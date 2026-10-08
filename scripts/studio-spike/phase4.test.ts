@@ -31,7 +31,7 @@ function candidate(store: StudioProduction, ctx: WorkerLease, bytes = BAD) {
 }
 function reviewing(store: StudioProduction, name: string, worker = `worker-${name}`) {
   const review = store.startReview("author", name, "independent-reviewer", { criteria: ["Empty background with clear center"], modality: "text", coverage: "complete fixture" });
-  return { ...review, ctx: store.claim(name, worker, 1000) };
+  return { ...review, ctx: (store.ticket(name).kind==='AUTHOR'&&store.registerCrewWorker(store.ticket(name).project_id,store.ticket(name).role, worker),store.claim(name, worker, 1000)) };
 }
 function verdict(store: StudioProduction, ctx: WorkerLease, decision: "PASS" | "CHANGES_REQUESTED") {
   const packet = store.reviewPacket(ctx.ticketId), bytes = readFileSync(packet.candidate_path);
@@ -45,11 +45,11 @@ function signedDecision(store: StudioProduction, principal: string, commandId: s
 }
 
 test("full rejection→repair→review→restart→authenticated exact-version approval preserves history", async () => isolated(root => {
-  let { store, principal } = setup(root); const originalLease = store.claim("author", "artist", 1000), original = candidate(store, originalLease);
+  let { store, principal } = setup(root); const originalLease = (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist"),store.claim("author", "artist", 1000)), original = candidate(store, originalLease);
   const first = reviewing(store, "review-one"), rejection = verdict(store, first.ctx, "CHANGES_REQUESTED");
   store.submitReview(first.ctx, rejection); store.submitReview(first.ctx, rejection);
   assert.equal(store.ticket("author").status, "CHANGES_REQUESTED"); assert.equal(store.ticket("author").strike_count, 1);
-  store.queueRepair("author"); const repairLease = store.claim("author", "artist-repair", 1000), repaired = candidate(store, repairLease, GOOD);
+  store.queueRepair("author"); const repairLease = (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist-repair"),store.claim("author", "artist-repair", 1000)), repaired = candidate(store, repairLease, GOOD);
   assert.notEqual(original.id, repaired.id); assert.notEqual(original.path, repaired.path); assert.equal(store.ticket("author").attempt_count, 2);
   const card = pass(store, "review-two"); assert.equal(store.ticket("author").status, "AWAITING_APPROVAL");
   const decision = signedDecision(store, principal, "approve-repaired", card);
@@ -62,10 +62,10 @@ test("full rejection→repair→review→restart→authenticated exact-version a
 }));
 
 test("reviewer ownership, completed perception, modality, and full coverage are required", async () => isolated(root => {
-  const { store } = setup(root), author = store.claim("author", "artist", 1000); candidate(store, author);
+  const { store } = setup(root), author = (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist"),store.claim("author", "artist", 1000)); candidate(store, author);
   store.startReview("author", "review", "independent-reviewer", { criteria: ["Empty background"], modality: "text", coverage: "complete fixture" });
-  assert.throws(() => store.claim("review", "artist", 1000), /AUTHOR_CANNOT_REVIEW_OWN_WORK/);
-  const reviewer = store.claim("review", "separate-reviewer", 1000), result = verdict(store, reviewer, "PASS");
+  assert.throws(() => (store.ticket("review").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("review").project_id,store.ticket("review").role, "artist"),store.claim("review", "artist", 1000)), /AUTHOR_CANNOT_REVIEW_OWN_WORK/);
+  const reviewer = (store.ticket("review").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("review").project_id,store.ticket("review").role, "separate-reviewer"),store.claim("review", "separate-reviewer", 1000)), result = verdict(store, reviewer, "PASS");
   assert.throws(() => store.submitReview(author, result), /TICKET_NOT_WORKING|REVIEWER_ASSIGNMENT_REQUIRED/);
   const supplied = store.mediaSupplied(reviewer, readFileSync(store.reviewPacket("review").candidate_path), details);
   assert.throws(() => store.submitReview(reviewer, { ...result, evidence_references: [supplied] }), /INVALID_INSPECTION_EVIDENCE/);
@@ -76,7 +76,7 @@ test("reviewer ownership, completed perception, modality, and full coverage are 
 }));
 
 test("stale inputs invalidate review and approval without granting acceptance", async () => isolated(root => {
-  const { store, principal } = setup(root); candidate(store, store.claim("author", "artist", 1000), GOOD);
+  const { store, principal } = setup(root); candidate(store, (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist"),store.claim("author", "artist", 1000)), GOOD);
   const r = reviewing(store, "review"), result = verdict(store, r.ctx, "PASS"); store.setInput("project", "script", "script-v2");
   assert.throws(() => store.submitReview(r.ctx, result), /STALE_INPUTS/);
   store.setInput("project", "script", "script-v1"); store.submitReview(r.ctx, result); const command = signedDecision(store, principal, "approve");
@@ -85,9 +85,9 @@ test("stale inputs invalidate review and approval without granting acceptance", 
 }));
 
 test("old approval cards, conflicting commands, and concurrent decisions cannot approve newer work", async () => isolated(root => {
-  const { store, principal } = setup(root); candidate(store, store.claim("author", "artist", 1000), GOOD); const oldCard = pass(store, "review-one");
+  const { store, principal } = setup(root); candidate(store, (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist"),store.claim("author", "artist", 1000)), GOOD); const oldCard = pass(store, "review-one");
   const oldApproval = signedDecision(store, principal, "old-approval", oldCard), rejection = signedDecision(store, principal, "director-reject", oldCard, "REJECT");
-  store.directorDecision(rejection); store.queueRepair("author"); candidate(store, store.claim("author", "new-artist", 1000), GOOD + "_REVISED");
+  store.directorDecision(rejection); store.queueRepair("author"); candidate(store, (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "new-artist"),store.claim("author", "new-artist", 1000)), GOOD + "_REVISED");
   const newCard = pass(store, "review-two"); assert.throws(() => store.directorDecision(oldApproval), /STALE_DIRECTOR_DECISION/);
   const approve = signedDecision(store, principal, "new-approval", newCard), competing = signedDecision(store, principal, "competing", newCard, "REJECT");
   const secondConnection = new StudioProduction(root, () => 1000); const applied = store.directorDecision(approve);
@@ -97,7 +97,7 @@ test("old approval cards, conflicting commands, and concurrent decisions cannot 
 }));
 
 test("unsigned, modified, foreign-principal and wrong-hash commands cannot approve", async () => isolated(root => {
-  const { store, principal } = setup(root); candidate(store, store.claim("author", "artist", 1000), GOOD); pass(store);
+  const { store, principal } = setup(root); candidate(store, (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist"),store.claim("author", "artist", 1000)), GOOD); pass(store);
   const command = signedDecision(store, principal, "approve");
   assert.throws(() => store.directorDecision({ payload: command.payload } as any), /UNAUTHENTICATED_OPERATOR/);
   assert.throws(() => store.directorDecision({ ...command, payload: { ...command.payload, decision: "REJECT", feedback: "Tampered" } }), /UNAUTHENTICATED_OPERATOR/);
@@ -107,7 +107,7 @@ test("unsigned, modified, foreign-principal and wrong-hash commands cannot appro
 }));
 
 test("inconclusive reviewer blocks progress without penalizing author or creating approval card", async () => isolated(root => {
-  const { store } = setup(root); candidate(store, store.claim("author", "artist", 1000)); const r = reviewing(store, "review");
+  const { store } = setup(root); candidate(store, (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist"),store.claim("author", "artist", 1000))); const r = reviewing(store, "review");
   store.submitReview(r.ctx, { verdict: "INCONCLUSIVE", findings: "Explicit mock reviewer lacks the required perception capability.", defects: [], evidence_references: [] });
   assert.equal(store.ticket("author").status, "BLOCKED"); assert.equal(store.ticket("author").blocked_reason, "REVIEW_INCONCLUSIVE"); assert.equal(store.ticket("author").strike_count, 0);
   assert.throws(() => store.approvalCard("author"), /NOT_AWAITING_APPROVAL/); assert.throws(() => store.queueRepair("author"), /REPAIR_NOT_ELIGIBLE/); store.close();
@@ -115,26 +115,26 @@ test("inconclusive reviewer blocks progress without penalizing author or creatin
 
 test("repeated failures escalate separately from successful repair; signed extensions preserve counts", async () => isolated(root => {
   const { store, principal } = setup(root, { maxStrikes: 2, maxAttempts: 4 });
-  for (const n of [1, 2]) { candidate(store, store.claim("author", `artist-${n}`, 1000)); const r = reviewing(store, `review-${n}`); store.submitReview(r.ctx, verdict(store, r.ctx, "CHANGES_REQUESTED")); if (n === 1) store.queueRepair("author"); }
+  for (const n of [1, 2]) { candidate(store, (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, `artist-${n}`),store.claim("author", `artist-${n}`, 1000))); const r = reviewing(store, `review-${n}`); store.submitReview(r.ctx, verdict(store, r.ctx, "CHANGES_REQUESTED")); if (n === 1) store.queueRepair("author"); }
   const blocked = store.ticket("author"); assert.equal(blocked.status, "BLOCKED"); assert.equal(blocked.blocked_reason, "REPEATED_FAILURE");
-  assert.throws(() => store.claim("author", "automatic-retry", 1000), /TICKET_ALREADY_CLAIMED/);
+  assert.throws(() => (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "automatic-retry"),store.claim("author", "automatic-retry", 1000)), /TICKET_ALREADY_CLAIMED/);
   const extension = signLocalOperator(store.root, { id: "extend-strikes", principal, project_id: "project", action: "extend_limits" as const, ticket_id: "author", expected_revision: blocked.revision, reason: "Explicit test director authorizes one more failure allowance", max_strikes: 3 });
   assert.throws(() => store.authorizeLimits({ ...extension, signature: "0".repeat(64) }), /UNAUTHENTICATED_OPERATOR/);
   const extended = store.authorizeLimits(extension); assert.deepEqual(store.authorizeLimits(extension), extended);
-  assert.equal(store.ticket("author").strike_count, 2); store.queueRepair("author"); candidate(store, store.claim("author", "artist-final", 1000), GOOD); pass(store, "review-final");
+  assert.equal(store.ticket("author").strike_count, 2); store.queueRepair("author"); candidate(store, (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist-final"),store.claim("author", "artist-final", 1000)), GOOD); pass(store, "review-final");
   assert.equal(store.directorDecision(signedDecision(store, principal, "approve-final")).status, "APPROVED"); store.close();
 }));
 
 test("attempt cap stops repair scheduling until an exact authenticated extension", async () => isolated(root => {
-  const { store, principal } = setup(root, { maxAttempts: 1, maxStrikes: 5 }); candidate(store, store.claim("author", "artist", 1000)); const r = reviewing(store, "review"); store.submitReview(r.ctx, verdict(store, r.ctx, "CHANGES_REQUESTED"));
+  const { store, principal } = setup(root, { maxAttempts: 1, maxStrikes: 5 }); candidate(store, (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist"),store.claim("author", "artist", 1000))); const r = reviewing(store, "review"); store.submitReview(r.ctx, verdict(store, r.ctx, "CHANGES_REQUESTED"));
   assert.equal(store.queueRepair("author").blocked_reason, "ATTEMPT_LIMIT"); const blocked = store.ticket("author");
   const extension = signLocalOperator(store.root, { id: "extend-attempt", principal, project_id: "project", action: "extend_limits" as const, ticket_id: "author", expected_revision: blocked.revision, reason: "Explicitly authorize another attempt", max_attempts: 2 });
-  store.authorizeLimits(extension); store.queueRepair("author"); store.claim("author", "repair", 1000); assert.equal(store.ticket("author").attempt_count, 2);
+  store.authorizeLimits(extension); store.queueRepair("author"); (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "repair"),store.claim("author", "repair", 1000)); assert.equal(store.ticket("author").attempt_count, 2);
   assert.throws(() => store.authorizeLimits(signLocalOperator(store.root, { ...extension.payload, id: "stale-extension" })), /STALE_LIMIT_EXTENSION/); store.close();
 }));
 
 test("native model turn limit stops execution before an extra model call; extension preserves usage", async () => isolated(async root => {
-  const { store, principal } = setup(root, { maxTurns: 1 }); const ctx = store.claim("author", "artist", 1000), work = dirname(store.draftDirectory(ctx));
+  const { store, principal } = setup(root, { maxTurns: 1 }); const ctx = (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist"),store.claim("author", "artist", 1000)), work = dirname(store.draftDirectory(ctx));
   for (const dir of ["references", "versions", "skills"]) mkdirSync(join(work, dir));
   const model = new ScriptedModel([() => call("write_file", { file_path: "/drafts/notes.txt", content: "mock notes" }), () => new AIMessage("This call should never run")]);
   const agent = assignmentAgent(model, store, ctx, "openai:isolated-scripted-model", "Explicit isolated local mock turn-limit test.");
@@ -153,13 +153,13 @@ test("authenticated ticket allowance extension cannot silently raise the project
 }));
 
 test("local operator CLI applies one signed exact-version decision and keeps capability outside worker tools", async () => isolated(async root => {
-  const { store } = setup(root); candidate(store, store.claim("author", "artist", 1000), GOOD); const card = pass(store);
+  const { store } = setup(root); candidate(store, (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist"),store.claim("author", "artist", 1000)), GOOD); const card = pass(store);
   const file = join(root, "operator-command.json"); writeFileSync(file, JSON.stringify({ id: "cli-approve", action: "decide", ...card, decision: "APPROVE" }));
   const script = join(import.meta.dirname, "operator-cli.ts");
   const result = await exec(process.execPath, ["--import", "tsx", script, root, "apply", file]); assert.equal(JSON.parse(result.stdout).status, "APPROVED");
   const replay = await exec(process.execPath, ["--import", "tsx", script, root, "apply", file]); assert.deepEqual(JSON.parse(replay.stdout), JSON.parse(result.stdout));
-  assert.throws(() => store.claim("review", "nobody", 1000), /TICKET_ALREADY_CLAIMED/);
-  store.createTicket("isolated-reviewer", "project", "reviewer", {}, 0, "REVIEWER"); const ctx = store.claim("isolated-reviewer", "separate-worker", 1000);
+  assert.throws(() => (store.ticket("review").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("review").project_id,store.ticket("review").role, "nobody"),store.claim("review", "nobody", 1000)), /TICKET_ALREADY_CLAIMED/);
+  store.createTicket("isolated-reviewer", "project", "reviewer", {}, 0, "REVIEWER"); const ctx = (store.ticket("isolated-reviewer").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("isolated-reviewer").project_id,store.ticket("isolated-reviewer").role, "separate-worker"),store.claim("isolated-reviewer", "separate-worker", 1000));
   const work = dirname(store.draftDirectory(ctx)); for (const dir of ["references", "versions", "skills"]) mkdirSync(join(work, dir));
   const privateKey = JSON.parse(readFileSync(join(store.root, "operator-auth.json"), "utf8")).key;
   const model = new ScriptedModel([() => call("read_file", { file_path: "/operator-auth.json" }), messages => { assert.ok(!JSON.stringify(messages).includes(privateKey)); return new AIMessage("Explicit mock test finished"); }]);
@@ -169,17 +169,17 @@ test("local operator CLI applies one signed exact-version decision and keeps cap
 }));
 
 test("published-byte tampering prevents approval; only approved local versions become inputs", async () => isolated(root => {
-  const { store, principal } = setup(root); const v = candidate(store, store.claim("author", "artist", 1000), GOOD);
+  const { store, principal } = setup(root); const v = candidate(store, (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist"),store.claim("author", "artist", 1000)), GOOD);
   assert.throws(() => store.setInput("project", "background", v.id), /UNAPPROVED_INPUT_VERSION/);
   pass(store); const command = signedDecision(store, principal, "approve");
   chmodSync(v.path, 0o600); writeFileSync(v.path, "CORRUPTED_MOCK_BYTES");
   assert.throws(() => store.directorDecision(command), /PUBLISHED_BYTES_CORRUPT/); assert.equal(store.ticket("author").status, "AWAITING_APPROVAL");
   writeFileSync(v.path, GOOD); chmodSync(v.path, 0o400); store.directorDecision(command); store.setInput("project", "background", v.id);
-  store.createTicket("dependent", "project", "author", { background: v.id }, 1000000); store.claim("dependent", "next-artist", 1000); store.close();
+  store.createTicket("dependent", "project", "author", { background: v.id }, 1000000); (store.ticket("dependent").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("dependent").project_id,store.ticket("dependent").role, "next-artist"),store.claim("dependent", "next-artist", 1000)); store.close();
 }));
 
 test("native independent reviewer submission ends its separate assignment without director approval", async () => isolated(async root => {
-  const { store } = setup(root); candidate(store, store.claim("author", "artist", 1000), GOOD); const r = reviewing(store, "review");
+  const { store } = setup(root); candidate(store, (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "artist"),store.claim("author", "artist", 1000)), GOOD); const r = reviewing(store, "review");
   const result = verdict(store, r.ctx, "PASS"), work = dirname(store.draftDirectory(r.ctx)); for (const dir of ["references", "versions", "skills"]) mkdirSync(join(work, dir));
   const model = new ScriptedModel([() => call("submit_review", result)]);
   const agent = assignmentAgent(model, store, r.ctx, "openai:isolated-scripted-model", "Explicit mock reviewer finishing an already-inspected fixture.");

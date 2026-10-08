@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { tool } from "langchain";
 import { z } from "zod";
-import { askActiveAgent } from "../../lib/agent-bridge.js";
+
 import { workspaceAgent, hash } from "./harness.js";
 import { NimModel } from "./nim-model.js";
 import { nimTransport } from "./nim-transport.js";
@@ -87,7 +87,7 @@ async function runWorker(root: string, role: string, assignment: string, tools: 
     handleLLMEnd(result: any) { const m = result.generations[0]?.[0]?.message; if (m?.usage_metadata) usage.push(m.usage_metadata); if (supplied.length) events.push({ status: "INSPECTION_RESPONSE", sha256: supplied, findings: m?.content, tool_calls: m?.tool_calls }); },
   };
   try {
-    await askActiveAgent(assignment, { operatingAgent: prompt => agent.invoke({ messages: [{ role: "user", content: prompt }] }, { runId: id, callbacks: [tracer, callbacks], recursionLimit: 30, signal: AbortSignal.any([AbortSignal.timeout(180000), controller.signal]), metadata: { phase: 2, role, production: false, inference_provider: "NVIDIA NIM" } }) });
+    await agent.invoke({ messages: [{ role: "user", content: assignment }] }, { runId: id, callbacks: [tracer, callbacks], recursionLimit: 30, signal: AbortSignal.any([AbortSignal.timeout(180000), controller.signal]), metadata: { phase: 2, role, production: false, inference_provider: "NVIDIA NIM" } });
     await client.awaitPendingTraceBatches(); assert.deepEqual(failures, []);
     const trace = await client.readRun(id, { loadChildRuns: true });
     const serializedTrace = JSON.stringify(trace);

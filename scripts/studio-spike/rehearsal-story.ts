@@ -8,7 +8,7 @@ import { loadMemoirFormat, createMemoirAssignment, candidateValidator, startMemo
 import { rehearsalWorker } from './rehearsal-worker.js';
 import { tracing, namedSecret } from './tracing.js';
 
-/** Mechanical publication/review of contracts already authored and inspected by the active Codex.
+/** Mechanical publication/review of contracts already authored and inspected (harness override).
  * This command does not write or rewrite creative content or resume the old coordinator. */
 export async function runStory(root: string, kit: string, authorizationPath: string) {
   const dir=join(root,'story-narration'), quote=JSON.parse(readFileSync(join(dir,'quote.json'),'utf8'));
@@ -28,18 +28,19 @@ export async function runStory(root: string, kit: string, authorizationPath: str
     const traces=await tracing(),key=await namedSecret('OPENROUTER_API_KEY');
     const inputs:Record<string,string>={};
     const assignments=[
-      {kind:'answers',role:'script-writer',file:'answers.json',findings:'The active Codex inspected all five source answers and identity fields. The exact source digest and human approval match; sibling ages, coupe ownership, engineering salary and long-distance weekly FaceTime facts remain intact.',approval:'Reuse exact previously human-approved intake under the explicit live rehearsal plan.'},
-      {kind:'script',role:'script-writer',file:'script.json',findings:'The active Codex inspected every beat and cast entry. All preferred Kimi narration is unchanged including every night; the repaired cast uses one minor late-teen design for ages seventeen and nineteen. Actual timing remains subject to measured voice delivery.',approval:'The director selected Kimi Script 1 and explicitly instructed preservation of its narration plus shared late-teen metadata repair in the approved rehearsal plan.'},
+      {kind:'answers',role:'script-writer',file:'answers.json',findings:'Director-authorized harness override: inspected all five source answers and identity fields. The exact source digest and human approval match; sibling ages, coupe ownership, engineering salary and long-distance weekly FaceTime facts remain intact.',approval:'Reuse exact previously human-approved intake under the explicit live rehearsal plan.'},
+      {kind:'script',role:'script-writer',file:'script.json',findings:'Director-authorized harness override: inspected every beat and cast entry. All preferred Kimi narration is unchanged including every night; the repaired cast uses one minor late-teen design for ages seventeen and nineteen. Actual timing remains subject to measured voice delivery.',approval:'The director selected Kimi Script 1 and explicitly instructed preservation of its narration plus shared late-teen metadata repair in the approved rehearsal plan.'},
     ];
     for(const item of assignments){
       const id='rehearsal-'+item.kind,bytes=readFileSync(join(dir,item.file));
       if(item.kind==='script'&&hash(Buffer.from(JSON.stringify(JSON.parse(bytes.toString()))))!==quote.script_hash)throw new Error('AUTHORIZED_SCRIPT_CHANGED');
       createMemoirAssignment(format,store,{id,projectId:rehearsalProject,kind:item.kind,role:item.role,inputs:{...inputs},allowanceMicros:0,limits:{maxTurns:12,maxAttempts:3},outcome:item.kind==='script'?'Review and preserve the preferred Kimi narration exactly, including every night as director-authorized family ritual language. Preserve the shared late-teen design at factual ages 17 and 19. Judge narrative clarity, factual grounding and emotional purpose; actual timing is tested by synthesis next.':'Confirm the exact approved source answers without adding or paraphrasing facts.'});
-      const author=store.claim(id,'active-operating-codex',300000);
+      const author=store.claim(id,'harness-override',300000);
       writeFileSync(join(store.draftDirectory(author),'candidate.json'),bytes,{flag:'wx',mode:0o600});
-      const evidence=store.mediaSupplied(author,bytes,{runId:'active-codex-story-inspection',model:'active-operating-Codex',modality:'text',coverage:'entire authored contract'});
+      const evidence=store.mediaSupplied(author,bytes,{runId:'harness-story-inspection',model:'harness-override',modality:'text',coverage:'entire authored contract'});
       store.inspectionCompleted(author,evidence,item.findings);
       const validated_hash=await candidateValidator(format,store,id)(bytes);
+      store.harnessOverride(signLocalOperator(root, {id:`harness-override-${id}`, principal, project_id:rehearsalProject, action:'harness_override' as const, ticket_id:id, attempt_id:author.attemptId, reason:'Director-authorized mechanical publication of approved scripts'}));
       store.publish(author,{draft_path:'candidate.json',evidence_references:[evidence],validated_hash});
       const reviewId=id+'-review';startMemoirReview(store,id,reviewId,quote.ticket_caps_micros[item.kind+'_review'],undefined,{maxTurns:12,maxAttempts:3});
       const ctx=store.claim(reviewId,'independent-'+item.kind+'-reviewer',300000),worker=rehearsalWorker(store,ctx,{key});

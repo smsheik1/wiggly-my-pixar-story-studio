@@ -37,6 +37,7 @@ async function seed(projectId: string, key: string, kind: string, content: any, 
   const id = `${projectId}-seed-${key.replaceAll(":", "_")}`;
   store.createTicket(id, projectId, "explicit-fixture-import", {}, 0);
   store.bindMemoirAssignment(id, kind, format.contracts.criteria[kind]);
+  store.registerCrewWorker(projectId, "explicit-fixture-import", id);
   const lease = store.claim(id, id, 60000);
   function pin(value: any): any {
     if (!value || typeof value !== "object") return value;
@@ -87,6 +88,7 @@ try {
     const edit = { ...helpers.editPlan({ artifacts: [{ key: "videoPlan", valid: true, content: { clips } }] }), clips: clips.map((clip: any) => ({ clipId: clip.id, sourceOffsetSeconds: scenario.trim })) };
     const ticketId = `${projectId}-editor`;
     createMemoirAssignment(format, store, { id: ticketId, projectId, kind: "editPlan", role: "film-editor", outcome: "Produce the explicit local test edit preserving each measured source trim and all narration stems.", inputs });
+    store.registerCrewWorker(projectId, "film-editor", "fixture-operating-editor");
     const lease = store.claim(ticketId, "fixture-operating-editor", 60000);
     const inspectTool = tool(() => ({ evidence: inspect(lease, store.readDraft(lease, "edit.json")) }), { name: "inspect_fixture", description: "EXPLICIT isolated inspection mock", schema: z.object({}).strict() });
     const model = new ScriptedModel([
@@ -106,6 +108,7 @@ try {
     const file = await format.media.importMedia(out, dir); assert.equal(file.durationSeconds, 2); assert.equal(file.hasAudio, true);
     const filmTicket = `${projectId}-final-film`;
     createMemoirAssignment(format, store, { id: filmTicket, projectId, kind: "film", role: "film-editor", inputs, outcome: "Render the existing fixture edit using the passive official renderer; no creative acceptance." });
+    store.registerCrewWorker(projectId, "film-editor", "fixture-operating-film-editor");
     const filmLease = store.claim(filmTicket, "fixture-operating-film-editor", 120000);
     const rendered = await renderMemoirFilm(format, store, filmLease), filmBytes = store.readDraft(filmLease, "film.json");
     const filmVersion = store.publish(filmLease, { draft_path: "film.json", validated_hash: await (await import("./memoir-format.js")).candidateValidator(format, store, filmTicket)(filmBytes), evidence_references: [inspect(filmLease, filmBytes)] });

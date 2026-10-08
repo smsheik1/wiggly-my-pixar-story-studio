@@ -7,7 +7,7 @@ import { LangChainTracer } from '@langchain/core/tracers/tracer_langchain';
 import { tool, createMiddleware } from 'langchain';
 import { z } from 'zod';
 import { StudioProduction, type WorkerLease } from '../../lib/studio-production.js';
-import { askActiveAgent } from '../../lib/agent-bridge.js';
+
 import { workspaceAgent, hash } from './harness.js';
 import { productionMiddleware } from './production-tools.js';
 import { photoDelivery } from './reference-intake.js';
@@ -68,7 +68,7 @@ ${rubric}`,{mode:0o600});
  const model=options.modelOverride??new ChatGoogleGenerativeAI({model:modelName,apiKey:options.key,maxOutputTokens:8192,maxRetries:0,streaming:false,disableStreaming:true});
  const agent=workspaceAgent(model,root,'gemini-review-'+ctx.ticketId+'-'+ctx.token,ctx.workerId,[inspect,submit],system,[productionMiddleware(store,ctx),budget]);
  const callbacks=options.traceClient?[new LangChainTracer({client:options.traceClient,projectName:'wiggly-studio-phase1'})]:[];
- await askActiveAgent(system,{operatingAgent:prompt=>agent.invoke({messages:[{role:'user',content:prompt}]},{callbacks,signal:AbortSignal.timeout(180000),metadata:{ticket:ctx.ticketId,model:modelName,reviewer_architecture:'Deep Agents / LangGraph',media_hashes:files.map(f=>f.sha256)}})});
+ await agent.invoke({messages:[{role:'user',content:system}]},{callbacks,signal:AbortSignal.timeout(180000),metadata:{ticket:ctx.ticketId,model:modelName,reviewer_architecture:'Deep Agents / LangGraph',media_hashes:files.map(f=>f.sha256)}});
  if(!report)throw new Error('GEMINI_REVIEW_NOT_SUBMITTED');return{report,receiptPath:receipts.at(-1)!,operationId:lastOperationId!,runId,receiptPaths:receipts};
 }
 export async function runGeminiAudioReviewer(store:StudioProduction,ctx:WorkerLease,options:GeminiReviewerOptions) {

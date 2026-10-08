@@ -21,7 +21,7 @@ function policy(store: StudioProduction, principal: string) {
 }
 function publish(store: StudioProduction, id = "plate", kind = "backgroundAngle", inputs = {}) {
   store.createTicket(id, "film", "artist", inputs, 0); store.bindMemoirAssignment(id, kind, ["continuity"]);
-  const lease = store.claim(id, `author-${id}`, 1000), bytes = Buffer.from(`EXPLICIT MOCK ${id}`);
+  const lease = (store.ticket(id).kind==='AUTHOR'&&store.registerCrewWorker(store.ticket(id).project_id,store.ticket(id).role, `author-${id}`),store.claim(id, `author-${id}`, 1000)), bytes = Buffer.from(`EXPLICIT MOCK ${id}`);
   writeFileSync(join(store.draftDirectory(lease), "candidate.json"), bytes);
   const evidence = store.mediaSupplied(lease, bytes, details); store.inspectionCompleted(lease, evidence, "Explicit fixture author inspection; no creative-quality claim.");
   const version = store.publish(lease, { draft_path: "candidate.json", evidence_references: [evidence], validated_hash: hash(bytes) });
@@ -31,7 +31,7 @@ function review(store: StudioProduction, id = "plate", compatible?: boolean) {
   const film = store.memoirAssignment(id)!.kind === "film";
   for (const modality of film ? ["video", "audio"] : [memoirReviewModality(store.memoirAssignment(id)!.kind)]) {
     const reviewer = `${id}-review-${modality}`; store.startReview(id, reviewer, "reviewer", { criteria: film ? memoirFilmReviewCriteria[modality as "video" | "audio"] : ["continuity"], modality, coverage: memoirReviewCoverage });
-    const lease = store.claim(reviewer, `independent-${id}-${modality}`, 1000), packet = store.reviewPacket(reviewer), bytes = readFileSync(packet.candidate_path);
+    const lease = (store.ticket(reviewer).kind==='AUTHOR'&&store.registerCrewWorker(store.ticket(reviewer).project_id,store.ticket(reviewer).role, `independent-${id}-${modality}`),store.claim(reviewer, `independent-${id}-${modality}`, 1000)), packet = store.reviewPacket(reviewer), bytes = readFileSync(packet.candidate_path);
     const evidence = store.mediaSupplied(lease, bytes, { ...details, modality: packet.modality, coverage: packet.coverage }); store.inspectionCompleted(lease, evidence, "Explicit independent fixture inspection of the exact version.");
     store.submitReview(lease, { verdict: "PASS", findings: "Explicit isolated fixture passes continuity; no production creative approval.", defects: [], evidence_references: [evidence], ...(compatible === undefined ? {} : { direction_compatible: compatible }) });
   }
@@ -74,7 +74,7 @@ test("incompatible direction stays with the director rather than silently procee
 test("format publication rejects a draft changed after validation", () => fixture((store, principal) => {
   store.activateMemoirPolicy(policy(store, principal));
   store.createTicket("plate", "film", "artist", {}, 0); store.bindMemoirAssignment("plate", "backgroundAngle", ["continuity"]);
-  const lease = store.claim("plate", "author", 1000), bytes = Buffer.from("EXPLICIT changed draft");
+  const lease = (store.ticket("plate").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("plate").project_id,store.ticket("plate").role, "author"),store.claim("plate", "author", 1000)), bytes = Buffer.from("EXPLICIT changed draft");
   writeFileSync(join(store.draftDirectory(lease), "candidate"), bytes);
   const evidence = store.mediaSupplied(lease, bytes, details); store.inspectionCompleted(lease, evidence, "Explicit fixture inspection of changed bytes.");
   assert.throws(() => store.publish(lease, { draft_path: "candidate", evidence_references: [evidence] }), /FORMAT_VALIDATION_REQUIRED/);
@@ -113,7 +113,7 @@ test("format reviews cannot downgrade media coverage to a text-only pass", () =>
 test("trusted media pinning preserves bytes and rejects expired workers", () => fixture((store, principal) => {
   store.activateMemoirPolicy(policy(store, principal));
   store.createMemoirTicket("media", "film", "artist", {}, 0, "backgroundAngle", ["continuity"], {});
-  const lease = store.claim("media", "artist", 1000), original = Buffer.from("EXPLICIT media pin fixture");
+  const lease = (store.ticket("media").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("media").project_id,store.ticket("media").role, "artist"),store.claim("media", "artist", 1000)), original = Buffer.from("EXPLICIT media pin fixture");
   const pinned = store.pinMedia(lease, original, ".png"); original.fill(0);
   assert.equal(hash(readFileSync(pinned.path)), pinned.sha256);
   assert.deepEqual(store.pinMedia(lease, readFileSync(pinned.path), ".png"), pinned);
@@ -126,7 +126,7 @@ test("submission binds runtime receipt when a model invents one in a parallel to
   try {
     store.createProject("fixture", 0); store.operator("fixture", "resume", 0, { id: "resume", actor: "explicit-local-mock", reason: "Local regression" });
     store.createTicket("author", "fixture", "editor", {}, 0);
-    const ctx = store.claim("author", "editor", 10000), bytes = Buffer.from("Actual inspected mock contract");
+    const ctx = (store.ticket("author").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("author").project_id,store.ticket("author").role, "editor"),store.claim("author", "editor", 10000)), bytes = Buffer.from("Actual inspected mock contract");
     writeFileSync(join(store.draftDirectory(ctx), "candidate.json"), bytes);
     const evidence = store.mediaSupplied(ctx, bytes, details); store.inspectionCompleted(ctx, evidence, "Actual completed runtime receipt for this local regression.");
     const result = await publicationTool(store, ctx, undefined, () => [evidence]).invoke({ draft_path: "/drafts/candidate.json", evidence_references: ["model-invented-receipt"] });
@@ -140,7 +140,7 @@ test("final film cannot advance on visual review alone or reuse its visual revie
   function pass(modality: "video" | "audio", worker: string) {
     const reviewer = `film-${modality}`;
     store.startReview("film-ticket", reviewer, "reviewer", { criteria: memoirFilmReviewCriteria[modality], modality, coverage: memoirReviewCoverage });
-    const ctx = store.claim(reviewer, worker, 1000), packet = store.reviewPacket(reviewer);
+    const ctx = (store.ticket(reviewer).kind==='AUTHOR'&&store.registerCrewWorker(store.ticket(reviewer).project_id,store.ticket(reviewer).role, worker),store.claim(reviewer, worker, 1000)), packet = store.reviewPacket(reviewer);
     const evidence = store.mediaSupplied(ctx, readFileSync(packet.candidate_path), { ...details, modality, coverage: memoirReviewCoverage });
     store.inspectionCompleted(ctx, evidence, "EXPLICIT MOCK full-film modality receipt for this safety test.");
     return () => store.submitReview(ctx, { verdict: "PASS", findings: "EXPLICIT MOCK modality verdict, not real audiovisual perception.", defects: [], evidence_references: [evidence], direction_compatible: true });
@@ -155,7 +155,7 @@ test("final film cannot advance on visual review alone or reuse its visual revie
 test("director chooses an explicit character candidate index and repeated delivery preserves it", () => fixture((store, principal) => {
   store.activateMemoirPolicy(policy(store, principal));
   store.createMemoirTicket("choice", "film", "artist", {}, 0, "candidates", ["continuity"], {});
-  const ctx = store.claim("choice", "artist", 1000), bytes = Buffer.from(JSON.stringify({ files: [{ explicit_mock: 1 }, { explicit_mock: 2 }] }));
+  const ctx = (store.ticket("choice").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("choice").project_id,store.ticket("choice").role, "artist"),store.claim("choice", "artist", 1000)), bytes = Buffer.from(JSON.stringify({ files: [{ explicit_mock: 1 }, { explicit_mock: 2 }] }));
   writeFileSync(join(store.draftDirectory(ctx), "candidate.json"), bytes);
   const evidence = store.mediaSupplied(ctx, bytes, details); store.inspectionCompleted(ctx, evidence, "EXPLICIT MOCK inspected candidate selection envelope.");
   store.publish(ctx, { draft_path: "candidate.json", evidence_references: [evidence], validated_hash: hash(bytes) });
@@ -172,7 +172,7 @@ test("independent review receives the authorized revision outcome instead of ass
   store.activateMemoirPolicy(policy(store, principal));
   const outcome = "Change the first clip trim by exactly one frame; preserve every other field.";
   store.createMemoirTicket("revision", "film", "editor", {}, 0, "editPlan", ["continuity"], { outcome, selectors: { shotId: "shot-one" } });
-  const ctx = store.claim("revision", "editor", 1000), bytes = Buffer.from("EXPLICIT MOCK authorized revision");
+  const ctx = (store.ticket("revision").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("revision").project_id,store.ticket("revision").role, "editor"),store.claim("revision", "editor", 1000)), bytes = Buffer.from("EXPLICIT MOCK authorized revision");
   writeFileSync(join(store.draftDirectory(ctx), "candidate.json"), bytes);
   const evidence = store.mediaSupplied(ctx, bytes, details); store.inspectionCompleted(ctx, evidence, "Explicit inspected revision envelope for this regression.");
   store.publish(ctx, { draft_path: "candidate.json", evidence_references: [evidence], validated_hash: hash(bytes) });
@@ -184,7 +184,7 @@ test("publishing a revision head retains its historical starting output without 
   store.activateMemoirPolicy(policy(store, principal)); store.setInput("film", "source", "source-v1");
   function revision(id: string, inputs: Record<string, string>) {
     store.createMemoirTicket(id, "film", "editor", inputs, 0, "editPlan", ["continuity"], { asset_key: "editPlan" });
-    const ctx = store.claim(id, `editor-${id}`, 1000), bytes = Buffer.from(`EXPLICIT mock revision ${id}`);
+    const ctx = (store.ticket(id).kind==='AUTHOR'&&store.registerCrewWorker(store.ticket(id).project_id,store.ticket(id).role, `editor-${id}`),store.claim(id, `editor-${id}`, 1000)), bytes = Buffer.from(`EXPLICIT mock revision ${id}`);
     writeFileSync(join(store.draftDirectory(ctx), "candidate.json"), bytes);
     const evidence = store.mediaSupplied(ctx, bytes, details); store.inspectionCompleted(ctx, evidence, "Explicit local reference-history regression inspection.");
     const v = store.publish(ctx, { draft_path: "candidate.json", evidence_references: [evidence], validated_hash: hash(bytes) });

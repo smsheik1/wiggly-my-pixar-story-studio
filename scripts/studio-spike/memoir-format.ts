@@ -3,7 +3,6 @@ import { join, dirname, basename, extname } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import type { RunnableConfig } from "@langchain/core/runnables";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { askActiveAgent } from "../../lib/agent-bridge.js";
 import { StudioProduction, memoirReviewModality, memoirReviewCoverage, memoirFilmReviewCriteria, type InputVersions, type WorkerLease, type TicketLimits } from "../../lib/studio-production.js";
 import { workspaceAgent, hash } from "./harness.js";
 import { publicationTool, productionMiddleware, reviewTool } from "./production-tools.js";
@@ -15,6 +14,11 @@ export function assertCrewRole(agents: Record<string, unknown>, role: string): v
   if (!Object.prototype.hasOwnProperty.call(agents, role)) {
     throw new Error(`UNKNOWN_CREW_ROLE: ${role}`);
   }
+}
+
+export function registerMemoirCrewWorker(format: Format, store: StudioProduction, projectId: string, role: string, workerId: string) {
+  assertCrewRole(format.config.agents, role);
+  store.registerCrewWorker(projectId, role, workerId);
 }
 
 /** Reuse the installed official Format. Never apply events to its legacy coordinator. */
@@ -142,7 +146,7 @@ export async function runMemoirAuthor(format: Format, store: StudioProduction, c
   }
   const system = `Author the declarative ${binding.kind} JSON contract from the exact reference versions. ${packet.outcome} Before authoring character designs, use inspect_reference_photo for supplied photos. Detect every visible person. Never infer names, relationships or ages from appearance. If any person identity is unresolved, call ask_reference_identities to show labelled regions and ask the director; this ends the run pending clarification. Do not generate or submit a character design with unresolved references. Inspect the actual draft and submit its evidence. No phoneme lip-sync. No approval authority. Read the role skill from /skills/. Write only to /drafts/; references are in /references/. Do not list / or /tmp, which are intentionally inaccessible. Use the loaded role skill. Submission ends this run.`;
   const agent = workspaceAgent(model, root, `memoir-${ctx.ticketId}-${ctx.token}`, ctx.workerId, [...inspectionTools, publicationTool(store, ctx, candidateValidator(format, store, ctx.ticketId), evidenceReferences)], system, [productionMiddleware(store, ctx)]);
-  return askActiveAgent(system, { operatingAgent: async prompt => agent.invoke({ messages: [{ role: "user", content: prompt }] }, invokeConfig) });
+  return agent.invoke({ messages: [{ role: "user", content: system }] }, invokeConfig);
 }
 
 export async function prepareMemoirComposition(format: Format, store: StudioProduction, projectId: string, inputs: InputVersions, destination: string) {
@@ -194,7 +198,7 @@ export async function runMemoirReviewer(format: Format, store: StudioProduction,
   const mediaDirection = packet.modality === "text" ? "" : "inspect_candidate invokes a dedicated multimodal model on the pinned media bytes and returns its findings. Evaluate those actual inspection findings; do not read raw audio/video through the text filesystem tool. If the inspection is complete, use it to submit your verdict; do not repeat inspection or search for nonexistent references.";
   const system = `Independently review /references/packet.json and its exact candidate and relevant approved references. Call inspect_candidate with no arguments before submit_review; read_file alone does not create the runtime inspection receipt required for acceptance. Use the native inspection tools to actually inspect the required ${packet.modality} coverage. Do not infer seeing or hearing from metadata. If any required perception is unavailable submit INCONCLUSIVE. Evaluate the packet criteria; if all pass, report whether the candidate preserves approved creative direction. You cannot approve or generate media. ${preferredDirection} ${mediaDirection} Available reference files: ${JSON.stringify(availableReferences)}. These are the complete supplied reference inventory; do not search for additional source files. The immutable original questionnaire is /references/source-inputs.json; compare candidate facts against it. Read exact files directly; listing /, /drafts, or /large_tool_results is unnecessary and may be denied. End with submit_review. Authoritative packet: ${JSON.stringify(workerPacket)}. The author assignment requested this outcome: ${JSON.stringify(authorizedOutcome)}. Evaluate that requested revision; a specifically requested change from an older approved reference is not itself a defect. Retain all other criteria and approved-direction constraints. ${continuationContext}`;
   const agent = workspaceAgent(model, root, `memoir-review-${ctx.ticketId}-${ctx.token}`, ctx.workerId, [...inspectionTools, reviewTool(store, ctx, evidenceReferences)], system, [productionMiddleware(store, ctx)]);
-  return askActiveAgent(system, { operatingAgent: prompt => agent.invoke({ messages: [{ role: "user", content: prompt }] }, invokeConfig) });
+  return agent.invoke({ messages: [{ role: "user", content: system }] }, invokeConfig);
 }
 
 

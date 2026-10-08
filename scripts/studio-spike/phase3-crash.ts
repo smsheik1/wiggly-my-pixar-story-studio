@@ -6,7 +6,11 @@ import { hash } from "./harness.js";
 const [root, point, worker = "worker"] = process.argv.slice(2);
 if (point === "claim") {
   const store = new StudioProduction(root);
-  try { console.log(JSON.stringify({ lease: store.claim("ticket", worker, 30000) })); }
+  try { 
+    const t = store.ticket("ticket");
+    store.registerCrewWorker(t.project_id, t.role, worker);
+    console.log(JSON.stringify({ lease: store.claim("ticket", worker, 30000) })); 
+  }
   catch (error: any) { console.log(JSON.stringify({ error: error.message })); }
   finally { store.close(); }
 } else {
@@ -17,6 +21,7 @@ if (point === "claim") {
   store.operator("project", "resume", 0, { id: "test-resume", actor: "test-operator", reason: "Isolated mock test" });
   store.setInput("project", "script", "script-v1");
   store.createTicket("ticket", "project", "author", { script: "script-v1" }, 1000000);
+  store.registerCrewWorker("project", "author", worker);
   const ctx = store.claim("ticket", worker, 60000);
   writeFileSync(join(root, "lease.json"), JSON.stringify(ctx));
   if (point.startsWith("after_pub")) {

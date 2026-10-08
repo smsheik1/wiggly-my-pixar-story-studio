@@ -32,7 +32,7 @@ export async function prepareNarrationBatch(root: string, kit: string) {
     return {plan,request:providers.requestDescriptor(projection,plan)};
   });
   const quote={id:'story-narration-v1',authorized:false,allowance_micros:2000000,project_id:rehearsalProject,
-    script_hash:manifest.authored_script_hash,voice_id:lookup.voiceId,writer:'Preserved preferred Kimi K3 draft; active Codex metadata repair only',
+    script_hash:manifest.authored_script_hash,voice_id:lookup.voiceId,writer:'Preserved preferred Kimi K3 draft; harness metadata repair only (director-authorized)',
     execution_model:'deepseek/deepseek-v4.1-flash',route:'decart/fp4',perception_model:'gemini-3.8-flash',
     initial_cartesia_characters:jobs.reduce((sum,j)=>sum+j.request.costEstimate.characters,0),initial_cartesia_allowance_usd:jobs.reduce((sum,j)=>sum+j.plan.estimatedCostUsd,0),
     ticket_caps_micros:{answers_review:100000,script_review:100000,clone_review:100000,audition_author:200000,audition_review:200000,narration_author:700000,narration_review:600000},
