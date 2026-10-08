@@ -44,7 +44,7 @@ test('each named skill, scoped recipe, separate review rubric and producer voice
  assert.equal(task.skill.path,'crew/leo/SKILL.md');assert.match(task.skill.content,/Write for the ear, not the page/);assert.equal(task.reviewerRubric,undefined);assert.equal(task.recipe,undefined);assert.equal(task.inputChecklist[0].status,'verified');assert.equal(task.communication,undefined);
  const draft=send(p,'artifact',{workerId:'isolated-script-writer',content:script});const review=await prepareCrewTask(draft,taskFor(draft));
  assert.equal(review.skill.path,'crew/sage/SKILL.md');assert.equal(review.skill.sha256,p.studio.documents['crew/sage/SKILL.md'].sha256);assert.deepEqual(review.allowedTools,['readAsset','viewImage']);assert.equal(review.formatRole,'text-reviewer');assert.equal(review.reviewerRubricSource.path,'evaluation/rubrics/text.md');assert.match(review.reviewerRubric,/For scripts/);assert.equal(review.evaluatorEvidence.productionApproval,false);assert.ok(review.criteria.length>0);
- assert.equal(new Set(Object.values(p.studio.config.agents).map(a=>a.skill)).size,14);assert.equal(p.studio.config.agents['sheet-prompter'].skill,p.studio.config.agents['pixar-prompter'].skill);
+ assert.equal(new Set(Object.values(p.studio.config.agents).map(a=>a.skill)).size,15);assert.equal(p.studio.config.agents['sheet-prompter'].skill,p.studio.config.agents['pixar-prompter'].skill);
 });
 
 test('saved SQLite project dispatches its original instructions, recipes and limits after editable template changes',async()=>{
