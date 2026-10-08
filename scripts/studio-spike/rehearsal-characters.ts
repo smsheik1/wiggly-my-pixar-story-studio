@@ -17,7 +17,7 @@ export async function runCharacterRoster(root:string,kit:string) {
  if(auth.quote_sha256!==hash(Buffer.from(JSON.stringify(quote)))||auth.allowance_micros!==2000000||!auth.confirmed_reference_crops||!auth.operator_message?.trim())throw new Error('EXACT_CHARACTER_BATCH_AUTHORIZATION_REQUIRED');
  const marker=join(dir,'roster-started.json');if(existsSync(marker))throw new Error('ROSTER_ALREADY_STARTED_RECONCILE_NO_AUTOMATIC_RETRY');
  const manifest=JSON.parse(readFileSync(join(root,'manifest.json'),'utf8'));
- const preserved=existsSync(manifest.source)?manifest.source:'/Users/shaz/Documents/wiggly-private-backups/agent-runs-backup/debug-round-1-20261004-script-led-v3';assertPreserved(preserved,manifest.saved_production_hashes);
+ assertPreserved(manifest.source,manifest.saved_production_hashes);
  const group=JSON.parse(readFileSync(join(dir,'group-reference-selection.json'),'utf8'));
  if(hash(readFileSync(group.source))!==group.sha256||!group.age_direction_confirmed)throw new Error('CONFIRMED_REFERENCE_CHANGED');
  const format=await loadMemoirFormat(kit),store=new StudioProduction(root),principal=provisionLocalOperator(root);let failure:string|undefined,result:any;
@@ -30,6 +30,7 @@ export async function runCharacterRoster(root:string,kit:string) {
   const inputs=Object.fromEntries(['answers','script','narration'].map(k=>[k,store.ticket('rehearsal-'+k).candidate_id]));
   const script=JSON.parse(readFileSync(store.acceptedVersion(rehearsalProject,inputs.script).path,'utf8'));
   createMemoirAssignment(format,store,{id:'rehearsal-roster',projectId:rehearsalProject,kind:'roster',role:'cast-designer',inputs,allowanceMicros:200000,limits:{maxTurns:12,maxAttempts:3},outcome:'Read /references/cast-contract.json for the exact contract and confirmed mapping. Bind the six approved screenplay cast entries to director-selected real-person photos and age direction. No new people, no invented source ages, no reference substitutions. Inspect actual photos, preserve shared teen design for 17 and 19. Sister is +7 years, brother approximately -2. Source photo is a teen family snapshot; sister likeness applies at age 15 and brother likeness at age 6 by explicit director direction. Author roster.json data only; generate no images yet.'});
+  store.registerCrewWorker(rehearsalProject, 'cast-designer', 'deepagents-cast-designer');
   const ctx=store.claim('rehearsal-roster','deepagents-cast-designer',300000);
   const raw:any[]=quote.reference_selections.map((r:any)=>({id:r.look==='childhood'?'shaz-child':r.look==='late-teens'?'shaz-late-teen':r.look==='adult'?'shaz-adult':'mia-mother',file:r.file,direction:'Director-selected source reference, keep exact screenplay age variant.'}));
   const crops=join(dir,'reference-crops');mkdirSync(crops,{recursive:true});
@@ -64,7 +65,7 @@ export async function runCharacterRoster(root:string,kit:string) {
   await traces.client.awaitPendingTraceBatches();if(traces.failures.length)throw new Error('LANGSMITH_TRACE_UPLOAD_FAILED');
   console.log(JSON.stringify({stage:'ROSTER_APPROVED',author:ctx.workerId,reviewer:reviewer.workerId,version:card.candidate_version_id,allowance:store.allowance(rehearsalProject)}));
  }catch(error:any){let cause=error;while(cause?.cause)cause=cause.cause;failure=String(cause);throw new Error(failure);}
- finally{store.authenticatedProjectCommand(signLocalOperator(root,{id:'character-roster-pause',principal,project_id:rehearsalProject,action:'pause',value:1,reason:'End bounded cast reference stage; preserve progress'}));writeFileSync(join(dir,'roster-proof.json'),JSON.stringify({status:failure?'BLOCKED':'PASS',diagnostic:failure??null,result,allowance:store.allowance(rehearsalProject),paused:true,invoice_charges:null},null,2),{flag:'wx',mode:0o600});store.close();assertPreserved(preserved,manifest.saved_production_hashes);}
+ finally{store.authenticatedProjectCommand(signLocalOperator(root,{id:'character-roster-pause',principal,project_id:rehearsalProject,action:'pause',value:1,reason:'End bounded cast reference stage; preserve progress'}));writeFileSync(join(dir,'roster-proof.json'),JSON.stringify({status:failure?'BLOCKED':'PASS',diagnostic:failure??null,result,allowance:store.allowance(rehearsalProject),paused:true,invoice_charges:null},null,2),{flag:'wx',mode:0o600});store.close();assertPreserved(manifest.source,manifest.saved_production_hashes);}
 }
 if(process.argv[1]&&resolve(process.argv[1])===import.meta.filename)await runCharacterRoster(resolve(process.argv[2]),resolve(process.argv[3]));
 
@@ -86,7 +87,8 @@ export async function finishCharacterRoster(root:string,kit:string) {
   const db=new DatabaseSync(join(root,'studio.sqlite'),{readOnly:true});let evidence:string[];try{evidence=(db.prepare("SELECT id FROM inspections WHERE ticket_id=? AND attempt_id=? AND content_hash=? AND status='INSPECTION_COMPLETED'").all(t.id,t.attempt_id,sha256) as any[]).map(r=>r.id);}finally{db.close();}if(!evidence.length)throw new Error('EXISTING_COMPLETED_INSPECTION_REQUIRED');
   writeFileSync(marker,JSON.stringify({at:new Date().toISOString(),candidate_hash:sha256,author:t.worker_id,mechanical_fix_only:true}),{flag:'wx',mode:0o600});
   store.authenticatedProjectCommand(signLocalOperator(root,{id:'character-roster-validation-resume',principal,project_id:rehearsalProject,action:'resume',value:0,reason:'Finish unchanged agent-authored, already inspected roster after deterministic inherited-input validator fix; no additional author calls'}));
-  if(t.lease_until<=Date.now())ctx=store.claim(t.id,t.worker_id,300000);else store.heartbeat(ctx,300000);
+  if(t.lease_until<=Date.now())ctx=store.claim(t.id,'harness-override',300000);else store.heartbeat(ctx,300000);
+  store.harnessOverride(signLocalOperator(root, {id:`harness-override-${t.id}-fix`, principal, project_id:rehearsalProject, action:'harness_override' as const, ticket_id:t.id, attempt_id:ctx.attemptId, reason:'Director-authorized mechanical fix for candidate validation'}));
   store.publish(ctx,{draft_path:'candidate.json',evidence_references:evidence,validated_hash});
   startMemoirReview(store,t.id,'rehearsal-roster-review',120000,undefined,{maxTurns:12,maxAttempts:3});const reviewer=store.claim('rehearsal-roster-review','independent-gemini-cast-reviewer',300000),traces=await tracing();
   result=await runGeminiMediaReviewer(store,reviewer,{key:await namedSecret('GEMINI_API_KEY'),references:{approvedScript:script,confirmedDirectorDirection:confirmed.references.map((r:any)=>({id:r.character_id,direction:r.direction})),outcome:JSON.parse(store.memoirAssignment(t.id)!.packet).outcome},traceClient:traces.client});
@@ -111,6 +113,7 @@ export async function runCharacterCandidates(root:string,kit:string, repairTicke
   const confirmed=JSON.parse(readFileSync(join(dir,'confirmed-references.json'),'utf8'));
   if(store.project(rehearsalProject).paused!==1)throw new Error('REHEARSAL_MUST_BE_PAUSED');writeFileSync(repairTicket||resumeTicket?join(dir,'candidates'+stageSuffix+'-started.json'):marker,JSON.stringify({auth,roster_version:rosterVersion.id,started_at:new Date().toISOString(),repair_ticket:repairTicket??null,resume_ticket:resumeTicket??null}),{flag:'wx',mode:0o600});
   store.authenticatedProjectCommand(signLocalOperator(root,{id:'character-candidates-resume'+stageSuffix,principal,project_id:rehearsalProject,action:'resume',value:0,reason:auth.operator_message}));
+  store.registerCrewWorker(rehearsalProject, 'cast-designer', 'deepagents-cast-designer');
   const traces=await tracing(),key=await namedSecret('OPENROUTER_API_KEY'),geminiKey=await namedSecret('GEMINI_API_KEY');
   const remaining=()=>{const amount=budget.allowance_micros-(store.allowance(rehearsalProject).used-budget.baseline_used_micros);if(amount<=0)throw new Error('CHARACTER_BATCH_CAP_EXHAUSTED');return amount;};
   const baseInputs=Object.fromEntries(['answers','script','narration','roster'].map(k=>[k,store.ticket('rehearsal-'+k).candidate_id]));

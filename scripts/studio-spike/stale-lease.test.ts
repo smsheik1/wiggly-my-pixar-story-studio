@@ -17,7 +17,7 @@ test("a WORKING ticket with an expired lease gets swept", async () => {
   store.operator("p1", "resume", 0, { id: randomUUID(), actor: "test", reason: "start" });
   store.setInput("p1", "asset", "v1");
   store.createTicket("t1", "p1", "my-role", { asset: "v1" }, 1000000);
-  const lease = store.claim("t1", "w1", 5000);
+  const lease = (store.ticket("t1").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("t1").project_id,store.ticket("t1").role, "w1"),store.claim("t1", "w1", 5000));
   assert.ok(lease);
 
   // Expire the lease
@@ -50,7 +50,7 @@ test("a live lease is untouched by the sweep", async () => {
   store.operator("p1", "resume", 0, { id: randomUUID(), actor: "test", reason: "start" });
   store.setInput("p1", "asset", "v1");
   store.createTicket("t1", "p1", "my-role", { asset: "v1" }, 1000000);
-  const lease = store.claim("t1", "w1", 5000);
+  const lease = (store.ticket("t1").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("t1").project_id,store.ticket("t1").role, "w1"),store.claim("t1", "w1", 5000));
   assert.ok(lease);
 
   // Still active lease (now is 1000, lease until 6000)
@@ -73,12 +73,12 @@ test("a swept ticket can't be claimed (TICKET_ALREADY_CLAIMED)", async () => {
   store.operator("p1", "resume", 0, { id: randomUUID(), actor: "test", reason: "start" });
   store.setInput("p1", "asset", "v1");
   store.createTicket("t1", "p1", "my-role", { asset: "v1" }, 1000000);
-  store.claim("t1", "w1", 5000);
+  (store.ticket("t1").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("t1").project_id,store.ticket("t1").role, "w1"),store.claim("t1", "w1", 5000));
 
   now = 7000;
   store.sweepStaleLeases();
 
-  assert.throws(() => store.claim("t1", "w2", 5000), /TICKET_ALREADY_CLAIMED/);
+  assert.throws(() => (store.ticket("t1").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("t1").project_id,store.ticket("t1").role, "w2"),store.claim("t1", "w2", 5000)), /TICKET_ALREADY_CLAIMED/);
   store.close();
 });
 
@@ -92,7 +92,7 @@ test("signed recovery keeps attempt_id AND the real worker_turns rows", async ()
   store.operator("p1", "resume", 0, { id: randomUUID(), actor: "test", reason: "start" });
   store.setInput("p1", "asset", "v1");
   store.createTicket("t1", "p1", "my-role", { asset: "v1" }, 1000000);
-  const lease = store.claim("t1", "w1", 5000);
+  const lease = (store.ticket("t1").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("t1").project_id,store.ticket("t1").role, "w1"),store.claim("t1", "w1", 5000));
 
   // Record at least one real turn before lease expires
   store.beginTurn(lease, "turn-1");
@@ -142,7 +142,7 @@ test("after recovery, calling sweepStaleLeases() again sweeps nothing, and a NEW
   store.operator("p1", "resume", 0, { id: randomUUID(), actor: "test", reason: "start" });
   store.setInput("p1", "asset", "v1");
   store.createTicket("t1", "p1", "my-role", { asset: "v1" }, 1000000);
-  const lease1 = store.claim("t1", "w1", 5000);
+  const lease1 = (store.ticket("t1").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("t1").project_id,store.ticket("t1").role, "w1"),store.claim("t1", "w1", 5000));
 
   now = 7000;
   store.sweepStaleLeases();
@@ -164,7 +164,7 @@ test("after recovery, calling sweepStaleLeases() again sweeps nothing, and a NEW
   assert.deepEqual(sweptAgain, []);
 
   // A NEW worker can claim the ticket and gets the same attempt_id
-  const lease2 = store.claim("t1", "w2", 5000);
+  const lease2 = (store.ticket("t1").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("t1").project_id,store.ticket("t1").role, "w2"),store.claim("t1", "w2", 5000));
   assert.ok(lease2);
   assert.equal(lease2.workerId, "w2");
   assert.equal(lease2.attemptId, lease1.attemptId);

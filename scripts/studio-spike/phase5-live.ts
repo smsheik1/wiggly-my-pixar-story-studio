@@ -11,7 +11,7 @@ import { ToolMessage, HumanMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import { provisionLocalOperator, signLocalOperator } from '../../lib/studio-operator.js';
 import { StudioProduction, type WorkerLease } from '../../lib/studio-production.js';
-import { askActiveAgent } from '../../lib/agent-bridge.js';
+
 import { publicationTool, productionMiddleware } from './production-tools.js';
 import { workspaceAgent, hash } from './harness.js';
 import { dispatchAssignments } from './dispatch.js';
@@ -39,6 +39,7 @@ export function workerReviewPacket(packet:any){return {...packet,candidate_path:
 export function inspectionResult(bytes:Buffer, text:string, toolCallId:string){return new Command({update:{messages:[new ToolMessage({content:text,tool_call_id:toolCallId}),new HumanMessage({content:[{type:'text',text:'Actual candidate image returned by inspect_candidate.'},{type:'image_url',image_url:{url:'data:image/webp;base64,'+bytes.toString('base64')}}]})]}});}
 const receipts:any[]=[], wire:any[]=[];let store:StudioProduction;
 async function worker(ctx:WorkerLease, reviewer:boolean, openRouter = false){
+ if(!reviewer){const t=store.ticket(ctx.ticketId);store.registerCrewWorker(t.project_id,t.role,ctx.workerId);}
  const modelName=openRouter?'deepseek/deepseek-v4.1-flash':'moonshotai/kimi-k3', provider=openRouter?'openrouter':'nvidia-nim';
  const mount=dirname(store.draftDirectory(ctx)),runId=randomUUID(),name=reviewer?'independent-review':'background-author';
  for(const dir of ['references','versions',`skills/${name}`])await mkdir(join(mount,dir),{recursive:true});
@@ -95,7 +96,8 @@ async function worker(ctx:WorkerLease, reviewer:boolean, openRouter = false){
  const agent=workspaceAgent(model,mount,modelName,ctx.workerId,reviewer?[inspect,reviewFinish]:[...(recovery?[]:[generate]),inspect,finishInspection,publicationTool(store,ctx)],'Operate only this assignment. Load its skill. Inspect actual bytes. No shell, delegation, substitute providers or director approval.',[productionMiddleware(store,ctx)]);
  const started=Date.now();
  try{
-  await askActiveAgent(reviewer?'Independently review the exact candidate. The authoritative packet is supplied here; load your skill and inspect actual bytes before submitting findings: '+JSON.stringify(workerReviewPacket(store.reviewPacket(ctx.ticketId))):recovery?'Recover the already generated /drafts/candidate.webp: load the skill and /references/prior-generation.json, inspect_candidate, finish_inspection and submit_candidate. Generation is not exposed or authorized again.':'Create the background according to your skill. One image call is authorized within the isolated $5 test allowance.',{operatingAgent:prompt=>agent.invoke({messages:[{role:'user',content:prompt}]},{runId,callbacks:[tracer],recursionLimit:40,signal:AbortSignal.timeout(240000),metadata:{phase:5,ticket:ctx.ticketId,production:false,repair_attempt:repair,reasoning_effort:repair===3?'high':'max'}})});
+  const systemPrompt = reviewer?'Independently review the exact candidate. The authoritative packet is supplied here; load your skill and inspect actual bytes before submitting findings: '+JSON.stringify(workerReviewPacket(store.reviewPacket(ctx.ticketId))):recovery?'Recover the already generated /drafts/candidate.webp: load the skill and /references/prior-generation.json, inspect_candidate, finish_inspection and submit_candidate. Generation is not exposed or authorized again.':'Create the background according to your skill. One image call is authorized within the isolated $5 test allowance.';
+  await agent.invoke({messages:[{role:'user',content:systemPrompt}]},{runId,callbacks:[tracer],recursionLimit:40,signal:AbortSignal.timeout(240000),metadata:{phase:5,ticket:ctx.ticketId,production:false,repair_attempt:repair,reasoning_effort:repair===3?'high':'max'}});
   assert.equal(store.ticket(ctx.ticketId).status,'SUBMITTED','Worker did not submit');await client.awaitPendingTraceBatches();assert.deepEqual(failures,[]);
   const trace=await client.readRun(runId,{loadChildRuns:true});for(const media of delivered)assert.ok(!JSON.stringify(trace).includes(media),'Media leaked into LangSmith');
   const receipt={ticket:ctx.ticketId,run_id:runId,elapsed_ms:Date.now()-started,usage,trace_url:await client.getRunUrl({run:trace}),submitted:true};receipts.push(receipt);await writeFile(join(mount,'worker-receipt.json'),JSON.stringify(receipt,null,2));
@@ -190,7 +192,7 @@ async function openRouterMain(){
  for(const [name,trial,unknown]of [['unknown','25572b68-ea79-4af8-83df-37c9092cc821',true],['passed','d597c077-5045-4556-8366-bb8974c00a3d',false]] as const){
   if(routedRecovery)continue;
   const report=JSON.parse(await readFile(join(import.meta.dirname,'output/deepseek-phase5-probe',trial,'report.json'),'utf8')),ticket='openrouter-probe-'+name;
-  store.createTicket(ticket,'phase5','capability-probe',{},750000,'AUTHOR');const ctx=store.claim(ticket,ticket,300000),op='openrouter-probe-'+trial;
+  store.createTicket(ticket,'phase5','capability-probe',{},750000,'AUTHOR');store.registerCrewWorker('phase5','capability-probe',ticket);const ctx=store.claim(ticket,ticket,300000),op='openrouter-probe-'+trial;
   store.prepareOperation(ctx,{operationId:op,provider:'openrouter',requestHash:hash(Buffer.from(JSON.stringify(report))),estimateMicros:750000});store.startOperation(ctx,op);
   if(unknown)store.failOperation(op,'Imported actual connection-error trial: billing unknown; retain reservation and provider slot');
   else{store.completeOperation(op,{result:{artifactReferences:[join(import.meta.dirname,'output/deepseek-phase5-probe',trial,'report.json')]},actualAllowanceMicros:Math.ceil(report.reported_cost_usd*1e6),providerUsage:report.usage});

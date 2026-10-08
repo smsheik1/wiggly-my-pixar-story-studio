@@ -36,7 +36,7 @@ export class StudioProduction {
     mkdirSync(root, { recursive: true }); this.root = realpathSync(root);
     this.#db = new DatabaseSync(join(this.root, "studio.sqlite"));
     this.#db.exec("PRAGMA busy_timeout=5000");
-    requireThat([0, 1, 2, 3, 4, 5].includes(this.#get("PRAGMA user_version")!.user_version), "UNSUPPORTED_STUDIO_SCHEMA");
+    requireThat([0, 1, 2, 3, 4, 5, 6].includes(this.#get("PRAGMA user_version")!.user_version), "UNSUPPORTED_STUDIO_SCHEMA");
     this.#db.exec(`PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
       CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY, paused INTEGER NOT NULL DEFAULT 1 CHECK(paused IN (0,1)), allowance INTEGER NOT NULL CHECK(allowance>=0)) STRICT;
       CREATE TABLE IF NOT EXISTS operator_decisions(id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id), actor TEXT NOT NULL, action TEXT NOT NULL, value INTEGER NOT NULL, reason TEXT NOT NULL, at INTEGER NOT NULL) STRICT;
@@ -89,6 +89,15 @@ export class StudioProduction {
         CREATE TABLE policy_acceptances(version_id TEXT PRIMARY KEY REFERENCES versions(id),policy TEXT NOT NULL,validation TEXT NOT NULL,at INTEGER NOT NULL) STRICT;
         PRAGMA user_version=5;`);
     });
+    this.#tx(() => {
+      if (this.#get("PRAGMA user_version")!.user_version < 6) {
+        this.#db.exec(`
+          CREATE TABLE crew_registry(project_id TEXT NOT NULL REFERENCES projects(id), role TEXT NOT NULL, worker_id TEXT NOT NULL, registered_at INTEGER NOT NULL, PRIMARY KEY(project_id,role,worker_id)) STRICT;
+          CREATE TABLE harness_overrides(ticket_id TEXT NOT NULL REFERENCES tickets(id), attempt_id TEXT NOT NULL, actor TEXT NOT NULL, reason TEXT NOT NULL, at INTEGER NOT NULL, command_id TEXT NOT NULL UNIQUE, PRIMARY KEY(ticket_id,attempt_id)) STRICT;
+          PRAGMA user_version=6;
+        `);
+      }
+    });
     for (const dir of ["assignments", "versions", "publication-staging"]) { mkdirSync(join(this.root, dir), { recursive: true }); requireThat(realpathSync(join(this.root, dir)) === join(this.root, dir), "WORKSPACE_SYMLINK"); }
   }
   close() { this.#db.close(); }
@@ -109,6 +118,33 @@ export class StudioProduction {
   #run(sql: string, ...args: SQLInputValue[]) { return this.#db.prepare(sql).run(...args); }
   #tx<T>(body: () => T): T { this.#db.exec("BEGIN IMMEDIATE"); try { const result = body(); this.#db.exec("COMMIT"); return result; } catch (error) { this.#db.exec("ROLLBACK"); throw error; } }
   project(projectId: string) { const row = this.#get("SELECT * FROM projects WHERE id=?", projectId); requireThat(row, "PROJECT_NOT_FOUND"); return row!; }
+
+  registerCrewWorker(projectId: string, role: string, workerId: string) {
+    id(projectId); id(role); id(workerId);
+    this.project(projectId);
+    this.#run("INSERT OR IGNORE INTO crew_registry(project_id, role, worker_id, registered_at) VALUES (?, ?, ?, ?)", projectId, role, workerId, this.now());
+  }
+  crewRegistry(projectId: string) {
+    return this.#db.prepare("SELECT * FROM crew_registry WHERE project_id=? ORDER BY registered_at ASC").all(projectId) as any[];
+  }
+  harnessOverride(command: SignedOperatorCommand<OperatorPayload & { action: "harness_override"; ticket_id: string; attempt_id: string; reason: string }>) {
+    const p = authenticateOperator(this.root, command);
+    const serialized = commandJSON(p);
+    id(p.id);
+    requireThat(p.action === "harness_override" && typeof p.reason === "string" && p.reason.trim().length >= 10, "INVALID_HARNESS_OVERRIDE");
+    return this.#tx(() => {
+      requireThat(!this.#get("SELECT id FROM director_commands WHERE id=?", p.id), "HARNESS_OVERRIDE_REPLAY");
+      const t = this.ticket(p.ticket_id);
+      requireThat(t.project_id === p.project_id && t.kind === "AUTHOR" && t.status === "WORKING" && t.attempt_id === p.attempt_id, "STALE_HARNESS_OVERRIDE");
+      this.#run("INSERT INTO harness_overrides(ticket_id, attempt_id, actor, reason, at, command_id) VALUES (?, ?, ?, ?, ?, ?)", t.id, p.attempt_id, p.principal, p.reason.trim(), this.now(), p.id);
+      this.#saveCommand(command, serialized, { harness_override: p.id, ticket_id: t.id, attempt_id: p.attempt_id });
+      return this.#get("SELECT * FROM harness_overrides WHERE ticket_id=? AND attempt_id=?", t.id, p.attempt_id);
+    });
+  }
+  harnessOverrides(ticketId: string) {
+    return this.#db.prepare("SELECT * FROM harness_overrides WHERE ticket_id=? ORDER BY at ASC").all(ticketId) as any[];
+  }
+
   ticket(ticketId: string) { const row = this.#get("SELECT * FROM tickets WHERE id=?", ticketId); requireThat(row, "TICKET_NOT_FOUND"); return row!; }
   operation(operationId: string) { const row = this.#get("SELECT * FROM operations WHERE id=?", operationId); requireThat(row, "OPERATION_NOT_FOUND"); return row!; }
   version(versionId: string) { const row = this.#get("SELECT * FROM versions WHERE id=?", versionId); requireThat(row, "VERSION_NOT_FOUND"); return row!; }
@@ -486,7 +522,9 @@ export class StudioProduction {
   publish(ctx: WorkerLease, request: { draft_path: string; evidence_references: string[]; validated_hash?: string }) {
     let bytes: Buffer, intent: Row;
     this.#tx(() => {
-      const t = this.#lease(ctx, true); requireThat(t.kind === "AUTHOR", "AUTHOR_ASSIGNMENT_REQUIRED"); bytes = this.#draftBytes(ctx, request.draft_path); const contentHash = sha(bytes); requireThat(!this.memoirAssignment(t.id) || request.validated_hash === contentHash, "FORMAT_VALIDATION_REQUIRED"); requireThat(request.validated_hash === undefined || request.validated_hash === contentHash, "DRAFT_CHANGED_AFTER_VALIDATION"); this.#evidence(ctx, request.evidence_references, contentHash);
+      const t = this.#lease(ctx, true); requireThat(t.kind === "AUTHOR", "AUTHOR_ASSIGNMENT_REQUIRED");
+      requireThat(!!this.#get("SELECT 1 FROM crew_registry WHERE project_id=? AND role=? AND worker_id=?", t.project_id, t.role, ctx.workerId) || !!this.#get("SELECT 1 FROM harness_overrides WHERE ticket_id=? AND attempt_id=?", ctx.ticketId, ctx.attemptId), "UNREGISTERED_CREW_WORKER");
+      bytes = this.#draftBytes(ctx, request.draft_path); const contentHash = sha(bytes); requireThat(!this.memoirAssignment(t.id) || request.validated_hash === contentHash, "FORMAT_VALIDATION_REQUIRED"); requireThat(request.validated_hash === undefined || request.validated_hash === contentHash, "DRAFT_CHANGED_AFTER_VALIDATION"); this.#evidence(ctx, request.evidence_references, contentHash);
       const evidence = json([...request.evidence_references].sort());
       const previous = this.#get("SELECT * FROM publication_intents WHERE ticket_id=? AND attempt_id=?", ctx.ticketId, ctx.attemptId);
       if (previous) { requireThat(previous.content_hash === contentHash && previous.inputs === t.inputs && previous.evidence === evidence, "PUBLICATION_REPLAY_CONFLICT"); intent = previous; }

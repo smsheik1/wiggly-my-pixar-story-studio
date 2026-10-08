@@ -26,7 +26,7 @@ function fixture(run: (store: StudioProduction) => void) {
 function publish(store: StudioProduction, id: string, kind: string, criteria = ["continuity"]) {
   store.createTicket(id, "film", "artist", {}, 0);
   store.bindMemoirAssignment(id, kind, criteria);
-  const lease = store.claim(id, `author-${id}`, 1000);
+  const lease = (store.ticket(id).kind==='AUTHOR'&&store.registerCrewWorker(store.ticket(id).project_id,store.ticket(id).role, `author-${id}`),store.claim(id, `author-${id}`, 1000));
   const bytes = Buffer.from(`EXPLICIT MOCK ${id}`);
   writeFileSync(join(store.draftDirectory(lease), "candidate.json"), bytes);
   const evidence = store.mediaSupplied(lease, bytes, { runId: "mock", model: "mock", modality: "text", coverage: "complete" });

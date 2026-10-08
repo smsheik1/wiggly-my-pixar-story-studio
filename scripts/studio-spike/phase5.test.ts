@@ -47,7 +47,7 @@ test("atomic provider slots survive restart and uncertainty; confirmed settlemen
 }));
 
 test("provider waiting submits each request once and respects one slot across two workers", async () => fixture(async s => {
-  const contexts = [s.claim("a", "one", 60000), s.claim("b", "two", 60000)];
+  const contexts = [(s.ticket("a").kind==='AUTHOR'&&s.registerCrewWorker(s.ticket("a").project_id,s.ticket("a").role, "one"),s.claim("a", "one", 60000)), (s.ticket("b").kind==='AUTHOR'&&s.registerCrewWorker(s.ticket("b").project_id,s.ticket("b").role, "two"),s.claim("b", "two", 60000))];
   let active = 0, peak = 0, calls = 0;
   await Promise.all(contexts.map(ctx => s.executeOperation(ctx, request(ctx.ticketId), async () => {
     peak = Math.max(peak, ++active); calls++; await delay(35); active--;
@@ -57,7 +57,7 @@ test("provider waiting submits each request once and respects one slot across tw
 }));
 
 test("pause prevents waiting operation from starting while retaining its intent", async () => fixture(async s => {
-  const a = s.claim("a", "one", 60000), b = s.claim("b", "two", 60000);
+  const a = (s.ticket("a").kind==='AUTHOR'&&s.registerCrewWorker(s.ticket("a").project_id,s.ticket("a").role, "one"),s.claim("a", "one", 60000)), b = (s.ticket("b").kind==='AUTHOR'&&s.registerCrewWorker(s.ticket("b").project_id,s.ticket("b").role, "two"),s.claim("b", "two", 60000));
   s.prepareOperation(a, request("a")); s.startOperation(a, "a"); let calls = 0;
   const waiting = s.executeOperation(b, request("b"), async () => { calls++; return { completed: { result: { artifactReferences: [] } } }; }, String, AbortSignal.timeout(5000));
   s.operator("p", "pause", 1, { id: "pause", actor: "mock-director", reason: "Pause local test" });
@@ -71,7 +71,7 @@ test("bounded dispatch overlaps two independent publications and preserves their
     const bytes = Buffer.from(`EXPLICIT_MOCK_${ctx.ticketId}`); writeFileSync(join(s.draftDirectory(ctx), "plate.txt"), bytes);
     const e = s.mediaSupplied(ctx, bytes, { runId: ctx.ticketId, model: "mock", modality: "text", coverage: "complete" });
     s.inspectionCompleted(ctx, e, `Explicit mock complete findings for assignment ${ctx.ticketId}`);
-    s.publish(ctx, { draft_path: "plate.txt", evidence_references: [e] }); active--;
+    s.registerCrewWorker(s.ticket(ctx.ticketId).project_id, s.ticket(ctx.ticketId).role, ctx.workerId); s.publish(ctx, { draft_path: "plate.txt", evidence_references: [e] }); active--;
   });
   assert.equal(peak, 2); assert.equal(result.receipts.length, 4); assert.ok(result.receipts.every(r => r.status === "SUBMITTED"));
   assert.equal(new Set(result.receipts.map(r => s.ticket(r.ticket).candidate_id)).size, 4);
@@ -110,7 +110,7 @@ test("NIM rejects missing required tool, truncation, and unknown/invalid tool ca
 
 test("provider pacing is durable across connections and cannot be bypassed by another worker", async () => fixture(async (s, root) => {
   s.configureConcurrency("p", 2, { mock: 2 }, { mock: 10000 });
-  const a = s.claim("a", "one", 60000), b = s.claim("b", "two", 60000);
+  const a = (s.ticket("a").kind==='AUTHOR'&&s.registerCrewWorker(s.ticket("a").project_id,s.ticket("a").role, "one"),s.claim("a", "one", 60000)), b = (s.ticket("b").kind==='AUTHOR'&&s.registerCrewWorker(s.ticket("b").project_id,s.ticket("b").role, "two"),s.claim("b", "two", 60000));
   s.prepareOperation(a, request("a")); s.prepareOperation(b, request("b")); s.startOperation(a, "a");
   s.completeOperation("a", { result: { artifactReferences: [] } });
   const next = s.providerCapacity("mock").nextAllowedAt; assert.ok(next > Date.now());
@@ -120,7 +120,7 @@ test("provider pacing is durable across connections and cannot be bypassed by an
 }));
 
 test("a reserved waiting operation cannot start after another operation overruns the project cap", async () => fixture(async s => {
-  const a = s.claim("a", "one", 60000), b = s.claim("b", "two", 60000);
+  const a = (s.ticket("a").kind==='AUTHOR'&&s.registerCrewWorker(s.ticket("a").project_id,s.ticket("a").role, "one"),s.claim("a", "one", 60000)), b = (s.ticket("b").kind==='AUTHOR'&&s.registerCrewWorker(s.ticket("b").project_id,s.ticket("b").role, "two"),s.claim("b", "two", 60000));
   s.prepareOperation(a, request("a")); s.prepareOperation(b, request("b")); s.startOperation(a, "a");
   s.completeOperation("a", { result: { artifactReferences: [] }, actualAllowanceMicros: 1000 });
   assert.throws(() => s.startOperation(b, "b"), /ALLOWANCE_EXCEEDED/); assert.equal(s.operation("b").state, "INTENT");
@@ -216,7 +216,7 @@ test("authenticated rejected-call recovery preserves reservations, turn history,
  const {provisionLocalOperator,signLocalOperator}=await import('../../lib/studio-operator.js');
  const principal=provisionLocalOperator(root);
  s.createTicket('recovery','p','reviewer',{},1000,'REVIEWER',{maxTurns:4,maxAttempts:1});
- const old=s.claim('recovery','old-reviewer',300000);
+ const old=(s.ticket('recovery').kind==='AUTHOR'&&s.registerCrewWorker(s.ticket('recovery').project_id,s.ticket('recovery').role,'old-reviewer'),s.claim('recovery','old-reviewer',300000));
  for(let n=1;n<=3;n++)s.beginTurn(old,'turn-'+n);
  s.prepareOperation(old,request('rejected',100));s.startOperation(old,'rejected');s.failOperation('rejected','HTTP 400: image unsupported');
  const payload={id:'authorized-recovery',principal,project_id:'p',action:'extend_limits' as const,ticket_id:'recovery',expected_revision:s.ticket('recovery').revision,reason:'Explicit mock director recovery',max_turns:6,recover_rejected_operation:{operation_id:'rejected',request_id:'gen-rejected',evidence_reference:'isolated mock rejection receipt'}};
@@ -224,7 +224,7 @@ test("authenticated rejected-call recovery preserves reservations, turn history,
  const signed=signLocalOperator(root,payload),result=s.authorizeLimits(signed);
  assert.deepEqual(s.authorizeLimits(signed),result);
  assert.equal(s.allowance('p').used,100);assert.equal(s.operation('rejected').settled_at,null);
- const current=s.claim('recovery','new-reviewer',300000);assert.equal(current.attemptId,old.attemptId);
+ const current=(s.ticket('recovery').kind==='AUTHOR'&&s.registerCrewWorker(s.ticket('recovery').project_id,s.ticket('recovery').role,'new-reviewer'),s.claim('recovery','new-reviewer',300000));assert.equal(current.attemptId,old.attemptId);
  assert.throws(()=>s.beginTurn(old,'stale'),/STALE_WORKER/);
  assert.throws(()=>s.prepareOperation(current,request('rejected',100)),/RECONCILE_INSTEAD_OF_RESUBMIT/);
  s.prepareOperation(current,request('intentional-new-call',100));assert.equal(s.allowance('p').used,200);
@@ -233,7 +233,7 @@ test("authenticated rejected-call recovery preserves reservations, turn history,
 }));
 
 test("operator recovery cannot declare a connection error a rejected request",async()=>fixture(async(s,root)=>{
- const {provisionLocalOperator,signLocalOperator}=await import('../../lib/studio-operator.js');const principal=provisionLocalOperator(root),ctx=s.claim('a','worker',300000);
+ const {provisionLocalOperator,signLocalOperator}=await import('../../lib/studio-operator.js');const principal=provisionLocalOperator(root),ctx=(s.ticket('a').kind==='AUTHOR'&&s.registerCrewWorker(s.ticket('a').project_id,s.ticket('a').role,'worker'),s.claim('a','worker',300000));
  s.prepareOperation(ctx,request('unknown',100));s.startOperation(ctx,'unknown');s.failOperation('unknown','Connection error: submission outcome unknown');
  assert.throws(()=>s.authorizeLimits(signLocalOperator(root,{id:'wrong-recovery',principal,project_id:'p',action:'extend_limits' as const,ticket_id:'a',expected_revision:s.ticket('a').revision,reason:'Explicit isolated mock negative test',max_turns:10,recover_rejected_operation:{operation_id:'unknown',request_id:'invented',evidence_reference:'mock'}})),/REJECTED_OPERATION_REQUIRED/);
  assert.equal(s.ticket('a').status,'BLOCKED');assert.equal(s.operation('unknown').settled_at,null);assert.equal(s.providerCapacity('mock').used,1);
@@ -242,21 +242,21 @@ test("operator recovery cannot declare a connection error a rejected request",as
 
 test("explicit rejected 429 recovery needs no artificial limit increase or invented provider ID",async()=>fixture(async(s,root)=>{
  const {provisionLocalOperator,signLocalOperator}=await import('../../lib/studio-operator.js');const principal=provisionLocalOperator(root);
- s.createTicket('rate-limited','p','author',{},1000,'AUTHOR',{maxTurns:12});const old=s.claim('rate-limited','worker',300000);s.beginTurn(old,'turn-1');
+ s.createTicket('rate-limited','p','author',{},1000,'AUTHOR',{maxTurns:12});const old=(s.ticket('rate-limited').kind==='AUTHOR'&&s.registerCrewWorker(s.ticket('rate-limited').project_id,s.ticket('rate-limited').role,'worker'),s.claim('rate-limited','worker',300000));s.beginTurn(old,'turn-1');
  s.prepareOperation(old,request('rate-limit',100));s.startOperation(old,'rate-limit');s.failOperation('rate-limit','OpenRouter HTTP 429: upstream provider overloaded');
  const payload={id:'same-budget-recovery',principal,project_id:'p',action:'extend_limits' as const,ticket_id:'rate-limited',expected_revision:s.ticket('rate-limited').revision,reason:'Explicit isolated recovery with same-model failover',recover_rejected_operation:{operation_id:'rate-limit',evidence_reference:'explicit mock HTTP 429 diagnostic receipt'}};
  const result=s.authorizeLimits(signLocalOperator(root,payload));assert.equal(result.status,'WORKING');assert.equal(s.ticket('rate-limited').max_turns,12);assert.equal(s.ticket('rate-limited').allowance,1000);assert.equal(s.operation('rate-limit').request_id,null);assert.equal(s.operation('rate-limit').settled_at,null);assert.equal(s.allowance('p').used,100);
- const current=s.claim('rate-limited','worker',300000);assert.equal(current.attemptId,old.attemptId);assert.throws(()=>s.heartbeat(old,300000),/STALE/);
+ const current=(s.ticket('rate-limited').kind==='AUTHOR'&&s.registerCrewWorker(s.ticket('rate-limited').project_id,s.ticket('rate-limited').role,'worker'),s.claim('rate-limited','worker',300000));assert.equal(current.attemptId,old.attemptId);assert.throws(()=>s.heartbeat(old,300000),/STALE/);
 }));
 
 
 test('safe worker exit releases its lease while preserving attempt and turn history',async()=>fixture(async(s)=>{
- const old=s.claim('a','worker',300000);s.beginTurn(old,'turn-1');s.releaseLease(old);assert.throws(()=>s.heartbeat(old,300000),/STALE/);const current=s.claim('a','next-worker',300000);assert.equal(current.attemptId,old.attemptId);s.prepareOperation(current,request('in-flight',100));s.startOperation(current,'in-flight');assert.throws(()=>s.releaseLease(current),/UNCERTAIN_OPERATION/);
+ const old=(s.ticket('a').kind==='AUTHOR'&&s.registerCrewWorker(s.ticket('a').project_id,s.ticket('a').role,'worker'),s.claim('a','worker',300000));s.beginTurn(old,'turn-1');s.releaseLease(old);assert.throws(()=>s.heartbeat(old,300000),/STALE/);const current=(s.ticket('a').kind==='AUTHOR'&&s.registerCrewWorker(s.ticket('a').project_id,s.ticket('a').role,'next-worker'),s.claim('a','next-worker',300000));assert.equal(current.attemptId,old.attemptId);s.prepareOperation(current,request('in-flight',100));s.startOperation(current,'in-flight');assert.throws(()=>s.releaseLease(current),/UNCERTAIN_OPERATION/);
 }));
 
 
 test('explicit HTTP 400 rejection without a provider ID can recover with reservation retained',async()=>fixture(async(s,root)=>{
- const {provisionLocalOperator,signLocalOperator}=await import('../../lib/studio-operator.js');const principal=provisionLocalOperator(root),old=s.claim('a','worker',300000);
+ const {provisionLocalOperator,signLocalOperator}=await import('../../lib/studio-operator.js');const principal=provisionLocalOperator(root),old=(s.ticket('a').kind==='AUTHOR'&&s.registerCrewWorker(s.ticket('a').project_id,s.ticket('a').role,'worker'),s.claim('a','worker',300000));
  s.prepareOperation(old,request('rejected-400',100));s.startOperation(old,'rejected-400');s.failOperation('rejected-400','Gemini HTTP 400: explicit mock request rejected before a provider ID');
  s.authorizeLimits(signLocalOperator(root,{id:'recover-400',principal,project_id:'p',action:'extend_limits' as const,ticket_id:'a',expected_revision:s.ticket('a').revision,reason:'Explicit isolated authenticated recovery',recover_rejected_operation:{operation_id:'rejected-400',evidence_reference:'explicit mock HTTP rejection receipt'}}));
  assert.equal(s.providerCapacity('mock').used,0);assert.equal(s.operation('rejected-400').request_id,null);assert.equal(s.operation('rejected-400').settled_at,null);assert.equal(s.allowance('p').used,100);assert.equal(s.ticket('a').status,'WORKING');

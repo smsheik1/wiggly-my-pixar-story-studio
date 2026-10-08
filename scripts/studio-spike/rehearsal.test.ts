@@ -17,7 +17,7 @@ function fixture(allowance = 100000) {
   const root = mkdtempSync(join(tmpdir(), "wiggly-rehearsal-explicit-mock-")), store = new StudioProduction(root);
   store.createProject("mock", allowance); store.operator("mock", "resume", 0, { id: "resume", actor: "explicit-isolated-test", reason: "Isolated mock, no production authority" });
   store.createTicket("worker", "mock", "inspector", {}, allowance, "AUTHOR", { maxTurns: 12, maxAttempts: 3 });
-  const ctx = store.claim("worker", "mock-inspector", 300000), path = join(root, "image.png");
+  const ctx = (store.ticket("worker").kind==='AUTHOR'&&store.registerCrewWorker(store.ticket("worker").project_id,store.ticket("worker").role, "mock-inspector"),store.claim("worker", "mock-inspector", 300000)), path = join(root, "image.png");
   execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "color=c=red:s=320x180", "-frames:v", "1", path]);
   const bytes = readFileSync(path); const file = { path, bytes: bytes.length, sha256: hash(bytes), width: 320, height: 180 };
   const key = join(root, "mock-secrets.env"); writeFileSync(key, "GEMINI_API_KEY=EXPLICIT_MOCK_KEY\n");
