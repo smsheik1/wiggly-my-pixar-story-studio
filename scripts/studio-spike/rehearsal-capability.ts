@@ -50,6 +50,7 @@ export async function runCapability(root: string, kit: string, authorizationPath
   const started = join(root, "capability-started.json");
   if (existsSync(started)) throw new Error("CAPABILITY_ALREADY_STARTED_NO_AUTOMATIC_RETRY");
   const fixtures = await prepareCapability(root, kit), store = new StudioProduction(root), principal = provisionLocalOperator(root), traces = await tracing();
+  store.sweepStaleLeases();
   if (store.project(rehearsalProject).allowance !== 0 || store.project(rehearsalProject).paused !== 1) { store.close(); throw new Error("CAPABILITY_SCOPE_OR_BUDGET_RESET"); }
   const records: any[] = []; let errorText: string | undefined;
   writeFileSync(started, JSON.stringify({ at: new Date().toISOString(), authorization, quote }), { flag: "wx", mode: 0o600 });
@@ -84,6 +85,7 @@ export async function recoverCapabilityTraces(root: string) {
   if (proof.status !== "BLOCKED" || proof.diagnostic !== "Error: LANGSMITH_HTTP_404" || proof.records.length !== 3) throw new Error("EXACT_TRACE_RECOVERY_REQUIRED");
   const target = join(root, "capability-trace-recovery.json"); if (existsSync(target)) throw new Error("TRACE_RECOVERY_ALREADY_RECORDED");
   const store = new StudioProduction(root);
+  store.sweepStaleLeases();
   try {
     if (store.project(rehearsalProject).paused !== 1 || JSON.stringify(store.allowance(rehearsalProject)) !== JSON.stringify(proof.allowance)) throw new Error("TRACE_RECOVERY_STATE_CHANGED");
     const fixtures = JSON.parse(readFileSync(join(root, "capability-fixtures/fixtures.json"), "utf8")), traces = await tracing();

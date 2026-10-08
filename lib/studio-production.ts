@@ -92,6 +92,19 @@ export class StudioProduction {
     for (const dir of ["assignments", "versions", "publication-staging"]) { mkdirSync(join(this.root, dir), { recursive: true }); requireThat(realpathSync(join(this.root, dir)) === join(this.root, dir), "WORKSPACE_SYMLINK"); }
   }
   close() { this.#db.close(); }
+  sweepStaleLeases(): string[] {
+    return this.#tx(() => {
+      const ts = this.now();
+      const swept: string[] = [];
+      const stale = this.#db.prepare("SELECT id, project_id FROM tickets WHERE status='WORKING' AND lease_until <= ?").all(ts) as {id: string, project_id: string}[];
+      for (const t of stale) {
+        this.#run("UPDATE tickets SET status='BLOCKED', blocked_reason='STALE_LEASE', blocked_from='WORKING', revision=revision+1 WHERE id=?", t.id);
+        this.#run("INSERT INTO operator_decisions(id, project_id, actor, action, value, reason, at) VALUES(?,?,?,?,?,?,?)", randomUUID(), t.project_id, "studio-startup", "sweep_stale", 0, t.id, ts);
+        swept.push(t.id);
+      }
+      return swept;
+    });
+  }
   #get(sql: string, ...args: SQLInputValue[]) { return this.#db.prepare(sql).get(...args) as Row | undefined; }
   #run(sql: string, ...args: SQLInputValue[]) { return this.#db.prepare(sql).run(...args); }
   #tx<T>(body: () => T): T { this.#db.exec("BEGIN IMMEDIATE"); try { const result = body(); this.#db.exec("COMMIT"); return result; } catch (error) { this.#db.exec("ROLLBACK"); throw error; } }
@@ -396,9 +409,9 @@ export class StudioProduction {
       const t = this.ticket(p.ticket_id); requireThat(t.project_id === p.project_id && t.revision === p.expected_revision, "STALE_LIMIT_EXTENSION");
       const limits = { max_attempts: p.max_attempts ?? t.max_attempts, max_strikes: p.max_strikes ?? t.max_strikes, max_turns: p.max_turns ?? t.max_turns, allowance: p.allowance_micros ?? t.allowance };
       for (const [key, value] of Object.entries(limits)) requireThat(Number.isSafeInteger(value) && value >= t[key] && (key === "allowance" ? value >= 0 : value > 0), "LIMITS_CANNOT_DECREASE");
-      requireThat(p.recover_rejected_operation || Object.entries(limits).some(([key, value]) => value > t[key]), "EXTENSION_MUST_INCREASE");
+      requireThat(p.recover_rejected_operation || t.blocked_reason === "STALE_LEASE" || Object.entries(limits).some(([key, value]) => value > t[key]), "EXTENSION_MUST_INCREASE");
       let status = t.status;
-      if (t.status === "BLOCKED" && ((t.blocked_reason === "TURN_LIMIT" && limits.max_turns > t.max_turns) || (t.blocked_reason === "ATTEMPT_LIMIT" && limits.max_attempts > t.attempt_count) || (t.blocked_reason === "REPEATED_FAILURE" && limits.max_strikes > t.strike_count))) status = t.blocked_from;
+      if (t.status === "BLOCKED" && ((t.blocked_reason === "TURN_LIMIT" && limits.max_turns > t.max_turns) || (t.blocked_reason === "ATTEMPT_LIMIT" && limits.max_attempts > t.attempt_count) || (t.blocked_reason === "REPEATED_FAILURE" && limits.max_strikes > t.strike_count) || t.blocked_reason === "STALE_LEASE")) status = t.blocked_from;
       // An authenticated operator may recover a definitively rejected request while billing remains reserved.
       const recovery = p.recover_rejected_operation;
       if (recovery) {

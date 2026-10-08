@@ -18,6 +18,7 @@ export async function runStory(root: string, kit: string, authorizationPath: str
   const marker=join(dir,'started.json');if(existsSync(marker))throw new Error('BATCH_ALREADY_STARTED_NO_AUTOMATIC_RETRY');
   const manifest=JSON.parse(readFileSync(join(root,'manifest.json'),'utf8'));assertPreserved(manifest.source,manifest.saved_production_hashes);
   const format=await loadMemoirFormat(kit), store=new StudioProduction(root),principal=provisionLocalOperator(root);
+  store.sweepStaleLeases();
   const results:any[]=[];let failure:string|undefined;
   try{
     if(store.project(rehearsalProject).paused!==1)throw new Error('REHEARSAL_MUST_BE_PAUSED');

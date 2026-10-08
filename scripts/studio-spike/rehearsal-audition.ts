@@ -21,6 +21,7 @@ export async function runAudition(root:string,kit:string){
  if(continuation){const proof=JSON.parse(readFileSync(join(dir,authorContinuation?'audition-continuation-proof.json':'audition-proof.json'),'utf8'));if(proof.diagnostic!==(authorContinuation?'Error: DRAFT_PATH_REQUIRED':'Error: INSPECTION_REQUIRED')||existsSync(join(dir,continuationTag+'-started.json')))throw new Error('AUDITION_ALREADY_STARTED_NO_AUTOMATIC_RETRY');}
  const manifest=JSON.parse(readFileSync(join(root,'manifest.json'),'utf8'));assertPreserved(manifest.source,manifest.saved_production_hashes);
  const format=await loadMemoirFormat(kit),providers=await import(pathToFileURL(join(kit,'runtime/providers.mjs')).href),store=new StudioProduction(root),principal=provisionLocalOperator(root);
+ store.sweepStaleLeases();
  const findings:any[]=[];let errorText:string|undefined;
  try{
   const answer=store.ticket('rehearsal-answers');store.acceptedVersion(rehearsalProject,answer.candidate_id);

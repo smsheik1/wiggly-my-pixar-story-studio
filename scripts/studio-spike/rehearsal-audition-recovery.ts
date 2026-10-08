@@ -17,6 +17,7 @@ export async function recoverAudition(root:string,kit:string,authorizationPath:s
  if(receipt.provider_status!==499||receipt.output_available!==false||receipt.operation_id!=='3028ec7d-0d33-4f59-86f9-3ca72204eca8')throw new Error('TERMINAL_TIMEOUT_RECEIPT_REQUIRED');
  const manifest=JSON.parse(readFileSync(join(root,'manifest.json'),'utf8'));assertPreserved(manifest.source,manifest.saved_production_hashes);
  const format=await loadMemoirFormat(kit),store=new StudioProduction(root),principal=provisionLocalOperator(root),db=new DatabaseSync(join(root,'studio.sqlite'),{readOnly:true});
+ store.sweepStaleLeases();
  let failure:string|undefined,result:any;
  try{
   const ticket=store.ticket(auth.review_id),packet=store.reviewPacket(ticket.id),turns=(db.prepare('SELECT COUNT(*) AS n FROM worker_turns WHERE ticket_id=? AND attempt_id=?').get(ticket.id,ticket.attempt_id) as any).n;

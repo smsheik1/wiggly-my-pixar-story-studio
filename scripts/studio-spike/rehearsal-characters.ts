@@ -21,6 +21,7 @@ export async function runCharacterRoster(root:string,kit:string) {
  const group=JSON.parse(readFileSync(join(dir,'group-reference-selection.json'),'utf8'));
  if(hash(readFileSync(group.source))!==group.sha256||!group.age_direction_confirmed)throw new Error('CONFIRMED_REFERENCE_CHANGED');
  const format=await loadMemoirFormat(kit),store=new StudioProduction(root),principal=provisionLocalOperator(root);let failure:string|undefined,result:any;
+ store.sweepStaleLeases();
  try {
   if(store.project(rehearsalProject).paused!==1)throw new Error('REHEARSAL_MUST_BE_PAUSED');
   writeFileSync(marker,JSON.stringify({auth,at:new Date().toISOString()}),{flag:'wx',mode:0o600});
@@ -73,6 +74,7 @@ export async function finishCharacterRoster(root:string,kit:string) {
  if(auth.quote_sha256!==hash(Buffer.from(JSON.stringify(quote)))||auth.allowance_micros!==2000000)throw new Error('EXACT_CHARACTER_BATCH_AUTHORIZATION_REQUIRED');
  const marker=join(dir,'roster-validation-finish-started.json');if(existsSync(marker))throw new Error('ROSTER_FINISH_ALREADY_STARTED');
  const format=await loadMemoirFormat(kit),store=new StudioProduction(root),principal=provisionLocalOperator(root);let failure:string|undefined,result:any;
+ store.sweepStaleLeases();
  try {
   const t=store.ticket('rehearsal-roster');if(t.status!=='WORKING')throw new Error('EXISTING_UNFINISHED_ROSTER_REQUIRED');
   let ctx={ticketId:t.id,workerId:t.worker_id,token:t.token,attemptId:t.attempt_id};
@@ -100,6 +102,7 @@ export async function runCharacterCandidates(root:string,kit:string, repairTicke
  const dir=join(root,'character-style'),quote=JSON.parse(readFileSync(join(dir,'quote.json'),'utf8')),auth=JSON.parse(readFileSync(join(dir,'authorization.json'),'utf8')),budget=JSON.parse(readFileSync(join(dir,'batch-budget.json'),'utf8'));
  if(auth.quote_sha256!==hash(Buffer.from(JSON.stringify(quote)))||auth.allowance_micros!==budget.allowance_micros||auth.allowance_micros!==2000000)throw new Error('EXACT_CHARACTER_BATCH_AUTHORIZATION_REQUIRED');
  const format=await loadMemoirFormat(kit),providers=await import(pathToFileURL(join(kit,'runtime/providers.mjs')).href),store=new StudioProduction(root),principal=provisionLocalOperator(root),id='rehearsal-roster';let failure:string|undefined;const results:any[]=[];const claimed:any[]=[];
+ store.sweepStaleLeases();
  const marker=join(dir,'candidates-started.json');if(existsSync(marker)&&!(resumeTicket&&['WORKING','APPROVED'].includes(store.ticket(resumeTicket).status))&&(!repairTicket||store.ticket(repairTicket).status!=='CHANGES_REQUESTED')){store.close();throw new Error('CANDIDATES_ALREADY_STARTED_NO_AUTOMATIC_RETRY');}
  const stageSuffix=resumeTicket?'-continuation-'+store.ticket(resumeTicket).revision:repairTicket?'-creative-repair-'+store.ticket(repairTicket).attempt_count:'';
  const resultsPath=join(dir,'candidate-results.json');if(existsSync(resultsPath))results.push(...JSON.parse(readFileSync(resultsPath,'utf8')));
