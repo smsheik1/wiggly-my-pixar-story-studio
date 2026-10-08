@@ -389,9 +389,7 @@ This proves live text editing and independent review, not creative audiovisual q
 or full LangGraph checkpoint replay. Both isolated projects remain paused. Further
 paid trials require authorization.
 
-After a free full proof, run `node --import tsx phase6-render-check.ts <printed-root>`
-to inspect actual MP4 frames across every clip and compare portable-share scene/export
-bytes. The app renderer guardrail is `cd ../../; node --import tsx tests/memoir-render.test.tsx`.
+After a free full proof, automated render flow and parity checks are verified by `npm run test:phase6` (`phase6.test.ts`) (`phase6-render-check.ts` was removed). The app renderer guardrail is `cd ../../; node --import tsx tests/memoir-render.test.tsx`.
 The archived renderer runs in its own locked dependency process; do not import its
 Remotion runtime into the app process, which has a separate existing version.
 

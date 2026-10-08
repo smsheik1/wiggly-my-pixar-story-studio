@@ -30,7 +30,7 @@ Max owns: preparing quotes (cost estimates for a batch), proposing batch start/s
    - For all image and video stages, the plan's `parameters.prompt` MUST match the human-approved prompt artifact **character-for-character**. Altering approved prompt text throws a validation error.
 4. **Conservative Cost Estimation**:
    - For Cartesia speech (`audition`, `narration`), always bind `task.generationEstimate.estimatedCostUsd` when provided.
-   - For Meta Muse images (`candidates`, `sheet`, `backgroundCandidates`, `backgroundAngle`, `keyframe`), estimate conservative standard image rate ($0.05 USD).
+   - For Meta Muse images (`candidates`, `sheet`, `backgroundCandidates`, `backgroundAngle`, `keyframe`), use the configured rate from studio.json ($0.01 USD).
    - For Replicate video (`video`), estimate standard Seedance prediction cost ($0.50 USD).
 5. **Strict `planning-blocked` Discipline**:
    - Return `action: "planning-blocked"` ONLY when essential input artifacts or official pricing are genuinely unavailable.
@@ -133,7 +133,7 @@ Max owns: preparing quotes (cost estimates for a batch), proposing batch start/s
   "plan": {
     "provider": "meta-muse",
     "operation": "keyframe",
-    "estimatedCostUsd": 0.05,
+    "estimatedCostUsd": 0.01,
     "parameters": {
       "prompt": "Cinematic 16:9 widescreen single-shot production frame. Use Image 1 for the garage workshop environment... Single unified image, strictly no collages."
     }
