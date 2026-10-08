@@ -18,6 +18,7 @@ export async function recoverStory(root:string,kit:string,authorizationPath:stri
  const marker=join(dir,'source-recovery-started.json');if(existsSync(marker))throw new Error('RECOVERY_ALREADY_STARTED_NO_RETRY');
  const manifest=JSON.parse(readFileSync(join(root,'manifest.json'),'utf8'));assertPreserved(manifest.source,manifest.saved_production_hashes);
  const format=await loadMemoirFormat(kit),store=new StudioProduction(root),principal=provisionLocalOperator(root),db=new DatabaseSync(join(root,'studio.sqlite'),{readOnly:true});
+ store.sweepStaleLeases();
  let failure:string|undefined,result:any;
  try{
   const ticket=store.ticket(auth.review_id),turns=(db.prepare('SELECT COUNT(*) AS n FROM worker_turns WHERE ticket_id=? AND attempt_id=?').get(ticket.id,ticket.attempt_id) as any).n;

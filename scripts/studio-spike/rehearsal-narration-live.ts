@@ -19,6 +19,7 @@ export async function runNarration(root:string,kit:string,authorizationPath:stri
  const marker=join(dir,'four-beats-started.json');if(existsSync(marker))throw new Error('NARRATION_ALREADY_STARTED_NO_RETRY');
  const manifest=JSON.parse(readFileSync(join(root,'manifest.json'),'utf8'));assertPreserved(manifest.source,manifest.saved_production_hashes);
  const format=await loadMemoirFormat(kit),providers=await import(pathToFileURL(join(kit,'runtime/providers.mjs')).href),store=new StudioProduction(root),principal=provisionLocalOperator(root);
+ store.sweepStaleLeases();
  let failure:string|undefined,result:any;
  try{
   if(store.project(rehearsalProject).paused!==1)throw new Error('REHEARSAL_MUST_BE_PAUSED');

@@ -43,7 +43,7 @@ export async function prepareNarrationBatch(root: string, kit: string) {
     cost_note:'Allowance is a ceiling, not a cash charge. Cartesia consumes included subscription credits first when available; balance and invoices are unverified. Separate usage and verified charges in the scorecard.',
     excluded:['Voice cloning','New image/video generation','Music/effects/lip-sync','Unrelated saved production','Any previous test allowance'],
     gates:['Refresh existing voice metadata before synthesis','Independent reviews must pass','Director recognizes and approves the audition before remaining narration','Inconclusive perception blocks the batch','Exact completed narration requires director approval']};
-  const store=new StudioProduction(root);try {if(store.project(rehearsalProject).paused!==1)throw new Error('REHEARSAL_MUST_BE_PAUSED');}finally{store.close();}
+  const store=new StudioProduction(root);try {store.sweepStaleLeases();if(store.project(rehearsalProject).paused!==1)throw new Error('REHEARSAL_MUST_BE_PAUSED');}finally{store.close();}
   const dir=join(root,'story-narration');mkdirSync(dir,{recursive:true});
   for(const [name,value]of Object.entries({quote,answers,script,'existing-voice-provenance':clone,'generation-plans':jobs})){
     const file=join(dir,name+'.json'),serialized=JSON.stringify(value,null,2);
