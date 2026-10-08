@@ -1,6 +1,6 @@
 import { cpSync, realpathSync, readFileSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join, dirname, basename, extname } from "node:path";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import type { RunnableConfig } from "@langchain/core/runnables";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { askActiveAgent } from "../../lib/agent-bridge.js";
@@ -156,7 +156,13 @@ export function startMemoirReview(store: StudioProduction, authorId: string, rev
   const kind = assignment.kind;
   if (kind === "film" && !filmModality) throw new Error("FILM_REVIEW_MODALITY_REQUIRED");
   const modality = kind === "film" ? filmModality! : memoirReviewModality(kind);
-  return store.startReview(authorId, reviewerId, "independent-reviewer", { criteria: kind === "film" ? memoirFilmReviewCriteria[filmModality!] : JSON.parse(assignment.criteria), modality, coverage: memoirReviewCoverage }, allowanceMicros, limits);
+  const role = modality === "text" ? "text-reviewer" : modality === "audio" ? "audio-reviewer" : (modality === "image" || modality === "video") ? "visual-reviewer" : undefined;
+  if (!role) throw new Error(`UNKNOWN_REVIEWER_ROLE: ${modality}`);
+  const studioConfig = JSON.parse(readFileSync(fileURLToPath(new URL("../../public/format-repositories/my-pixar-story-v1/studio.json", import.meta.url)), "utf8"));
+  if (!studioConfig.reviewers || !Object.prototype.hasOwnProperty.call(studioConfig.reviewers, role)) {
+    throw new Error(`UNKNOWN_REVIEWER_ROLE: ${role}`);
+  }
+  return store.startReview(authorId, reviewerId, role, { criteria: kind === "film" ? memoirFilmReviewCriteria[filmModality!] : JSON.parse(assignment.criteria), modality, coverage: memoirReviewCoverage }, allowanceMicros, limits);
 }
 
 export async function runMemoirReviewer(format: Format, store: StudioProduction, ctx: WorkerLease, model: BaseChatModel, inspectionTools: any[], invokeConfig: RunnableConfig = {}, evidenceReferences?: () => string[], continuationContext = "") {
