@@ -28,7 +28,7 @@ test('prompt review and human lock precede generation; exact prompt and 16:9 pro
 });
 test('extra-hand defect is rejected internally and routes evidence to composition writer',()=>{
  let p=generated();const a=current(p);const checks=criteria.keyframe.map(criterion=>({criterion,status:criterion==='anatomy'?'fail':'pass',evidence:criterion==='anatomy'?'Three hands visible on one person.':'Isolated finding.',location:'right hand at bicycle handle',repair:criterion==='anatomy'?'Remove extra hand; preserve the two hand contacts.':''}));
- p=send(p,'review',{workerId:'visual-reviewer',artifactId:a.id,artifactDigest:a.digest,review:{decision:'rejected',perception:'direct-image',checks}});assert.equal(p.step,'keyframePrompt');assert.equal(p.gate,'author');assert.equal(current(p,'keyframe:home-0-wide'),undefined);assert.match(JSON.stringify(taskFor(p).feedback),/extra hand/);
+ p=send(p,'review',{workerId:'scene-reviewer',artifactId:a.id,artifactDigest:a.digest,review:{decision:'rejected',perception:'direct-image',checks}});assert.equal(p.step,'keyframePrompt');assert.equal(p.gate,'author');assert.equal(current(p,'keyframe:home-0-wide'),undefined);assert.match(JSON.stringify(taskFor(p).feedback),/extra hand/);
 });
 test('generation limit survives prompt revisions for the same approved shot plan',()=>{
  let p=promptLocked();for(let i=0;i<3;i++){p=generated(p);const a=current(p);p=send(p,'changes',{artifactId:a.id,artifactDigest:a.digest,message:'ISOLATED TEST adjust pose'});p=promptLocked(p);}

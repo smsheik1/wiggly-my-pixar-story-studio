@@ -23,7 +23,7 @@ export function assertAllowed(p, kind) {
   if (['reviewerQualification','videoPlan','videoPrompt','video','soundPlan','music','effect','editPlan','film'].includes(kind)) {
     if (!audioLocked(p)) throw new Error('NARRATION_LOCK_REQUIRED (AUDIO_LOCK_REQUIRED compatibility)');
     if (!locked(p,'shots') || !current(p,'shots').content.shots.every(s=>locked(p,`keyframe:${s.id}`))) throw new Error('KEYFRAME_LOCK_REQUIRED: all current keyframes need agent and human approval.');
-    if (!supervised(p) && kind !== 'reviewerQualification' && (!locked(p,'reviewerQualification')||!matchesWorker(p,'visual-reviewer',current(p,'reviewerQualification')?.content))) throw new Error('VISUAL_REVIEWER_NOT_QUALIFIED');
+    if (!supervised(p) && kind !== 'reviewerQualification' && (!locked(p,'reviewerQualification')||!matchesWorker(p,'scene-reviewer',current(p,'reviewerQualification')?.content))) throw new Error('VISUAL_REVIEWER_NOT_QUALIFIED');
     if (['videoPrompt','video'].includes(kind) && !locked(p,'videoPlan')) throw new Error('VIDEO_PLAN_LOCK_REQUIRED');
     if (kind === 'video' && !locked(p,`videoPrompt:${p.clipId}`)) throw new Error('VIDEO_PROMPT_LOCK_REQUIRED');
     if (['music','effect','editPlan','film'].includes(kind) && !locked(p,'soundPlan')) throw new Error('SOUND_PLAN_LOCK_REQUIRED');
