@@ -420,7 +420,8 @@ After explicit human authorization of the exact `capability-batch.json`, a trust
 operator records an authorization file containing `quote_sha256` (the hash of
 JSON.stringify(parsed quote)), `allowance_micros` (200000), and the actual
 `operator_message`. Run `rehearsal-capability.ts run --root <root> --kit <kit>
---authorization <file>` once. This permits only three configured Gemini perception
+--authorization <file>` once. This runs in an isolated diagnostics StudioProduction root
+(`output/diagnostics/<run-id>/`), permits only three configured Gemini perception
 calls, keeps unknown billing outcomes reserved, stops on external errors, links
 LangSmith traces, verifies held-out observations, and pauses on exit. It does not
 permit production generation, additional calls, retries, or migration. Authorization
