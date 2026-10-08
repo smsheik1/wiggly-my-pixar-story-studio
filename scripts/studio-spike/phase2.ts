@@ -13,7 +13,7 @@ import { NimModel } from "./nim-model.js";
 import { nimTransport } from "./nim-transport.js";
 import { namedSecret, tracing, redact, secretsPath } from "./tracing.js";
 
-const canonicalKit = "/Users/shaz/Projects/wiggly/v3/public/format-repositories/my-pixar-story-v1";
+const canonicalKit = resolve(import.meta.dirname, "../../public/format-repositories/my-pixar-story-v1");
 const modelName = "moonshotai/kimi-k3";
 const output = join(import.meta.dirname, "output/phase2");
 const reviewExisting = process.argv.includes("--review-existing");

@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { Client } from "langsmith";
 import { LangChainTracer } from "@langchain/core/tracers/tracer_langchain";
 
-export const secretsPath = "/Users/shaz/Projects/wiggly/secrets.env";
+export const secretsPath = process.env.WIGGLY_SECRETS_FILE || "/Users/shaz/Projects/wiggly/secrets.env";
 export async function namedSecret(name: string) {
   const source = await readFile(secretsPath, "utf8");
   const match = source.match(new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=\\s*(.*)$`, "m"));
