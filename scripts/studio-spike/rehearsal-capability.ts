@@ -13,6 +13,12 @@ import { capabilityQuote, rehearsalProject, assertPreserved } from "./rehearsal.
 import { hash } from "./harness.js";
 import { tracing } from "./tracing.js";
 const exec = promisify(execFile);
+export function capabilityDiagnosticsRoot(runId: string): string {
+  if (typeof runId !== "string" || !/^[a-z0-9][a-z0-9-]*$/.test(runId)) {
+    throw new Error("INVALID_DIAGNOSTICS_RUN_ID");
+  }
+  return resolve(import.meta.dirname, "output", "diagnostics", runId);
+}
 export function traceCapability(client: Client, kind: string, runId: string, invoke: (input: { modality: string; media_hash: string }) => Promise<any>, recovery = false) {
   return traceable(invoke, { id: runId, client, tracingEnabled: true, project_name: "wiggly-memoir-rehearsal", name: recovery ? `saved-capability-receipt-${kind}` : `capability-${kind}`, run_type: "tool", metadata: { production: false, modality: kind, recovered_after_execution: recovery, perception_repeated: false } });
 }
@@ -49,22 +55,35 @@ export async function runCapability(root: string, kit: string, authorizationPath
   if (authorization.quote_sha256 !== hash(Buffer.from(JSON.stringify(quote))) || authorization.allowance_micros !== capabilityQuote.allowance_micros || !authorization.operator_message?.trim()) throw new Error("EXACT_BATCH_AUTHORIZATION_REQUIRED");
   const started = join(root, "capability-started.json");
   if (existsSync(started)) throw new Error("CAPABILITY_ALREADY_STARTED_NO_AUTOMATIC_RETRY");
-  const fixtures = await prepareCapability(root, kit), store = new StudioProduction(root), principal = provisionLocalOperator(root), traces = await tracing();
-  store.sweepStaleLeases();
-  if (store.project(rehearsalProject).allowance !== 0 || store.project(rehearsalProject).paused !== 1) { store.close(); throw new Error("CAPABILITY_SCOPE_OR_BUDGET_RESET"); }
+  const fixtures = await prepareCapability(root, kit);
+
+  const rehearsalStore = new StudioProduction(root);
+  rehearsalStore.sweepStaleLeases();
+  const rehearsalProj = rehearsalStore.project(rehearsalProject);
+  const guardFailed = rehearsalProj.allowance !== 0 || rehearsalProj.paused !== 1;
+  rehearsalStore.close();
+  if (guardFailed) throw new Error("CAPABILITY_SCOPE_OR_BUDGET_RESET");
+
+  const runId = "capability-" + randomUUID();
+  const diagRoot = capabilityDiagnosticsRoot(runId);
+  mkdirSync(diagRoot, { recursive: true });
+  const diagProject = "capability-diagnostics";
+  const store = new StudioProduction(diagRoot), principal = provisionLocalOperator(diagRoot), traces = await tracing();
+  store.createProject(diagProject, 0);
+
   const records: any[] = []; let errorText: string | undefined;
-  writeFileSync(started, JSON.stringify({ at: new Date().toISOString(), authorization, quote }), { flag: "wx", mode: 0o600 });
+  writeFileSync(started, JSON.stringify({ at: new Date().toISOString(), authorization, quote, run_id: runId, diagnostics_root: diagRoot }), { flag: "wx", mode: 0o600 });
   try {
-    store.authenticatedProjectCommand(signLocalOperator(root, { id: "capability-allowance", principal, project_id: rehearsalProject, action: "extend_allowance" as const, value: quote.allowance_micros, reason: authorization.operator_message }));
-    store.authenticatedProjectCommand(signLocalOperator(root, { id: "capability-resume", principal, project_id: rehearsalProject, action: "resume" as const, value: 0, reason: "Only the explicitly authorized three perception fixtures" }));
-    store.createTicket("perception-capability", rehearsalProject, "capability-inspector", {}, quote.allowance_micros, "AUTHOR", { maxTurns: 12, maxAttempts: 1 });
+    store.authenticatedProjectCommand(signLocalOperator(diagRoot, { id: "capability-allowance", principal, project_id: diagProject, action: "extend_allowance" as const, value: quote.allowance_micros, reason: authorization.operator_message }));
+    store.authenticatedProjectCommand(signLocalOperator(diagRoot, { id: "capability-resume", principal, project_id: diagProject, action: "resume" as const, value: 0, reason: "Only the explicitly authorized three perception fixtures" }));
+    store.createTicket("perception-capability", diagProject, "capability-inspector", {}, quote.allowance_micros, "AUTHOR", { maxTurns: 12, maxAttempts: 1 });
     const ctx = store.claim("perception-capability", "live-perception-inspector", 300000);
     const tools = await createSQLPerception({ kit, store, ctx, files: Object.values(fixtures), criteria: ["Describe visible spatial relationships, temporal motion, and any actual spoken words. Do not infer from filenames or invent unavailable perception."], maxCalls: quote.max_calls, estimateMicros: quote.estimate_micros_per_call });
     for (const kind of ["image", "video", "audio"] as const) {
-      store.heartbeat(ctx, 300000); const runId = randomUUID(), start = Date.now();
-      const invoke = traceCapability(traces.client, kind, runId, async () => tools.inspect(kind, fixtures[kind].sha256));
+      store.heartbeat(ctx, 300000); const fixtureRunId = randomUUID(), start = Date.now();
+      const invoke = traceCapability(traces.client, kind, fixtureRunId, async () => tools.inspect(kind, fixtures[kind].sha256));
       const result = await invoke({ modality: kind, media_hash: fixtures[kind].sha256 });
-      records.push({ kind, run_id: runId, elapsed_ms: Date.now() - start, result });
+      records.push({ kind, run_id: fixtureRunId, elapsed_ms: Date.now() - start, result });
       assertCapability(kind, result);
     }
     await traces.client.awaitPendingTraceBatches(); if (traces.failures.length) throw new Error("LANGSMITH_TRACE_UPLOAD_FAILED");
@@ -73,8 +92,8 @@ export async function runCapability(root: string, kit: string, authorizationPath
     for (const record of records) record.trace_url = await traces.client.getRunUrl({ run: await traces.client.readRun(record.run_id) });
   } catch (error) { errorText = String(error); throw error; }
   finally {
-    store.authenticatedProjectCommand(signLocalOperator(root, { id: "capability-pause", principal, project_id: rehearsalProject, action: "pause" as const, value: 1, reason: "End capability test paused; no production media authority" }));
-    writeFileSync(join(root, "capability-proof.json"), JSON.stringify({ status: errorText ? "BLOCKED" : "PASS", diagnostic: errorText ?? null, records, allowance: store.allowance(rehearsalProject), production_media_calls: 0, paused: true, verified_invoice_charges: null }, null, 2), { mode: 0o600, flag: "wx" });
+    store.authenticatedProjectCommand(signLocalOperator(diagRoot, { id: "capability-pause", principal, project_id: diagProject, action: "pause" as const, value: 1, reason: "End capability test paused; no production media authority" }));
+    writeFileSync(join(root, "capability-proof.json"), JSON.stringify({ status: errorText ? "BLOCKED" : "PASS", diagnostic: errorText ?? null, records, allowance: store.allowance(diagProject), production_media_calls: 0, paused: true, verified_invoice_charges: null, run_id: runId, diagnostics_root: diagRoot }, null, 2), { mode: 0o600, flag: "wx" });
     store.close(); assertPreserved(manifest.source, manifest.saved_production_hashes);
   }
   return { status: "PASS", modalities: records.map(r => r.kind), root };
@@ -84,10 +103,12 @@ export async function recoverCapabilityTraces(root: string) {
   const proof = JSON.parse(readFileSync(join(root, "capability-proof.json"), "utf8"));
   if (proof.status !== "BLOCKED" || proof.diagnostic !== "Error: LANGSMITH_HTTP_404" || proof.records.length !== 3) throw new Error("EXACT_TRACE_RECOVERY_REQUIRED");
   const target = join(root, "capability-trace-recovery.json"); if (existsSync(target)) throw new Error("TRACE_RECOVERY_ALREADY_RECORDED");
-  const store = new StudioProduction(root);
-  store.sweepStaleLeases();
+  const isDiag = Boolean(proof.diagnostics_root);
+  const store = new StudioProduction(isDiag ? proof.diagnostics_root : root);
+  if (!isDiag) store.sweepStaleLeases();
+  const projectId = isDiag ? "capability-diagnostics" : rehearsalProject;
   try {
-    if (store.project(rehearsalProject).paused !== 1 || JSON.stringify(store.allowance(rehearsalProject)) !== JSON.stringify(proof.allowance)) throw new Error("TRACE_RECOVERY_STATE_CHANGED");
+    if (store.project(projectId).paused !== 1 || JSON.stringify(store.allowance(projectId)) !== JSON.stringify(proof.allowance)) throw new Error("TRACE_RECOVERY_STATE_CHANGED");
     const fixtures = JSON.parse(readFileSync(join(root, "capability-fixtures/fixtures.json"), "utf8")), traces = await tracing();
     for (const record of proof.records) {
       assertCapability(record.kind, record.result);
@@ -96,7 +117,7 @@ export async function recoverCapabilityTraces(root: string) {
     await traces.client.awaitPendingTraceBatches(); if (traces.failures.length) throw new Error("LANGSMITH_TRACE_UPLOAD_FAILED");
     await new Promise(resolve => setTimeout(resolve, 3000));
     for (const record of proof.records) record.trace_url = await traces.client.getRunUrl({ run: await traces.client.readRun(record.run_id) });
-    writeFileSync(target, JSON.stringify({ status: "PASS_WITH_TRACE_RECOVERY", original_diagnostic: proof.diagnostic, traces_recorded_after_execution: true, additional_perception_calls: 0, records: proof.records, allowance: store.allowance(rehearsalProject), paused: true, verified_invoice_charges: null }, null, 2), { mode: 0o600, flag: "wx" });
+    writeFileSync(target, JSON.stringify({ status: "PASS_WITH_TRACE_RECOVERY", original_diagnostic: proof.diagnostic, traces_recorded_after_execution: true, additional_perception_calls: 0, records: proof.records, allowance: store.allowance(projectId), paused: true, verified_invoice_charges: null }, null, 2), { mode: 0o600, flag: "wx" });
     return { status: "PASS_WITH_TRACE_RECOVERY", additional_perception_calls: 0, paused: true };
   } finally { store.close(); assertPreserved(manifest.source, manifest.saved_production_hashes); }
 }

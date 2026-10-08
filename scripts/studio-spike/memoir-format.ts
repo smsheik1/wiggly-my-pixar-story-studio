@@ -11,6 +11,12 @@ import { publicationTool, productionMiddleware, reviewTool } from "./production-
 export const MEMOIR_PACKAGE_SHA256 = "bb325df5475617628394527945b215de6d92334fb5459ddfeea289530d7a8724";
 export const memoirModels = { writer: "moonshotai/kimi-k3", execution: "deepseek/deepseek-v4.1-flash", imageProvider: "decart/fp4", textBackup: "sail-research/fp4" } as const;
 
+export function assertCrewRole(agents: Record<string, unknown>, role: string): void {
+  if (!Object.prototype.hasOwnProperty.call(agents, role)) {
+    throw new Error(`UNKNOWN_CREW_ROLE: ${role}`);
+  }
+}
+
 /** Reuse the installed official Format. Never apply events to its legacy coordinator. */
 export async function loadMemoirFormat(kit: string) {
   const load = (name: string) => import(pathToFileURL(join(kit, "runtime", `${name}.mjs`)).href);
@@ -75,6 +81,7 @@ export function approvedProjection(format: Format, store: StudioProduction, proj
 }
 export function createMemoirAssignment(format: Format, store: StudioProduction, options: { id: string; projectId: string; kind: string; role: string; outcome: string; inputs: InputVersions; selectors?: Record<string, string>; allowanceMicros?: number; limits?: Partial<TicketLimits>; existingVoice?: any; preferredScript?: any }) {
   const { id, projectId, kind, role, outcome, inputs } = options;
+  assertCrewRole(format.config.agents, role);
   for (const [key, value] of Object.entries(options.selectors ?? {})) if (!["characterId", "locationId", "angleId", "shotId", "clipId", "effectId"].includes(key) || !/^[a-z][a-z0-9-]*$/.test(value)) throw new Error("INVALID_MEMOIR_SELECTOR");
   if (!format.contracts.Content[kind] || !format.contracts.criteria[kind] || !outcome.trim()) throw new Error("INVALID_MEMOIR_ASSIGNMENT");
   const projection = approvedProjection(format, store, projectId, inputs, kind, options.selectors);
@@ -84,7 +91,6 @@ export function createMemoirAssignment(format: Format, store: StudioProduction, 
     if (options.existingVoice.origin?.kind !== "existing") throw new Error("EXISTING_VOICE_PROVENANCE_REQUIRED");
   }
   const worker = format.config.agents[role];
-  if (!worker) throw new Error("UNKNOWN_MEMOIR_ROLE");
   const skill = readFileSync(join(format.kit, worker.skill), "utf8");
   store.createMemoirTicket(id, projectId, role, inputs, options.allowanceMicros ?? 0, kind, format.contracts.criteria[kind], { outcome, asset_key: format.workflow.keyFor(projection), selectors: options.selectors ?? {}, skill, skill_sha256: hash(Buffer.from(skill)), skill_name: basename(dirname(worker.skill)), tools: worker.tools, model: role === "script-writer" ? memoirModels.writer : memoirModels.execution, lip_sync: false, ...(options.preferredScript ? { preferred_script: options.preferredScript } : {}), ...(options.existingVoice ? { existing_voice: options.existingVoice } : {}) }, options.limits);
   return store.ticket(id);
@@ -162,6 +168,7 @@ export function startMemoirReview(store: StudioProduction, authorId: string, rev
   if (!studioConfig.reviewers || !Object.prototype.hasOwnProperty.call(studioConfig.reviewers, role)) {
     throw new Error(`UNKNOWN_REVIEWER_ROLE: ${role}`);
   }
+  assertCrewRole(studioConfig.agents, role);
   return store.startReview(authorId, reviewerId, role, { criteria: kind === "film" ? memoirFilmReviewCriteria[filmModality!] : JSON.parse(assignment.criteria), modality, coverage: memoirReviewCoverage }, allowanceMicros, limits);
 }
 
