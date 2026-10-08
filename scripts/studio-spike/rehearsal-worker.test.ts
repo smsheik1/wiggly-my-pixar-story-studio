@@ -9,7 +9,6 @@ import { workspaceAgent } from './harness.js';
 import { productionMiddleware, publicationTool } from './production-tools.js';
 function fixture(allowance=100000, inputs:Record<string,string>={}) {
   const root = mkdtempSync(join(tmpdir(), 'wiggly-explicit-rehearsal-worker-mock-')), store = new StudioProduction(root);
-  store.sweepStaleLeases();
   store.createProject('mock', allowance); store.operator('mock','resume',0,{id:'resume',actor:'isolated-test',reason:'No real provider or creative acceptance'});
   for(const [name,version] of Object.entries(inputs))store.setInput('mock',name,version);
   store.createTicket('author','mock','test-author',inputs,100000,'AUTHOR',{maxTurns:12});

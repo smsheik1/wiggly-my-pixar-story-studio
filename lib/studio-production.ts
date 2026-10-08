@@ -424,6 +424,7 @@ export class StudioProduction {
         status = "WORKING"; // claim keeps this attempt and its existing turn history, and fences the old worker.
       }
       this.#run("UPDATE tickets SET max_attempts=?,max_strikes=?,max_turns=?,allowance=?,status=?,blocked_reason=?,blocked_from=?,revision=revision+1 WHERE id=?", limits.max_attempts, limits.max_strikes, limits.max_turns, limits.allowance, status, status === "BLOCKED" ? t.blocked_reason : null, status === "BLOCKED" ? t.blocked_from : null, t.id);
+      if (t.status === "BLOCKED" && t.blocked_reason === "STALE_LEASE" && status === "WORKING") this.#run("UPDATE tickets SET lease_until=NULL,token=token+1 WHERE id=?", t.id);
       const result = { command_id: p.id, ticket_id: t.id, status, revision: t.revision + 1, limits, ...(recovery ? { recovered_operation_id: recovery.operation_id, billing_reservation_retained: this.operation(recovery.operation_id).settled_at === null } : {}) }; this.#saveCommand(command, serialized, result); return result;
     });
   }
