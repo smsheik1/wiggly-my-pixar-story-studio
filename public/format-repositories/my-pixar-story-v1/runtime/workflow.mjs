@@ -31,7 +31,7 @@ const location = p => current(p, 'backgrounds')?.content.locations.find(l => l.i
 const briefKey = p => `${p.step === 'backgroundAnglePrompt' ? 'backgroundAngleBrief' : 'backgroundBrief'}:${p.locationId}${p.step === 'backgroundAnglePrompt' ? ':' + p.angleId : ''}`;
 const promptKey = p => `${p.step === 'backgroundAngle' ? 'backgroundAnglePrompt' : 'backgroundPrompt'}:${p.locationId}${p.step === 'backgroundAngle' ? ':' + p.angleId : ''}`;
 const isPrompt = p => ['backgroundPrompt', 'backgroundAnglePrompt'].includes(p.step);
-const audioEditingEnabled=p=>studioFor(p)?.config.agents['film-editor'].tools.includes('renderAudioEdit');
+const audioEditingEnabled=p=>studioFor(p)?.config.agents['voice-director'].tools.includes('renderAudioEdit');
 export function initialProject(id, inputs, options = {}) {
   const workflowRevision=options.workflowRevision ?? (options.reviewMode==='qualified'?2:4),studio=options.studio??loadStudio();
   return Project.parse({ formatVersion: VERSION, schemaVersion: 2, studio, workflowRevision, productionProfile:options.productionProfile??studio.config.generation.video.profile, id, reviewMode:options.reviewMode ?? 'supervised', budget:{maxCostUsd:studio.config.limits.initialSpendCeilingUsd,reservations:[]}, inputs: Inputs.parse(inputs), step: workflowRevision>=3?'answers':'script', gate: 'author', characterId: null,
@@ -267,7 +267,7 @@ export function taskFor(p) {
     planningGuide:p.gate==='produce'&&p.step!=='film'?planningAccountGuide(p):null,
     generationEstimate:p.gate==='produce'?generationEstimate(p):null,
     generationTexts:['audition','narration'].includes(p.step)?{scriptId:current(p,'script').id,scriptDigest:current(p,'script').digest,beats:narrationGenerationTexts(p),...(p.narrationRegeneration?{regeneration:p.narrationRegeneration}:{})}:null,
-    voiceReference:['audio-reviewer','film-editor'].includes(roleFor(p))?current(p,'voiceSample')??null:null,voiceChoice:p.voiceChoice??null,voiceBasis:voiceBasis(p),
+    voiceReference:['audio-reviewer','voice-director'].includes(roleFor(p))?current(p,'voiceSample')??null:null,voiceChoice:p.voiceChoice??null,voiceBasis:voiceBasis(p),
     role: p.gate === 'review' ? 'independent-reviewer' : p.gate==='author'&&p.step==='videoPlan'?'motion-director':p.gate==='author'&&p.step==='videoPrompt'?'video-prompt-engineer':p.gate==='author'&&p.step==='soundPlan'?'sound-designer':p.gate==='author'&&p.step==='editPlan'?'film-editor': p.gate === 'author' && ['shotIntentions','shots'].includes(p.step) ? 'shot-planner' : p.gate === 'author' && p.step === 'keyframePrompt' ? 'composition-writer' : p.gate === 'owner-review' || ['backgrounds', 'backgroundBrief', 'backgroundAngleBrief'].includes(p.step) ? 'background-product-owner' : isPrompt(p) && p.gate === 'author' ? 'pixar-prompter' : 'orchestrator',
     immediateScenes: sceneLocation?.scenes.filter(s => shot ? s.id === shot.sceneId : !p.angleId || sceneLocation.angles.find(a => a.id === p.angleId)?.sceneIds.includes(s.id)) ?? [],
     lockedAnswers:current(p,'answers')??null,
@@ -389,7 +389,7 @@ export function applyEvent(project, raw) {
     const a=current(p);
     if(!e.message||!p.studio||p.step!=='narration'||a?.review?.decision!=='rejected'||a.approvedBy||!locked(p,'script')||!locked(p,'audition')||p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status))||!['author','escalate'].includes(p.gate)||p.reviewDisagreements>=limitsFor(p).reviewDisagreements)throw new Error('AUDIO_EDIT_START_DENIED: explicitly enable editing only for rejected, unlocked narration with reconciled jobs and remaining attempts.');
     const next=loadStudio(),config=structuredClone(p.studio.config),documents={...p.studio.documents};
-    config.agents['film-editor'].tools=[...new Set([...config.agents['film-editor'].tools,'listenAudio','transcribe','inspectAudio','renderAudioEdit'])];
+    config.agents['voice-director'].tools=[...new Set([...config.agents['voice-director'].tools,'listenAudio','transcribe','inspectAudio','renderAudioEdit'])];
     for(const path of ['crew/eli/SKILL.md','crew/ava/SKILL.md','evaluation/rubrics/audio.md'])documents[path]=next.documents[path];
     p.studio={config,documents,sha256:digest({config,documents})};p.gate='author';if(p.debug?.enabled)p.debug.paused=true;
   }else if(e.action==='refresh-audio-instructions'){
