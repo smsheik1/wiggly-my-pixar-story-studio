@@ -115,6 +115,6 @@ test('script revision preserves the sample and clone and resumes at audition aft
 test('audio timing rejection tries a local repair before script changes or regeneration', () => {
   let p = audioProject(); p.step = 'narration'; p.gate = 'review';
   delete current(p).approvedBy;const scriptId=current(p,'script').id;
-  p = reviewed(p, 'rejected', { repairTarget: 'script' }); assert.equal(p.gate, 'author');assert.equal(taskFor(p).formatRole,'film-editor');assert.equal(current(p,'script').id,scriptId);
+  p = reviewed(p, 'rejected', { repairTarget: 'script' }); assert.equal(p.gate, 'author');assert.equal(taskFor(p).formatRole,'voice-director');assert.equal(current(p,'script').id,scriptId);
   assert.throws(() => send(p, 'plan', { plan: { provider: 'cartesia', operation: 'narration', estimatedCostUsd: 0.1, parameters: {} } }), /not allowed/);
 });

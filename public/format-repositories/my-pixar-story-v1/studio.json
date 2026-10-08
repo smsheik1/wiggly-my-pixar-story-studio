@@ -145,6 +145,19 @@
         "readAsset",
         "viewImage"
       ]
+    },
+    "voice-director": {
+      "name": "Nora",
+      "model": "gpt-5.6-sol",
+      "skill": "crew/nora/SKILL.md",
+      "tools": [
+        "readAsset",
+        "listenAudio",
+        "measureAudio",
+        "transcribe",
+        "inspectAudio",
+        "renderAudioEdit"
+      ]
     }
   },
   "generation": {

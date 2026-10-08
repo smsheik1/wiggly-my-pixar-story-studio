@@ -39,7 +39,7 @@ export function removedRanges(file,plan){let end=0;const cuts=[];for(const r of 
 export function createAudioEditTools({runDir}){
  const rendering=new Map();
  return {inspectAudio:async({file})=>inspectAudio(file),renderAudioEdit:async({file,task,worker,edit})=>{
-  if(task.step!=='narration'||task.gate!=='author'||worker.role!=='film-editor'||task.artifact?.review?.decision!=='rejected'||task.artifact.approvedBy)throw new Error('AUDIO_EDIT_SCOPE_DENIED: only the assigned editor may repair current unapproved rejected narration.');
+  if(task.step!=='narration'||task.gate!=='author'||worker.role!=='voice-director'||task.artifact?.review?.decision!=='rejected'||task.artifact.approvedBy)throw new Error('AUDIO_EDIT_SCOPE_DENIED: only the assigned editor may repair current unapproved rejected narration.');
   const beat=task.artifact.content.files.findIndex(f=>f.sha256===file.sha256)+1;
   if(!beat)throw new Error('AUDIO_EDIT_SOURCE_INVALID: use a current narration stem, not a voice reference.');
   await verifyFiles(file);const {plan,retainedSeconds}=validateAudioEdit(file,edit);

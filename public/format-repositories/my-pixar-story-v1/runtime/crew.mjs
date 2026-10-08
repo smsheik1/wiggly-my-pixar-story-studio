@@ -16,7 +16,7 @@ export const Crew=z.object({workers:z.array(z.object({workerId:text,name:text,ro
  if(Object.keys(crewRoles).some(role=>!crew.workers.some(w=>w.role===role)))ctx.addIssue({code:'custom',message:'Assign every format role; missing workers cannot silently fall back.'});
 });
 export function roleFor(p){
- if(p.step==='narration'&&p.gate==='author')return 'film-editor';
+ if(p.step==='narration'&&p.gate==='author')return 'voice-director';
  if(p.gate==='owner-review')return 'background-product-owner';
  if(p.gate==='review')return p.step==='film'?(reviewPassed(p.artifacts.findLast(a=>a.key==='film'&&a.valid)?.visualReview)?'audio-reviewer':'visual-reviewer'):['audition','narration','music','effect'].includes(p.step)?'audio-reviewer':['candidates','sheet','backgroundCandidates','backgroundAngle','keyframe','video'].includes(p.step)?'visual-reviewer':'text-reviewer';
  if(p.gate==='produce')return 'generation-planner';
@@ -45,7 +45,7 @@ export function crewTools(task,worker,adapters={},record=()=>{}){
   if(name==='readAsset')return {file,bytes:await readFile(file.path)};
   if(name==='measureAudio'){if(!file.durationSeconds||file.width)throw new Error('Expected an audio-only file.');return measureAudio(file);}
   if(['inspectAudio','renderAudioEdit'].includes(name)){
-   if(task.step!=='narration'||task.gate!=='author'||worker.role!=='film-editor'||!task.artifact?.content.files.some(f=>f.sha256===file.sha256))throw new Error('AUDIO_EDIT_SCOPE_DENIED');
+   if(task.step!=='narration'||task.gate!=='author'||worker.role!=='voice-director'||!task.artifact?.content.files.some(f=>f.sha256===file.sha256))throw new Error('AUDIO_EDIT_SCOPE_DENIED');
    if(name==='renderAudioEdit'&&(!observed.has(`listenAudio:${file.sha256}`)||!observed.has(`inspectAudio:${file.sha256}`)))throw new Error('AUDIO_EDIT_LISTEN_REQUIRED: actually listen and inspect this source before choosing cuts.');
    if(name==='renderAudioEdit'&&parameters.edit?.kind==='pronunciation-repair'&&!observed.has(`wordTiming:${file.sha256}`))throw new Error('AUDIO_EDIT_WORD_TIMING_REQUIRED: inspect actual word-timed transcription before cutting speech.');
    if(!adapters[name])throw new Error('CAPABILITY_UNAVAILABLE: connect the local audio editor.');
@@ -59,13 +59,13 @@ export function crewTools(task,worker,adapters={},record=()=>{}){
   if(['listenAudio','transcribe'].includes(name)&&(!file.durationSeconds||(file.width&&!(await probe(file.path)).hasAudio)))throw new Error('Expected an audible file.');
   if(!adapters[name])throw new Error(`CAPABILITY_UNAVAILABLE: host must connect actual ${name}; file access/metadata are insufficient.`);
   const result=await adapters[name]({file,worker,task});
-  if(name==='transcribe'){const transcript=z.object({transcript:text,method:text,words:z.array(z.object({word:text,start:z.number().nonnegative(),end:z.number().nonnegative()})).optional()}).passthrough().parse(result);if(transcript.words?.some(w=>w.end<w.start||w.end>file.durationSeconds+.1))throw new Error('STT_RESPONSE_MISMATCH: word timing must describe the current audio.');if(worker.role==='film-editor'&&task.step==='narration'&&task.gate==='author'&&!transcript.words?.length)throw new Error('STT_WORD_TIMING_UNAVAILABLE: editor transcription returned no word times. Preserve its receipt and repair timing output; this is a tool limitation, not proof speech cannot be edited.');return transcript;}
+  if(name==='transcribe'){const transcript=z.object({transcript:text,method:text,words:z.array(z.object({word:text,start:z.number().nonnegative(),end:z.number().nonnegative()})).optional()}).passthrough().parse(result);if(transcript.words?.some(w=>w.end<w.start||w.end>file.durationSeconds+.1))throw new Error('STT_RESPONSE_MISMATCH: word timing must describe the current audio.');if(worker.role==='voice-director'&&task.step==='narration'&&task.gate==='author'&&!transcript.words?.length)throw new Error('STT_WORD_TIMING_UNAVAILABLE: editor transcription returned no word times. Preserve its receipt and repair timing output; this is a tool limitation, not proof speech cannot be edited.');return transcript;}
   if(name==='viewImage')return z.object({perception:z.literal('direct-image')}).passthrough().parse(result);
   const perceived=z.object({perception:z.literal(name==='watchVideo'?'direct-video':'direct-audio'),seconds:z.number().positive()}).passthrough().parse(result);
-  if(name==='listenAudio'&&worker.role==='film-editor'&&task.step==='narration'&&task.gate==='author'&&perceived.seconds+.02<file.durationSeconds)throw new Error('AUDIO_EDIT_LISTEN_REQUIRED: complete source listening required.');
+  if(name==='listenAudio'&&worker.role==='voice-director'&&task.step==='narration'&&task.gate==='author'&&perceived.seconds+.02<file.durationSeconds)throw new Error('AUDIO_EDIT_LISTEN_REQUIRED: complete source listening required.');
   return perceived;
  };
- return async(name,parameters={})=>{try{const value=await execute(name,parameters);observed.add(`${name}:${parameters.sha256}`);if(name==='transcribe'&&value.words?.length)observed.add(`wordTiming:${parameters.sha256}`);record({tool:name,sha256:parameters.sha256,referenceSha256:parameters.referenceSha256,seconds:value.seconds,...(value.provider?{provider:value.provider,modelVersion:value.modelVersion,requestDigest:value.requestDigest,receiptPath:value.receiptPath,samplingFps:value.samplingFps}: {})},value);return value;}catch(error){if(task.step==='narration'&&task.gate==='author'&&worker.role==='film-editor'&&['listenAudio','inspectAudio','transcribe'].includes(name))error.stopDispatch=true;throw error;}};
+ return async(name,parameters={})=>{try{const value=await execute(name,parameters);observed.add(`${name}:${parameters.sha256}`);if(name==='transcribe'&&value.words?.length)observed.add(`wordTiming:${parameters.sha256}`);record({tool:name,sha256:parameters.sha256,referenceSha256:parameters.referenceSha256,seconds:value.seconds,...(value.provider?{provider:value.provider,modelVersion:value.modelVersion,requestDigest:value.requestDigest,receiptPath:value.receiptPath,samplingFps:value.samplingFps}: {})},value);return value;}catch(error){if(task.step==='narration'&&task.gate==='author'&&worker.role==='voice-director'&&['listenAudio','inspectAudio','transcribe'].includes(name))error.stopDispatch=true;throw error;}};
 }
 export async function prepareCrewTask(p,task){
  const expected=taskFor(p);

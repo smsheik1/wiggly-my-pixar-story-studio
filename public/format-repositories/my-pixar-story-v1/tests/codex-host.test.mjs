@@ -99,10 +99,10 @@ test('bounded driver preserves SQLite task state and stops for human and product
 });
 
 test('partial crew initialization retains durable roles and never blindly repeats uncertain initialization',async()=>{
- const dir=await mkdtemp(join(tmpdir(),'memoir-crew-partial-')),mock=fixture({failStartAt:15}),host=new CodexHost({cwd:dir,spawnProcess:mock.spawnProcess});host.profile=async()=> 'isolated-host-profile';
- try{await host.initialize();await assert.rejects(host.startCrew(),/startup failure/);const draft=JSON.parse(await readFile(join(dir,'crew-startup.json'),'utf8'));assert.equal(draft.workers.length,14);assert.equal(draft.pending,null);
-  const crew=await host.startCrew();assert.equal(crew.workers.length,15);assert.deepEqual(crew.workers.slice(0,14),draft.workers);assert.equal(mock.requests.filter(r=>r.method==='turn/start').length,15);
-  assert.deepEqual(await host.refreshCrew(crew),crew);assert.equal(mock.requests.filter(r=>r.method==='turn/start').length,15);
+ const dir=await mkdtemp(join(tmpdir(),'memoir-crew-partial-')),mock=fixture({failStartAt:16}),host=new CodexHost({cwd:dir,spawnProcess:mock.spawnProcess});host.profile=async()=> 'isolated-host-profile';
+ try{await host.initialize();await assert.rejects(host.startCrew(),/startup failure/);const draft=JSON.parse(await readFile(join(dir,'crew-startup.json'),'utf8'));assert.equal(draft.workers.length,15);assert.equal(draft.pending,null);
+  const crew=await host.startCrew();assert.equal(crew.workers.length,16);assert.deepEqual(crew.workers.slice(0,15),draft.workers);assert.equal(mock.requests.filter(r=>r.method==='turn/start').length,16);
+  assert.deepEqual(await host.refreshCrew(crew),crew);assert.equal(mock.requests.filter(r=>r.method==='turn/start').length,16);
   await writeFile(join(dir,'crew-startup.json'),JSON.stringify({...draft,pending:{role:'generation-planner',workerId:'uncertain'}}));const before=mock.requests.length;await assert.rejects(host.startCrew(),/STARTUP_UNCERTAIN/);assert.equal(mock.requests.length,before);
  }finally{host.close();await rm(dir,{recursive:true});}
 });
