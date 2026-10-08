@@ -31,7 +31,6 @@ test('narration editing permission moved to voice-director; film-editor is denie
     a.content.files = [file(101,15), source, file(103,15), file(104,15)];
     a.content.sourceFiles = structuredClone(a.content.files);
     a.content.tailSilenceSeconds = [0,0,0,0];
-    a.digest = importMedia.digest?importMedia.digest(a.content):a.digest||'';
 
     p = reviewed(p, 'rejected', { repairTarget: 'script', checks: taskFor(p).criteria.map(c=>({criterion:c,status:c==='duration'?'fail':'pass',location:'ISOLATED beat 2',evidence:'ISOLATED 17.2s',repair:c==='duration'?'Try local pause shortening.':''})) });
     const task = taskFor(p);
