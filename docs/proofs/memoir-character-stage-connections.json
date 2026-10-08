@@ -1,0 +1,70 @@
+{
+  "status": "CHILD_SELECTED_TEEN_PROMPT_SUBMITTED_REVIEW_BLOCKED",
+  "date": "2026-10-08",
+  "author": "Deep Agents / DeepSeek V4.1 Flash / Decart",
+  "independent_reviewer": "Gemini 3.8 Flash, direct actual-image input and verdict",
+  "production_authority": "SQLite",
+  "tracing": "LangSmith",
+  "authorized_character_batch_cap_usd": 2,
+  "director_selections_required_before_sheets": true,
+  "checks": {
+    "typecheck": "PASS",
+    "regression_tests": 107
+  },
+  "observed_failures_and_fixes": [
+    {
+      "failure": "Native large tool-result eviction replaced custom image results with a filesystem pointer before the model received the bytes.",
+      "fix": "Deliver bounded actual media through LangGraph multimodal user messages with a small tool acknowledgement; retain native binary offloading/hydration.",
+      "evidence": "Large-photo isolated regression and live cast author's exact-byte completed photo inspections."
+    },
+    {
+      "failure": "Downstream cast validation could not see the approved clone/audition inherited through narration and incorrectly reported narration was not locked.",
+      "fix": "Expand only exact accepted transitive input versions in the read-only validation projection; reject conflicting version bindings.",
+      "evidence": "Narration-lock regression and publication of the same unchanged, already inspected live agent draft followed by independent direct image-review PASS."
+    },
+    {
+      "failure": "A character prompt reviewer lacked the approved screenplay and incorrectly rejected an explicitly approved story prop, while correctly catching a source-shirt discrepancy.",
+      "fix": "The shared direct reviewer loads exact accepted input contracts itself; creative repair preserves history and bound attempts.",
+      "evidence": "Independent revised-prompt PASS after the author corrected the observed wardrobe issue. A regression confirms approved story direction reaches direct image review."
+    },
+    {
+      "failure": "Pinning Decart disabled native same-model failover and stalled otherwise recoverable work.",
+      "fix": "Enable OpenRouter native provider failover under unchanged model, required parameters and price ceiling.",
+      "evidence": "Routing regression and live teen author submission after recovery."
+    },
+    {
+      "failure": "Recovery rewrote a read-only reference and left a terminated local worker lease active.",
+      "fix": "Verify and reuse exact reference bytes; safely release leases without resetting attempt history.",
+      "evidence": "Read-only reference and lease fencing regressions; live author resumed and submitted."
+    }
+  ],
+  "limitations": [
+    "Character candidates and sheets are not declared complete by this checkpoint.",
+    "Reported tokens and allowance accounting are not verified invoice charges.",
+    "Private references, crops, model outputs and operator authorizations stay outside Git."
+  ],
+  "completed_candidate_sets": 1,
+  "remaining_candidate_sets": 5,
+  "operator_selection_pending": false,
+  "external_failure": {
+    "provider": "Google Gemini direct API",
+    "http_status": 400,
+    "reason": "prohibited_content; response does not identify the triggering text",
+    "response": "Stopped and paused affected batch; no teen images generated, failed review reservation retained. No claim of a completed independent review."
+  },
+  "selected_child_candidate": 2,
+  "provider_routing_policy": {
+    "same_model_failover": true,
+    "require_parameters": true,
+    "max_price_per_million": {
+      "input": 0.3,
+      "output": 1.2
+    },
+    "model_substitution": false
+  },
+  "spending_policy": {
+    "image_and_voice": "Authorized within existing caps; no per-call operator spending approval",
+    "video": "Explicit operator spending approval required",
+    "creative_checkpoints": "Retained"
+  }
+}

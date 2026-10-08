@@ -1,0 +1,13 @@
+node_modules/
+scripts/studio-spike/output/
+public/format-repositories/my-pixar-story-v1/build/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+secrets.env
+.env
+.env.*
+agent-runs/
+*.tsbuildinfo
+.DS_Store
