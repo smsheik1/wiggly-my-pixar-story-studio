@@ -16,6 +16,28 @@ test("Max SKILL.md Muse image estimate matches studio.json configured rate", () 
   assert.equal(skillRate, configuredRate, `Muse rate in SKILL.md ($${skillRate}) differs from studio.json ($${configuredRate})`);
 });
 
+test("Max SKILL.md provider model ids match studio.json configured models", () => {
+  const studioJson = JSON.parse(readFileSync(new URL('../studio.json', import.meta.url), 'utf8'));
+  const skillText = readFileSync(new URL('../crew/max/SKILL.md', import.meta.url), 'utf8');
+
+  // Verify Cartesia voice model bindings in Max's skill match studio.json
+  const cartesiaModelMatches = [...skillText.matchAll(/"model":\s*"([^"]+)"/g)].map(m => m[1]);
+  assert.ok(cartesiaModelMatches.length > 0, 'No model parameters found in Max SKILL.md');
+  for (const modelId of cartesiaModelMatches) {
+    assert.equal(
+      modelId,
+      studioJson.generation.voice.model,
+      `Provider model in SKILL.md ("${modelId}") differs from studio.json voice model ("${studioJson.generation.voice.model}")`
+    );
+  }
+
+  assert.equal(
+    skillText.includes('sonic-preview'),
+    false,
+    'Max SKILL.md must not reference stale "sonic-preview"'
+  );
+});
+
 test('failed generation job recovery routes re-planning to generation-planner', () => {
   const crew = {
     workers: Object.keys(crewRoles).map(role => ({

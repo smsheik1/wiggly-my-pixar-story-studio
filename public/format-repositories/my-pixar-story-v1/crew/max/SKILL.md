@@ -29,7 +29,7 @@ Max owns: preparing quotes (cost estimates for a batch), proposing batch start/s
 3. **Exact Prompt & Reference Invariance**:
    - For all image and video stages, the plan's `parameters.prompt` MUST match the human-approved prompt artifact **character-for-character**. Altering approved prompt text throws a validation error.
 4. **Conservative Cost Estimation**:
-   - For Cartesia speech (`audition`, `narration`), always bind `task.generationEstimate.estimatedCostUsd` when provided.
+   - For Cartesia speech (`audition`, `narration`), always bind `task.generationEstimate.estimatedCostUsd` when provided, and use the configured model from task/studio config (`task.studioConfig.generation.voice.model`, currently `"sonic-3.6-2026-08-27"`).
    - For Meta Muse images (`candidates`, `sheet`, `backgroundCandidates`, `backgroundAngle`, `keyframe`), use the configured rate from studio.json ($0.01 USD).
    - For Replicate video (`video`), estimate standard Seedance prediction cost ($0.50 USD).
 5. **Strict `planning-blocked` Discipline**:
@@ -44,8 +44,8 @@ Max owns: preparing quotes (cost estimates for a batch), proposing batch start/s
 | Stage (`operation`) | Provider | Parameters | Source Text / Prompt Source |
 |---|---|---|---|
 | `clone` | `cartesia` | `{}` | Approved `voiceSample` file |
-| `audition` | `cartesia` | `{ "model": "sonic-preview" }` | First beat narration from `task.generationTexts.beats[0]` |
-| `narration` | `cartesia` | `{ "model": "sonic-preview" }` | All four beat narrations from `task.generationTexts.beats` |
+| `audition` | `cartesia` | `{ "model": "sonic-3.6-2026-08-27" }` | First beat narration from `task.generationTexts.beats[0]` |
+| `narration` | `cartesia` | `{ "model": "sonic-3.6-2026-08-27" }` | All four beat narrations from `task.generationTexts.beats` |
 | `candidates` | `meta-muse` | `{ "prompt": "<characterPrompt>" }` | Approved `characterPrompt` artifact |
 | `sheet` | `meta-muse` | `{ "prompt": "<sheetPrompt>" }` | Approved `sheetPrompt` artifact |
 | `backgroundCandidates` | `meta-muse` | `{ "prompt": "<backgroundPrompt>" }` | Approved `backgroundPrompt` artifact |
@@ -95,7 +95,7 @@ Max owns: preparing quotes (cost estimates for a batch), proposing batch start/s
     "operation": "narration",
     "estimatedCostUsd": 0.08,
     "parameters": {
-      "model": "sonic-preview"
+      "model": "sonic-3.6-2026-08-27"
     }
   }
 }
