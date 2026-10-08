@@ -91,7 +91,7 @@ test('provider planning and unknown submission outcomes are reported without cla
  const sampleUpdate=producerUpdate(status(p));assert.equal(sampleUpdate.completion.worker,null);assert.match(sampleUpdate.completion.message,/You submitted/);
  p=send(p,'set-budget',{actor:'human',message:'ISOLATED budget',budgetLimitUsd:1});
  p=send(p,'plan',{workerId:taskFor(p).crewWorker.workerId,plan:{provider:'cartesia',operation:'clone',estimatedCostUsd:.05,parameters:{}}});
- let u=producerUpdate(status(p));assert.match(u.message,/Max \(Generation Planner\) prepared a request and cost estimate for voice clone/);assert.equal(u.completion.jobId,p.jobs.at(-1).id);assert.match(u.nextDecision,/spend/);
+ let u=producerUpdate(status(p));assert.match(u.message,/Max \(Line Producer & Production Manager\) prepared a request and cost estimate for voice clone/);assert.equal(u.completion.jobId,p.jobs.at(-1).id);assert.match(u.nextDecision,/spend/);
  const job=p.jobs.at(-1);p=send(p,'authorize',{actor:'human',jobId:job.id,artifactDigest:job.digest,message:'ISOLATED authorize exact test request'});
  u=producerUpdate(status(p));assert.match(u.message,/ready for submission/);assert.equal(u.nextWorker,null);assert.doesNotMatch(u.message,/prepare the exact request|clone complete/);
  p=send(p,'begin',{jobId:job.id,artifactDigest:job.digest});u=producerUpdate(status(p));assert.match(u.completion.message,/outcome is not confirmed/);
@@ -159,7 +159,7 @@ test('billing readiness alert requires problem, solution and canonical baby step
   assert.throws(()=>send(p,'planning-blocked',{...base,blocker:{kind:'account-readiness',...task.planningGuide,...replacement}}),/PLANNING_HELP_BINDING/);
  }
  const q=send(p,'planning-blocked',{...base,blocker:{kind:'account-readiness',...task.planningGuide}}),bytes=JSON.stringify(q),u=producerUpdate(status(q));
- assert.equal(u.alert.severity,'stop');assert.equal(u.alert.reportedBy,'Max (Generation Planner)');assert.equal(u.alert.problem,task.planningGuide.problem);assert.equal(u.alert.solution,task.planningGuide.solution);assert.deepEqual(u.alert.steps,task.planningGuide.steps);assert.match(u.message,/STOP/);assert.match(u.message,/https:\/\/play.cartesia.ai\/subscription/);assert.match(u.message,/Unknown credits alone do not block planning/);assert.doesNotMatch(u.message,/technical identifiers|which plan|HTTP 402|API failed/);assert.equal(u.diagnostic,message);assert.equal(u.nextWorker,null);assert.equal(q.jobs.length,0);assert.equal(JSON.stringify(q),bytes);
+ assert.equal(u.alert.severity,'stop');assert.equal(u.alert.reportedBy,'Max (Line Producer & Production Manager)');assert.equal(u.alert.problem,task.planningGuide.problem);assert.equal(u.alert.solution,task.planningGuide.solution);assert.deepEqual(u.alert.steps,task.planningGuide.steps);assert.match(u.message,/STOP/);assert.match(u.message,/https:\/\/play.cartesia.ai\/subscription/);assert.match(u.message,/Unknown credits alone do not block planning/);assert.doesNotMatch(u.message,/technical identifiers|which plan|HTTP 402|API failed/);assert.equal(u.diagnostic,message);assert.equal(u.nextWorker,null);assert.equal(q.jobs.length,0);assert.equal(JSON.stringify(q),bytes);
  assert.deepEqual(Project.parse(q).history.at(-1).blocker,u.completion.blocker);assert.equal(u.stage,'clone');assert.doesNotMatch(u.message,/paused|audition/i);assert.equal(u.debugNote,null);
 });
 

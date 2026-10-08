@@ -6,13 +6,18 @@ on:
 jobs:
   studio:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 26
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install ffmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        timeout-minutes: 5
+      - name: Verify ffmpeg
+        run: ffmpeg -version && ffprobe -version
+        timeout-minutes: 1
       - run: npm run setup
       - run: npm run test:studio
       - run: npm run check
