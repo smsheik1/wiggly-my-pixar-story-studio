@@ -47,7 +47,7 @@ test('automatic crew dispatch receives the same canonical rubric and advisory ev
  assert.equal(digest(p),before);const changed=applyEvent(p,result);assert.equal(changed.gate,'escalate');assert.equal(changed.jobs.length,p.jobs.length);assert.deepEqual(current(changed).content,script);
 });
 test('film requires separate qualified visual then audio passes before the human gate',()=>{
- let p=rendered();assert.equal(roleFor(p),'visual-reviewer');
+ let p=rendered();assert.equal(roleFor(p),'scene-reviewer');
  p=reviewed(p,'approved',{perception:'direct-video'});assert.equal(p.gate,'review');assert.equal(roleFor(p),'audio-reviewer');assert.equal(current(p).review,undefined);
  const a=current(p);assert.throws(()=>send(p,'approve',{artifactId:a.id,artifactDigest:a.digest,message:'Try skipping Ava.'}),/separate visual and audio|agent-passing/);
  assert.throws(()=>reviewed(p,'approved',{capabilityVersion:'wrong-tools'}),/Qualified independent audio/);
@@ -99,7 +99,7 @@ test('explicit reviewer profile upgrades reopen qualification and its descendant
  assert.deepEqual(refreshed.artifacts,supervised.artifacts);assert.deepEqual(refreshed.jobs,supervised.jobs);assert.deepEqual(refreshed.budget,supervised.budget);assert.equal(refreshed.step,supervised.step);assert.equal(refreshed.gate,supervised.gate);assert.deepEqual(refreshed.crew,replacement);
  for(const field of ['workerId','modelVersion','name','execution']){const swapped=structuredClone(replacement);swapped.workers.find(w=>w.role==='audio-reviewer')[field]=field==='execution'?'api':'ISOLATED replacement';assert.throws(()=>send(supervised,'configure-crew',{actor:'human',message:'ISOLATED replace reviewer',crew:swapped}));}
  const busy=structuredClone(p);busy.jobs[0].status='uncertain';assert.throws(()=>send(busy,'configure-crew',{actor:'human',message:'ISOLATED',crew:replacement}),/reconciled jobs/);
- const visual=bind(rendered()),newVisual={workers:crew.workers.map(w=>w.role==='visual-reviewer'?{...w,modelVersion:'new-real-model'}:w)};
+ const visual=bind(rendered()),newVisual={workers:crew.workers.map(w=>w.role==='scene-reviewer'?{...w,modelVersion:'new-real-model'}:w)};
  const reopened=send(visual,'configure-crew',{actor:'human',message:'ISOLATED visual upgrade',crew:newVisual});
  assert.equal(reopened.step,'reviewerQualification');assert.equal(current(reopened,'videoPlan'),undefined);assert.ok(current(reopened,'narration'));assert.deepEqual(reopened.artifacts.filter(a=>a.valid&&a.kind==='keyframe'),visual.artifacts.filter(a=>a.valid&&a.kind==='keyframe'));
 });

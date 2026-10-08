@@ -14,7 +14,7 @@ async function fixture(video=false,long=false){
  const dir=await mkdtemp(join(tmpdir(),'memoir-gemini-isolated-')),secretsPath=join(dir,'secrets.env'),path=join(dir,video?'source.mp4':'source.wav');
  await writeFile(secretsPath,'GEMINI_API_KEY=ISOLATED_SECRET\n');
  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i',video?'color=c=blue:s=160x90:r=30:d=0.2':`sine=frequency=440:sample_rate=48000:duration=${long?92:0.2}`,...(video?['-c:v','libx264','-pix_fmt','yuv420p']:['-c:a','pcm_s16le']),path]);
- const file=await importMedia(path,dir),worker={workerId:'isolated-ava',name:video?'Vera':'Ava',role:video?'visual-reviewer':'audio-reviewer'};
+ const file=await importMedia(path,dir),worker={workerId:'isolated-ava',name:video?'June':'Ava',role:video?'scene-reviewer':'audio-reviewer'};
  const task={taskId:'isolated-task',step:video?'video':'music',artifact:{content:{files:[file]}},criteria:['ISOLATED actual perceptual coverage']};
  const report={perceptible:true,fullMediaInspected:true,summary:'ISOLATED protocol result, not quality qualification',observations:[],limitations:['ISOLATED synthetic fixture']};
  const response=()=>new Response(JSON.stringify({id:'isolated-interaction',model:GEMINI_REVIEW_MODEL,status:'completed',steps:[{type:'model_output',content:[{type:'text',text:JSON.stringify(report)}]}]}));

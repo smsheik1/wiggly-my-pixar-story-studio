@@ -46,9 +46,9 @@
       ]
     },
     "pixar-prompter": {
-      "name": "Pia",
+      "name": "Theo",
       "model": "gpt-5.6-sol",
-      "skill": "crew/pia/SKILL.md",
+      "skill": "crew/theo/SKILL.md",
       "tools": [
         "readAsset",
         "viewImage"
@@ -137,6 +137,16 @@
         "watchVideo"
       ]
     },
+    "scene-reviewer": {
+      "name": "June",
+      "model": "gpt-5.6-sol",
+      "skill": "crew/june/SKILL.md",
+      "tools": [
+        "readAsset",
+        "viewImage",
+        "watchVideo"
+      ]
+    },
     "generation-planner": {
       "name": "Max",
       "model": "gpt-5.6-sol",
@@ -203,7 +213,8 @@
   "reviewers": {
     "text-reviewer": "evaluation/rubrics/text.md",
     "audio-reviewer": "evaluation/rubrics/audio.md",
-    "visual-reviewer": "evaluation/rubrics/visual.md"
+    "visual-reviewer": "evaluation/rubrics/visual.md",
+    "scene-reviewer": "evaluation/rubrics/scene.md"
   },
   "recipes": {
     "characterPrompt": "character-prompter.md",
