@@ -99,7 +99,7 @@ figure-containing edit is reviewed under the same criteria as a negative test.
 No production approvals, checkpoints, scheduler, or renderer are invoked.
 
 The runner depends on the canonical working kit at
-`/Users/shaz/Projects/wiggly/v3/public/format-repositories/my-pixar-story-v1`
+`public/format-repositories/my-pixar-story-v1`
 and loads only `META_API_KEY`, `NVIDIA_API_KEY`, and `LANGSMITH_API_KEY` from the
 canonical secrets file. It requests three author images ($0.03 estimated) and
 one deliberate negative edit ($0.01 estimated). NVIDIA prototype inference is

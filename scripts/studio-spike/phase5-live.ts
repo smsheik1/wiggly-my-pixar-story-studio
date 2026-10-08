@@ -21,7 +21,7 @@ import { tracing, namedSecret, secretsPath } from './tracing.js';
 import { assertBackgroundDimensions } from './phase2.js';
 export const deepseekProviders = { order: ['decart/fp4', 'sail-research/fp4'], only: ['decart/fp4', 'sail-research/fp4'], allow_fallbacks: true, require_parameters: true, max_price: { prompt: .3, completion: 1.2 } };
 export function deepseekRouting(hasImages:boolean){return hasImages?{...deepseekProviders,order:['decart/fp4'],only:['decart/fp4'],allow_fallbacks:false}:deepseekProviders;}
-const kit='/Users/shaz/Projects/wiggly/v3/public/format-repositories/my-pixar-story-v1';
+const kit = resolve(import.meta.dirname, '../../public/format-repositories/my-pixar-story-v1');
 const retained=join(import.meta.dirname,'output/phase2/e9be30f5-54ca-4612-8951-56315e7c90bf/candidate-b8dfeaa58674840103a270fa0d9798fa71aa2298c00c7fab952bb58973d7d45b.webp');
 const routedRecovery = process.argv.find(arg=>arg.startsWith('--phase5-routed-root='))?.slice('--phase5-routed-root='.length);
 const openRouterRecovery = routedRecovery ?? process.argv.find(arg=>arg.startsWith('--phase5-openrouter-root='))?.slice('--phase5-openrouter-root='.length);
