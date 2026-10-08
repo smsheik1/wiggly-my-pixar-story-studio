@@ -3,7 +3,7 @@
   "agents": {
     "script-writer": {
       "name": "Leo",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/leo/SKILL.md",
       "tools": [
         "readAsset"
@@ -11,7 +11,7 @@
     },
     "text-reviewer": {
       "name": "Sage",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/sage/SKILL.md",
       "tools": [
         "readAsset",
@@ -20,7 +20,7 @@
     },
     "cast-designer": {
       "name": "Cleo",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/cleo/SKILL.md",
       "tools": [
         "readAsset",
@@ -29,7 +29,7 @@
     },
     "sheet-prompter": {
       "name": "Pia",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/pia/SKILL.md",
       "tools": [
         "readAsset",
@@ -38,7 +38,7 @@
     },
     "background-product-owner": {
       "name": "Beau",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/beau/SKILL.md",
       "tools": [
         "readAsset",
@@ -47,7 +47,7 @@
     },
     "pixar-prompter": {
       "name": "Theo",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/theo/SKILL.md",
       "tools": [
         "readAsset",
@@ -56,7 +56,7 @@
     },
     "shot-planner": {
       "name": "Sam",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/sam/SKILL.md",
       "tools": [
         "readAsset",
@@ -65,7 +65,7 @@
     },
     "composition-writer": {
       "name": "Cam",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/cam/SKILL.md",
       "tools": [
         "readAsset",
@@ -74,7 +74,7 @@
     },
     "motion-director": {
       "name": "Mo",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/mo/SKILL.md",
       "tools": [
         "readAsset",
@@ -83,7 +83,7 @@
     },
     "video-prompt-engineer": {
       "name": "Vin",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/vin/SKILL.md",
       "tools": [
         "readAsset",
@@ -92,7 +92,7 @@
     },
     "sound-designer": {
       "name": "Finn",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/finn/SKILL.md",
       "tools": [
         "readAsset",
@@ -102,7 +102,7 @@
     },
     "film-editor": {
       "name": "Eli",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/eli/SKILL.md",
       "tools": [
         "readAsset",
@@ -117,7 +117,7 @@
     },
     "audio-reviewer": {
       "name": "Ava",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/ava/SKILL.md",
       "tools": [
         "readAsset",
@@ -129,7 +129,7 @@
     },
     "visual-reviewer": {
       "name": "Vera",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/vera/SKILL.md",
       "tools": [
         "readAsset",
@@ -139,7 +139,7 @@
     },
     "scene-reviewer": {
       "name": "June",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/june/SKILL.md",
       "tools": [
         "readAsset",
@@ -149,7 +149,7 @@
     },
     "generation-planner": {
       "name": "Max",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/max/SKILL.md",
       "tools": [
         "readAsset",
@@ -158,7 +158,7 @@
     },
     "voice-director": {
       "name": "Nora",
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6.1-sol",
       "skill": "crew/nora/SKILL.md",
       "tools": [
         "readAsset",

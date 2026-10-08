@@ -40,7 +40,7 @@ test('Codex bridge uses the explicitly selected model, real role threads and sco
  assert.match(await readFile(new URL('../runner.mjs',import.meta.url),'utf8'),/new CodexHost\(\{cwd:join\(runDir,'host-workspace'\),timeoutMs:600000,/);
  const dir=await mkdtemp(join(tmpdir(),'memoir-codex-protocol-')),mock=fixture({respondTool:true}),host=new CodexHost({cwd:dir,spawnProcess:mock.spawnProcess});host.profile=async()=> 'isolated-host-profile';
  try{
-  await host.initialize();const crew=await host.startCrew();assert.equal(DEFAULT_WORKER_MODEL,'gpt-5.6-sol');assert.equal(crew.workers.length,Object.keys(crewRoles).length);assert.equal(new Set(crew.workers.map(w=>w.workerId)).size,crew.workers.length);
+  await host.initialize();const crew=await host.startCrew();assert.equal(DEFAULT_WORKER_MODEL,'gpt-6.1-sol');assert.equal(crew.workers.length,Object.keys(crewRoles).length);assert.equal(new Set(crew.workers.map(w=>w.workerId)).size,crew.workers.length);
   const p=send(initialProject('bridge',inputs,{workflowRevision:2}),'configure-crew',{actor:'human',message:'ISOLATED bridge',crew});const task=taskFor(p);
   const result=await runCrewTask(p,task,host);assert.equal(result.workerId,crew.workers[0].workerId);assert.deepEqual(result.content,script);
   const payload=JSON.parse(mock.requests.findLast(r=>r.method==='turn/start').params.input[0].text);

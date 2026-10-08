@@ -166,10 +166,10 @@ During a real authorized assembly, surface assembly/<manifestDigest>/progress.ht
 
 Default compute is the current agentic chat host and its supported independent subagents; do not add a Gemini/API requirement merely because the host model’s tools have not been checked. Resolve the model actually used by each worker, including inherited models. `crew-template` proposes names/roles; `schema crew` exposes bindings. Submit human `configure-crew` with the current taskId, explicit message and `crew: {workers: [...]}` before worker submissions/provider work. Bind the actual worker IDs, modelVersion, capabilityVersion and `execution: "host"`. The runner refuses unconfigured worker submissions; bindings persist in SQLite. This does not provision workers or restrict the host application’s ambient shell/tools.
 
-**Built-in local Codex connection:** The operator selected GPT-5.6 Sol for local studio workers on October 2, 2026. With an installed, signed-in Codex CLI, use:
+**Built-in local Codex connection:** The operator selected GPT-6.1 Sol for local studio workers on October 2, 2026. With an installed, signed-in Codex CLI, use:
 
 ```sh
-node runner.mjs crew-start --model gpt-5.6-sol --message "<actual human authorization>" --run /absolute/run
+node runner.mjs crew-start --model gpt-6.1-sol --message "<actual human authorization>" --run /absolute/run
 node runner.mjs drive-codex --max-tasks 8 --run /absolute/run
 ```
 
