@@ -259,6 +259,13 @@ const generationScope=p=>current(p,p.step==='candidates'?'roster':p.step==='shee
 function hasDependency(p,ids,target){
  const queue=[...ids],seen=new Set();while(queue.length){const id=queue.pop();if(id===target)return true;if(seen.has(id))continue;seen.add(id);queue.push(...(p.artifacts.find(a=>a.id===id)?.dependencies??[]));}return false;
 }
+export function countsTowardAttemptCap(p,j){
+ if(j.status!=='failed')return true;
+ if(j.reconciliation?.outcome!=='confirmed-no-result')return true;
+ if(j.result)return true;
+ if(!p.history.some(h=>h.action==='provider-error'&&h.jobId===j.id))return true;
+ return false;
+}
 export function crewReviewEligible(p, a = current(p)) {
   if (!a) return false;
   if (['audition', 'narration'].includes(p.step)) {
@@ -734,7 +741,7 @@ export function applyEvent(project, raw) {
     if(['music','effect'].includes(p.step)&&plan.parameters.prompt!==(p.step==='music'?current(p,'soundPlan').content.music:effectFor(p)).prompt)throw new Error('Use approved sound prompt.');
     if (p.step === 'keyframe' && (!locked(p, `keyframePrompt:${p.shotId}`) || plan.parameters.prompt !== current(p, `keyframePrompt:${p.shotId}`).content.prompt)) throw new Error('Use the human-approved keyframe prompt exactly.');
     if (p.step === 'sheet' && plan.parameters.prompt !== current(p, `sheetPrompt:${p.characterId}`).content.prompt) throw new Error('Use the approved sheet prompt exactly.');
-    if (p.jobs.filter(j => j.key === keyFor(p) && ((['keyframe','video'].includes(p.step)||refinedWorkflow(p)&&p.step==='candidates'||miniProduction(p)&&imageSteps.includes(p.step)) ? hasDependency(p,j.dependencies,generationScope(p)) : JSON.stringify(j.dependencies) === JSON.stringify(dependencies(p))) && ['submitting', 'submitted', 'ready', 'uncertain', 'failed'].includes(j.status)).length >= limitsFor(p).generationAttempts) throw new Error('ATTEMPT_LIMIT: configured generation request limit reached for these dependencies. Stop and resolve the deliverable with the user.');
+    if (p.jobs.filter(j => j.key === keyFor(p) && ((['keyframe','video'].includes(p.step)||refinedWorkflow(p)&&p.step==='candidates'||miniProduction(p)&&imageSteps.includes(p.step)) ? hasDependency(p,j.dependencies,generationScope(p)) : JSON.stringify(j.dependencies) === JSON.stringify(dependencies(p))) && ['submitting', 'submitted', 'ready', 'uncertain', 'failed'].includes(j.status) && countsTowardAttemptCap(p,j)).length >= limitsFor(p).generationAttempts) throw new Error('ATTEMPT_LIMIT: configured generation request limit reached for these dependencies. Stop and resolve the deliverable with the user.');
     const request = requestDescriptor(p, plan);
     const bound = { plan, request, dependencies: dependencies(p) };
     const technicalRepair = p.step==='video' && p.artifacts.findLast(a=>a.review?.decision==='rejected'&&a.dependencies.includes(current(p,'videoPlan').id)&&((a.key===keyFor(p)&&a.review.checks.some(c=>c.status==='fail'&&['integrity','anatomy','identity','continuity','motion'].includes(c.criterion)))||(a.kind==='film'&&p.artifacts.find(v=>v.id===a.review.repairArtifactId)?.key===keyFor(p)&&a.review.checks.some(c=>c.status==='fail'&&['technical','visual-continuity'].includes(c.criterion)))));
