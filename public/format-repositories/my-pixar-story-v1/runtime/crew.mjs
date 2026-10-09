@@ -73,7 +73,10 @@ export function crewTools(task,worker,adapters={},record=()=>{}){
     try { await exec('ffmpeg',['-v','error','-y','-i',file.path,'-vf',`crop=${w}:${h}:${x}:${y}`,out]); }
     catch(e){throw new Error(`CROP_FAILED: ${e.message}`);}
     if(!adapters[name]){await unlinkTmp(out).catch(()=>{});throw new Error(`CAPABILITY_UNAVAILABLE: host must connect actual ${name}; file access/metadata are insufficient.`);}
-    const cropped={...file,path:out,width:w,height:h};
+    // The crop is new bytes: bind its own digest so perception adapters that
+    // re-verify file bytes (e.g. Gemini) accept it; the receipt keeps the source sha256 + region.
+    const cropBytes=await (await import('node:fs/promises')).readFile(out);
+    const cropped={...file,path:out,width:w,height:h,bytes:cropBytes.length,sha256:(await import('node:crypto')).createHash('sha256').update(cropBytes).digest('hex')};
     const result=await adapters[name]({file:cropped,worker,task,region:r});
     await unlinkTmp(out).catch(()=>{});
     try{await (await import('node:fs/promises')).rm(dir,{recursive:true});}catch{}

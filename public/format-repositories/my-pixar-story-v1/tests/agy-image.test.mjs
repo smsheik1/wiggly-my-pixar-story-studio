@@ -44,6 +44,18 @@ if (mode === 'brain-only') {
   mk(dir + '/' + imageName + '.png');
   process.exit(0);
 }
+if (mode === 'real-shape') {
+  // Shape observed from the real agy 1.3.2: a JPEG named <ImageName with '_'>_<ms>.jpg in a
+  // brain conversation dir, plus the same bytes copied to the requested (.png) path.
+  const dir = process.env.WIGGLY_AGY_BRAIN_DIR + '/conv-' + process.pid;
+  fs.mkdirSync(dir, { recursive: true });
+  const brainFile = dir + '/' + imageName.replace(/[^A-Za-z0-9]+/g, '_') + '_' + Date.now() + '.jpg';
+  execFileSync('ffmpeg', ['-hide_banner','-loglevel','error','-y','-f','lavfi','-i','color=c=red:s=1200x896','-frames:v','1',brainFile]);
+  // An unrelated newer brain image from another conversation must never be deleted.
+  fs.writeFileSync(dir + '/someone_else_' + Date.now() + '.png', 'not ours');
+  if (outPath) fs.copyFileSync(brainFile, outPath);
+  process.exit(0);
+}
 if (outPath) { mk(outPath); }
 // also leave a brain copy for output-path mode when requested
 if (process.env.FAKE_AGY_ALSO_BRAIN === '1' && outPath) {
@@ -197,5 +209,25 @@ test('meta-muse keeps 4:3 size mapping and 16:9 for backgrounds/keyframes', asyn
     assert.equal(master.aspectRatio, '16:9'); assert.equal(master.size, '1536x864');
     const agyMaster = requestDescriptor(b, { provider: 'agy', operation: b.step, estimatedCostUsd: 0, parameters: { prompt: current(b, 'backgroundPrompt:home').content.prompt } });
     assert.equal(agyMaster.aspectRatio, '16:9');
+  } finally { await rm(dir, { recursive: true }); }
+});
+
+test('real agy shape: JPEG bytes at a .png path are renamed .jpg and only the named brain copy is deleted', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'agy-real-shape-'));
+  const brain = join(dir, 'brain');
+  const bin = await makeFake(dir, brain);
+  try {
+    await withEnv({ WIGGLY_AGY_BIN: bin, WIGGLY_AGY_BRAIN_DIR: brain, FAKE_AGY_MODE: 'real-shape' }, async () => {
+      const out = join(dir, 'job-7-0.png');
+      const { outputPath, brainCleaned } = await generateAgyImage({ prompt: 'p', aspectRatio: '4:3', imageName: 'job-7-0', imagePaths: [], outputPath: out });
+      assert.equal(outputPath, resolve(join(dir, 'job-7-0.jpg')));
+      assert.equal(verifyAgyImage(await readFile(outputPath), '4:3').format, 'jpeg');
+      await assert.rejects(stat(out), /ENOENT/);
+      assert.match(brainCleaned, /job_7_0_\d+\.jpg$/);
+      await assert.rejects(stat(brainCleaned), /ENOENT/);
+      const { readdirSync } = await import('node:fs');
+      const left = readdirSync(join(brain, readdirSync(brain)[0]));
+      assert.deepEqual(left.filter(n => n.startsWith('someone_else_')).length, 1);
+    });
   } finally { await rm(dir, { recursive: true }); }
 });

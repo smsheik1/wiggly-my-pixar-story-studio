@@ -15,7 +15,7 @@ const disabled=['shell_tool','unified_exec','apps','plugins','multi_agent','code
 // The local Code Mode host executes the registered scoped function tools even
 // when the optional code_mode feature is off. Disabling it breaks every tool.
 const enabled=['code_mode_host'];
-const tool={type:'function',name:'wiggly_tool',description:'Call an allowed format tool on a hash from the current task. For renderAudioEdit supply edit with kind, keepRanges in fractional seconds and reason. Never read another path or submit a generation.',inputSchema:{type:'object',properties:{name:{type:'string'},sha256:{type:'string'},referenceSha256:{type:['string','null']},edit:{anyOf:[z.toJSONSchema(AudioEditPlan),{type:'null'}]}},required:['name','sha256','referenceSha256'],additionalProperties:false}};
+const tool={type:'function',name:'wiggly_tool',description:'Call an allowed format tool on a hash from the current task. For renderAudioEdit supply edit with kind, keepRanges in fractional seconds and reason. Never read another path or submit a generation.',inputSchema:{type:'object',properties:{name:{type:'string'},sha256:{type:'string'},referenceSha256:{type:['string','null']},edit:{anyOf:[z.toJSONSchema(AudioEditPlan),{type:'null'}]},region:{anyOf:[{type:'object',description:'viewImage close-up crop in relative 0-1 coordinates',properties:{x:{type:'number'},y:{type:'number'},width:{type:'number'},height:{type:'number'}},required:['x','y','width','height'],additionalProperties:false},{type:'null'}]}},required:['name','sha256','referenceSha256'],additionalProperties:false}};
 
 async function readJson(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;}}
 async function saveJson(path,value){await writeFile(path+'.tmp',JSON.stringify(value)+'\n',{mode:0o600});await rename(path+'.tmp',path);}
@@ -106,11 +106,11 @@ export class CodexHost {
    const active=this.active,params=message.params;
    try{
     if(!active||params.threadId!==active.threadId||params.turnId!==active.turnId||params.tool!=='wiggly_tool')throw new Error('TOOL_SCOPE_DENIED');
-    const arguments_=z.object({name:z.string(),sha256:z.string(),referenceSha256:z.string().nullable(),edit:AudioEditPlan.nullable().optional()}).strict().parse(params.arguments);
+    const arguments_=z.object({name:z.string(),sha256:z.string(),referenceSha256:z.string().nullable(),edit:AudioEditPlan.nullable().optional(),region:z.object({x:z.number(),y:z.number(),width:z.number(),height:z.number()}).strict().nullable().optional()}).strict().parse(params.arguments);
     let toolTrace=null;try{toolTrace=this.tracer?.tool?.({toolName:arguments_.name});}catch{toolTrace=null;}
     const toolStart=Date.now(),endTool=outcome=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart});}catch{}};
     let value;
-    try{value=await active.callTool(arguments_.name,{sha256:arguments_.sha256,...(arguments_.referenceSha256?{referenceSha256:arguments_.referenceSha256}:{}),...(arguments_.edit?{edit:arguments_.edit}:{})});}
+    try{value=await active.callTool(arguments_.name,{sha256:arguments_.sha256,...(arguments_.referenceSha256?{referenceSha256:arguments_.referenceSha256}:{}),...(arguments_.edit?{edit:arguments_.edit}:{}),...(arguments_.region?{region:arguments_.region}:{})});}
     catch(error){endTool('failed');throw error;}
     endTool('completed');
     active.finishedTools??=[];active.finishedTools.push({type:'dynamicToolCall',status:'completed',tool:'wiggly_tool',arguments:{name:arguments_.name,sha256:arguments_.sha256,referenceSha256:arguments_.referenceSha256}});

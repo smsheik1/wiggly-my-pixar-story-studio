@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { readdir, stat, readFile, copyFile, unlink, mkdir } from 'node:fs/promises';
+import { readdir, stat, readFile, copyFile, unlink, mkdir, rename } from 'node:fs/promises';
 import { join, resolve, dirname, basename, extname } from 'node:path';
 import { homedir } from 'node:os';
 
@@ -12,7 +12,7 @@ export const agyBrainDir = () => resolve(process.env.WIGGLY_AGY_BRAIN_DIR || joi
 export const agyTimeoutMs = () => Number(process.env.WIGGLY_AGY_TIMEOUT_MS || AGY_DEFAULT_TIMEOUT_MS);
 
 export function buildAgyPrompt({ prompt, aspectRatio, imageName, imagePaths, outputPath }) {
-  const refs = (imagePaths ?? []).map(p => `"${p}"`).join(', ');
+  const refs = (imagePaths ?? []).map(p => JSON.stringify(p)).join(', ');
   return `Call the built-in generate_image tool with Prompt=${JSON.stringify(prompt)}, AspectRatio=${JSON.stringify(aspectRatio)}, ImageName=${JSON.stringify(imageName)}, ImagePaths=[${refs}]. Then copy the resulting generated image file to ${JSON.stringify(outputPath)} (absolute path). Reply only with that absolute path.`;
 }
 
@@ -80,6 +80,8 @@ async function walkImages(dir, out = []) {
   return out;
 }
 
+export const agyNameStem = name => String(name).replace(/[^A-Za-z0-9]+/g, '_').toLowerCase();
+
 export async function findBrainFallback({ brainDir, startedAt, imageName }) {
   const candidates = await walkImages(brainDir);
   const scored = [];
@@ -90,7 +92,9 @@ export async function findBrainFallback({ brainDir, startedAt, imageName }) {
     scored.push({ path, mtime });
   }
   if (!scored.length) return null;
-  const named = imageName ? scored.filter(s => basename(s.path).includes(imageName)) : [];
+  // agy names files <ImageName with non-alphanumerics as '_'>_<timestamp>.<ext>.
+  const stem = imageName ? agyNameStem(imageName) : null;
+  const named = stem ? scored.filter(s => basename(s.path).toLowerCase().startsWith(stem)) : [];
   const pool = named.length ? named : scored;
   pool.sort((a, b) => b.mtime - a.mtime);
   return pool[0].path;
@@ -100,7 +104,7 @@ function runAgy({ bin, argv, timeoutMs, cwd }) {
   return new Promise((resolvePromise, rejectPromise) => {
     let child;
     try {
-      child = spawn(bin, argv, { stdio: ['ignore', 'pipe', 'pipe'] });
+      child = spawn(bin, argv, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
     } catch (e) {
       rejectPromise(new Error(`agy binary not found at ${bin}: ${e.message}`));
       return;
@@ -143,39 +147,36 @@ export async function generateAgyImage({ prompt, aspectRatio, imageName, imagePa
   await mkdir(dirname(absOutput), { recursive: true });
   const startedAt = Date.now();
   const agyPrompt = buildAgyPrompt({ prompt, aspectRatio, imageName, imagePaths: imagePaths.map(p => resolve(p)), outputPath: absOutput });
-  const argv = ['-p', agyPrompt, '--dangerously-skip-permissions', '--add-dir', dirname(absOutput), '--output-format', 'json'];
+  const argv = ['-p', agyPrompt, '--sandbox', '--dangerously-skip-permissions', '--add-dir', dirname(absOutput), '--output-format', 'json'];
   await runAgy({ bin: resolvedBin, argv, timeoutMs: resolvedTimeout, cwd: dirname(absOutput) });
   let source = null;
   try {
     const st = await stat(absOutput);
     if (st.isFile()) source = absOutput;
   } catch (e) { if (e.code !== 'ENOENT') throw e; }
-  let brainCopy = null;
+  // The brain copy is identified by its ImageName stem only; never guess at
+  // unrelated newer brain files when the requested output already exists.
+  const named = await findBrainFallback({ brainDir: resolvedBrain, startedAt, imageName });
+  const brainCopy = named && basename(named).toLowerCase().startsWith(agyNameStem(imageName)) ? named : null;
   if (!source) {
-    brainCopy = await findBrainFallback({ brainDir: resolvedBrain, startedAt, imageName });
-    if (!brainCopy) throw new Error('agy produced no image: requested output missing and no new brain image found.');
-    source = brainCopy;
-  } else {
-    // Prefer the requested path, but still track a brain copy for cleanup when it matches.
-    const fallback = await findBrainFallback({ brainDir: resolvedBrain, startedAt, imageName });
-    if (fallback) brainCopy = fallback;
+    source = brainCopy ?? await findBrainFallback({ brainDir: resolvedBrain, startedAt, imageName: null });
+    if (!source) throw new Error('agy produced no image: requested output missing and no new brain image found.');
   }
   const buffer = await readFile(source);
-  verifyAgyImage(buffer, aspectRatio);
-  // If the source was the brain fallback, materialize the requested output path.
-  let usedBrainFile = null;
-  if (source !== absOutput) {
-    await copyFile(source, absOutput);
-    usedBrainFile = source;
-  }
-  // Delete only the brain file actually used, never anything else, never outside the brain dir.
-  const toDelete = usedBrainFile ?? (brainCopy && brainCopy !== absOutput ? (source === absOutput ? null : null) : null);
-  // When output path was used directly, optionally clean the sibling brain copy only if it is the same bytes? Spec says delete only the file it used.
-  // So delete usedBrainFile when we copied from brain; otherwise delete nothing.
-  if (usedBrainFile) {
-    const resolved = resolve(usedBrainFile), root = resolve(resolvedBrain);
+  const { format } = verifyAgyImage(buffer, aspectRatio);
+  // agy may return JPEG bytes even when asked for .png; name the file by its real format
+  // so downstream MIME detection by extension is truthful.
+  const wantedExt = { png: '.png', jpeg: '.jpg', webp: '.webp' }[format];
+  const finalOutput = extname(absOutput).toLowerCase() === wantedExt || (format === 'jpeg' && extname(absOutput).toLowerCase() === '.jpeg') ? absOutput : absOutput.slice(0, absOutput.length - extname(absOutput).length) + wantedExt;
+  if (source === absOutput) { if (finalOutput !== absOutput) await rename(absOutput, finalOutput); }
+  else await copyFile(source, finalOutput);
+  // Delete the brain copy (the generated image agy keeps in its own history), only inside the brain dir.
+  const toDelete = source !== absOutput ? source : brainCopy;
+  let brainCleaned = null;
+  if (toDelete) {
+    const resolved = resolve(toDelete), root = resolve(resolvedBrain);
     if (resolved === root || !resolved.startsWith(root + '/')) throw new Error('Refusing to delete outside the agy brain dir.');
-    await unlink(resolved);
+    await unlink(resolved); brainCleaned = resolved;
   }
-  return { outputPath: absOutput, brainCleaned: usedBrainFile };
+  return { outputPath: finalOutput, brainCleaned };
 }

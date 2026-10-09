@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
+import { CodexHost } from '../runtime/codex-host.mjs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -96,12 +100,15 @@ test('Vera crop inspection uses ffmpeg region without replacing full view requir
     const worker = { name: 'Vera', role: 'visual-reviewer' };
     const task = { step: 'candidates', gate: 'review', artifact: { content: { files: [f] } }, dependencies: [] };
     let sawCrop = null;
-    const tools = crewTools(task, worker, { viewImage: async ({ file, region }) => { if (region) sawCrop = { file, region }; return { perception: 'direct-image' }; } }, () => {});
+    const tools = crewTools(task, worker, { viewImage: async ({ file, region }) => { if (region) sawCrop = { file, region, actualSha256: createHash('sha256').update(await readFile(file.path)).digest('hex') }; return { perception: 'direct-image' }; } }, () => {});
     await tools('viewImage', { sha256: f.sha256 });
     await tools('viewImage', { sha256: f.sha256, region: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 } });
     assert.ok(sawCrop);
     assert.equal(sawCrop.region.width, 0.2);
     assert.ok(sawCrop.file.width < f.width);
+    // The crop is bound to its own bytes so byte-verifying adapters (Gemini) accept it.
+    assert.equal(sawCrop.file.sha256, sawCrop.actualSha256);
+    assert.notEqual(sawCrop.file.sha256, f.sha256);
     await assert.rejects(tools('viewImage', { sha256: f.sha256, region: { x: 0, y: 0, width: 2, height: 1 } }), /REGION_MISMATCH/);
   } finally { await rm(dir, { recursive: true }); }
 });
@@ -132,4 +139,19 @@ test('review gate still requires full viewImage of every file even with crops pr
     const ok = await runCrewTask(p, task, { tools: { viewImage: async () => ({ perception: 'direct-image' }) }, runTask: async (_t, { callTool }) => { for (const fl of files) await callTool('viewImage', { sha256: fl.sha256 }); return verdict; } });
     assert.equal(ok.review.decision, 'approved');
   } finally { await rm(dir, { recursive: true }); }
+});
+
+test('Codex host accepts and forwards a viewImage region from the live tool call', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'vera-host-region-'));
+  const child = new EventEmitter(); child.stdout = new PassThrough(); child.stderr = new PassThrough(); child.stdin = { end() {} }; child.kill = () => {};
+  const host = new CodexHost({ cwd: dir, spawnProcess: () => child });
+  const sent = []; host.send = m => sent.push(m);
+  let received = null;
+  host.active = { threadId: 'thread-1', turnId: 'turn-1', worker: { workerId: 'thread-1', name: 'Vera', role: 'visual-reviewer' }, callTool: async (name, parameters) => { received = { name, parameters }; return { perception: 'direct-image' }; }, resolve: () => {}, reject: () => {}, output: '', buffer: [], pendingTools: 0, finishedTools: [] };
+  try {
+    const region = { x: 0.5, y: 0.5, width: 0.25, height: 0.25 };
+    await host.toolCall({ id: 7, params: { threadId: 'thread-1', turnId: 'turn-1', tool: 'wiggly_tool', arguments: { name: 'viewImage', sha256: 'a'.repeat(64), referenceSha256: null, region } } });
+    assert.deepEqual(received, { name: 'viewImage', parameters: { sha256: 'a'.repeat(64), region } });
+    assert.equal(sent[0].result.success, true);
+  } finally { host.close(); await rm(dir, { recursive: true }); }
 });

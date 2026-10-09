@@ -573,7 +573,8 @@ export function applyEvent(project, raw) {
     }
     const required=p.step==='film'?filmCriteria(p):criteriaFor(p);
     const names = r.checks.map(c => c.criterion);
-    if (names.length !== required.length || new Set(names).size !== names.length || required.some(c => !names.includes(c))) throw new Error('Every required criterion needs exactly one evidenced finding.');
+    // Review.checks may be empty only for a human crew-review pick; a reviewer verdict always needs findings.
+    if (!names.length || names.length !== required.length || new Set(names).size !== names.length || required.some(c => !names.includes(c))) throw new Error('Every required criterion needs exactly one evidenced finding.');
     const perception = ['audition', 'narration'].includes(p.step) ? 'direct-audio' : imageSteps.includes(p.step) ? 'direct-image' : p.step==='video'?'direct-video':p.step==='film'?(reviewPassed(a.visualReview)?'direct-audio':'direct-video'):['music','effect'].includes(p.step)?'direct-audio':'direct-text';
     if(r.decision==='provisional'&&(!supervised(p)||r.perception!==perception||r.checks.some(c=>c.status==='fail')))throw new Error('Provisional review requires supervised mode, actual perception and no known failures.');
     if(r.decision==='provisional'&&supervised(p)&&r.checks.every(c=>c.status==='pass'))throw new Error('REVIEW_VERDICT_MISMATCH: a supervised review with every check passing must use decision approved; provisional is only for reviews with an inconclusive check and no failures.');
