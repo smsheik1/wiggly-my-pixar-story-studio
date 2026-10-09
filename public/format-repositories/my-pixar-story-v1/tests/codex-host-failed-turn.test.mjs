@@ -59,7 +59,7 @@ test('failed turn with an in-flight tool call stays refused',async()=>{
  }finally{await rm(dir,{recursive:true});}
 });
 
-function usageLimitFixture({retryAfter='2026-10-09T01:00:00Z'}={}){
+function usageLimitFixture({retryAfter='2026-10-09T01:00:00Z',error={code:'usageLimitExceeded',message:'usageLimitExceeded: limit reached',retryAfter}}={}){
  const requests=[],child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.kill=()=>{};
  let id=0;const persisted=new Set();
  const emit=value=>child.stdout.write(JSON.stringify(value)+'\n');
@@ -72,7 +72,7 @@ function usageLimitFixture({retryAfter='2026-10-09T01:00:00Z'}={}){
    if(request.params.input[0].text.startsWith('Initialization only:')){const turnId=`init-turn-${request.params.threadId}`;emit({id:request.id,result:{turn:{id:turnId}}});emit({method:'item/completed',params:{threadId:request.params.threadId,turnId,item:{type:'agentMessage',text:'READY'}}});emit({method:'turn/completed',params:{threadId:request.params.threadId,turn:{id:turnId,status:'completed'}}});continue;}
    emit({id:request.id,result:{turn:{id:'turn-isolated'}}});
    // Usage-limit failure before any agent message or tool call.
-   emit({method:'turn/completed',params:{threadId:request.params.threadId,turn:{id:'turn-isolated',status:'failed',error:{code:'usageLimitExceeded',message:'usageLimitExceeded: limit reached',retryAfter}}}});
+   emit({method:'turn/completed',params:{threadId:request.params.threadId,turn:{id:'turn-isolated',status:'failed',error}}});
   }
  }callback();}});
  return {child,requests,spawnProcess:()=>child};
@@ -93,5 +93,37 @@ test('host observing a failed turn records it in the receipt with the usage-limi
   assert.match(receipt.error,/retry after 2026-10-09T01:00:00Z/);
   // No manual reconcile needed: the next run reports the recorded rejection, never uncertainty.
   await assert.rejects(driveCrew(workflow,'run',host,options),/RESULT_REJECTED/);
+ }finally{host.close();workflow.close();await rm(dir,{recursive:true});}
+});
+
+// Shape recorded by codex-cli 0.162.0 app-server for the real r4 usage-limit turn.
+const nativeUsageLimitError={message:'You’ve hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/settings/usage to purchase more credits or try again at 9:34 PM.',codexErrorInfo:'usageLimitExceeded',additionalDetails:null,misalignment:null};
+
+test('native usage-limit failed turn with a finished tool call reconciles with its retry time',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-reconcile-native-'));
+ const {task,receipt,userMessage}=reconcileSetup(),path=join(dir,task.taskId+'.json');
+ const turn={id:'native-turn',status:'failed',error:nativeUsageLimitError,items:[userMessage,{type:'reasoning'},{type:'dynamicToolCall',status:'completed'},{type:'reasoning'}]};
+ const host={call:async()=>({thread:{id:receipt.worker.workerId,turns:[turn]}})};
+ try{
+  await writeFile(path,JSON.stringify(receipt));
+  const result=await reconcileDispatch(task,host,{receiptDirectory:dir,turnId:turn.id,message:'Actual direction'});
+  assert.equal(result.reconciliation.outcome,'confirmed-failed');
+  assert.match(result.error,/turn failed before producing output: usageLimitExceeded: .*try again at 9:34 PM\. Continue/);
+  assert.equal(result.event.savedTools.length,1);
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('host observing the native usage-limit shape surfaces its retry time',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-failed-host-native-')),workflow=openWorkflow(join(dir,'state.sqlite'));
+ const mock=usageLimitFixture({error:nativeUsageLimitError}),host=new CodexHost({cwd:dir,spawnProcess:mock.spawnProcess});host.profile=async()=>'isolated-host-profile';
+ const options={maxTasks:1,receiptDirectory:join(dir,'dispatch')};
+ try{
+  await host.initialize();const crew=await host.startCrew();
+  const init=await workflow.init('run',inputs,{workflowRevision:2});await workflow.respond('run',event(init.project,'configure-crew',{actor:'human',message:'ISOLATED',crew}));
+  const task=(await workflow.status('run')).pending,path=join(options.receiptDirectory,task.taskId+'.json');
+  await assert.rejects(driveCrew(workflow,'run',host,options),/Codex usage limit reached; retry after 9:34 PM\./);
+  const receipt=JSON.parse(await readFile(path));
+  assert.equal(receipt.status,'rejected');
+  assert.match(receipt.error,/retry after 9:34 PM\./);
  }finally{host.close();workflow.close();await rm(dir,{recursive:true});}
 });

@@ -20,22 +20,32 @@ const tool={type:'function',name:'wiggly_tool',description:'Call an allowed form
 async function readJson(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;}}
 async function saveJson(path,value){await writeFile(path+'.tmp',JSON.stringify(value)+'\n',{mode:0o600});await rename(path+'.tmp',path);}
 
-// Failed-turn detail comes from the native turn error; without it the cause is
-// uncertain and the turn stays unreconciled. Retry-after may arrive under
-// several key names depending on the host version.
+// Failed-turn detail comes from the native turn error. Codex app-server
+// reports {message, codexErrorInfo}, e.g. codexErrorInfo 'usageLimitExceeded'
+// with "...try again at 9:34 PM." in the message; codexErrorInfo may also be an
+// object keyed by its variant. Without error detail the cause is uncertain and
+// the turn stays unreconciled.
+function errorInfoName(error){
+ const info=error?.codexErrorInfo;
+ if(typeof info==='string')return info;
+ if(info&&typeof info==='object')return Object.keys(info)[0]??'';
+ return '';
+}
 function turnErrorDetail(turn){
  const error=turn?.error;
  if(error==null)return String(turn?.status??'unknown');
- if(typeof error==='string')return error;
- return error.message??error.code??error.type??JSON.stringify(error);
+ if(typeof error==='string')return error.replace(/\.+$/,'');
+ const name=errorInfoName(error)||error.code||error.type||'',message=String(error.message??'').trim().replace(/\.+$/,'');
+ return (name&&message?`${name}: ${message}`:name||message)||JSON.stringify(error);
 }
 function turnRetryAfter(error){
  if(!error||typeof error!=='object')return null;
- for(const key of ['retryAfter','retry_after','retryAfterSeconds','retry_after_seconds','resetAfter','resetsAfter','resetAt','resetsAt','retryAt','windowReset'])if(error[key]!=null)return error[key];
- return null;
+ for(const key of ['retryAfter','retry_after','resetsAt','resetAt'])if(error[key]!=null)return error[key];
+ const said=/try again (?:at|in|after) ([^.]+?)\s*(?:\.|$)/i.exec(String(error.message??''));
+ return said?said[1]:null;
 }
 function isUsageLimitFailure(turn,detail){
- const error=turn?.error,code=error&&typeof error==='object'?(error.code??error.type??''):'';
+ const error=turn?.error,code=error&&typeof error==='object'?(errorInfoName(error)||error.code||error.type||''):'';
  return /usage.?limit|rate.?limit|too.?many.?requests|quota|\b429\b/i.test(`${code} ${detail}`);
 }
 function turnFailureMessage(turn){
