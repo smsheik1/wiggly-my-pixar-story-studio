@@ -1,0 +1,18 @@
+[Parsed_ebur128_1 @ 0xbc2c20d80] t: 0.899977   TARGET:-23 LUFS    M: -21.1 S:-120.7     I: -21.1 LUFS       LRA:   0.0 LU  FTPK: -18.1 dBFS  TPK: -18.1 dBFS
+[Parsed_ebur128_1 @ 0xbc2c20d80] t: 0.999977   TARGET:-23 LUFS    M: -21.1 S:-120.7     I: -21.1 LUFS       LRA:   0.0 LU  FTPK: -18.1 dBFS  TPK: -18.1 dBFS
+[Parsed_ebur128_1 @ 0xbc2c20d80] Summary:
+
+  Integrated loudness:
+    I:         -19.5 LUFS
+    Threshold: -31.1 LUFS
+
+  Loudness range:
+    LRA:         0.0 LU
+    Threshold:   0.0 LUFS
+    LRA low:     0.0 LUFS
+    LRA high:    0.0 LUFS
+
+  True peak:
+    Peak:      -1.2 dBFS
+[out#0/null @ 0xbc2c20480] video:0KiB audio:86KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown
+size=N/A time=00:00:01.00 bitrate=N/A speed= 342x elapsed=0:00:00.00

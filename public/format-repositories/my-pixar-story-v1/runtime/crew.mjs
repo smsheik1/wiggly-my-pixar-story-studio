@@ -94,6 +94,13 @@ export async function runCrewTask(p,task,host){
  task=await prepareCrewTask(p,task);
  const receipts=[],outputs=new Map();
  const event=await host.runTask({...task,worker,allowedTools:task.allowedTools??crewRoles[worker.role].tools},{worker,callTool:crewTools(task,worker,host.tools,(r,value)=>{receipts.push(r);outputs.set(`${r.tool}:${r.sha256}`,value);})});
+ if (event && typeof event === 'object') {
+   event.workerId ??= worker.workerId;
+   if (event.review && typeof event.review === 'object') {
+     event.review.modelVersion ??= worker.modelVersion;
+     event.review.capabilityVersion ??= worker.capabilityVersion;
+   }
+ }
  try{
  const expected=task.gate==='review'?'review':task.gate==='owner-review'?'owner-review':task.gate==='produce'?'plan':'artifact';
  if(event.taskId!==task.taskId||event.actor!==task.actor||!(event.action===expected||(task.gate==='produce'||task.step==='narration'&&task.gate==='author')&&event.action==='planning-blocked'))throw new Error('CREW_PERMISSION_DENIED: worker may only submit its assigned deliverable; no human approvals, state writes or provider calls.');
