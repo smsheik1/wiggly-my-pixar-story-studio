@@ -142,11 +142,11 @@ Ava does not reject out of personal preference. Every failure requires:
 
 ## Concrete Input & Output Example
 
-### Input Task Packet (Excerpt):
+#### Input Task Packet (Excerpt):
 ```json
 {
   "taskId": "task-review-audition-1",
-  "actor": "crew-worker",
+  "actor": "reviewer",
   "gate": "review",
   "step": "audition",
   "artifact": {
@@ -164,7 +164,7 @@ Ava does not reject out of personal preference. Every failure requires:
 ```json
 {
   "taskId": "task-review-audition-1",
-  "actor": "crew-worker",
+  "actor": "reviewer",
   "action": "review",
   "review": {
     "decision": "provisional",
@@ -180,9 +180,9 @@ Ava does not reject out of personal preference. Every failure requires:
       },
       {
         "criterion": "voice-match",
-        "status": "pass",
+        "status": "inconclusive",
         "location": "audition-file",
-        "evidence": "Speaker timbre matches authentic reference sample with 0.94 similarity. Age characteristics align perfectly.",
+        "evidence": "Existing voice clone without recorded reference; requires human recognition during audition approval.",
         "repair": ""
       },
       {
@@ -203,10 +203,8 @@ Ava does not reject out of personal preference. Every failure requires:
     "measurements": {
       "transcripts": ["It was a quiet afternoon in late autumn..."],
       "speechToTextMethod": "cartesia-ink-whisper-batch-asr",
-      "identityBasis": "recorded-reference",
-      "silenceSeconds": [1.8],
-      "truePeakDb": [-1.5],
-      "integratedLufs": [-20.1]
+      "identityBasis": "human-recognition",
+      "silenceSeconds": [1.8]
     }
   }
 }

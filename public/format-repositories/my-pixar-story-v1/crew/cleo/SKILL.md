@@ -27,7 +27,6 @@ Cleo operates in two distinct task modes:
 3. **Reference Photo Audit**:
    - Call `viewImage` on every photo in `task.characterReferences`.
    - Never claim an unseen photo matches. If a photo is missing or blurry, record `interpreted-likeness` in `notes` for explicit human operator confirmation.
-   - For minors (`minor: true`), verify responsible adult/guardian authority is flagged.
 4. **Output Schema (`Content.roster`)**:
    - Every character requires `{ id, name, ageVariant, important: true, references: [File], notes }`.
 
