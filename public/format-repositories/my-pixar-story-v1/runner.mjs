@@ -2,7 +2,7 @@
 import {loadStudio,studioFor,limitsFor,communicationFor} from './runtime/instructions.mjs';
 import {assertDebugReady,debugSnapshot} from './runtime/debug.mjs';
 import { readFile, mkdir, writeFile, unlink } from 'node:fs/promises';
-import { resolve, join, dirname } from 'node:path';
+import { resolve, join, dirname, basename } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { z } from 'zod';
@@ -127,12 +127,17 @@ async function main() {
       const reviewCalls=Number(option('review-calls','0'));
       const transcriptionCalls=Number(option('transcription-calls','0'));
       const reviewCost=Number(option('review-cost-usd','0')),transcriptionCost=Number(option('transcription-cost-usd','0'));
+      // Optional live LangSmith tracing: enabled only with LANGSMITH_API_KEY in
+      // the --secrets file; off when WIGGLY_TRACING=off or no key. Never breaks a run.
+      const fallbackTracer=()=>({enabled:false,turn:()=>({end(){}}),tool:()=>({end(){}}),review(){},paidJob(){},flush:async()=>{}});
+      let tracer=fallbackTracer();
+      try{const tracing=await import('./runtime/tracing.mjs');tracer=await tracing.createTracer({secretsPath,runId:basename(runDir)});}catch{tracer=fallbackTracer();}
       let budgetQueue=Promise.resolve();
-      const beforeRequest=async({provider,requestDigest,task})=>{if(status.project.reviewMode!=='supervised')return;const amount=provider==='gemini'?reviewCost:transcriptionCost;if(!Number.isFinite(amount)||amount<=0)throw new Error('ACCOUNT_ESTIMATE_REQUIRED: set positive --review-cost-usd / --transcription-cost-usd before paid inference.');budgetQueue=budgetQueue.then(async()=>{const latest=await workflow.status('project');if(latest.pending.taskId!==task.taskId)throw new Error('STALE_TASK: inference reservation belongs to an older task.');await workflow.respond('project',{taskId:task.taskId,actor:'runtime',action:'reserve-compute',reservation:{id:provider+':'+requestDigest,provider,estimatedCostUsd:amount}});});return budgetQueue;};
+      const beforeRequest=async({provider,requestDigest,task})=>{if(status.project.reviewMode!=='supervised')return;const amount=provider==='gemini'?reviewCost:(provider==='cartesia-stt'?transcriptionCost:NaN);if(!Number.isFinite(amount)||amount<=0)throw new Error('ACCOUNT_ESTIMATE_REQUIRED: set positive --review-cost-usd / --transcription-cost-usd before paid inference.');try{tracer.paidJob({provider,estimatedCostUsd:amount,actualCostUsd:null,requestDigest,taskId:task.taskId});}catch{}budgetQueue=budgetQueue.then(async()=>{const latest=await workflow.status('project');if(latest.pending.taskId!==task.taskId)throw new Error('STALE_TASK: inference reservation belongs to an older task.');await workflow.respond('project',{taskId:task.taskId,actor:'runtime',action:'reserve-compute',reservation:{id:provider+':'+requestDigest,provider,estimatedCostUsd:amount}});});return budgetQueue;};
       const perceptionTools={...createGeminiReviewTools({secretsPath,receiptDirectory:join(runDir,'gemini-reviews'),maxCalls:reviewCalls,beforeRequest}),...createCartesiaTranscriptionTool({secretsPath,receiptDirectory:join(runDir,'cartesia-transcriptions'),maxCalls:transcriptionCalls,beforeRequest}),...createAudioEditTools({runDir})};
       // A four-file review includes twelve tool calls and a structured report.
       // Keep a bounded ten-minute window; timeout still stops without a retry.
-      const host=new CodexHost({cwd:join(runDir,'host-workspace'),timeoutMs:600000,perceptionTools,perceptionProfile:{media:GEMINI_REVIEW_PROFILE,transcription:CARTESIA_STT_PROFILE,audioEditing:AUDIO_EDIT_PROFILE},onProgress:({worker,item})=>process.stderr.write(`${worker}: ${item}\n`)});
+      const host=new CodexHost({cwd:join(runDir,'host-workspace'),timeoutMs:600000,perceptionTools,perceptionProfile:{media:GEMINI_REVIEW_PROFILE,transcription:CARTESIA_STT_PROFILE,audioEditing:AUDIO_EDIT_PROFILE},tracer,onProgress:({worker,item})=>process.stderr.write(`${worker}: ${item}\n`)});
       try{
         if(command==='dispatch-reconcile'){
           const turnId=option('turn'),message=option('message');if(args.length)throw new Error('Unknown reconciliation arguments.');
@@ -156,9 +161,9 @@ async function main() {
         if(recoveryAttempt&&(!recoveryTask||!Number.isInteger(recoveryAttempt.attempt)||!recoveryMessage||maxTasks!==1))throw new Error('Recovery needs exact --recovery-task, --recovery-attempt, --recovery-message and one task.');
         if(!['true','false'].includes(repair))throw new Error('--repair-invalid needs true or false.');
         await host.initialize();
-        const result=await driveCrew(workflow,'project',host,{maxTasks,repairInvalid:repair==='true',recoveryAttempt,receiptDirectory:join(runDir,'host-dispatch'),verifySubmission,onProgress:progress=>process.stderr.write(progress.type==='repair-notice'?`DEFECT FOUND: ${progress.notice.key??progress.notice.artifactId}. ${progress.notice.findings?.map(f=>f.evidence).join(' ')??'See the localized repair notice in status.'} Repair routed through the current task.\n`:`${progress.step}: ${progress.gate}\n`)});
+        const result=await driveCrew(workflow,'project',host,{maxTasks,repairInvalid:repair==='true',recoveryAttempt,receiptDirectory:join(runDir,'host-dispatch'),verifySubmission,tracer,onProgress:progress=>process.stderr.write(progress.type==='repair-notice'?`DEFECT FOUND: ${progress.notice.key??progress.notice.artifactId}. ${progress.notice.findings?.map(f=>f.evidence).join(' ')??'See the localized repair notice in status.'} Repair routed through the current task.\n`:`${progress.step}: ${progress.gate}\n`)});
         print({completed:result.completed,stop:result.stop,...presentation(result.status)});return;
-      }finally{host.close();}
+      }finally{try{await tracer.flush(5000);}catch{}host.close();}
     }
     if(['qualify-audio','qualify-visual','generate','collect','render','preview','finalize'].includes(command)&&!status.project.crew)throw new Error('CREW_NOT_CONFIGURED: bind actual host workers using configure-crew; old approvals never supply capabilities.');
     if(command==='qualify-audio'){
