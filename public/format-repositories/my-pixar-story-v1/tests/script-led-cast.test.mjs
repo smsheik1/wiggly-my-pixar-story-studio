@@ -43,6 +43,21 @@ test('cast references and consent remain enforced at roster; approved script cas
  p=approveExact(p,{intakeConfirmation:intake});assert.equal(p.step,'characterPrompt');assert.deepEqual(current(p,'roster').intakeConfirmation,intake);
 });
 
+test('a roster with minor characters and no guardianAuthority is approved',()=>{
+ const minorCast=[{id:'alex',name:'Alex',ageVariant:'child-8yo',minor:true,storyPurpose:'Narrator as child'}];
+ let p=confirmed(supervisedAudio());p.workflowRevision=4;current(p,'script').content.proposedCast=minorCast;
+ p=reviewed(author(p,{characters:[{id:'alex',name:'Alex',ageVariant:'child-8yo',important:true,references:[image(1)],notes:'ISOLATED minor'}]},'cast-owner'));
+ const intake={
+  voiceConsent:true,
+  characters:[{id:'alex',name:'Alex',ageVariant:'child-8yo',minor:true,photoRights:true,references:[image(1)],likeness:'reference',decisionNotes:'ISOLATED'}],
+  resolvedFindings:[]
+ };
+ p=approveExact(p,{intakeConfirmation:intake});
+ assert.equal(p.step,'characterPrompt');
+ assert.equal(current(p,'roster').intakeConfirmation.characters[0].minor,true);
+ assert.equal(current(p,'roster').intakeConfirmation.characters[0].guardianAuthority,undefined);
+});
+
 test('script and cast are delivered together after SQLite restart; no intake inventory demand in the delivery view',async()=>{
  const {mkdtemp,rm}=await import('node:fs/promises');const {tmpdir}=await import('node:os');const {join}=await import('node:path');
  const {openWorkflow}=await import('../runtime/workflow.mjs');const {presentDeliverable}=await import('../runtime/presentation.mjs');

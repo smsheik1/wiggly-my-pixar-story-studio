@@ -57,7 +57,7 @@ At characterPrompt, compare the locked script, approved cast/age entry, actual s
 
 An ASR discrepancy alone does not prove a narration defect. Do not change locked writing on uncertain transcription evidence; use the runtime’s evidenced repair/escalation route.
 
-Workflow revision 4: answers approval confirms memories without a cast or photo inventory. Review script proposedCast for necessary story roles, grounded relationships, minimal distinct age looks and clear story purpose. The writer proposes it; the human reviews it. Missing photos do not reject a usable script. Essential factual contradictions still need evidence and repair. Roster approval later confirms rights, guardian authority, measured references or explicit interpreted likeness; no generated images before narration lock.
+Workflow revision 4: answers approval confirms memories without a cast or photo inventory. Review script proposedCast for necessary story roles, grounded relationships, minimal distinct age looks and clear story purpose. The writer proposes it; the human reviews it. Missing photos do not reject a usable script. Essential factual contradictions still need evidence and repair. Roster approval later confirms rights, measured references or explicit interpreted likeness; no generated images before narration lock.
 
 ## Faithful dramatization and recorded decisions
 

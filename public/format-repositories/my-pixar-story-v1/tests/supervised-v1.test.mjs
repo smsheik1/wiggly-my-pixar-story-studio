@@ -125,9 +125,13 @@ test('script lock needs actual human rights/reference and common-sense resolutio
  const approve=intake=>send(p,'approve',{artifactId:a.id,artifactDigest:a.digest,message:'ISOLATED',...(intake?{intakeConfirmation:intake}:{})});
  assert.throws(()=>approve(),/INTAKE_CONFIRMATION_REQUIRED/);
  const base=intakeFixture(p);
- for(const edit of [i=>i.voiceConsent=false,i=>i.characters[0].photoRights=false,i=>{i.characters[0].minor=true;i.characters[0].guardianAuthority=false;},i=>i.characters[0].likeness='await-reference',i=>i.resolvedFindings=[],i=>i.resolvedFindings[0].findingDigest='other']){
+ for(const edit of [i=>i.voiceConsent=false,i=>i.characters[0].photoRights=false,i=>i.characters[0].likeness='await-reference',i=>i.resolvedFindings=[],i=>i.resolvedFindings[0].findingDigest='other']){
   const intake=structuredClone(base);edit(intake);assert.throws(()=>approve(intake));
  }
+ const minorIntake=structuredClone(base);minorIntake.characters[0].minor=true;delete minorIntake.characters[0].guardianAuthority;
+ assert.equal(approve(minorIntake).step,'voiceSample');
+ const legacyGuardianIntake=structuredClone(base);legacyGuardianIntake.characters[0].minor=true;legacyGuardianIntake.characters[0].guardianAuthority=false;
+ assert.equal(approve(legacyGuardianIntake).step,'voiceSample');
  const q=approve(base);assert.equal(q.step,'voiceSample');assert.equal(current(q,'script').intakeConfirmation.characters[0].id,'alex');
  const roster=confirmed(supervisedAudio()),character={id:'alex',name:'Alex',ageVariant:'adult',important:true,references:[image(1)],notes:'ISOLATED'};
  for(const change of [{id:'swapped-person'},{ageVariant:'child'},{references:[image(2)]}])assert.throws(()=>author(roster,{characters:[{...character,...change}]},'cast-owner'),/INTAKE_ROSTER_MISMATCH/);
