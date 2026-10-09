@@ -106,6 +106,42 @@ test('throwing tracing backend never breaks driveCrew',async()=>{
  }finally{workflow.close();await rm(dir,{recursive:true});}
 });
 
+test('rejected worker result ends the turn trace with an error exactly once',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-tracing-reject-')),workflow=openWorkflow(join(dir,'state.sqlite'));
+ const crew={workers:Object.entries((await import('../runtime/crew.mjs')).crewRoles).map(([role,{name}])=>({workerId:`isolated-${role}`,name,role,modelVersion:'isolated-host',capabilityVersion:'isolated-tools',execution:'host'}))};
+ // Valid event shape but a stale taskId, so runCrewTask validation fails after the turn started.
+ const host={runTask:async(task,{worker})=>({taskId:'stale-task',actor:'agent',workerId:worker.workerId,action:'artifact',content:script})};
+ const fake={captured:[]};
+ const {dir:secretsDir,path}=await secretsFile();
+ try{
+  const tracer=await createTracer({secretsPath:path,runId:'reject-check',client:fake});
+  const init=await workflow.init('run',inputs,{workflowRevision:2});await workflow.respond('run',event(init.project,'configure-crew',{actor:'human',message:'ISOLATED',crew}));
+  await assert.rejects(driveCrew(workflow,'run',host,{maxTasks:1,receiptDirectory:join(dir,'dispatch'),tracer}),/CODEX_RESULT_REJECTED|CREW_PERMISSION_DENIED/);
+  const ends=fake.captured.filter(r=>r.phase==='crew-turn-end');
+  assert.equal(ends.length,1);
+  assert.match(JSON.stringify(ends[0]),/error/);
+ }finally{workflow.close();await rm(dir,{recursive:true});await rm(secretsDir,{recursive:true});}
+});
+
+test('flush ends still-open child runs with an unfinished-at-flush error',async()=>{
+ const {dir,path}=await secretsFile();
+ try{
+  const fake={captured:[]};
+  const tracer=await createTracer({secretsPath:path,runId:'flush-check',client:fake});
+  tracer.turn({role:'script-writer',taskId:'t-open'});
+  tracer.tool({toolName:'viewImage'});
+  tracer.turn({role:'visual-reviewer',taskId:'t-done'}).end({outcome:'completed'});
+  await tracer.flush();
+  const ends=fake.captured.filter(r=>r.phase==='crew-turn-end'||r.phase==='tool-end');
+  assert.equal(ends.length,3);
+  assert.equal(ends.filter(e=>JSON.stringify(e).includes('unfinished at flush')).length,2);
+  assert.equal(ends.filter(e=>JSON.stringify(e).includes('completed')).length,1);
+  // A second flush must not double-end anything.
+  await tracer.flush();
+  assert.equal(fake.captured.filter(r=>r.phase==='crew-turn-end'||r.phase==='tool-end').length,3);
+ }finally{await rm(dir,{recursive:true});}
+});
+
 test('live LangSmith path ends every run, keeps digests and scrubs any secrets-file value (fake fetch, no network)',async()=>{
  const {dir,path}=await secretsFile('OTHER_TOKEN=zz-unlisted-secret-999\n');
  const bodies=[];

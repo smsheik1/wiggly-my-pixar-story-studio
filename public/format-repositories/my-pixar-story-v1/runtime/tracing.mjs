@@ -100,10 +100,13 @@ export async function createTracer({secretsPath,runId='local',projectName=TRACIN
   const post=run=>{try{captured.push(run);}catch(error){warnOnce(error.message);}};
   const root={name:'drive-codex',run_type:'chain',project_name:projectName,tags,inputs:safe({runId}),metadata:safe({runId})};
   post({phase:'root',...root});
+  const open=new Set();
   const child=(kind,fields)=>{
    const run={phase:kind,project_name:projectName,tags,...safe(fields)};
    post(run);
-   return {end:(outputs={})=>{try{post({phase:`${kind}-end`,tags,...safe(outputs)});}catch(error){warnOnce(error.message);}},...run};
+   const handle={...run,ended:false,end:(outputs={})=>{if(handle.ended)return;handle.ended=true;open.delete(handle);try{post({phase:`${kind}-end`,tags,...safe(outputs)});}catch(error){warnOnce(error.message);}}};
+   open.add(handle);
+   return handle;
   };
   return {
    enabled:true,projectName,runId,captured,
@@ -111,7 +114,7 @@ export async function createTracer({secretsPath,runId='local',projectName=TRACIN
    tool:(fields={})=>child('tool',{name:`tool:${fields.toolName??'unknown'}`,run_type:'tool',...fields}),
    review:(fields={})=>{child('review',{name:'review-verdict',run_type:'chain',...fields}).end({});},
    paidJob:(fields={})=>{child('paid-job',{name:`paid-job:${fields.provider??'unknown'}`,run_type:'tool',...fields}).end({});},
-   flush:async()=>{},
+   flush:async()=>{for(const handle of [...open])try{handle.end({outcome:'error',error:'unfinished at flush'});}catch(error){warnOnce(error.message);}},
   };
  }
  // Live backend: minimal langsmith Client + RunTree usage.
@@ -121,13 +124,16 @@ export async function createTracer({secretsPath,runId='local',projectName=TRACIN
   const ls=new Client({apiKey,callerOptions:{maxRetries:0},timeout_ms:10000,hideInputs:value=>safe(value),hideOutputs:value=>safe(value),hideMetadata:value=>safe(value),fetchImplementation:fetcher});
   const root=new RunTree({name:'drive-codex',run_type:'chain',inputs:safe({runId}),project_name:projectName,tags,metadata:safe({runId}),client:ls});
   root.postRun().catch(error=>warnOnce(error.message));
+  const open=new Set();
   const child=(name,run_type,fields)=>{
    try{
     const tree=new RunTree({name,run_type,parent_run:root,inputs:safe(fields),project_name:projectName,tags,metadata:safe(fields),client:ls});
     tree.postRun().catch(error=>warnOnce(error.message));
     // RunTree.end() only records locally; patchRun() sends the end time/outputs.
-    return {end:(outputs={},errorText)=>{try{Promise.resolve(tree.end(safe(outputs),errorText)).then(()=>tree.patchRun()).catch(error=>warnOnce(error.message));}catch(error){warnOnce(error.message);}}};
-   }catch(error){warnOnce(error.message);return {end(){}};}
+    const handle={ended:false,end:(outputs={},errorText)=>{if(handle.ended)return;handle.ended=true;open.delete(handle);try{Promise.resolve(tree.end(safe(outputs),errorText)).then(()=>tree.patchRun()).catch(error=>warnOnce(error.message));}catch(error){warnOnce(error.message);}}};
+    open.add(handle);
+    return handle;
+   }catch(error){warnOnce(error.message);return {ended:true,end(){}};}
   };
   let flushed=false;
   return {
@@ -138,6 +144,7 @@ export async function createTracer({secretsPath,runId='local',projectName=TRACIN
    paidJob:(fields={})=>{child(`paid-job:${fields.provider??'unknown'}`,'tool',fields).end({provider:fields.provider,estimatedCostUsd:fields.estimatedCostUsd,actualCostUsd:fields.actualCostUsd});},
    flush:async(timeoutMs=5000)=>{
     if(flushed)return;flushed=true;
+    for(const handle of [...open])try{handle.end({outcome:'error',error:'unfinished at flush'},'unfinished at flush');}catch(error){warnOnce(error.message);}
     let timer;
     try{await Promise.race([(async()=>{await root.end(safe({runId}));await root.patchRun();await ls.awaitPendingTraceBatches();})(),new Promise(resolve=>{timer=setTimeout(resolve,timeoutMs);timer.unref?.();})]);}
     catch(error){warnOnce(error.message);}
