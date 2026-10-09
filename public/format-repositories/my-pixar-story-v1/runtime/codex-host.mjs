@@ -58,8 +58,8 @@ function turnFailureMessage(turn){
 }
 
 export class CodexHost {
- constructor({cwd,spawnProcess=spawn,timeoutMs=180000,onProgress=()=>{},perceptionTools={},perceptionProfile=null}={}){
-  this.cwd=cwd;this.timeoutMs=timeoutMs;this.onProgress=onProgress;this.sequence=0;this.pending=new Map();this.active=null;this.perceptionProfile=perceptionProfile;
+ constructor({cwd,spawnProcess=spawn,timeoutMs=180000,onProgress=()=>{},perceptionTools={},perceptionProfile=null,tracer=null}={}){
+  this.cwd=cwd;this.timeoutMs=timeoutMs;this.onProgress=onProgress;this.sequence=0;this.pending=new Map();this.active=null;this.perceptionProfile=perceptionProfile;this.tracer=tracer;
   this.child=spawnProcess('codex',['app-server','--stdio',...enabled.flatMap(name=>['--enable',name]),...disabled.flatMap(name=>['--disable',name]),'-c','web_search="disabled"'],{stdio:['pipe','pipe','pipe']});
   this.lines=createInterface({input:this.child.stdout});
   this.lines.on('line',line=>{try{this.message(JSON.parse(line));}catch(error){this.fail(error);}});
@@ -81,30 +81,43 @@ export class CodexHost {
   const active=this.active;if(!active||message.params?.threadId!==active.threadId||message.params?.turnId&&message.params.turnId!==active.turnId)return;
   if(message.method==='item/completed'&&message.params.item?.type==='agentMessage')active.output=message.params.item.text;
   if(message.method==='item/started')this.onProgress({worker:active.worker.name,item:message.params.item?.type});
-  if(message.method==='turn/completed'){
-   const turn=message.params.turn;
-   if(turn.id!==active.turnId)return;
-   if(turn.status!=='completed'){
-    const error=new Error(turnFailureMessage(turn));
-    error.turnStatus=turn.status;error.turnError=turn?.error??null;
-    // A failed turn that produced no final message and left no tool call in
-    // progress is safe to retry; flag it so the driver records the outcome
-    // instead of leaving the receipt started. Anything else stays uncertain.
-    if(turn.status==='failed'&&!active.output&&(active.pendingTools??0)===0)error.safeRetryWithoutOutput=true;
-    active.reject(error);return;}
-   active.resolve(active.output);
+   if(message.method==='turn/completed'){
+    const turn=message.params.turn;
+    if(turn.id!==active.turnId)return;
+    if(turn.status!=='completed'){
+     const error=new Error(turnFailureMessage(turn));
+     error.turnStatus=turn.status;error.turnError=turn?.error??null;
+     // A failed turn with native error detail that produced no final message
+     // and left no tool call in progress is safe to retry; flag it so the
+     // driver records the outcome instead of leaving the receipt started.
+     // Anything else stays uncertain. Usage-limit failures are flagged
+     // distinctly so the driver defers without consuming an attempt.
+     const detail=turnErrorDetail(turn);
+     if(turn.status==='failed'&&turn?.error!=null&&!active.output&&(active.pendingTools??0)===0){
+      error.safeRetryWithoutOutput=true;
+      error.savedTools=[...(active.finishedTools??[])];
+      if(isUsageLimitFailure(turn,detail)){error.usageLimitExceeded=true;error.retryAfter=turnRetryAfter(turn?.error);}
+     }
+     active.reject(error);return;}
+    active.resolve(active.output);
+   }
+ }
+  async toolCall(message){
+   const active=this.active,params=message.params;
+   try{
+    if(!active||params.threadId!==active.threadId||params.turnId!==active.turnId||params.tool!=='wiggly_tool')throw new Error('TOOL_SCOPE_DENIED');
+    const arguments_=z.object({name:z.string(),sha256:z.string(),referenceSha256:z.string().nullable(),edit:AudioEditPlan.nullable().optional()}).strict().parse(params.arguments);
+    let toolTrace=null;try{toolTrace=this.tracer?.tool?.({toolName:arguments_.name});}catch{toolTrace=null;}
+    const toolStart=Date.now(),endTool=outcome=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart});}catch{}};
+    let value;
+    try{value=await active.callTool(arguments_.name,{sha256:arguments_.sha256,...(arguments_.referenceSha256?{referenceSha256:arguments_.referenceSha256}:{}),...(arguments_.edit?{edit:arguments_.edit}:{})});}
+    catch(error){endTool('failed');throw error;}
+    endTool('completed');
+    active.finishedTools??=[];active.finishedTools.push({type:'dynamicToolCall',status:'completed',tool:'wiggly_tool',arguments:{name:arguments_.name,sha256:arguments_.sha256,referenceSha256:arguments_.referenceSha256}});
+    const contentItems=value.imageUrl?[{type:'inputText',text:JSON.stringify({fileSha256:arguments_.sha256,perception:value.perception})},{type:'inputImage',imageUrl:value.imageUrl}]:[{type:'inputText',text:JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value)}];
+    this.send({id:message.id,result:{success:true,contentItems}});
+   }catch(error){if(active&&!error.stopDispatch){active.finishedTools??=[];active.finishedTools.push({type:'dynamicToolCall',status:'failed',tool:'wiggly_tool'});}if(error.stopDispatch)this.active?.reject(error);this.send({id:message.id,result:{success:false,contentItems:[{type:'inputText',text:error.message}]}});}
   }
- }
- async toolCall(message){
-  const active=this.active,params=message.params;
-  try{
-   if(!active||params.threadId!==active.threadId||params.turnId!==active.turnId||params.tool!=='wiggly_tool')throw new Error('TOOL_SCOPE_DENIED');
-   const arguments_=z.object({name:z.string(),sha256:z.string(),referenceSha256:z.string().nullable(),edit:AudioEditPlan.nullable().optional()}).strict().parse(params.arguments);
-   const value=await active.callTool(arguments_.name,{sha256:arguments_.sha256,...(arguments_.referenceSha256?{referenceSha256:arguments_.referenceSha256}:{}),...(arguments_.edit?{edit:arguments_.edit}:{})});
-   const contentItems=value.imageUrl?[{type:'inputText',text:JSON.stringify({fileSha256:arguments_.sha256,perception:value.perception})},{type:'inputImage',imageUrl:value.imageUrl}]:[{type:'inputText',text:JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value)}];
-   this.send({id:message.id,result:{success:true,contentItems}});
-  }catch(error){if(error.stopDispatch)this.active?.reject(error);this.send({id:message.id,result:{success:false,contentItems:[{type:'inputText',text:error.message}]}});}
- }
  async initialize(){await mkdir(this.cwd,{recursive:true});await this.call('initialize',{clientInfo:{name:'wiggly_memoir',title:'Wiggly memoir studio',version:'2.0.0'},capabilities:{experimentalApi:true}});this.send({method:'initialized',params:{}});}
  async profile(){
   const version=execFileSync('codex',['--version'],{encoding:'utf8'}).trim();
@@ -162,7 +175,7 @@ export class CodexHost {
  async turn(worker,input,callTool=async()=>{throw new Error('No tools are permitted during initialization.');},outputSchema){
   if(this.active)throw new Error('CODEX_HOST_BUSY: one graph task at a time.');
   let resolve,reject;const done=new Promise((yes,no)=>{resolve=yes;reject=no;});
-  this.active={threadId:worker.workerId,worker,callTool,resolve,reject,output:'',buffer:[],pendingTools:0};
+   this.active={threadId:worker.workerId,worker,callTool,resolve,reject,output:'',buffer:[],pendingTools:0,finishedTools:[]};
   // Attach a handler immediately; a transport can fail before turn/start returns.
   done.catch(()=>{});
   const timer=setTimeout(()=>reject(new Error('CODEX_TURN_TIMEOUT: inspect saved worker progress; no automatic retry.')),this.timeoutMs);
@@ -191,16 +204,21 @@ export async function reconcileDispatch(task,host,{receiptDirectory,turnId,messa
  const cleanFailed=turn?.status==='failed'&&turn?.error!=null;
  if(result.thread?.id!==receipt.worker.workerId||!(turn?.status==='interrupted'||cleanFailed)||turn.items.some(i=>i.type==='agentMessage')||turn.items.some(i=>i.type==='dynamicToolCall'&& !['completed','failed'].includes(i.status))||packet?.task?.taskId!==task.taskId||packet?.task?.worker?.workerId!==receipt.worker.workerId)throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: exact interrupted or clean-failed turn without a final result, pending tool or missing failure detail required; no retry permitted.');
  const failed=turn.status==='failed',detail=turnErrorDetail(turn);
- const archive=path+`.${failed?'failed':'interrupted'}-${receipt.attempt}.json`,evidence=path+`.native-turn-${receipt.attempt}.json`;
+ const usageLimit=failed&&isUsageLimitFailure(turn,detail);
+ const archive=path+`.${usageLimit?'deferred':failed?'failed':'interrupted'}-${receipt.attempt}.json`,evidence=path+`.native-turn-${receipt.attempt}.json`;
  for(const [target,value] of [[archive,receipt],[evidence,turn]]){
   const prior=await readJson(target);if(prior&&digest(prior)!==digest(value))throw new Error('DISPATCH_RECEIPT_CONFLICT');
   if(!prior)await writeFile(target,JSON.stringify(value)+'\n',{flag:'wx',mode:0o600});
+ }
+ if(usageLimit){
+  const reconciled={...receipt,status:'deferred',reason:'usage-limit',retryAfter:turnRetryAfter(turn?.error),error:`${turnFailureMessage(turn)} Continue the saved investigation; existing local draft and paid-call attempts remain consumed. Reuse compatible finished tool receipts; do not repeat invalid or unknown provider calls.`,event:{savedTools:turn.items.filter(i=>i.type==='dynamicToolCall')},reconciliation:{outcome:'confirmed-failed',turnId,message,evidencePath:evidence,at:new Date().toISOString()}};
+  await saveJson(path,reconciled);return reconciled;
  }
  const reconciled={...receipt,status:'rejected',error:failed?`turn failed before producing output: ${detail}. Continue the saved investigation; existing local draft and paid-call attempts remain consumed. Reuse compatible finished tool receipts; do not repeat invalid or unknown provider calls.`:'Confirmed native interruption without final result. Continue the saved investigation; existing local draft and paid-call attempts remain consumed. Reuse compatible finished tool receipts; do not repeat invalid or unknown provider calls.',event:{savedTools:turn.items.filter(i=>i.type==='dynamicToolCall')},reconciliation:{outcome:failed?'confirmed-failed':'confirmed-interrupted',turnId,message,evidencePath:evidence,at:new Date().toISOString()}};
  await saveJson(path,reconciled);return reconciled;
 }
 
-export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,repairInvalid=false,recoveryAttempt,verifySubmission=async()=>{},onProgress=()=>{}}={}){
+export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,repairInvalid=false,recoveryAttempt,verifySubmission=async()=>{},onProgress=()=>{},tracer=null}={}){
  maxTasks??=limitsFor((await workflow.status(thread)).project).crewTasksPerDispatch;
  if(!Number.isInteger(maxTasks)||maxTasks<1||maxTasks>32)throw new Error('Use a bounded maxTasks between 1 and 32.');
  if(!receiptDirectory)throw new Error('DISPATCH_RECEIPTS_REQUIRED: provide the run’s durable dispatch directory.');
@@ -212,34 +230,52 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
   // Provider execution stays in the authorized runner; this loop never generates media.
   if(!['author','owner-review','review','produce'].includes(task.gate)||task.gate==='produce'&&task.step==='film'||['audioReviewerQualification','reviewerQualification'].includes(task.step))return {completed,stop:'graph-gate',status};
   onProgress({step:task.step,gate:task.gate});
-  const path=join(receiptDirectory,task.taskId+'.json'),receipt=await readJson(path);
-  if(receipt&&receipt.workerDigest!==digest(task.crewWorker)&&!(receipt.status==='rejected'&&digest({...receipt.worker,capabilityVersion:null})===digest({...task.crewWorker,capabilityVersion:null})))throw new Error('DISPATCH_WORKER_CHANGED');
-  if(receipt?.status==='started')throw new Error(`CODEX_DISPATCH_UNCERTAIN: inspect ${path} and the saved worker turn before reconciling. No automatic rerun.`);
-  const attempt=(receipt?.attempt??0)+(receipt?.status==='rejected'?1:0)||1;
-  if(receipt?.status==='rejected'){
-   if(!repairInvalid)throw new Error(`CODEX_RESULT_REJECTED: ${receipt.error}; inspect ${path}; --repair-invalid true explicitly requests a bounded repair of the known finished result.`);
-   if(attempt>limitsFor(status.project).finishedWorkerAttempts&&!(maxTasks===1&&recoveryAttempt?.taskId===task.taskId&&recoveryAttempt.attempt===attempt&&typeof recoveryAttempt.message==='string'&&recoveryAttempt.message.trim()))throw new Error('CODEX_REPAIR_LIMIT: configured finished-attempt limit exhausted; one further recovery attempt requires exact task/attempt and actual human authorization.');
-   const archive=path+`.rejected-${receipt.attempt}.json`,prior=await readJson(archive);
-   if(prior&&digest(prior)!==digest(receipt))throw new Error('DISPATCH_RECEIPT_CONFLICT');
-   if(!prior)await writeFile(archive,JSON.stringify(receipt)+'\n',{flag:'wx',mode:0o600});
-  }
+   const path=join(receiptDirectory,task.taskId+'.json'),receipt=await readJson(path);
+   if(receipt&&receipt.workerDigest!==digest(task.crewWorker)&&!((receipt.status==='rejected'||receipt.status==='deferred')&&digest({...receipt.worker,capabilityVersion:null})===digest({...task.crewWorker,capabilityVersion:null})))throw new Error('DISPATCH_WORKER_CHANGED');
+   if(receipt?.status==='started')throw new Error(`CODEX_DISPATCH_UNCERTAIN: inspect ${path} and the saved worker turn before reconciling. No automatic rerun.`);
+   const attempt=receipt?.status==='deferred'?(receipt.attempt||1):((receipt?.attempt??0)+(receipt?.status==='rejected'?1:0)||1);
+   if(receipt?.status==='deferred'){
+    if(receipt.reason!=='usage-limit')throw new Error(`CODEX_DISPATCH_UNKNOWN_DEFERRED: inspect ${path}.`);
+    const archive=path+`.deferred-${receipt.attempt}.json`,prior=await readJson(archive);
+    if(prior&&digest(prior)!==digest(receipt))throw new Error('DISPATCH_RECEIPT_CONFLICT');
+    if(!prior)await writeFile(archive,JSON.stringify(receipt)+'\n',{flag:'wx',mode:0o600});
+   }
+   if(receipt?.status==='rejected'){
+    if(!repairInvalid)throw new Error(`CODEX_RESULT_REJECTED: ${receipt.error}; inspect ${path}; --repair-invalid true explicitly requests a bounded repair of the known finished result.`);
+    if(attempt>limitsFor(status.project).finishedWorkerAttempts&&!(maxTasks===1&&recoveryAttempt?.taskId===task.taskId&&recoveryAttempt.attempt===attempt&&typeof recoveryAttempt.message==='string'&&recoveryAttempt.message.trim()))throw new Error('CODEX_REPAIR_LIMIT: configured finished-attempt limit exhausted; one further recovery attempt requires exact task/attempt and actual human authorization.');
+    const archive=path+`.rejected-${receipt.attempt}.json`,prior=await readJson(archive);
+    if(prior&&digest(prior)!==digest(receipt))throw new Error('DISPATCH_RECEIPT_CONFLICT');
+    if(!prior)await writeFile(archive,JSON.stringify(receipt)+'\n',{flag:'wx',mode:0o600});
+   }
   let event=receipt?.status==='completed'?receipt.event:null;
   const started={status:'started',taskId:task.taskId,worker:task.crewWorker,workerDigest:digest(task.crewWorker),attempt,...(attempt>limitsFor(status.project).finishedWorkerAttempts?{recoveryAuthorization:{actor:'human',...recoveryAttempt,at:new Date().toISOString()}}:{})};
   if(!event){
    if(receipt)await saveJson(path,started);else await writeFile(path,JSON.stringify(started)+'\n',{flag:'wx',mode:0o600});
   }
+  let turnTrace=null;try{turnTrace=tracer?.turn?.({role:task.crewWorker?.role,workerName:task.crewWorker?.name,model:task.crewWorker?.modelVersion,taskId:task.taskId,step:task.step,gate:task.gate,attempt});}catch{turnTrace=null;}
+  const turnStart=Date.now();
+  const endTrace=outcome=>{try{turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart});}catch{}};
   try{
    event=event?Event.parse(event):await runCrewTask(status.project,{...task,...(receipt?.status==='rejected'?{repairFeedback:{error:receipt.error,previousEvent:receipt.event,instruction:'Repair this evidenced validation error. Preserve current source facts and return the current gate Event.'}}:{})},host);
    applyEvent(status.project,event);
    // Validate actual referenced files before declaring a finished response reusable.
    // Recheck old completed receipts too; changed/missing bytes cannot trap repair.
    await verifySubmission(status,event);
+   endTrace('completed');
+   if(event.action==='review'||event.action==='owner-review')try{tracer?.review?.({decision:event.review?.decision,artifactId:event.artifactId});}catch{}
   }catch(error){
-    // The host observed a clean native failure (no output, no pending tool):
-    // record it so the receipt is not left started and the task can be
-    // retried without a manual reconcile. Anything else stays uncertain.
+    // A clean usage-limit failure defers without consuming a finished-worker
+    // attempt and retries with normal framing. Other clean native failures
+    // record as rejected. Anything else stays uncertain.
     if(!event&&error?.safeRetryWithoutOutput){
-     await saveJson(path,{...started,status:'rejected',error:error.message});
+     if(error?.usageLimitExceeded){
+      endTrace('deferred-usage-limit');
+      await saveJson(path,{...started,status:'deferred',reason:'usage-limit',retryAfter:error.retryAfter??null,error:error.message,event:{savedTools:error.savedTools??[]}});
+      if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
+      throw error;
+     }
+     endTrace('rejected');
+     await saveJson(path,{...started,status:'rejected',error:error.message,event:{savedTools:error.savedTools??[]}});
      if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
      throw error;
     }

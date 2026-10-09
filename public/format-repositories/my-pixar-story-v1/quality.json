@@ -37,7 +37,7 @@
     "modelJudgesQualified": false,
     "knownAnatomyDefect": "inconclusive/missed by local rules; actual model inspection pending",
     "productionRouting": "advisory existing evidence plus mandatory pre-video visual qualification; no current production judge qualified",
-    "langsmith": "optional local examples export; no upload or tracing enabled"
+    "langsmith": "optional live tracing when LANGSMITH_API_KEY is in the --secrets file (off when WIGGLY_TRACING=off or no key); project wiggly-my-pixar-story tagged run:<runId>; media only by sha256/basename, never bytes/base64/data URLs/photos/audio/private inputs/secrets; failures never break a run"
   },
   "backgrounds": "scene-first direction, known/proposed facts, staging space, empty environments, style, continuity, separate review/human lock for each required angle",
   "keyframes": "exact shot/reference bindings; full-frame measured 16:9 at least 1280x720; scene fit, likeness, anatomy, setting continuity, staging, style, composition; independent direct-image review then human",

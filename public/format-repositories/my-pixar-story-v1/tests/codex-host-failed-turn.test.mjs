@@ -26,11 +26,13 @@ test('failed turn with no output reconciles as safe to retry with a clear reason
  try{
   await writeFile(path,JSON.stringify(receipt));
   const result=await reconcileDispatch(task,host,{receiptDirectory:dir,turnId:turn.id,message:'Actual direction'});
-  assert.equal(result.status,'rejected');
-  assert.match(result.error,/turn failed before producing output/);
+  assert.equal(result.status,'deferred');
+  assert.equal(result.reason,'usage-limit');
+  assert.match(result.error,/usage limit reached/i);
   assert.match(result.error,/usageLimitExceeded/);
+  assert.equal(result.attempt,receipt.attempt);
   assert.equal(result.reconciliation.outcome,'confirmed-failed');
-  assert.deepEqual(JSON.parse(await readFile(path+'.failed-2.json')),receipt);
+  assert.deepEqual(JSON.parse(await readFile(path+'.deferred-2.json')),receipt);
   assert.deepEqual(JSON.parse(await readFile(result.reconciliation.evidencePath)),turn);
  }finally{await rm(dir,{recursive:true});}
 });
@@ -89,10 +91,15 @@ test('host observing a failed turn records it in the receipt with the usage-limi
   await assert.rejects(driveCrew(workflow,'run',host,options),/usage limit reached/i);
   const receipt=JSON.parse(await readFile(path));
   assert.notEqual(receipt.status,'started');
-  assert.equal(receipt.status,'rejected');
+  assert.equal(receipt.status,'deferred');
+  assert.equal(receipt.reason,'usage-limit');
+  assert.equal(receipt.attempt,1);
   assert.match(receipt.error,/retry after 2026-10-09T01:00:00Z/);
-  // No manual reconcile needed: the next run reports the recorded rejection, never uncertainty.
-  await assert.rejects(driveCrew(workflow,'run',host,options),/RESULT_REJECTED/);
+  // No manual reconcile and no --repair-invalid needed: the next run retries cleanly, never uncertainty.
+  await assert.rejects(driveCrew(workflow,'run',host,options),/usage limit reached/i);
+  const second=JSON.parse(await readFile(path));
+  assert.equal(second.status,'deferred');
+  assert.equal(second.attempt,1);
  }finally{host.close();workflow.close();await rm(dir,{recursive:true});}
 });
 
@@ -107,8 +114,12 @@ test('native usage-limit failed turn with a finished tool call reconciles with i
  try{
   await writeFile(path,JSON.stringify(receipt));
   const result=await reconcileDispatch(task,host,{receiptDirectory:dir,turnId:turn.id,message:'Actual direction'});
+  assert.equal(result.status,'deferred');
+  assert.equal(result.reason,'usage-limit');
+  assert.equal(result.retryAfter,'9:34 PM');
+  assert.equal(result.attempt,receipt.attempt);
   assert.equal(result.reconciliation.outcome,'confirmed-failed');
-  assert.match(result.error,/turn failed before producing output: usageLimitExceeded: .*try again at 9:34 PM\. Continue/);
+  assert.match(result.error,/Codex usage limit reached; retry after 9:34 PM\..*Continue/);
   assert.equal(result.event.savedTools.length,1);
  }finally{await rm(dir,{recursive:true});}
 });
@@ -123,7 +134,10 @@ test('host observing the native usage-limit shape surfaces its retry time',async
   const task=(await workflow.status('run')).pending,path=join(options.receiptDirectory,task.taskId+'.json');
   await assert.rejects(driveCrew(workflow,'run',host,options),/Codex usage limit reached; retry after 9:34 PM\./);
   const receipt=JSON.parse(await readFile(path));
-  assert.equal(receipt.status,'rejected');
+  assert.equal(receipt.status,'deferred');
+  assert.equal(receipt.reason,'usage-limit');
+  assert.equal(receipt.retryAfter,'9:34 PM');
+  assert.equal(receipt.attempt,1);
   assert.match(receipt.error,/retry after 9:34 PM\./);
  }finally{host.close();workflow.close();await rm(dir,{recursive:true});}
 });

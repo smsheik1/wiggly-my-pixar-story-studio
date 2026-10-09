@@ -12,6 +12,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 26
+          cache: npm
+          cache-dependency-path: |
+            scripts/studio-spike/package-lock.json
+            public/format-repositories/my-pixar-story-v1/package-lock.json
       - name: Install ffmpeg
         uses: FedericoCarboni/setup-ffmpeg@v3
         timeout-minutes: 5
@@ -19,6 +23,62 @@ jobs:
         run: ffmpeg -version && ffprobe -version
         timeout-minutes: 1
       - run: npm run setup
-      - run: npm run test:studio
+      - name: Studio tests with count guard
+        run: |
+          set -o pipefail
+          cd scripts/studio-spike
+          node --import tsx --test --test-concurrency=4 --test-reporter=tap spike.test.ts harness-override.test.ts phase3.test.ts phase4.test.ts phase5.test.ts phase6.test.ts rehearsal.test.ts rehearsal-worker.test.ts stale-lease.test.ts reviewer-identity.test.ts crew-roles.test.ts production-manager.test.ts 2>&1 | tee /tmp/studio.tap
+      - name: Assert studio totals (123 tests, 0 failures)
+        run: |
+          pass=$(grep -c "^ok " /tmp/studio.tap || true)
+          fail=$(grep -c "^not ok" /tmp/studio.tap || true)
+          echo "studio pass=$pass fail=$fail"
+          test "$fail" = "0"
+          test "$pass" = "123"
       - run: npm run check
-      - run: npm run test:kit
+  kit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: public/format-repositories/my-pixar-story-v1/package-lock.json
+      - name: Install ffmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        timeout-minutes: 5
+      - name: Verify ffmpeg
+        run: ffmpeg -version && ffprobe -version
+        timeout-minutes: 1
+      - run: npm --prefix public/format-repositories/my-pixar-story-v1 ci
+      - run: npm --prefix public/format-repositories/my-pixar-story-v1 rebuild better-sqlite3 esbuild
+      - name: Kit tests shard ${{ matrix.shard }}/4
+        run: |
+          set -o pipefail
+          cd public/format-repositories/my-pixar-story-v1
+          node --test --test-concurrency=6 --test-shard=${{ matrix.shard }}/4 --test-reporter=tap "tests/*.test.mjs" 2>&1 | tee /tmp/kit-shard-${{ matrix.shard }}.tap
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kit-tap-${{ matrix.shard }}
+          path: /tmp/kit-shard-${{ matrix.shard }}.tap
+  kit-totals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [kit]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/kit-taps
+      - name: Assert kit totals (278 tests across 4 shards, 0 failures)
+        run: |
+          pass=$(grep -h "^ok " /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l)
+          fail=$(grep -h "^not ok" /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l || true)
+          echo "kit pass=$pass fail=$fail"
+          test "$fail" = "0"
+          test "$pass" = "278"
