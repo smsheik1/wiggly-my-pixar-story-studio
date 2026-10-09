@@ -31,7 +31,8 @@ Max owns: preparing quotes (cost estimates for a batch), proposing batch start/s
 4. **Conservative Cost Estimation**:
    - For Cartesia speech (`audition`, `narration`), always bind `task.generationEstimate.estimatedCostUsd` when provided, and use the configured model from task/studio config (`task.studioConfig.generation.voice.model`, currently `"sonic-3.6-2026-08-27"`).
    - For Meta Muse images (`candidates`, `sheet`, `backgroundCandidates`, `backgroundAngle`, `keyframe`), use the configured meta-muse rate from studio.json (`generation.image.metaMuseEstimatedUnitCostUsd`, $0.01 USD per image, so estimate $0.01 × n).
-   - For local agy images, cost is $0.00 per image (default `provider: "agy"`, configured rate `generation.image.agyEstimatedUnitCostUsd`).
+   - For local agy images, cost is $0.00 per image (default `provider: "agy"`, configured rate `generation.image.agyEstimatedUnitCostUsd`). For every agy image plan, also set `fallbackEstimatedCostUsd` to at least n × `generation.image.metaMuseEstimatedUnitCostUsd` ($0.01 × n) so the authorized Muse quota fallback is covered; the runtime rejects a present-but-too-low fallback and binds the fallback descriptor into the job digest.
+   - When `task.imageProviderPreference` is present on an image step at `produce`, plan with exactly `task.imageProviderPreference.provider`; a mismatch is rejected. The preference applies to the next image job only and is cleared once an image plan is accepted.
    - Character sheets/options are 4:3, backgrounds/keyframes are 16:9.
    - For Replicate video (`video`), estimate standard Seedance prediction cost ($0.50 USD).
 5. **Strict `planning-blocked` Discipline**:

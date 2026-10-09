@@ -254,39 +254,43 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
   }
   let turnTrace=null;try{turnTrace=tracer?.turn?.({role:task.crewWorker?.role,workerName:task.crewWorker?.name,model:task.crewWorker?.modelVersion,taskId:task.taskId,step:task.step,gate:task.gate,attempt});}catch{turnTrace=null;}
   const turnStart=Date.now();
-  const endTrace=outcome=>{try{turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart});}catch{}};
+  let traceEnded=false;
+  const endTrace=outcome=>{if(traceEnded)return;traceEnded=true;try{turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart});}catch{}};
   try{
-   event=event?Event.parse(event):await runCrewTask(status.project,{...task,...(receipt?.status==='rejected'?{repairFeedback:{error:receipt.error,previousEvent:receipt.event,instruction:'Repair this evidenced validation error. Preserve current source facts and return the current gate Event.'}}:{})},host);
-   applyEvent(status.project,event);
-   // Validate actual referenced files before declaring a finished response reusable.
-   // Recheck old completed receipts too; changed/missing bytes cannot trap repair.
-   await verifySubmission(status,event);
-   endTrace('completed');
-   if(event.action==='review'||event.action==='owner-review')try{tracer?.review?.({decision:event.review?.decision,artifactId:event.artifactId});}catch{}
-  }catch(error){
-    // A clean usage-limit failure defers without consuming a finished-worker
-    // attempt and retries with normal framing. Other clean native failures
-    // record as rejected. Anything else stays uncertain.
-    if(!event&&error?.safeRetryWithoutOutput){
-     if(error?.usageLimitExceeded){
-      endTrace('deferred-usage-limit');
-      await saveJson(path,{...started,status:'deferred',reason:'usage-limit',retryAfter:error.retryAfter??null,error:error.message,event:{savedTools:error.savedTools??[]}});
+   try{
+    event=event?Event.parse(event):await runCrewTask(status.project,{...task,...(receipt?.status==='rejected'?{repairFeedback:{error:receipt.error,previousEvent:receipt.event,instruction:'Repair this evidenced validation error. Preserve current source facts and return the current gate Event.'}}:{})},host);
+    applyEvent(status.project,event);
+    // Validate actual referenced files before declaring a finished response reusable.
+    // Recheck old completed receipts too; changed/missing bytes cannot trap repair.
+    await verifySubmission(status,event);
+    if(event.action==='review'||event.action==='owner-review')try{tracer?.review?.({decision:event.review?.decision,artifactId:event.artifactId});}catch{}
+   }catch(error){
+     // A clean usage-limit failure defers without consuming a finished-worker
+     // attempt and retries with normal framing. Other clean native failures
+     // record as rejected. Anything else stays uncertain.
+     if(!event&&error?.safeRetryWithoutOutput){
+      if(error?.usageLimitExceeded){
+       endTrace('deferred-usage-limit');
+       await saveJson(path,{...started,status:'deferred',reason:'usage-limit',retryAfter:error.retryAfter??null,error:error.message,event:{savedTools:error.savedTools??[]}});
+       if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
+       throw error;
+      }
+      endTrace('rejected');
+      await saveJson(path,{...started,status:'rejected',error:error.message,event:{savedTools:error.savedTools??[]}});
       if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
       throw error;
      }
-     endTrace('rejected');
-     await saveJson(path,{...started,status:'rejected',error:error.message,event:{savedTools:error.savedTools??[]}});
-     if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
-     throw error;
-    }
-    if(!event&&!error.knownFinished){if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});throw error;}
-   await saveJson(path,{...started,status:'rejected',event:event??error.finishedResult,error:error.message});
-   if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
-   throw new Error(`CODEX_RESULT_REJECTED: known finished worker result violates the contract: ${error.message}. Inspect ${path}; use --repair-invalid true for a bounded repair.`);
-  }
-  await saveJson(path,{...started,status:'completed',event});
-  const updated=await workflow.respond(thread,event);completed++;
+     if(!event&&!error.knownFinished){endTrace('error');if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});throw error;}
+    endTrace('error');
+    await saveJson(path,{...started,status:'rejected',event:event??error.finishedResult,error:error.message});
+    if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
+    throw new Error(`CODEX_RESULT_REJECTED: known finished worker result violates the contract: ${error.message}. Inspect ${path}; use --repair-invalid true for a bounded repair.`);
+   }
+   await saveJson(path,{...started,status:'completed',event});
+   const updated=await workflow.respond(thread,event);completed++;
+   endTrace('completed');
   if(event.action==='review'&&event.review?.decision==='rejected'){const notice=updated.pending.repairNotices.find(n=>n.artifactId===event.artifactId);if(notice)onProgress({type:'repair-notice',notice});}
+  }catch(e){endTrace('error');throw e;}finally{endTrace('error');}
  }
  const status=await workflow.status(thread);
  return {completed,stop:status.project.debug?.enabled&&status.project.debug.paused?'debug-pause':'task-limit',status};

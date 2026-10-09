@@ -244,6 +244,16 @@ async function main() {
       await verifyFiles(imported);
       print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'import-sheet', characterId: character, importFile: imported, importProvenance: provenance, message }))); return;
     }
+    if (command === 'prefer-image-provider') {
+      const provider = option('provider'); const message = option('message');
+      if (!['meta-muse','agy'].includes(provider) || !message || args.length) throw new Error('prefer-image-provider needs --provider meta-muse|agy --message "<text>" --run <run>.');
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'prefer-image-provider', provider, message }))); return;
+    }
+    if (command === 'refresh-visual-instructions') {
+      const message = option('message');
+      if (!message || args.length) throw new Error('refresh-visual-instructions needs --message "<actual human instruction>" --run <run>.');
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'refresh-visual-instructions', message }))); return;
+    }
     if (command === 'generate' || command === 'collect') {
       const { project, pending } = status; const job = pending.job;
       if (pending.gate !== 'collect' || !job) throw new Error('Only a current authorized generation request can be executed/collected.');
@@ -267,13 +277,16 @@ async function main() {
       if(command==='collect'&&job.status==='authorized')throw new Error('NOT_SUBMITTED: collection cannot start a paid request.');
       await verifyFiles(job.request);
       let key='';
-      if((command==='generate'||job.plan.provider==='replicate')&&job.plan.provider!=='agy'){
+      if(job.plan.provider==='agy'&&job.request.fallback){
+        try{key=await loadKey('meta-muse',secretsPath);}catch{key='';}
+      }else if((command==='generate'||job.plan.provider==='replicate')&&job.plan.provider!=='agy'){
         try{key=await loadKey(job.plan.provider,secretsPath);}catch(e){throw new Error(`${e.message}\n${remediation(job.plan.provider,secretsPath)}`);}
       }
       if(command==='generate')await runtimeEvent('begin');
       try{
         const latest=(await workflow.status('project')).project;
-        const result=await executeJob(latest,latest.jobs.find(j=>j.id===job.id),runDir,key,command==='collect'&&job.plan.provider!=='replicate'?()=>{throw new Error('Collection cannot resubmit synchronous providers.');}:fetch,command==='collect',onJobId);
+        const needsStub=command==='collect'&&job.plan.provider!=='replicate'&&!(job.plan.provider==='agy'&&job.request.fallback);
+        const result=await executeJob(latest,latest.jobs.find(j=>j.id===job.id),runDir,key,needsStub?()=>{throw new Error('Collection cannot resubmit synchronous providers.');}:fetch,command==='collect',onJobId);
         if(result.pending){print({...presentation(await workflow.status('project')),collection:result});return;}
         await verifyFiles(result);print(presentation(await runtimeEvent('receipt',{result})));
       }catch(e){
@@ -281,7 +294,7 @@ async function main() {
         await runtimeEvent('provider-error',{message:diagnostic});throw new Error(`${diagnostic}\n${remediation(job.plan.provider,secretsPath)}`);
       }return;
     }
-    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
+    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, prefer-image-provider, refresh-visual-instructions, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
   } catch(error){
     const latest=await workflow.status('project').catch(()=>null);
     if(latest?.project.debug?.enabled&&!latest.project.debug.paused)await workflow.respond('project',{taskId:latest.pending.taskId,actor:'runtime',action:'debug-stop',message:'Command stopped: '+error.message});

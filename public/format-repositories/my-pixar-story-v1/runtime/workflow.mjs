@@ -1,7 +1,7 @@
 import {loadStudio,studioFor,limitsFor,recipeFor,workerInstructions,communicationFor,legacyGeneration} from './instructions.mjs';
 import {legacyInstruction} from './legacy-instructions.mjs';
 import {assertDebugReady} from './debug.mjs';
-import {spendSummary,requireBudget} from './budget.mjs';
+import {spendSummary,requireBudget,planTotalCost} from './budget.mjs';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { extname } from 'node:path';
@@ -313,6 +313,8 @@ export function taskFor(p) {
     generationEstimate:p.gate==='produce'?generationEstimate(p):null,
     generationTexts:['audition','narration'].includes(p.step)?{scriptId:current(p,'script').id,scriptDigest:current(p,'script').digest,beats:narrationGenerationTexts(p),...(p.narrationRegeneration?{regeneration:p.narrationRegeneration}:{})}:null,
     voiceReference:['audio-reviewer','voice-director'].includes(roleFor(p))?current(p,'voiceSample')??null:null,voiceChoice:p.voiceChoice??null,voiceBasis:voiceBasis(p),
+    ...(p.imageProviderPreference?{imageProviderPreference:p.imageProviderPreference}:{}),
+    ...(imageSteps.includes(p.step)&&p.gate==='produce'&&p.imageProviderPreference?{imageProviderDirective:`Human provider preference: plan this image step with provider '${p.imageProviderPreference.provider}'. Reason: ${p.imageProviderPreference.message} Applies to the next image job only; it is cleared once an image plan is accepted.`}:{}),
     role: p.gate === 'review' ? 'independent-reviewer' : p.gate==='author'&&p.step==='videoPlan'?'motion-director':p.gate==='author'&&p.step==='videoPrompt'?'video-prompt-engineer':p.gate==='author'&&p.step==='soundPlan'?'sound-designer':p.gate==='author'&&p.step==='editPlan'?'film-editor': p.gate === 'author' && ['shotIntentions','shots'].includes(p.step) ? 'shot-planner' : p.gate === 'author' && p.step === 'keyframePrompt' ? 'composition-writer' : p.gate === 'owner-review' || ['backgrounds', 'backgroundBrief', 'backgroundAngleBrief'].includes(p.step) ? 'background-product-owner' : isPrompt(p) && p.gate === 'author' ? 'pixar-prompter' : 'orchestrator',
     immediateScenes: sceneLocation?.scenes.filter(s => shot ? s.id === shot.sceneId : !p.angleId || sceneLocation.angles.find(a => a.id === p.angleId)?.sceneIds.includes(s.id)) ?? [],
     lockedAnswers:current(p,'answers')??null,
@@ -329,7 +331,7 @@ export function taskFor(p) {
     dependencies: dependencies(p).map(id => p.artifacts.find(a => a.id === id)),
     creativeDirections:p.creativeDirections??[],
     feedback: p.feedback.filter(f => f.key === keyFor(p)), criteria: p.step==='film'&&p.gate==='review'?filmCriteria(p):criteriaFor(p),
-    instruction: p.gate==='produce'&&p.step!=='film' ? `Prepare the assigned generation plan from the canonical task inputs. For audition, generationTexts contains the FIRST locked story beat; no separate audition text or approval is needed. For narration it contains all four locked beats unless generationTexts.regeneration is present: then plan ONLY its human-selected beat and spelling/punctuation pronunciation clarification. The three other files and the locked script/clone/audition are retained. Never widen a scoped repair into a batch. Use generationEstimate when supplied: it is a sourced conservative reservation, not verified account billing. Unknown credit balance, untested generation access, or a zero project budget do not block PLANNING. Return a plan; the runtime owns authorization, budget enforcement and submission. Do not demand a dashboard screenshot or admin key merely to plan. If a rate truly is unavailable and no generationEstimate is supplied, return planning-blocked using the canonical planningGuide. If essential inputs are missing, return missing-input with specific evidence and baby steps. Actual provider errors stop submission through the runtime, with no fallback or automatic retry. Never invent prices, provider receipts, approvals or a new recording requirement for an existing clone. Follow the attached skill for the remaining procedure.` : loaded && ['author','owner-review','review','produce'].includes(p.gate) ? `Follow the attached ${loaded.skill.path} for this ${p.step}/${p.gate} task and return only the assigned Event.` : legacyInstruction(p),
+    instruction: p.gate==='produce'&&p.step!=='film' ? `Prepare the assigned generation plan from the canonical task inputs. For audition, generationTexts contains the FIRST locked story beat; no separate audition text or approval is needed. For narration it contains all four locked beats unless generationTexts.regeneration is present: then plan ONLY its human-selected beat and spelling/punctuation pronunciation clarification. The three other files and the locked script/clone/audition are retained. Never widen a scoped repair into a batch. Use generationEstimate when supplied: it is a sourced conservative reservation, not verified account billing. Unknown credit balance, untested generation access, or a zero project budget do not block PLANNING. Return a plan; the runtime owns authorization, budget enforcement and submission. Do not demand a dashboard screenshot or admin key merely to plan. If a rate truly is unavailable and no generationEstimate is supplied, return planning-blocked using the canonical planningGuide. If essential inputs are missing, return missing-input with specific evidence and baby steps. Actual provider errors stop submission through the runtime, with automatic Muse fallback only for agy quota failures carrying a bound fallback; no other fallback or automatic retry. Never invent prices, provider receipts, approvals or a new recording requirement for an existing clone. Follow the attached skill for the remaining procedure.` : loaded && ['author','owner-review','review','produce'].includes(p.gate) ? `Follow the attached ${loaded.skill.path} for this ${p.step}/${p.gate} task and return only the assigned Event.` : legacyInstruction(p),
   };
 }
 function repairVisual(p, message) {
@@ -488,6 +490,19 @@ export function applyEvent(project, raw) {
     const next=loadStudio(),allowed=['crew/ava/SKILL.md','evaluation/rubrics/audio.md'];
     if(digest(next.config)!==digest(p.studio.config)||Object.keys(next.documents).length!==Object.keys(p.studio.documents).length||Object.keys(next.documents).some(path=>!allowed.includes(path)&&digest(next.documents[path])!==digest(p.studio.documents[path])))throw new Error('AUDIO_REFRESH_SCOPE: only Ava skill and audio rubric may change; all other bindings stay pinned.');
     p.studio=next;
+  }else if(e.action==='refresh-visual-instructions'){
+    requiredActor(e,'human');
+    if(!e.message||!p.studio||!['candidates','sheet','backgroundCandidates','backgroundAngle','keyframe'].includes(p.step)||!['produce','review','human','escalate'].includes(p.gate)||p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status))||p.artifacts.some(a=>a.key===keyFor(p)&&a.approvedBy))throw new Error('VISUAL_REFRESH_LOCKED: refresh Vera instructions explicitly for the current unapproved image item with reconciled jobs.');
+    // Copy ONLY Vera's skill and the visual rubric from the kit; config and every other document stay pinned
+    // (older runs pin an older config/other docs, so whole-snapshot equality would make this unusable).
+    const next=loadStudio(),config=p.studio.config,documents={...p.studio.documents};
+    for(const path of ['crew/vera/SKILL.md','evaluation/rubrics/visual.md']){if(!next.documents[path]||!p.studio.documents[path])throw new Error(`VISUAL_REFRESH_SCOPE: ${path} is not bound in this studio.`);documents[path]=next.documents[path];}
+    p.studio={config,documents,sha256:digest({config,documents})};
+  }else if(e.action==='prefer-image-provider'){
+    requiredActor(e,'human');
+    if(!e.message||!['meta-muse','agy'].includes(e.provider))throw new Error('prefer-image-provider needs --provider meta-muse|agy and --message "<text>".');
+    if(p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status)))throw new Error('IMAGE_PREFERENCE_LOCKED: reconcile outstanding jobs before setting the image provider preference.');
+    p.imageProviderPreference={provider:e.provider,message:e.message,at:new Date().toISOString(),sequence:p.sequence};
   }else if(e.action==='set-budget'){
     requiredActor(e,'human');if(e.budgetLimitUsd===undefined||!e.message||e.budgetLimitUsd+1e-9<spendSummary(p).totalReservedUsd)throw new Error('Budget needs explicit human limit covering existing reservations.');
     p.budget??={maxCostUsd:0,reservations:[]};p.budget.maxCostUsd=e.budgetLimitUsd;
@@ -704,6 +719,7 @@ export function applyEvent(project, raw) {
     const plan = Plans.parse(e.plan);
     if (plan.operation !== p.step || plan.provider !== (imageSteps.includes(p.step)?plan.provider:p.step==='video'?'replicate':['music','effect'].includes(p.step)?'elevenlabs':'cartesia')) throw new Error('Provider/operation does not match the current stage.');
     if (imageSteps.includes(p.step) && !['agy', 'meta-muse'].includes(plan.provider)) throw new Error('Provider/operation does not match the current stage.');
+    if (imageSteps.includes(p.step) && p.imageProviderPreference && plan.provider !== p.imageProviderPreference.provider) throw new Error(`IMAGE_PROVIDER_PREFERENCE: plan uses ${plan.provider} but the human prefers ${p.imageProviderPreference.provider}: ${p.imageProviderPreference.message}`);
     if(refinedWorkflow(p)&&p.step==='candidates'&&plan.parameters.prompt!==current(p,`characterPrompt:${p.characterId}`).content.prompt)throw new Error('Use the human-approved character design prompt exactly.');
     if (imageSteps.includes(p.step) && !plan.parameters.prompt) throw new Error('Image plan needs an authored prompt.');
     if (['backgroundCandidates', 'backgroundAngle'].includes(p.step) && (!locked(p, promptKey(p)) || plan.parameters.prompt !== current(p, promptKey(p)).content.prompt)) throw new Error('Use the human-approved background prompt exactly.');
@@ -717,13 +733,14 @@ export function applyEvent(project, raw) {
     const technicalRepair = p.step==='video' && p.artifacts.findLast(a=>a.review?.decision==='rejected'&&a.dependencies.includes(current(p,'videoPlan').id)&&((a.key===keyFor(p)&&a.review.checks.some(c=>c.status==='fail'&&['integrity','anatomy','identity','continuity','motion'].includes(c.criterion)))||(a.kind==='film'&&p.artifacts.find(v=>v.id===a.review.repairArtifactId)?.key===keyFor(p)&&a.review.checks.some(c=>c.status==='fail'&&['technical','visual-continuity'].includes(c.criterion)))));
     const userRevision = p.history.findLast(h=>['changes','redo','reject','resolve'].includes(h.action));
     const repairIsCurrent = technicalRepair && (!userRevision || technicalRepair.reviewSequence>userRevision.sequence);
-    const allowance = p.narrationRegeneration?undefined:p.allowances.findLast(a => { const used = p.jobs.filter(j => j.allowanceId === a.id); return a.operations.includes(plan.operation) && (plan.operation!=='video'||(!supervised(p)&&!miniProduction(p)&&a.repairOf===keyFor(p)&&repairIsCurrent&&current(p,`videoPrompt:${p.clipId}`).content.repairOnly)) && used.length < a.maxRequests && used.reduce((n, j) => n + j.plan.estimatedCostUsd, 0) + plan.estimatedCostUsd <= a.maxCostUsd; });
-    if(allowance)requireBudget(p,plan.estimatedCostUsd);
+    const allowance = p.narrationRegeneration?undefined:p.allowances.findLast(a => { const used = p.jobs.filter(j => j.allowanceId === a.id); return a.operations.includes(plan.operation) && (plan.operation!=='video'||(!supervised(p)&&!miniProduction(p)&&a.repairOf===keyFor(p)&&repairIsCurrent&&current(p,`videoPrompt:${p.clipId}`).content.repairOnly)) && used.length < a.maxRequests && used.reduce((n, j) => n + planTotalCost(j.plan), 0) + planTotalCost(plan) <= a.maxCostUsd; });
+    if(allowance)requireBudget(p,planTotalCost(plan));
     p.jobs.push({ id: `job-${p.jobs.length + 1}`, key: keyFor(p), plan, request, dependencies: bound.dependencies, digest: digest(bound), status: allowance ? 'authorized' : 'planned', ...(allowance ? { allowanceId: allowance.id, authorization: { message: allowance.message, at: new Date().toISOString() } } : {}) }); p.gate = allowance ? 'collect' : 'authorize';
+    if (imageSteps.includes(p.step)) delete p.imageProviderPreference;
   } else if (e.action === 'authorize') {
     requiredActor(e, 'human'); const j = p.jobs.findLast(j => j.key === keyFor(p));
     if (p.gate !== 'authorize' || j.status !== 'planned' || e.jobId !== j.id || e.artifactDigest !== j.digest || !e.message) throw new Error('Authorization must bind the exact generation request, estimate and current dependencies.');
-    requireBudget(p,j.plan.estimatedCostUsd);j.status = 'authorized'; j.authorization = { message: e.message, at: new Date().toISOString() }; p.gate = 'collect';
+    requireBudget(p,planTotalCost(j.plan));j.status = 'authorized'; j.authorization = { message: e.message, at: new Date().toISOString() }; p.gate = 'collect';
   } else if (['begin', 'job-id', 'receipt', 'provider-error'].includes(e.action)) {
     requiredActor(e, 'runtime'); const j = p.jobs.find(j => j.id === e.jobId);
     if (p.gate !== 'collect' || !j || j.key !== keyFor(p) || j.digest !== e.artifactDigest || j.dependencies.some(id => !p.artifacts.some(a => a.id === id && a.valid))) throw new Error('Job does not belong to the current authorized stage/dependencies.');

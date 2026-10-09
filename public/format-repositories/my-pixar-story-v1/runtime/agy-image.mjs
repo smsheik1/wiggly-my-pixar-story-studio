@@ -9,6 +9,8 @@ export const AGY_ASPECT_TOLERANCE = 0.05;
 
 export const agyBinary = () => process.env.WIGGLY_AGY_BIN || 'agy';
 export const agyBrainDir = () => resolve(process.env.WIGGLY_AGY_BRAIN_DIR || join(homedir(), '.gemini', 'antigravity-cli', 'brain'));
+// agy writes its own CLI logs next to the brain dir; image-tool quota errors only appear there when agy exits 0.
+export const agyLogDir = () => resolve(process.env.WIGGLY_AGY_LOG_DIR || join(dirname(agyBrainDir()), 'log'));
 export const agyTimeoutMs = () => Number(process.env.WIGGLY_AGY_TIMEOUT_MS || AGY_DEFAULT_TIMEOUT_MS);
 
 export function buildAgyPrompt({ prompt, aspectRatio, imageName, imagePaths, outputPath }) {
@@ -82,6 +84,46 @@ async function walkImages(dir, out = []) {
 
 export const agyNameStem = name => String(name).replace(/[^A-Za-z0-9]+/g, '_').toLowerCase();
 
+// Quota/capacity failures are the only agy errors eligible for the meta-muse fallback.
+export function isAgyQuotaError(text) {
+  // A bare 429 is not enough: agy logs unrelated MCP/OAuth 429s (Cloudflare 1015) on normal runs.
+  return /resource_exhausted|exhausted your capacity|quota will reset/i.test(String(text ?? ''));
+}
+
+export function parseAgyQuotaReset(text) {
+  const s = String(text ?? '');
+  let m = /try again (?:at|in|after) ([^.]+?)\s*(?:\.|$)/i.exec(s);
+  if (m) return m[1].trim() || null;
+  m = /quota will reset[^0-9A-Za-z]*([0-9][^.]*?)\s*(?:\.|$)/i.exec(s);
+  if (m) return m[1].trim() || null;
+  m = /resets? (?:at|in|after) ([^.]+?)\s*(?:\.|$)/i.exec(s);
+  if (m) return m[1].trim() || null;
+  return null;
+}
+
+// Real agy quota exhaustion: the image tool fails with 429 RESOURCE_EXHAUSTED inside agy,
+// agy still exits 0 and no image is written. The only record is agy's CLI log, e.g.
+// "E1009 00:08:10 ... generate_image.go:167] error generating image: ... 429 Too Many Requests, body: {...RESOURCE_EXHAUSTED...}".
+// Return the newest such block written since startedAt (whitespace-collapsed, bounded), or null.
+export async function agyImageErrorFromLogs({ logDir = agyLogDir(), startedAt }) {
+  let names;
+  try { names = await readdir(logDir); } catch { return null; }
+  let found = null, foundAt = -1;
+  for (const name of names) {
+    if (!/^cli-.*\.log$/.test(name)) continue;
+    const path = join(logDir, name);
+    let st;
+    try { st = await stat(path); } catch { continue; }
+    if (!st.isFile() || !(st.mtimeMs >= startedAt) || st.size > 20 * 1024 * 1024) continue;
+    const lines = (await readFile(path, 'utf8')).split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (!/generate_image[^\]]*\].*error generating image/i.test(lines[i])) continue;
+      if (st.mtimeMs >= foundAt) { found = lines.slice(i, i + 16).join(' ').replace(/\s+/g, ' ').slice(0, 600); foundAt = st.mtimeMs; }
+    }
+  }
+  return found;
+}
+
 export async function findBrainFallback({ brainDir, startedAt, imageName }) {
   const candidates = await walkImages(brainDir);
   const scored = [];
@@ -139,7 +181,7 @@ function runAgy({ bin, argv, timeoutMs, cwd }) {
 }
 
 // One image via the local agy CLI. Never retries; throws on every failure.
-export async function generateAgyImage({ prompt, aspectRatio, imageName, imagePaths = [], outputPath, brainDir, bin, timeoutMs }) {
+export async function generateAgyImage({ prompt, aspectRatio, imageName, imagePaths = [], outputPath, brainDir, bin, timeoutMs, logDir }) {
   const resolvedBin = bin ?? agyBinary();
   const resolvedBrain = brainDir ?? agyBrainDir();
   const resolvedTimeout = timeoutMs ?? agyTimeoutMs();
@@ -160,7 +202,10 @@ export async function generateAgyImage({ prompt, aspectRatio, imageName, imagePa
   const brainCopy = named && basename(named).toLowerCase().startsWith(agyNameStem(imageName)) ? named : null;
   if (!source) {
     source = brainCopy ?? await findBrainFallback({ brainDir: resolvedBrain, startedAt, imageName: null });
-    if (!source) throw new Error('agy produced no image: requested output missing and no new brain image found.');
+    if (!source) {
+      const reported = await agyImageErrorFromLogs({ logDir: logDir ?? agyLogDir(), startedAt });
+      throw new Error(`agy produced no image: requested output missing and no new brain image found.${reported ? ` agy log: ${reported}` : ''}`);
+    }
   }
   const buffer = await readFile(source);
   const { format } = verifyAgyImage(buffer, aspectRatio);
