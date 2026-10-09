@@ -42,6 +42,7 @@ const mode = process.env.FAKE_AGY_MODE || 'success';
 if (mode === 'quota-all') { console.error('Error: 429 RESOURCE_EXHAUSTED: you have exhausted your capacity, quota will reset at 9:34 PM.'); process.exit(1); }
 const pIdx = args.indexOf('-p');
 const prompt = pIdx >= 0 ? args[pIdx + 1] : '';
+if (process.env.FAKE_AGY_LOG) { const fs = await import('node:fs'); fs.appendFileSync(process.env.FAKE_AGY_LOG, JSON.stringify(prompt) + '\\n'); }
 const allOut = [...prompt.matchAll(/"([^"]+\\.png)"/g)].map(m=>m[1]);
 const outPath = allOut.length ? allOut[allOut.length-1] : null;
 const aspect = prompt.includes('16:9') ? '16:9' : '4:3';
@@ -131,18 +132,28 @@ test('agy quota fallback Muse body is allowlisted (no aspectRatio)', async () =>
   } finally { await rm(dir, { recursive: true }); }
 });
 
-test('agy request still carries aspectRatio for generateAgyImage', async () => {
+test('agy path still sends aspectRatio to the agy CLI (and never calls Muse)', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'muse-body-agy-'));
+  const brain = join(dir, 'brain');
+  const bin = await makeFake(dir);
+  const log = join(dir, 'agy-prompts.log');
   try {
-    const ref = await refImage(dir, 'ref-agy.png');
-    const p = audioProject();
-    p.characterId = 'alex';
-    p.artifacts.push({ key: 'roster', valid: true, content: { characters: [{ id: 'alex', references: [ref] }] } });
-    const plan = { provider: 'agy', operation: 'candidates', estimatedCostUsd: 0, fallbackEstimatedCostUsd: 0.03, parameters: { prompt: 'agy prompt' } };
-    const req = requestDescriptor(p, plan);
-    assert.equal(req.aspectRatio, '4:3');
-    assert.equal(req.fallback.aspectRatio, '4:3');
-    const src = await readFile(new URL('../runtime/providers.mjs', import.meta.url), 'utf8');
-    assert.match(src, /generateAgyImage\(\{\s*prompt:\s*request\.prompt,\s*aspectRatio:\s*request\.aspectRatio/);
+    await withEnv({ WIGGLY_AGY_BIN: bin, WIGGLY_AGY_BRAIN_DIR: brain, FAKE_AGY_MODE: 'success', FAKE_AGY_LOG: log }, async () => {
+      const ref = await refImage(dir, 'ref-agy.png');
+      const p = audioProject();
+      p.characterId = 'alex';
+      p.artifacts.push({ key: 'roster', valid: true, content: { characters: [{ id: 'alex', references: [ref] }] } });
+      const plan = { provider: 'agy', operation: 'candidates', estimatedCostUsd: 0, fallbackEstimatedCostUsd: 0.03, parameters: { prompt: 'agy prompt' } };
+      const req = requestDescriptor(p, plan);
+      assert.equal(req.aspectRatio, '4:3');
+      assert.equal(req.fallback.aspectRatio, '4:3');
+      const job = { id: 'job-agy-aspect', plan, request: req, dependencies: [], digest: digest({ plan, request: req, dependencies: [] }) };
+      const result = await executeMediaRequest(job, dir, 'isolated-meta-key', () => { throw new Error('Muse must not be called when agy succeeds'); }, false);
+      assert.equal(result.files.length, 3);
+      assert.equal(result.provider, 'agy');
+      const prompts = (await readFile(log, 'utf8')).trim().split('\n').map(l => JSON.parse(l));
+      assert.equal(prompts.length, 3);
+      for (const pr of prompts) assert.ok(pr.includes('AspectRatio="4:3"'), 'agy CLI prompt must carry AspectRatio="4:3"');
+    });
   } finally { await rm(dir, { recursive: true }); }
 });
