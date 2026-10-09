@@ -74,6 +74,12 @@ export function requestDescriptor(p, plan) {
   return { endpoint: `https://api.meta.ai/v1/images/${images.length ? 'edits' : 'generations'}`, model: generation.image.model, prompt: plan.parameters.prompt, images, n, size: metaMuseSizeFor(aspectRatio), aspectRatio, response_format: 'b64_json', output_format: 'webp',
     tool_enablement: { enable_web_search: false, enable_image_search: false, enable_shell: false } };
 }
+export function museRequestBody(fields, images) {
+  const body = {};
+  for (const k of ['model', 'prompt', 'n', 'size', 'response_format', 'output_format', 'tool_enablement']) if (fields[k] !== undefined) body[k] = fields[k];
+  if (images?.length) body.images = images;
+  return body;
+}
 export async function atomicJson(path, value) { const temp = `${path}.tmp`; await writeFile(temp, JSON.stringify(value, null, 2), { mode: 0o600 }); await rename(temp, path); }
 // Operator guidance is canonical data, not a claim that an API request failed.
 export function planningAccountGuide(p){
@@ -221,7 +227,7 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
         catch (e) { if (e.code === 'EEXIST') throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${j}. Its Muse fallback already started without a receipt; reconcile it, never duplicate it.`); throw e; }
       }
       const images = await Promise.all(request.images.map(async f => ({ image_url: `data:image/${extname(f.path).slice(1).replace('jpg', 'jpeg')};base64,${(await readFile(f.path)).toString('base64')}` })));
-      const body = { model: fallback.model, prompt: request.prompt, n: indices.length, size: fallback.size, aspectRatio: request.aspectRatio, response_format: fallback.response_format, output_format: fallback.output_format, tool_enablement: fallback.tool_enablement, ...(images.length ? { images } : {}) };
+      const body = museRequestBody({ model: fallback.model, prompt: request.prompt, n: indices.length, size: fallback.size, response_format: fallback.response_format, output_format: fallback.output_format, tool_enablement: fallback.tool_enablement }, images);
       let response;
       try { response = await fetcher(fallback.endpoint, { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(180000) }); }
       catch (e) { throw new Error((apiKey ? e.message.replaceAll(apiKey, '[redacted]') : e.message)); }
@@ -291,8 +297,7 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
     }
   } else {
     const images = await Promise.all(request.images.map(async f => ({ image_url: `data:image/${extname(f.path).slice(1).replace('jpg', 'jpeg')};base64,${(await readFile(f.path)).toString('base64')}` })));
-    const { endpoint, images: _refs, ...body } = request;
-    const response = await post(0, JSON.stringify({ ...body, ...(images.length ? { images } : {}) }), { 'Content-Type': 'application/json' });
+    const response = await post(0, JSON.stringify(museRequestBody(request, images)), { 'Content-Type': 'application/json' });
     if (!Array.isArray(response.data) || response.data.length !== request.n || response.data.some(d => !d.b64_json)) throw new Error('Muse must return the exact requested image count as base64; no remote-image fallback.');
     const files = [];
     for (const [i, data] of response.data.entries()) { const path = join(dir, `${i}.${request.output_format}`); await writeFile(path, Buffer.from(data.b64_json, 'base64'), { mode: 0o600 }); files.push(await importMedia(path, runDir)); }
