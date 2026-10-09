@@ -103,3 +103,57 @@ test('explicit reviewer profile upgrades reopen qualification and its descendant
  const reopened=send(visual,'configure-crew',{actor:'human',message:'ISOLATED visual upgrade',crew:newVisual});
  assert.equal(reopened.step,'reviewerQualification');assert.equal(current(reopened,'videoPlan'),undefined);assert.ok(current(reopened,'narration'));assert.deepEqual(reopened.artifacts.filter(a=>a.valid&&a.kind==='keyframe'),visual.artifacts.filter(a=>a.valid&&a.kind==='keyframe'));
 });
+
+test('safety logic matches expected bounds', async () => {
+ const dir=await mkdtemp(join(tmpdir(),'crew-safety-'));
+ try {
+  const safeWav = join(dir, 'safe.wav');
+  const loudWav = join(dir, 'loud.wav');
+  const source = join(dir, 'sample.wav');
+  execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'sine=frequency=220:duration=1', safeWav]);
+  execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'sine=frequency=220:duration=1', '-filter:a', 'volume=20dB', loudWav]);
+  execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'sine=frequency=600:duration=10', source]);
+  const safeFile = await importMedia(safeWav, dir);
+  const loudFile = await importMedia(loudWav, dir);
+  const sample = await importMedia(source, dir);
+  
+  const pBase = audioProject(); pBase.step = 'audition'; pBase.gate = 'review';
+  current(pBase, 'voiceSample').content.files = [sample];
+  const q = current(pBase, 'audioReviewerQualification').content;
+  pBase.crew = {workers: crew.workers.map(w => w.role === 'audio-reviewer' ? {...w, workerId: q.workerId, modelVersion: q.modelVersion, capabilityVersion: q.capabilityVersion} : w)};
+  
+  const runWith = async (file, flags, safeStatus) => {
+   const p = structuredClone(pBase);
+   const a = current(p);
+   a.content.files = [file];
+   a.digest = digest(a.content);
+   const task = taskFor(p);
+   
+   const tools = {
+    listenAudio: async () => ({perception: 'direct-audio', seconds: file.durationSeconds, provider: 'gemini', modelVersion: 'ISOLATED', requestDigest: 'ISOLATED', receiptPath: '/tmp', report: {perceptible: true, fullMediaInspected: true, summary: 'a', limitations: [], observations: [], comfort: flags, comfortNotes: 'b'}}),
+    transcribe: async () => ({transcript: script.beats[0].narration, method: 'ISOLATED'}),
+    speakerSimilarity: async () => ({score: 0.99, method: 'ISOLATED', calibrationNotes: 'test'})
+   };
+   
+   return runCrewTask(p, task, {tools, runTask: async (_task, {worker, callTool}) => {
+    for (const name of ['listenAudio', 'measureAudio', 'transcribe', 'speakerSimilarity']) await callTool(name, {sha256: file.sha256, referenceSha256: sample.sha256});
+    const r = event(p, 'review', {workerId: worker.workerId, artifactId: a.id, artifactDigest: a.digest, review: {
+      decision: 'approved', perception: 'direct-audio', modelVersion: worker.modelVersion, capabilityVersion: worker.capabilityVersion,
+      coverage: {artifactSha256: file.sha256, audioFiles: [{sha256: file.sha256, seconds: file.durationSeconds}]},
+      checks: task.criteria.map(c => ({criterion: c, status: c === 'safety' ? safeStatus : 'pass', evidence: 'ISOLATED', location: 'whole fixture'})),
+      measurements: {transcripts: [script.beats[0].narration]}
+    }});
+    r.review.measurements.identityBasis = 'recorded-reference';
+    return r;
+   }});
+  };
+  
+  await runWith(safeFile, {harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false}, 'pass');
+  await assert.rejects(runWith(safeFile, {harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false}, 'fail'), /SAFETY_EVIDENCE_MISMATCH/);
+  await assert.rejects(runWith(loudFile, {harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false}, 'pass'), /SAFETY_EVIDENCE_MISMATCH/);
+  await runWith(loudFile, {harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false}, 'fail');
+  await assert.rejects(runWith(safeFile, {harshness: false, sibilance: true, clippingOrDistortion: false, suddenSpikes: false}, 'pass'), /SAFETY_EVIDENCE_MISMATCH/);
+  await runWith(safeFile, {harshness: false, sibilance: true, clippingOrDistortion: false, suddenSpikes: false}, 'fail');
+  
+ } finally { await rm(dir, {recursive: true}); }
+});

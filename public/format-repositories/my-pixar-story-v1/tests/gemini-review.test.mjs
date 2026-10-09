@@ -16,7 +16,7 @@ async function fixture(video=false,long=false){
  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i',video?'color=c=blue:s=160x90:r=30:d=0.2':`sine=frequency=440:sample_rate=48000:duration=${long?92:0.2}`,...(video?['-c:v','libx264','-pix_fmt','yuv420p']:['-c:a','pcm_s16le']),path]);
  const file=await importMedia(path,dir),worker={workerId:'isolated-ava',name:video?'June':'Ava',role:video?'scene-reviewer':'audio-reviewer'};
  const task={taskId:'isolated-task',step:video?'video':'music',artifact:{content:{files:[file]}},criteria:['ISOLATED actual perceptual coverage']};
- const report={perceptible:true,fullMediaInspected:true,summary:'ISOLATED protocol result, not quality qualification',observations:[],limitations:['ISOLATED synthetic fixture']};
+ const report={perceptible:true,fullMediaInspected:true,summary:'ISOLATED protocol result, not quality qualification',observations:[],limitations:['ISOLATED synthetic fixture'],...(video?{}:{comfort:{harshness:false,sibilance:false,clippingOrDistortion:false,suddenSpikes:false},comfortNotes:''})};
  const response=()=>new Response(JSON.stringify({id:'isolated-interaction',model:GEMINI_REVIEW_MODEL,status:'completed',steps:[{type:'model_output',content:[{type:'text',text:JSON.stringify(report)}]}]}));
  return {dir,secretsPath,file,worker,task,report,response,options:{secretsPath,receiptDirectory:join(dir,'receipts'),maxCalls:1}};
 }
@@ -25,7 +25,7 @@ test('Gemini listens to exact media bytes, binds receipts and reuses a finished 
  const f=await fixture();let calls=0,body;
  try{
   const tools=createGeminiReviewTools({...f.options,fetcher:async(url,options)=>{calls++;assert.match(url,/v1beta\/interactions$/);assert.equal(options.headers['x-goog-api-key'],'ISOLATED_SECRET');assert.equal(options.redirect,'error');body=JSON.parse(options.body);return f.response();}});
-  const value=await tools.listenAudio(f);assert.equal(body.model,'gemini-3.8-flash');assert.equal(body.store,false);assert.equal(body.generation_config.thinking_level,'high');assert.equal(body.input[0].type,'audio');assert.deepEqual(Buffer.from(body.input[0].data,'base64'),await readFile(f.file.path));assert.equal(value.perception,'direct-audio');assert.equal(value.seconds,f.file.durationSeconds);assert.equal(value.modelVersion,GEMINI_REVIEW_PROFILE.model);assert.match(body.input.at(-1).text,/measured by ffprobe; do not estimate/);assert.ok(body.response_format.schema.required.includes('fullMediaInspected'));assert.equal(body.response_format.schema.properties.coverageEndSeconds,undefined);
+  const value=await tools.listenAudio(f);assert.equal(body.model,'gemini-3.8-flash');assert.equal(body.store,false);assert.equal(body.generation_config.thinking_level,'high');assert.equal(body.input[0].type,'audio');assert.deepEqual(Buffer.from(body.input[0].data,'base64'),await readFile(f.file.path));assert.equal(value.perception,'direct-audio');assert.equal(value.seconds,f.file.durationSeconds);assert.equal(value.modelVersion,GEMINI_REVIEW_PROFILE.model);assert.match(body.input.at(-1).text,/measured by ffprobe; do not estimate/);assert.match(body.input.at(-1).text,/comfort flag/);assert.ok(body.response_format.schema.required.includes('fullMediaInspected'));assert.equal(body.response_format.schema.properties.coverageEndSeconds,undefined);
   assert.deepEqual(await tools.listenAudio(f),value);assert.equal(calls,1);
   const noSpend=createGeminiReviewTools({...f.options,maxCalls:0,fetcher:async()=>{throw new Error('Must not call network');}});assert.deepEqual(await noSpend.listenAudio(f),value);
   const saved=JSON.parse(await readFile(join(value.receiptPath,'result.json'),'utf8'));saved.result.seconds=999;await writeFile(join(value.receiptPath,'result.json'),JSON.stringify(saved));await assert.rejects(tools.listenAudio(f),/RECEIPT_CHANGED/);
@@ -151,5 +151,19 @@ test('ffprobe owns duration; full inspection is required and routing refresh reu
    const tools=createGeminiReviewTools({...f.options,fetcher:async()=>f.response()});
    await assert.rejects(tools[mode==='video-observation'?'watchVideo':'listenAudio'](f),e=>e.stopDispatch===true);
   }finally{await rm(f.dir,{recursive:true});}
+ }
+});
+
+test('audio report missing comfort raises INCONCLUSIVE or parse failure', async () => {
+ const f = await fixture(false);
+ try {
+  const tools = createGeminiReviewTools({...f.options, fetcher: async () => {
+    const badReport = {...f.report};
+    delete badReport.comfort;
+    return new Response(JSON.stringify({id: 'iso', model: GEMINI_REVIEW_MODEL, status: 'completed', steps: [{type: 'model_output', content: [{type: 'text', text: JSON.stringify(badReport)}]}]}));
+  }});
+  await assert.rejects(tools.listenAudio(f), /GEMINI_PERCEPTION_INCONCLUSIVE|STOP:/);
+ } finally {
+  await rm(f.dir, {recursive: true});
  }
 });

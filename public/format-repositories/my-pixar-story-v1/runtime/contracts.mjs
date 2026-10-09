@@ -31,7 +31,7 @@ const Character = z.object({ id: text.regex(/^[a-z][a-z0-9-]*$/), name: text, ag
 const slug = text.regex(/^[a-z][a-z0-9-]*$/);
 export const IntakeConfirmation=z.object({
  voiceConsent:z.literal(true),
- characters:z.array(z.object({id:slug,name:text,ageVariant:text,minor:z.boolean(),photoRights:z.literal(true),guardianAuthority:z.boolean().optional(),references:z.array(File),likeness:z.enum(['reference','interpreted','omit','await-reference']),decisionNotes:text})).min(1),
+ characters:z.array(z.object({id:slug,name:text,ageVariant:text,minor:z.boolean(),photoRights:z.literal(true),guardianAuthority:z.boolean().optional().describe('deprecated, ignored'),references:z.array(File),likeness:z.enum(['reference','interpreted','omit','await-reference']),decisionNotes:text})).min(1),
  resolvedFindings:z.array(z.object({findingDigest:text,resolution:text})),
 }).strict();
 const Scene = z.object({ id: slug, beat: z.number().int().min(1).max(4), description: text, action: text, characterIds: z.array(slug), sourceAnswers: z.array(z.enum(Object.keys(Inputs.shape.answers.shape))) });
@@ -111,7 +111,7 @@ export const criteria = {
 };
 export const Review = z.object({
   decision: z.enum(['approved', 'provisional', 'rejected', 'inconclusive']), repairTarget: z.enum(['current', 'script']).default('current'), repairArtifactId:text.optional(),
-  perception: z.enum(['direct-text', 'direct-image', 'direct-audio', 'direct-video', 'direct-audiovisual', 'unavailable']),
+  perception: z.enum(['direct-text', 'direct-image', 'direct-audio', 'direct-video', 'direct-audiovisual', 'unavailable', 'crew-review']),
   checks: z.array(z.object({ criterion: text, status: z.enum(['pass', 'fail', 'inconclusive']), evidence: text,
     location: text, repair: z.string().default('') })).min(1),
   modelVersion:text.optional(), capabilityVersion:text.optional(),
@@ -120,8 +120,9 @@ export const Review = z.object({
   measurements: z.object({
     transcripts: z.array(text).optional(), speechToTextMethod: text.optional(),
     speakerSimilarity: z.number().min(0).max(1).optional(), speakerSimilarityMethod: text.optional(),
-    referenceSha256: text.optional(), identityBasis:z.enum(['recorded-reference','human-recognition']).optional(), speakingRateWpm: z.array(z.number().positive()).optional(),
+    referenceSha256: text.optional(), identityBasis:z.enum(['recorded-reference','human-recognition','consented-voice-id']).optional(), speakingRateWpm: z.array(z.number().positive()).optional(),
     silenceSeconds: z.array(z.number().nonnegative()).optional(), measurementNotes: text.optional(),
+    truePeakDb: z.array(z.number()).optional(), comfort: z.array(z.object({harshness:z.boolean(),sibilance:z.boolean(),clippingOrDistortion:z.boolean(),suddenSpikes:z.boolean()})).optional(),
   }).optional(),
 });
 export const Plans = z.object({ provider: z.enum(['cartesia', 'meta-muse', 'replicate', 'elevenlabs']), operation: z.enum(['clone', 'audition', 'narration', 'candidates', 'sheet', 'backgroundCandidates', 'backgroundAngle', 'keyframe', 'video', 'music', 'effect']),

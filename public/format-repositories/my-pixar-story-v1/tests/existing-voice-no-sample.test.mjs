@@ -16,15 +16,15 @@ import {createCartesiaTranscriptionTool} from '../runtime/cartesia-stt.mjs';
 import {inputs,script,send,event,approved,reviewed,file,produce,captureEvents,qualifyTestAudio} from './helpers.mjs';
 
 // Isolated mechanics only: synthetic identities/audio, mocked provider/perception results.
-const choice={voiceId:'00000000-0000-4000-8000-000000000002',name:'ISOLATED reused clone',consentMessage:'ISOLATED own-voice consent',reuseWithoutSample:true};
-const lookup={voiceId:choice.voiceId,name:choice.name,language:'en',isOwner:true,status:'active',access:'private',apiVersion:'2026-08-14',checkedAt:'2026-10-04T00:00:00Z',endpoint:`https://api.cartesia.ai/voices/${choice.voiceId}`,httpStatus:200};
-const draft={...script,commonSenseChecks:[],proposedCast:[{id:'alex',name:'Alex',ageVariant:'adult',minor:false,storyPurpose:'ISOLATED memories'}]};
-function start(options={}){let p=initialProject('project',inputs,options);p=approved(reviewed(send(p,'artifact',{workerId:'writer',content:{inputs:p.inputs,sourceInputDigest:digest(p.inputs),commonSenseChecks:[]}})));return approved(reviewed(send(p,'artifact',{workerId:'writer',content:draft})));}
-const choose=(p,content=choice)=>send(p,'choose-voice',{actor:'human',message:'ISOLATED reuse my existing clone',content});
-const verify=p=>send(p,'voice-verified',{actor:'runtime',content:lookup});
-const ready=()=>verify(choose(start()));
-function audition(){let p=ready();p=send(p,'set-budget',{actor:'human',message:'ISOLATED ceiling',budgetLimitUsd:1});return produce(p,{files:[file(1)],voiceId:choice.voiceId,transcript:draft.beats[0].narration});}
-function reviewEvent(p){const a=current(p);return event(p,'review',{workerId:'audio-reviewer',artifactId:a.id,artifactDigest:a.digest,review:{decision:'provisional',perception:'direct-audio',modelVersion:'ISOLATED-model',capabilityVersion:'ISOLATED-tools',coverage:{artifactSha256:a.content.files[0].sha256,audioFiles:a.content.files.map(f=>({sha256:f.sha256,seconds:f.durationSeconds}))},checks:taskFor(p).criteria.map(criterion=>({criterion,status:criterion==='voice-match'?'inconclusive':'pass',evidence:criterion==='voice-match'?'ISOLATED: no original recording; actual human must recognize their voice.':'ISOLATED mock check',location:'whole fixture',repair:''})),measurements:{identityBasis:'human-recognition',transcripts:a.content.transcript?[a.content.transcript]:a.content.transcripts,speechToTextMethod:'ISOLATED mock STT',speakingRateWpm:a.content.files.map(()=>80),silenceSeconds:a.content.files.map(()=>0),measurementNotes:'ISOLATED: no biometric comparison or production-quality claim.'}}});}
+export const choice={voiceId:'00000000-0000-4000-8000-000000000002',name:'ISOLATED reused clone',consentMessage:'ISOLATED own-voice consent',reuseWithoutSample:true};
+export const lookup={voiceId:choice.voiceId,name:choice.name,language:'en',isOwner:true,status:'active',access:'private',apiVersion:'2026-08-14',checkedAt:'2026-10-04T00:00:00Z',endpoint:`https://api.cartesia.ai/voices/${choice.voiceId}`,httpStatus:200};
+export const draft={...script,commonSenseChecks:[],proposedCast:[{id:'alex',name:'Alex',ageVariant:'adult',minor:false,storyPurpose:'ISOLATED memories'}]};
+export function start(options={}){let p=initialProject('project',inputs,options);p=approved(reviewed(send(p,'artifact',{workerId:'writer',content:{inputs:p.inputs,sourceInputDigest:digest(p.inputs),commonSenseChecks:[]}})));return approved(reviewed(send(p,'artifact',{workerId:'writer',content:draft})));}
+export const choose=(p,content=choice)=>send(p,'choose-voice',{actor:'human',message:'ISOLATED reuse my existing clone',content});
+export const verify=p=>send(p,'voice-verified',{actor:'runtime',content:lookup});
+export const ready=()=>verify(choose(start()));
+export function audition(){let p=ready();p=send(p,'set-budget',{actor:'human',message:'ISOLATED ceiling',budgetLimitUsd:1});return produce(p,{files:[file(1)],voiceId:choice.voiceId,transcript:draft.beats[0].narration});}
+export function reviewEvent(p){const a=current(p);return event(p,'review',{workerId:'audio-reviewer',artifactId:a.id,artifactDigest:a.digest,review:{decision:'provisional',perception:'direct-audio',modelVersion:'ISOLATED-model',capabilityVersion:'ISOLATED-tools',coverage:{artifactSha256:a.content.files[0].sha256,audioFiles:a.content.files.map(f=>({sha256:f.sha256,seconds:f.durationSeconds}))},checks:taskFor(p).criteria.map(criterion=>({criterion,status:criterion==='voice-match'?'inconclusive':'pass',evidence:criterion==='voice-match'?'ISOLATED: no original recording; actual human must recognize their voice.':'ISOLATED mock check',location:'whole fixture',repair:''})),measurements:{identityBasis:'human-recognition',transcripts:a.content.transcript?[a.content.transcript]:a.content.transcripts,speechToTextMethod:'ISOLATED mock STT',speakingRateWpm:a.content.files.map(()=>80),silenceSeconds:a.content.files.map(()=>0),measurementNotes:'ISOLATED: no biometric comparison or production-quality claim.'}}});}
 const passReview=p=>send(p,'review',{...reviewEvent(p)});
 function humanApprove(p){const a=current(p);return approved(p,{humanReview:{decision:'approved',perception:'direct-audio',checks:taskFor(p).criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED actual human recognizes own voice and approves this fixture',location:'whole fixture',repair:''}))}});}
 
@@ -51,6 +51,26 @@ test('historical verified selection changes only through explicit human reuse an
 test('sample-free audio review requires real human identity recognition and cannot invent similarity or source evidence',()=>{
  const p=audition(),e=reviewEvent(p);
  for(const mutation of [r=>r.measurements.referenceSha256=file().sha256,r=>r.measurements.speakerSimilarity=.99,r=>r.measurements.speakerSimilarityMethod='invented',r=>r.checks.find(c=>c.criterion==='voice-match').status='pass',r=>delete r.measurements.identityBasis]){const forged=structuredClone(e);mutation(forged.review);assert.throws(()=>send(p,'review',{...forged}),/HUMAN_VOICE_IDENTITY_REQUIRED/);}
+ 
+ const p2 = structuredClone(p);
+ p2.jobs[0].request = { voice: choice.voiceId };
+ p2.jobs[0].result = { voiceId: choice.voiceId };
+ const e2 = reviewEvent(p2);
+ e2.review.measurements.identityBasis = 'consented-voice-id';
+ e2.review.checks.find(c => c.criterion === 'voice-match').status = 'pass';
+ e2.review.decision = 'approved';
+ const reviewedConsented = send(p2, 'review', {...e2});
+ assert.equal(reviewedConsented.gate, 'human');
+ 
+ const e3 = reviewEvent(p2);
+ e3.review.measurements.identityBasis = 'human-recognition';
+ e3.review.checks.find(c => c.criterion === 'voice-match').status = 'pass';
+ assert.throws(()=>send(p2,'review',{...e3}), /HUMAN_VOICE_IDENTITY_REQUIRED/);
+
+ const pBadJob = structuredClone(p2);
+ pBadJob.jobs[0].result.voiceId = 'wrong';
+ assert.throws(()=>send(pBadJob,'review',{...e2}), /HUMAN_VOICE_IDENTITY_REQUIRED/);
+
  const reviewed=passReview(p);assert.equal(reviewed.gate,'human');assert.equal(current(reviewed).approvedBy,undefined);
  assert.throws(()=>approved(reviewed));
  const approvedAudition=humanApprove(reviewed);assert.equal(approvedAudition.step,'narration');assert.equal(current(approvedAudition,'audition').humanReview.checks.find(c=>c.criterion==='voice-match').status,'pass');assert.equal(narrationLocked(approvedAudition),false);
@@ -101,8 +121,24 @@ test('canonical worker packet includes existing voice basis and actual review br
  p=send(p,'configure-crew',{actor:'human',message:'ISOLATED bind test crew',crew:{workers:Object.entries(crewRoles).map(([role,{name}])=>({workerId:role==='audio-reviewer'?'audio-reviewer':role,name,role,modelVersion:'ISOLATED-model',capabilityVersion:'ISOLATED-tools',execution:'host'}))}});
  const task=taskFor(p);await assert.rejects(prepareCrewTask(p,{...task,voiceBasis:{...task.voiceBasis,language:'xx'}}),/TASK_INPUT_MISMATCH: voiceBasis/);
  const tools={listenAudio:async()=>({perception:'direct-audio',seconds:12}),transcribe:async()=>({transcript:draft.beats[0].narration,method:'ISOLATED mock transcriber'})};
- const result=await runCrewTask(p,task,{tools,runTask:async(t,{callTool})=>{assert.equal(t.voiceReference,null);assert.equal(t.voiceBasis.language,'en');await assert.rejects(callTool('speakerSimilarity',{sha256:f.sha256,referenceSha256:f.sha256}),/VOICE_REFERENCE_UNAVAILABLE/);for(const name of ['listenAudio','measureAudio','transcribe'])await callTool(name,{sha256:f.sha256});return reviewEvent(p);}});
- assert.equal(result.review.measurements.identityBasis,'human-recognition');assert.equal(result.review.measurements.referenceSha256,undefined);assert.equal(result.review.measurements.speakerSimilarity,undefined);p=send(p,'review',{...result});assert.equal(p.gate,'human');
+ const runForBasis = async (project, expectedBasis) => await runCrewTask(project,taskFor(project),{tools,runTask:async(t,{callTool})=>{assert.equal(t.voiceReference,null);assert.equal(t.voiceBasis.language,'en');await assert.rejects(callTool('speakerSimilarity',{sha256:f.sha256,referenceSha256:f.sha256}),/VOICE_REFERENCE_UNAVAILABLE/);for(const name of ['listenAudio','measureAudio','transcribe'])await callTool(name,{sha256:f.sha256});
+  const r = reviewEvent(project);
+  r.review.measurements.identityBasis = expectedBasis;
+  if (expectedBasis === 'consented-voice-id') {
+    const identityCheck = r.review.checks.find(c => c.criterion === 'voice-match');
+    if (identityCheck) identityCheck.status = 'pass';
+  }
+  return r;
+ }});
+ const result=await runForBasis(p, 'consented-voice-id');
+ assert.equal(result.review.measurements.identityBasis,'consented-voice-id');assert.equal(result.review.measurements.referenceSha256,undefined);assert.equal(result.review.measurements.speakerSimilarity,undefined);p=send(p,'review',{...result});assert.equal(p.gate,'human');
+ 
+ let pUnverified=ready();pUnverified=send(pUnverified,'set-budget',{actor:'human',message:'ISOLATED ceiling',budgetLimitUsd:1});pUnverified=produce(pUnverified,{files:[f],voiceId:choice.voiceId,transcript:draft.beats[0].narration});
+ pUnverified.jobs.find(j => j.status === 'ready').request.voice = 'wrong';
+ pUnverified=send(pUnverified,'configure-crew',{actor:'human',message:'ISOLATED bind test crew',crew:{workers:Object.entries(crewRoles).map(([role,{name}])=>({workerId:role==='audio-reviewer'?'audio-reviewer':role,name,role,modelVersion:'ISOLATED-model',capabilityVersion:'ISOLATED-tools',execution:'host'}))}});
+ const resultUnverified=await runForBasis(pUnverified, 'human-recognition');
+ assert.equal(resultUnverified.review.measurements.identityBasis,'human-recognition');
+ pUnverified=send(pUnverified,'review',{...resultUnverified});assert.equal(pUnverified.gate,'human');
  }finally{await rm(dir,{recursive:true});}
 });
 
@@ -121,4 +157,41 @@ test('independent STT uses the verified existing-clone language without an origi
  const tools=createCartesiaTranscriptionTool({secretsPath:secrets,receiptDirectory:join(dir,'receipts'),maxCalls:1,fetcher:async(url,options)=>{calls++;assert.equal(options.body.get('language'),'en');assert.equal(options.body.get('prompt'),null);return Response.json({type:'transcript',text:'ISOLATED decoded words',language:'en',duration:file.durationSeconds});}});
  const result=await tools.transcribe({file,worker:{role:'audio-reviewer',workerId:'ISOLATED-ava'},task:{taskId:'ISOLATED-no-reference',voiceReference:null,voiceBasis:{kind:'existing-clone',language:'en'}}});assert.equal(result.language,'en');assert.equal(calls,1);
  }finally{await rm(dir,{recursive:true});}
+});
+
+test('crew-review human approval logic', () => {
+ const p = audition();
+ const p2 = structuredClone(p);
+ p2.jobs[0].request = { voice: choice.voiceId };
+ p2.jobs[0].result = { voiceId: choice.voiceId };
+ const e2 = reviewEvent(p2);
+ e2.review.measurements.identityBasis = 'consented-voice-id';
+ e2.review.checks.find(c => c.criterion === 'voice-match').status = 'pass';
+ e2.review.decision = 'approved';
+ const reviewedConsented = send(p2, 'review', {...e2});
+ 
+ // human approve with crew-review
+ const crewApprove = {
+   decision: 'approved',
+   perception: 'crew-review',
+   checks: taskFor(p2).criteria.map(c => ({criterion: c, status: 'pass', evidence: 'crew', location: 'file', repair: ''}))
+ };
+ const res = send(reviewedConsented, 'approve', {actor: 'human', artifactId: current(reviewedConsented).id, artifactDigest: current(reviewedConsented).digest, message: 'approved', humanReview: crewApprove});
+ assert.equal(res.step, 'narration');
+ 
+ // direct-audio still accepted
+ const directApprove = structuredClone(crewApprove);
+ directApprove.perception = 'direct-audio';
+ assert.doesNotThrow(() => send(reviewedConsented, 'approve', {actor: 'human', artifactId: current(reviewedConsented).id, artifactDigest: current(reviewedConsented).digest, message: 'approved', humanReview: directApprove}));
+
+ // rejected if check fails
+ const badApprove = structuredClone(crewApprove);
+ badApprove.checks[0].status = 'fail';
+ assert.throws(() => send(reviewedConsented, 'approve', {actor: 'human', artifactId: current(reviewedConsented).id, artifactDigest: current(reviewedConsented).digest, message: 'approved', humanReview: badApprove}), /HUMAN_MEDIA_REVIEW_REQUIRED/);
+
+ // rejected if provisional
+ const eProv = structuredClone(e2);
+ eProv.review.decision = 'provisional';
+ const reviewedProv = send(p2, 'review', {...eProv});
+ assert.throws(() => send(reviewedProv, 'approve', {actor: 'human', artifactId: current(reviewedProv).id, artifactDigest: current(reviewedProv).digest, message: 'approved', humanReview: crewApprove}), /HUMAN_MEDIA_REVIEW_REQUIRED/);
 });
