@@ -87,7 +87,7 @@ test('stranded started receipt reconciles as not-dispatched and redispatches at 
 test('reconcileNotDispatched refuses without direction or a clean started receipt',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'memoir-deadlock-deny-'));
  const worker={workerId:'native-worker',name:'Max',role:'generation-planner',modelVersion:'gpt-5.6-sol',capabilityVersion:'old',execution:'host'},task={taskId:'saved-task',crewWorker:worker};
- const path=join(dir,task.taskId+'.json'),reader={call:async()=>({thread:{id:worker.workerId,turns:[]}})};
+ const path=join(dir,task.taskId+'.json'),reader={call:async()=>({thread:{id:worker.workerId,turns:[{id:'init-turn',status:'completed',items:[]}]}})};
  try{
   const clean={status:'started',taskId:task.taskId,worker,workerDigest:digest(worker),attempt:1};
   const cases=[
@@ -122,6 +122,8 @@ test('reconcileNotDispatched refuses when any native turn may belong to this tas
    ['turn in progress',{thread:{id:worker.workerId,turns:[{id:'running-turn',status:'inProgress',items:[unrelated('inProgress')] }]}}],
    ['taskId in non-JSON text',{thread:{id:worker.workerId,turns:[{id:'note-turn',status:'completed',items:[{type:'userMessage',content:[{type:'text',text:`notes about saved-task progress`}]}]}]}}],
    ['thread id mismatch',{thread:{id:'other-thread',turns:[]}}],
+   ['turns missing',{thread:{id:worker.workerId}}],
+   ['turns empty',{thread:{id:worker.workerId,turns:[]}}],
   ];
   for(const [name,result] of cases){
    await writeFile(path,JSON.stringify(receipt));

@@ -234,8 +234,9 @@ export async function reconcileNotDispatched(task,host,{receiptDirectory,message
  if(receipt.turnId!=null||receipt.turn!=null||receipt.event!=null||receipt.reconciliation!=null)throw new Error('DISPATCH_RECONCILIATION_DENIED: receipt records a turn reference; use the --turn path.');
  let result;try{result=await host.call('thread/read',{threadId:receipt.worker.workerId,includeTurns:true});}catch{throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: native thread/read failed; no retry permitted.');}
  const thread=result?.thread;
- if(!thread||thread.id!==receipt.worker.workerId||(thread.turns!==undefined&&!Array.isArray(thread.turns)))throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: unexpected native thread; no retry permitted.');
- for(const turn of thread.turns??[]){
+ // Missing turns is not proof of no turns: a durable crew thread always has its READY turn.
+ if(!thread||thread.id!==receipt.worker.workerId||!Array.isArray(thread.turns)||!thread.turns.length)throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: unexpected native thread; no retry permitted.');
+ for(const turn of thread.turns){
   if(!turn||typeof turn.id!=='string'||typeof turn.status!=='string'||!Array.isArray(turn.items))throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: unexpected native turn; no retry permitted.');
   if(!['completed','interrupted','failed'].includes(turn.status))throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: a turn may still be running; no retry permitted.');
   for(const item of turn.items){
