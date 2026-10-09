@@ -179,7 +179,7 @@
     "image": {
       "provider": "agy",
       "model": "muse-image-1.0",
-      "estimatedUnitCostUsd": 0.01,
+      "metaMuseEstimatedUnitCostUsd": 0.01,
       "agyEstimatedUnitCostUsd": 0
     },
     "video": {
