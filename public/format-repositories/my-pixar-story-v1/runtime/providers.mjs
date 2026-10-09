@@ -2,7 +2,8 @@ import { readFile, writeFile, mkdir, rename, copyFile, unlink, stat } from 'node
 import {assertDebugReady} from './debug.mjs';
 import { join, extname, resolve } from 'node:path';
 import {legacyGeneration,studioFor,imageUnitCostFor,imageAspectFor,metaMuseSizeFor} from './instructions.mjs';
-import { generateAgyImage, agyBrainDir, agyBinary, agyTimeoutMs } from './agy-image.mjs';
+import { generateAgyImage, agyBrainDir, agyBinary, agyTimeoutMs, isAgyQuotaError, parseAgyQuotaReset } from './agy-image.mjs';
+export { isAgyQuotaError, parseAgyQuotaReset };
 import { videoBinding, effectFor } from './studio.mjs';
 import { executeVideo } from './video-provider.mjs';
 import { shotReferences } from './shots.mjs';
@@ -63,7 +64,13 @@ export function requestDescriptor(p, plan) {
   if (!['agy', 'meta-muse'].includes(provider)) throw new Error('Image provider must be agy or meta-muse.');
   const unitCost = imageUnitCostFor(p, provider);
   if (plan.estimatedCostUsd + 1e-9 < n * unitCost) throw new Error(provider === 'agy' ? 'agy estimate must account for every requested image ($0 each).' : 'Muse estimate must account for every requested image ($0.01 each).');
-  if (provider === 'agy') return { provider: 'agy', prompt: plan.parameters.prompt, images, n, aspectRatio, estimatedUnitCostUsd: 0 };
+  if (provider === 'agy') {
+    const base = { provider: 'agy', prompt: plan.parameters.prompt, images, n, aspectRatio, estimatedUnitCostUsd: 0 };
+    if (plan.fallbackEstimatedCostUsd === undefined) return base;
+    const museUnit = imageUnitCostFor(p, 'meta-muse');
+    if (plan.fallbackEstimatedCostUsd + 1e-9 < n * museUnit) throw new Error(`agy fallback estimate must reserve at least ${n} x $${museUnit} Muse images.`);
+    return { ...base, fallback: { provider: 'meta-muse', endpoint: `https://api.meta.ai/v1/images/${images.length ? 'edits' : 'generations'}`, model: generation.image.model, size: metaMuseSizeFor(aspectRatio), aspectRatio, response_format: 'b64_json', output_format: 'webp', tool_enablement: { enable_web_search: false, enable_image_search: false, enable_shell: false }, unitCostUsd: museUnit } };
+  }
   return { endpoint: `https://api.meta.ai/v1/images/${images.length ? 'edits' : 'generations'}`, model: generation.image.model, prompt: plan.parameters.prompt, images, n, size: metaMuseSizeFor(aspectRatio), aspectRatio, response_format: 'b64_json', output_format: 'webp',
     tool_enablement: { enable_web_search: false, enable_image_search: false, enable_shell: false } };
 }
@@ -78,7 +85,7 @@ export function planningAccountGuide(p){
 
 export function remediation(provider, secretsPath) {
   if(provider==='gemini')return `STOP: Gemini media review failed. No fallback or retry was submitted.\n1. Open https://aistudio.google.com/api-keys and sign in; select the key's Google Cloud project.\n2. Open Dashboard → Usage/Billing (https://aistudio.google.com/usage); check quota, billing and payment for that project.\n3. Open API keys → Create API key; verify Gemini API access and any key restrictions.\n4. Open ${resolve(secretsPath)} and set GEMINI_API_KEY=<your-key> on its own line. Never paste the key in chat.\n5. Inspect the run's gemini-reviews receipts before another request. An uncertain request is never automatically repeated; HTTP 429 requires waiting for the quota window.`;
-  if(provider==='agy')return `STOP: agy image generation failed. No fallback or retry was submitted.\n1. Run \`${agyBinary()} --version\` locally; reinstall the Antigravity CLI if missing.\n2. Check WIGGLY_AGY_BIN and WIGGLY_AGY_BRAIN_DIR env values and brain-dir write access.\n3. Inspect receipts/<jobId> started markers and receipts; reconcile the uncertain subrequest, never duplicate it.\n4. No API key is required for agy.`;
+  if(provider==='agy')return `STOP: agy image generation failed. Quota failures fall back to Muse only when the authorized request carries a bound fallback and META_API_KEY exists; otherwise no fallback or retry was submitted.\n1. Run \`${agyBinary()} --version\` locally; reinstall the Antigravity CLI if missing.\n2. Check WIGGLY_AGY_BIN and WIGGLY_AGY_BRAIN_DIR env values and brain-dir write access.\n3. Inspect receipts/<jobId> started markers, quota markers (*.quota.json) and receipts; reconcile the uncertain subrequest, never duplicate a started subrequest without a receipt or quota marker.\n4. For quota exhaustion with a bound fallback, reconcile with collect-existing then collect to finish quota-marked images on Muse; without a quota marker collection refuses. No API key is required for agy itself.`;
   const cartesia = provider === 'cartesia'; const key = {cartesia:'CARTESIA_API_KEY','meta-muse':'META_API_KEY',replicate:'REPLICATE_API_TOKEN',elevenlabs:'ELEVENLABS_API_KEY'}[provider];
   return `STOP: ${provider} failed. No fallback or retry was submitted.\n1. Open ${{cartesia:'https://play.cartesia.ai','meta-muse':'https://dev.meta.ai',replicate:'https://replicate.com/account/billing',elevenlabs:'https://elevenlabs.io/app/settings/subscription'}[provider]} and sign in.\n2. Open the account's Billing/Usage page; check credits and payment, and add funds if needed.\n3. Open API Keys, verify access to ${{cartesia:'voice cloning and Sonic TTS','meta-muse':'Muse Image',replicate:'Seedance video; API tokens at https://replicate.com/account/api-tokens',elevenlabs:'Music/Sound Effects; API keys at https://elevenlabs.io/app/settings/api-keys'}[provider]}, and copy a valid key.\n4. Open ${resolve(secretsPath)} and set ${key}=<your-key> on its own line. Never paste the key in chat.\n5. Read status and reconcile the recorded job before another request. For 429, wait for the provider retry window; for an outage, check the provider status/support page.`;
 }
@@ -187,21 +194,98 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
       result.audioRegenerations=[...(result.audioRegenerations??[]).filter(e=>e.beat!==scope.beat),{beat:scope.beat,spokenText:scope.spokenText,parentArtifactId:scope.artifactId,parentArtifactDigest:scope.artifactDigest,jobId:job.id,requestDigest:job.digest}];
     }
   } else if (job.plan.provider === 'agy') {
-    const agy = async (index) => {
-      const receipt = join(dir, `${index}.json`); const started = join(dir, `${index}.started`);
-      try { return JSON.parse(await readFile(receipt, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
-      if (collectOnly) throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${index}; no completed receipt exists. Collection will not submit it.`);
-      try { await writeFile(started, JSON.stringify({ jobId: job.id, digest: job.digest, index }), { flag: 'wx', mode: 0o600 }); }
-      catch (e) { if (e.code === 'EEXIST') throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${index}. Reconcile its existing result; never duplicate it.`); throw e; }
-      const outPath = join(dir, `${index}.png`);
-      const { outputPath } = await generateAgyImage({ prompt: request.prompt, aspectRatio: request.aspectRatio, imageName: `${job.id}-${index}`, imagePaths: request.images.map(f => f.path), outputPath: outPath, brainDir: process.env.WIGGLY_AGY_BRAIN_DIR ? resolve(process.env.WIGGLY_AGY_BRAIN_DIR) : undefined, bin: process.env.WIGGLY_AGY_BIN || undefined, timeoutMs: process.env.WIGGLY_AGY_TIMEOUT_MS ? Number(process.env.WIGGLY_AGY_TIMEOUT_MS) : undefined });
-      const file = await importMedia(outputPath, runDir);
-      const recorded = { file };
-      await atomicJson(receipt, recorded); return recorded;
+    const fallback = request.fallback ?? null;
+    const readJsonOrNull = async path => { try { return JSON.parse(await readFile(path, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; return null; } };
+    const files = Array(request.n).fill(null);
+    const providers = Array(request.n).fill(null);
+    for (let i = 0; i < request.n; i++) {
+      const r = await readJsonOrNull(join(dir, `${i}.json`));
+      if (r?.file) { files[i] = r.file; providers[i] = { index: i, provider: r.provider ?? 'agy', costUsd: r.costUsd ?? (r.provider === 'meta-muse' ? (fallback?.unitCostUsd ?? 0.01) : 0) }; }
+    }
+    const missingIndices = () => files.map((f, i) => f ? null : i).filter(v => v !== null);
+    const finishResult = () => {
+      const kind = providers.every(p => p?.provider === 'agy') ? 'agy' : providers.every(p => p?.provider === 'meta-muse') ? 'meta-muse' : 'mixed';
+      return { files: [...files], prompt: request.prompt, provider: kind, imageProviders: [...providers] };
     };
-    const files = [];
-    for (let i = 0; i < request.n; i++) files.push((await agy(i)).file);
-    result = { files, prompt: request.prompt, provider: 'agy' };
+    const runMuseFallback = async indices => {
+      if (job.plan.operation === 'video') throw new Error('No image fallback for video operations.');
+      if (!fallback) throw new Error(`AGY_QUOTA_EXHAUSTED: agy image quota is used up; no fallback bound to this job.`);
+      if (!apiKey) throw new Error(`AGY_QUOTA_EXHAUSTED: agy image quota is used up; no META_API_KEY for the Muse fallback.`);
+      for (const j of indices) {
+        if (files[j]) continue;
+        const quota = await readJsonOrNull(join(dir, `${j}.quota.json`));
+        try { await writeFile(join(dir, `${j}.started`), JSON.stringify({ jobId: job.id, digest: job.digest, index: j, fallback: true }), { flag: 'wx', mode: 0o600 }); }
+        catch (e) { if (e.code === 'EEXIST') { if (!quota) throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${j}. Reconcile its existing result; never duplicate it.`); } else throw e; }
+      }
+      const images = await Promise.all(request.images.map(async f => ({ image_url: `data:image/${extname(f.path).slice(1).replace('jpg', 'jpeg')};base64,${(await readFile(f.path)).toString('base64')}` })));
+      const body = { model: fallback.model, prompt: request.prompt, n: indices.length, size: fallback.size, aspectRatio: request.aspectRatio, response_format: fallback.response_format, output_format: fallback.output_format, tool_enablement: fallback.tool_enablement, ...(images.length ? { images } : {}) };
+      let response;
+      try { response = await fetcher(fallback.endpoint, { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(180000) }); }
+      catch (e) { throw new Error((apiKey ? e.message.replaceAll(apiKey, '[redacted]') : e.message)); }
+      if (!response.ok) { const diagnostic = (await response.text()).replaceAll(apiKey, '[redacted]').slice(0, 800); throw new Error(`HTTP ${response.status}: ${diagnostic}`); }
+      const parsed = await response.json();
+      if (!Array.isArray(parsed.data) || parsed.data.length !== indices.length || parsed.data.some(d => !d.b64_json)) throw new Error('Muse must return the exact requested image count as base64; no remote-image fallback.');
+      for (const [k, j] of indices.entries()) {
+        if (files[j]) continue;
+        const path = join(dir, `${j}.${fallback.output_format}`);
+        await writeFile(path, Buffer.from(parsed.data[k].b64_json, 'base64'), { mode: 0o600 });
+        const file = await importMedia(path, runDir);
+        const recorded = { file, provider: 'meta-muse', costUsd: fallback.unitCostUsd };
+        await atomicJson(join(dir, `${j}.json`), recorded);
+        files[j] = file; providers[j] = { index: j, provider: 'meta-muse', costUsd: fallback.unitCostUsd };
+      }
+    };
+    if (collectOnly) {
+      const miss = missingIndices();
+      if (!miss.length) result = finishResult();
+      else {
+        if (!fallback) throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${miss[0]}. Reconcile its existing result; never duplicate it.`);
+        let haveQuota = false;
+        for (let q = 0; q < request.n; q++) if (await readJsonOrNull(join(dir, `${q}.quota.json`))) { haveQuota = true; break; }
+        if (!haveQuota) throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${miss[0]}. Reconcile its existing result; never duplicate it.`);
+        for (const j of miss) {
+          if (await readJsonOrNull(join(dir, `${j}.quota.json`))) continue;
+          try { await stat(join(dir, `${j}.started`)); throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${j}. Reconcile its existing result; never duplicate it.`); }
+          catch (e) { if (e.code !== 'ENOENT') throw e; }
+        }
+        if (!apiKey) throw new Error(`AGY_QUOTA_EXHAUSTED: agy image quota is used up; no META_API_KEY for the Muse fallback.`);
+        await runMuseFallback(miss);
+        result = finishResult();
+      }
+    } else {
+      for (let i = 0; i < request.n; i++) {
+        if (files[i]) continue;
+        try { await writeFile(join(dir, `${i}.started`), JSON.stringify({ jobId: job.id, digest: job.digest, index: i }), { flag: 'wx', mode: 0o600 }); }
+        catch (e) {
+          if (e.code !== 'EEXIST') throw e;
+          if (!await readJsonOrNull(join(dir, `${i}.quota.json`))) throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${i}. Reconcile its existing result; never duplicate it.`);
+          const miss = missingIndices();
+          if (!fallback) throw new Error(`AGY_QUOTA_EXHAUSTED: agy image quota is used up; no fallback bound to this job.`);
+          if (!apiKey) throw new Error(`AGY_QUOTA_EXHAUSTED: agy image quota is used up; no META_API_KEY for the Muse fallback.`);
+          await runMuseFallback(miss);
+          break;
+        }
+        try {
+          const outPath = join(dir, `${i}.png`);
+          const { outputPath } = await generateAgyImage({ prompt: request.prompt, aspectRatio: request.aspectRatio, imageName: `${job.id}-${i}`, imagePaths: request.images.map(f => f.path), outputPath: outPath, brainDir: process.env.WIGGLY_AGY_BRAIN_DIR ? resolve(process.env.WIGGLY_AGY_BRAIN_DIR) : undefined, bin: process.env.WIGGLY_AGY_BIN || undefined, timeoutMs: process.env.WIGGLY_AGY_TIMEOUT_MS ? Number(process.env.WIGGLY_AGY_TIMEOUT_MS) : undefined });
+          const file = await importMedia(outputPath, runDir);
+          const recorded = { file, provider: 'agy', costUsd: 0 };
+          await atomicJson(join(dir, `${i}.json`), recorded);
+          files[i] = file; providers[i] = { index: i, provider: 'agy', costUsd: 0 };
+        } catch (e) {
+          if (!isAgyQuotaError(e.message)) throw e;
+          const reset = parseAgyQuotaReset(e.message);
+          const diagnostic = String(e.message ?? e).slice(0, 800);
+          await atomicJson(join(dir, `${i}.quota.json`), { diagnostic, reset, at: new Date().toISOString() });
+          const miss = missingIndices();
+          if (!fallback) throw new Error(`AGY_QUOTA_EXHAUSTED: agy image quota is used up${reset ? ` (resets ${reset})` : ''}; no fallback bound to this job.`);
+          if (!apiKey) throw new Error(`AGY_QUOTA_EXHAUSTED: agy image quota is used up${reset ? ` (resets ${reset})` : ''}; no META_API_KEY for the Muse fallback.`);
+          await runMuseFallback(miss);
+          break;
+        }
+      }
+      result = finishResult();
+    }
   } else {
     const images = await Promise.all(request.images.map(async f => ({ image_url: `data:image/${extname(f.path).slice(1).replace('jpg', 'jpeg')};base64,${(await readFile(f.path)).toString('base64')}` })));
     const { endpoint, images: _refs, ...body } = request;
@@ -209,7 +293,8 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
     if (!Array.isArray(response.data) || response.data.length !== request.n || response.data.some(d => !d.b64_json)) throw new Error('Muse must return the exact requested image count as base64; no remote-image fallback.');
     const files = [];
     for (const [i, data] of response.data.entries()) { const path = join(dir, `${i}.${request.output_format}`); await writeFile(path, Buffer.from(data.b64_json, 'base64'), { mode: 0o600 }); files.push(await importMedia(path, runDir)); }
-    result = { files, prompt: request.prompt };
+    const unit = job.plan.estimatedCostUsd / request.n;
+    result = { files, prompt: request.prompt, provider: 'meta-muse', imageProviders: files.map((_, i) => ({ index: i, provider: 'meta-muse', costUsd: unit })) };
   }
   await atomicJson(join(dir, 'result.json'), result); return result;
 }

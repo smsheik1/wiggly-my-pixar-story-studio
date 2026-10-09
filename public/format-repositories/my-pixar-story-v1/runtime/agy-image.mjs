@@ -82,6 +82,22 @@ async function walkImages(dir, out = []) {
 
 export const agyNameStem = name => String(name).replace(/[^A-Za-z0-9]+/g, '_').toLowerCase();
 
+// Quota/capacity failures are the only agy errors eligible for the meta-muse fallback.
+export function isAgyQuotaError(text) {
+  return /429|resource_exhausted|exhausted your capacity|quota will reset/i.test(String(text ?? ''));
+}
+
+export function parseAgyQuotaReset(text) {
+  const s = String(text ?? '');
+  let m = /try again (?:at|in|after) ([^.]+?)\s*(?:\.|$)/i.exec(s);
+  if (m) return m[1].trim() || null;
+  m = /quota will reset[^0-9A-Za-z]*([0-9][^.]*?)\s*(?:\.|$)/i.exec(s);
+  if (m) return m[1].trim() || null;
+  m = /resets? (?:at|in) ([^.]+?)\s*(?:\.|$)/i.exec(s);
+  if (m) return m[1].trim() || null;
+  return null;
+}
+
 export async function findBrainFallback({ brainDir, startedAt, imageName }) {
   const candidates = await walkImages(brainDir);
   const scored = [];
