@@ -216,6 +216,9 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
         const quota = await readJsonOrNull(join(dir, `${j}.quota.json`));
         try { await writeFile(join(dir, `${j}.started`), JSON.stringify({ jobId: job.id, digest: job.digest, index: j, fallback: true }), { flag: 'wx', mode: 0o600 }); }
         catch (e) { if (e.code === 'EEXIST') { if (!quota) throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${j}. Reconcile its existing result; never duplicate it.`); } else throw e; }
+        // One Muse attempt per index: a fallback that started without a receipt is uncertain (it may have been billed).
+        try { await writeFile(join(dir, `${j}.fallback.started`), JSON.stringify({ jobId: job.id, digest: job.digest, index: j }), { flag: 'wx', mode: 0o600 }); }
+        catch (e) { if (e.code === 'EEXIST') throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${j}. Its Muse fallback already started without a receipt; reconcile it, never duplicate it.`); throw e; }
       }
       const images = await Promise.all(request.images.map(async f => ({ image_url: `data:image/${extname(f.path).slice(1).replace('jpg', 'jpeg')};base64,${(await readFile(f.path)).toString('base64')}` })));
       const body = { model: fallback.model, prompt: request.prompt, n: indices.length, size: fallback.size, aspectRatio: request.aspectRatio, response_format: fallback.response_format, output_format: fallback.output_format, tool_enablement: fallback.tool_enablement, ...(images.length ? { images } : {}) };

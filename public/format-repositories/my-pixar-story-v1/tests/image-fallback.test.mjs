@@ -27,6 +27,17 @@ if (mode.startsWith('quota-on-')) {
   const failSuffix = '-' + mode.slice('quota-on-'.length);
   if (imageName.endsWith(failSuffix)) { console.error('Error: 429 RESOURCE_EXHAUSTED: you have exhausted your capacity, quota will reset at 9:34 PM.'); process.exit(1); }
 }
+if (mode.startsWith('quota-log-on-') && imageName.endsWith('-' + mode.slice('quota-log-on-'.length))) {
+  // Real agy behaviour: the image tool hits 429 RESOURCE_EXHAUSTED, agy still exits 0, the only record is its CLI log.
+  const logDir = process.env.WIGGLY_AGY_LOG_DIR; fs.mkdirSync(logDir, { recursive: true });
+  fs.writeFileSync(logDir + '/cli-20261009_000741.log', [
+    'W1009 00:07:42.148717     174 mcp_auth.go:677] OAuth setup failed for buffer: registration failed with status 429: Error 1015: You are being rate limited',
+    'E1009 00:08:10.463585    3062 generate_image.go:167] error generating image: failed to generate content: 429 Too Many Requests, body: {',
+    '  "error": {', '    "code": 429,', '    "message": "You have exhausted your capacity on this model. Your quota will reset after 3h0m43s.",', '    "status": "RESOURCE_EXHAUSTED",',
+    '    "details": [ { "reason": "QUOTA_EXHAUSTED", "metadata": { "model": "gemini-3.1-flash-image", "quotaResetDelay": "3h0m43.502788675s" } } ]', '  }', '}', ''].join('\\n'));
+  console.log(JSON.stringify({ response: 'I was unable to generate the image.' }));
+  process.exit(0);
+}
 if (mode === 'nonzero') { console.error('fake agy failure tail'); process.exit(1); }
 const allOut = [...prompt.matchAll(/"([^"]+\.png)"/g)].map(m=>m[1]);
 const outPath = allOut.length ? allOut[allOut.length-1] : null;
@@ -67,7 +78,10 @@ function fakeMuseFetcher(bytes, seen) {
 }
 
 test('isAgyQuotaError matches 429, RESOURCE_EXHAUSTED and capacity/quota phrases', () => {
-  assert.equal(isAgyQuotaError('agy exited 1: Error 429 too many'), true);
+  assert.equal(isAgyQuotaError('agy exited 1: Error: 429 RESOURCE_EXHAUSTED on gemini-3.1-flash-image'), true);
+  assert.equal(isAgyQuotaError('agy produced no image: requested output missing and no new brain image found. agy log: E1009 generate_image.go:167] error generating image: failed to generate content: 429 Too Many Requests, body: { "error": { "code": 429, "message": "You have exhausted your capacity on this model. Your quota will reset after 3h0m43s.", "status": "RESOURCE_EXHAUSTED" } }'), true);
+  // agy logs unrelated MCP OAuth 429s on normal runs; a bare 429 is not image quota exhaustion
+  assert.equal(isAgyQuotaError('agy exited 1: OAuth setup failed for buffer: registration failed with status 429: Error 1015: You are being rate limited'), false);
   assert.equal(isAgyQuotaError('RESOURCE_EXHAUSTED quota exceeded'), true);
   assert.equal(isAgyQuotaError('you have exhausted your capacity, slow down'), true);
   assert.equal(isAgyQuotaError('quota will reset at midnight'), true);
@@ -78,6 +92,7 @@ test('isAgyQuotaError matches 429, RESOURCE_EXHAUSTED and capacity/quota phrases
 test('parseAgyQuotaReset extracts reset time when present', () => {
   assert.equal(parseAgyQuotaReset('quota will reset at 9:34 PM.'), '9:34 PM');
   assert.equal(parseAgyQuotaReset('try again at 9:34 PM.'), '9:34 PM');
+  assert.equal(parseAgyQuotaReset('Your quota will reset after 3h0m43s.'), '3h0m43s');
   assert.equal(parseAgyQuotaReset('nothing here'), null);
 });
 
@@ -233,5 +248,61 @@ test('half-finished quota recovery via collect works; started without quota mark
       await writeFile(join(dir, 'receipts', 'job-fb-uncertain', '0.started'), JSON.stringify({ jobId: 'job-fb-uncertain' }));
       await assert.rejects(executeMediaRequest(job, dir, 'k', async () => Response.json({ data: [] }), true), /UNCERTAIN_SUBREQUEST/);
     }
+  } finally { await rm(dir, { recursive: true }); }
+});
+
+async function refProject(dir, name) {
+  const p = audioProject();
+  p.characterId = 'alex';
+  const refPath = join(dir, name);
+  execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', refPath]);
+  const ref = await importMedia(refPath, dir);
+  p.artifacts.push({ key: 'roster', valid: true, content: { characters: [{ id: 'alex', references: [ref] }] } });
+  return p;
+}
+
+test('real agy quota (exit 0, 429 RESOURCE_EXHAUSTED only in the agy CLI log) keeps agy images and finishes on Muse', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'fb-reallog-'));
+  const bin = await makeFake(dir);
+  try {
+    const bytes = await pngBytes(dir);
+    await withEnv({ WIGGLY_AGY_BIN: bin, WIGGLY_AGY_BRAIN_DIR: join(dir, 'brain'), WIGGLY_AGY_LOG_DIR: join(dir, 'log'), FAKE_AGY_MODE: 'quota-log-on-1' }, async () => {
+      const p = await refProject(dir, 'ref.png');
+      const plan = { provider: 'agy', operation: 'candidates', estimatedCostUsd: 0, fallbackEstimatedCostUsd: 0.03, parameters: { prompt: 'real log prompt' } };
+      const req = requestDescriptor(p, plan);
+      const job = { id: 'job-fb-log', plan, request: req, dependencies: [], digest: digest({ plan, request: req, dependencies: [] }), key: 'candidates', status: 'submitting', authorization: { message: 't', at: new Date().toISOString() } };
+      const seen = { calls: 0 };
+      const result = await executeMediaRequest(job, dir, 'isolated-meta-key', fakeMuseFetcher(bytes, seen), false);
+      assert.equal(result.provider, 'mixed');
+      assert.deepEqual(result.imageProviders.map(x => x.provider), ['agy', 'meta-muse', 'meta-muse']);
+      assert.equal(seen.calls, 1);
+      assert.equal(seen.body.n, 2);
+      assert.equal(seen.body.prompt, 'real log prompt');
+      const quota = JSON.parse(await readFile(join(dir, 'receipts', 'job-fb-log', '1.quota.json'), 'utf8'));
+      assert.match(quota.diagnostic, /RESOURCE_EXHAUSTED/);
+      assert.match(quota.diagnostic, /gemini-3\.1-flash-image/);
+      assert.equal(quota.reset, '3h0m43s');
+    });
+  } finally { await rm(dir, { recursive: true }); }
+});
+
+test('a Muse fallback that started without a receipt is never sent again', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'fb-once-'));
+  const bin = await makeFake(dir);
+  try {
+    await withEnv({ WIGGLY_AGY_BIN: bin, WIGGLY_AGY_BRAIN_DIR: join(dir, 'brain'), FAKE_AGY_MODE: 'quota-on-2' }, async () => {
+      const p = await refProject(dir, 'ref.png');
+      const plan = { provider: 'agy', operation: 'candidates', estimatedCostUsd: 0, fallbackEstimatedCostUsd: 0.03, parameters: { prompt: 'once' } };
+      const req = requestDescriptor(p, plan);
+      const job = { id: 'job-fb-once', plan, request: req, dependencies: [], digest: digest({ plan, request: req, dependencies: [] }), key: 'candidates', status: 'submitting', authorization: { message: 't', at: new Date().toISOString() } };
+      let calls = 0;
+      // The Muse request leaves without a usable answer (network drop): it may still have been billed.
+      await assert.rejects(executeMediaRequest(job, dir, 'isolated-meta-key', async () => { calls++; throw new Error('socket hang up'); }, false), /socket hang up/);
+      assert.equal(calls, 1);
+      // Neither collect nor generate may repeat it, even though image 2 carries a quota marker.
+      await assert.rejects(executeMediaRequest(job, dir, 'isolated-meta-key', async () => { calls++; return Response.json({}); }, true), /UNCERTAIN_SUBREQUEST/);
+      await assert.rejects(executeMediaRequest(job, dir, 'isolated-meta-key', async () => { calls++; return Response.json({}); }, false), /UNCERTAIN_SUBREQUEST/);
+      assert.equal(calls, 1);
+    });
   } finally { await rm(dir, { recursive: true }); }
 });

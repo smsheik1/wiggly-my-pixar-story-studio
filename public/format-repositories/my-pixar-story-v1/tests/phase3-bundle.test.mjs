@@ -110,19 +110,26 @@ test('refresh-visual-instructions applies only Vera skill and visual rubric', ()
   assert.equal(p.studio.sha256, kit.sha256);
 });
 
-test('refresh-visual-instructions refuses when another doc or config differs', () => {
+test('refresh-visual-instructions on an older pinned studio changes only Vera skill and visual rubric', () => {
+  // Shaped like live run r4: pinned config and several other docs are older than the kit.
   const kit = loadStudio();
   let p = candidatesProduce();
-  const oldLeo = kit.documents['crew/leo/SKILL.md'].content + '\n<!-- isolated -->';
-  p.studio.documents['crew/leo/SKILL.md'] = { content: oldLeo, sha256: sha(oldLeo) };
+  const pin = (path, extra) => { const content = kit.documents[path].content + extra; p.studio.documents[path] = { content, sha256: sha(content) }; };
+  pin('crew/leo/SKILL.md', '\n<!-- isolated old leo -->');
+  pin('crew/max/SKILL.md', '\n<!-- isolated old max -->');
+  pin('evaluation/rubrics/scene.md', '\n<!-- isolated old scene -->');
+  pin('crew/vera/SKILL.md', '\n<!-- isolated old vera -->');
+  pin('evaluation/rubrics/visual.md', '\n<!-- isolated old visual -->');
+  p.studio.config = { ...p.studio.config, generation: { ...p.studio.config.generation, image: { ...p.studio.config.generation.image, model: 'muse-image-1.0-pinned' } } };
   p.studio.sha256 = digest({ config: p.studio.config, documents: p.studio.documents });
-  assert.throws(() => send(p, 'refresh-visual-instructions', { actor: 'human', message: 'ISOLATED' }), /VISUAL_REFRESH_SCOPE/);
-  let q = candidatesProduce();
-  q.studio.config = { ...q.studio.config, version: 1 };
-  // force a config digest difference via a generation model string that still parses
-  q.studio.config.generation = { ...q.studio.config.generation, image: { ...q.studio.config.generation.image, model: 'muse-image-1.0-changed' } };
-  q.studio.sha256 = digest({ config: q.studio.config, documents: q.studio.documents });
-  assert.throws(() => send(q, 'refresh-visual-instructions', { actor: 'human', message: 'ISOLATED' }), /VISUAL_REFRESH_SCOPE|STUDIO_SNAPSHOT_CHANGED|custom/);
+  const before = structuredClone(p.studio);
+  p = send(p, 'refresh-visual-instructions', { actor: 'human', message: 'ISOLATED refresh Vera on an older run' });
+  assert.equal(p.studio.documents['crew/vera/SKILL.md'].content, kit.documents['crew/vera/SKILL.md'].content);
+  assert.equal(p.studio.documents['evaluation/rubrics/visual.md'].content, kit.documents['evaluation/rubrics/visual.md'].content);
+  for (const path of Object.keys(before.documents)) if (!['crew/vera/SKILL.md', 'evaluation/rubrics/visual.md'].includes(path)) assert.deepEqual(p.studio.documents[path], before.documents[path], path);
+  assert.deepEqual(p.studio.config, before.config);
+  assert.deepEqual(Object.keys(p.studio.documents).sort(), Object.keys(before.documents).sort());
+  assert.equal(p.studio.sha256, digest({ config: p.studio.config, documents: p.studio.documents }));
 });
 
 test('refresh-visual-instructions refuses when the current item already has an approved image', () => {
@@ -187,4 +194,18 @@ test('Vera anatomy pass without crops is accepted when fingers are too small to 
     const done = send(p, 'review', { workerId: event.workerId, artifactId: event.artifactId, artifactDigest: event.artifactDigest, review: event.review });
     assert.equal(done.gate, 'human');
   } finally { await rm(dir, { recursive: true }); }
+});
+
+test('Vera skill and visual rubric fail photoreal or 3D-hybrid style and keep the quick-pass hand rule', () => {
+  const kit = loadStudio();
+  const vera = kit.documents['crew/vera/SKILL.md'].content, visual = kit.documents['evaluation/rubrics/visual.md'].content;
+  for (const doc of [vera, visual]) {
+    assert.match(doc, /Pixar-like 3D/);
+    assert.match(doc, /photoreal\/3D hybrid/);
+    assert.match(doc, /fails? `style`/i);
+    assert.match(doc, /quick normal pass/);
+    assert.match(doc, /too small to count/);
+  }
+  assert.match(vera, /Never pass photoreal style to protect likeness/);
+  assert.doesNotMatch(vera, /five distinct fingers/);
 });

@@ -493,9 +493,11 @@ export function applyEvent(project, raw) {
   }else if(e.action==='refresh-visual-instructions'){
     requiredActor(e,'human');
     if(!e.message||!p.studio||!['candidates','sheet','backgroundCandidates','backgroundAngle','keyframe'].includes(p.step)||!['produce','review','human','escalate'].includes(p.gate)||p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status))||p.artifacts.some(a=>a.key===keyFor(p)&&a.approvedBy))throw new Error('VISUAL_REFRESH_LOCKED: refresh Vera instructions explicitly for the current unapproved image item with reconciled jobs.');
-    const next=loadStudio(),allowed=['crew/vera/SKILL.md','evaluation/rubrics/visual.md'];
-    if(digest(next.config)!==digest(p.studio.config)||Object.keys(next.documents).length!==Object.keys(p.studio.documents).length||Object.keys(next.documents).some(path=>!allowed.includes(path)&&digest(next.documents[path])!==digest(p.studio.documents[path])))throw new Error('VISUAL_REFRESH_SCOPE: only Vera skill and visual rubric may change; all other bindings stay pinned.');
-    p.studio=next;
+    // Copy ONLY Vera's skill and the visual rubric from the kit; config and every other document stay pinned
+    // (older runs pin an older config/other docs, so whole-snapshot equality would make this unusable).
+    const next=loadStudio(),config=p.studio.config,documents={...p.studio.documents};
+    for(const path of ['crew/vera/SKILL.md','evaluation/rubrics/visual.md']){if(!next.documents[path]||!p.studio.documents[path])throw new Error(`VISUAL_REFRESH_SCOPE: ${path} is not bound in this studio.`);documents[path]=next.documents[path];}
+    p.studio={config,documents,sha256:digest({config,documents})};
   }else if(e.action==='prefer-image-provider'){
     requiredActor(e,'human');
     if(!e.message||!['meta-muse','agy'].includes(e.provider))throw new Error('prefer-image-provider needs --provider meta-muse|agy and --message "<text>".');
