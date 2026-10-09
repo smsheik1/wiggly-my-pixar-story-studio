@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {text,File,digest} from './contracts.mjs';
 import {loadStudio,studioFor,maximumTools} from './instructions.mjs';
 import {taskFor} from './workflow.mjs';
-import {assertAllowed,keyFor,current} from './gates.mjs';
+import {assertAllowed,keyFor,current,sheetKeyFor} from './gates.mjs';
 import {verifyFiles,measureAudio,probe} from './media.mjs';
 import {supervised,reviewPassed} from './gates.mjs';
 import {artifactEvidence} from './evaluators.mjs';
@@ -20,6 +20,7 @@ export function roleFor(p){
  if(p.gate==='owner-review')return 'background-product-owner';
  if(p.gate==='review')return p.step==='film'?(reviewPassed(p.artifacts.findLast(a=>a.key==='film'&&a.valid)?.visualReview)?'audio-reviewer':'scene-reviewer'):['audition','narration','music','effect'].includes(p.step)?'audio-reviewer':['keyframe','video'].includes(p.step)?'scene-reviewer':['candidates','sheet','backgroundCandidates','backgroundAngle'].includes(p.step)?'visual-reviewer':'text-reviewer';
  if(p.gate==='produce')return 'generation-planner';
+ if(p.step==='characterPrompt'&&p.workflowRevision>=5)return 'sheet-prompter';
  return ({answers:'script-writer',characterPrompt:'cast-designer',script:'script-writer',roster:'cast-designer',sheetPrompt:'sheet-prompter',backgrounds:'background-product-owner',backgroundBrief:'background-product-owner',backgroundAngleBrief:'background-product-owner',backgroundPrompt:'pixar-prompter',backgroundAnglePrompt:'pixar-prompter',shotIntentions:'shot-planner',shots:'shot-planner',keyframePrompt:'composition-writer',videoPlan:'motion-director',videoPrompt:'video-prompt-engineer',soundPlan:'sound-designer',music:'sound-designer',effect:'sound-designer',editPlan:'film-editor'})[p.step]??'orchestrator';
 }
 export function assignedWorker(p){return p.crew?.workers.find(w=>w.role===roleFor(p));}
@@ -57,6 +58,30 @@ export function crewTools(task,worker,adapters={},record=()=>{}){
   if(name==='viewImage'&&(!file.width||file.durationSeconds))throw new Error('Expected a still image.');
   if(name==='watchVideo'&&(!file.width||!file.durationSeconds))throw new Error('Expected a measured video.');
   if(['listenAudio','transcribe'].includes(name)&&(!file.durationSeconds||(file.width&&!(await probe(file.path)).hasAudio)))throw new Error('Expected an audible file.');
+  if(name==='viewImage'&&parameters.region!==undefined){
+    const r=parameters.region;
+    if(!r||typeof r!=='object'||![r.x,r.y,r.width,r.height].every(v=>typeof v==='number'&&v>=0&&v<=1)||!(r.width>0&&r.height>0&&r.x+r.width<=1+1e-9&&r.y+r.height<=1+1e-9))throw new Error('REGION_MISMATCH: region needs relative {x,y,width,height} in 0-1 coords.');
+    const { execFile } = await import('node:child_process');
+    const { promisify } = await import('node:util');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { mkdtemp, unlink: unlinkTmp } = await import('node:fs/promises');
+    const exec = promisify(execFile);
+    const x=Math.floor(file.width*r.x),y=Math.floor(file.height*r.y),w=Math.max(1,Math.floor(file.width*r.width)),h=Math.max(1,Math.floor(file.height*r.height));
+    const dir=await mkdtemp(join(tmpdir(),'vera-crop-'));
+    const out=join(dir,'crop.png');
+    try { await exec('ffmpeg',['-v','error','-y','-i',file.path,'-vf',`crop=${w}:${h}:${x}:${y}`,out]); }
+    catch(e){throw new Error(`CROP_FAILED: ${e.message}`);}
+    if(!adapters[name]){await unlinkTmp(out).catch(()=>{});throw new Error(`CAPABILITY_UNAVAILABLE: host must connect actual ${name}; file access/metadata are insufficient.`);}
+    // The crop is new bytes: bind its own digest so perception adapters that
+    // re-verify file bytes (e.g. Gemini) accept it; the receipt keeps the source sha256 + region.
+    const cropBytes=await (await import('node:fs/promises')).readFile(out);
+    const cropped={...file,path:out,width:w,height:h,bytes:cropBytes.length,sha256:(await import('node:crypto')).createHash('sha256').update(cropBytes).digest('hex')};
+    const result=await adapters[name]({file:cropped,worker,task,region:r});
+    await unlinkTmp(out).catch(()=>{});
+    try{await (await import('node:fs/promises')).rm(dir,{recursive:true});}catch{}
+    return z.object({perception:z.literal('direct-image')}).passthrough().parse(result);
+  }
   if(!adapters[name])throw new Error(`CAPABILITY_UNAVAILABLE: host must connect actual ${name}; file access/metadata are insufficient.`);
   const result=await adapters[name]({file,worker,task});
   if(name==='transcribe'){const transcript=z.object({transcript:text,method:text,words:z.array(z.object({word:text,start:z.number().nonnegative(),end:z.number().nonnegative()})).optional()}).passthrough().parse(result);if(transcript.words?.some(w=>w.end<w.start||w.end>file.durationSeconds+.1))throw new Error('STT_RESPONSE_MISMATCH: word timing must describe the current audio.');if(worker.role==='voice-director'&&task.step==='narration'&&task.gate==='author'&&!transcript.words?.length)throw new Error('STT_WORD_TIMING_UNAVAILABLE: editor transcription returned no word times. Preserve its receipt and repair timing output; this is a tool limitation, not proof speech cannot be edited.');return transcript;}
@@ -65,7 +90,7 @@ export function crewTools(task,worker,adapters={},record=()=>{}){
   if(name==='listenAudio'&&worker.role==='voice-director'&&task.step==='narration'&&task.gate==='author'&&perceived.seconds+.02<file.durationSeconds)throw new Error('AUDIO_EDIT_LISTEN_REQUIRED: complete source listening required.');
   return perceived;
  };
- return async(name,parameters={})=>{try{const value=await execute(name,parameters);observed.add(`${name}:${parameters.sha256}`);if(name==='transcribe'&&value.words?.length)observed.add(`wordTiming:${parameters.sha256}`);record({tool:name,sha256:parameters.sha256,referenceSha256:parameters.referenceSha256,seconds:value.seconds,...(value.provider?{provider:value.provider,modelVersion:value.modelVersion,requestDigest:value.requestDigest,receiptPath:value.receiptPath,samplingFps:value.samplingFps}: {})},value);return value;}catch(error){if(task.step==='narration'&&task.gate==='author'&&worker.role==='voice-director'&&['listenAudio','inspectAudio','transcribe'].includes(name))error.stopDispatch=true;throw error;}};
+ return async(name,parameters={})=>{try{const value=await execute(name,parameters);observed.add(`${name}:${parameters.sha256}`);if(name==='transcribe'&&value.words?.length)observed.add(`wordTiming:${parameters.sha256}`);record({tool:name,sha256:parameters.sha256,referenceSha256:parameters.referenceSha256,seconds:value.seconds,...(parameters.region?{region:parameters.region}:{}),...(value.provider?{provider:value.provider,modelVersion:value.modelVersion,requestDigest:value.requestDigest,receiptPath:value.receiptPath,samplingFps:value.samplingFps}: {})},value);return value;}catch(error){if(task.step==='narration'&&task.gate==='author'&&worker.role==='voice-director'&&['listenAudio','inspectAudio','transcribe'].includes(name))error.stopDispatch=true;throw error;}};
 }
 export async function prepareCrewTask(p,task){
  const expected=taskFor(p);
@@ -77,9 +102,9 @@ export async function prepareCrewTask(p,task){
  for(const a of expected.dependencies??[])if(!a.valid||(!a.approvedBy&&a.kind!=='clone')||current(p,a.key)?.id!==a.id)throw new Error(`TASK_INPUT_NOT_LOCKED: ${a.key}`);
  if(['review','owner-review'].includes(task.gate)&&(!task.artifact||current(p,keyFor(p))?.id!==task.artifact.id))throw new Error('TASK_INPUT_MISSING: exact current artifact required for review.');
  const inputChecklist=[{input:'current task and role',source:'SQLite',status:'verified'},...expected.dependencies.map(a=>({input:a.key,artifactId:a.id,artifactDigest:a.digest,source:'SQLite locked artifact',status:'verified'})),...(task.artifact?[{input:'current deliverable',artifactId:task.artifact.id,artifactDigest:task.artifact.digest,source:'SQLite draft (not human approval)',status:'verified'}]:[])];
- for(const ref of expected.characterReferences??[])if(!current(p,`sheet:${ref.characterId}`)?.approvedBy)throw new Error(`TASK_INPUT_NOT_LOCKED: sheet:${ref.characterId}`);
+ for(const ref of expected.characterReferences??[])if(!current(p,sheetKeyFor(p,ref.characterId))?.approvedBy)throw new Error(`TASK_INPUT_NOT_LOCKED: ${sheetKeyFor(p,ref.characterId)}`);
  if(expected.narration&&!current(p,'narration')?.approvedBy)throw new Error('TASK_INPUT_NOT_LOCKED: narration');
- inputChecklist.push(...(expected.characterReferences??[]).map(ref=>({input:`sheet:${ref.characterId}`,artifactId:ref.artifactId,sha256:ref.file.sha256,source:'SQLite approved reference',status:'verified'})),...(expected.narration?[{input:'narration',artifactId:expected.narration.id,artifactDigest:expected.narration.digest,source:'SQLite locked narration',status:'verified'}]:[]));
+ inputChecklist.push(...(expected.characterReferences??[]).map(ref=>({input:sheetKeyFor(p,ref.characterId),artifactId:ref.artifactId,sha256:ref.file.sha256,source:'SQLite approved reference',status:'verified'})),...(expected.narration?[{input:'narration',artifactId:expected.narration.id,artifactDigest:expected.narration.digest,source:'SQLite locked narration',status:'verified'}]:[]));
  const {communication,...workPacket}=expected;
  const canonical={...workPacket,inputChecklist,...(task.repairFeedback?{repairFeedback:task.repairFeedback}:{})};
  if(task.gate!=='review')return canonical;
@@ -124,7 +149,7 @@ export async function runCrewTask(p,task,host){
    if(supervised(p)&&event.review?.decision==='provisional'&&event.review.checks?.length&&event.review.checks.every(c=>c.status==='pass'))throw new Error('REVIEW_VERDICT_MISMATCH: a supervised review with every check passing must use decision approved; provisional is only for reviews with an inconclusive check and no failures.');
    if(event.review?.decision!=='inconclusive'){
    const required=worker.role==='audio-reviewer'?['listenAudio',...(['audition','narration'].includes(task.step)?['measureAudio','transcribe',...(!supervised(p)?['speakerSimilarity']:[])]:[])]:['visual-reviewer','scene-reviewer'].includes(worker.role)?[['video','film'].includes(task.step)?'watchVideo':'viewImage']:[];
-   for(const file of task.artifact?.content.files??[])for(const tool of required){const receipt=receipts.find(r=>r.tool===tool&&r.sha256===file.sha256);if(!receipt||['watchVideo','listenAudio'].includes(tool)&&receipt.seconds+.02<file.durationSeconds||tool==='speakerSimilarity'&&receipt.referenceSha256!==task.voiceReference?.content.files[0].sha256)throw new Error('PERCEPTION_NOT_PERFORMED: actual current-file perception/measurement tool calls are required before a verdict.');}
+   for(const file of task.artifact?.content.files??[])for(const tool of required){const receipt=receipts.find(r=>r.tool===tool&&r.sha256===file.sha256&&!(tool==='viewImage'&&r.region));if(!receipt||['watchVideo','listenAudio'].includes(tool)&&receipt.seconds+.02<file.durationSeconds||tool==='speakerSimilarity'&&receipt.referenceSha256!==task.voiceReference?.content.files[0].sha256)throw new Error('PERCEPTION_NOT_PERFORMED: actual current-file perception/measurement tool calls are required before a verdict.');}
   }
   if(worker.role==='audio-reviewer'&&['audition','narration'].includes(task.step)){
    const files=task.artifact.content.files,stt=files.map(f=>outputs.get(`transcribe:${f.sha256}`)),similarity=files.map(f=>outputs.get(`speakerSimilarity:${f.sha256}`)),measured=files.map(f=>outputs.get(`measureAudio:${f.sha256}`)),listen=files.map(f=>outputs.get(`listenAudio:${f.sha256}`));

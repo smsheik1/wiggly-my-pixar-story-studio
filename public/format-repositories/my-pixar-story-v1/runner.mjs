@@ -75,7 +75,7 @@ async function main() {
     const renderer=await verifyRenderer();
     const studio=loadStudio();
     print({studioVersion:studio.config.version,studioSha256:studio.sha256,instructionFiles:Object.keys(studio.documents),formatVersion: VERSION, node: process.version, tools, renderer:renderer.manifest.renderer, dependencies: 'LangGraph + SQLite loaded',
-      requiredKeys: ['CARTESIA_API_KEY', 'META_API_KEY', 'REPLICATE_API_TOKEN (video stage)'], conditionalKeys:['GEMINI_API_KEY (shipped Codex media review)'], optionalKeys:['ELEVENLABS_API_KEY (generated music/effects; imports need no key)'], credentialsRead: false, productionStageLimit: 'supervised v1 through private finalization; every media lock needs human review and every video request needs exact human authorization; qualified policy remains available; real production proof not performed' });
+      requiredKeys: ['CARTESIA_API_KEY', 'REPLICATE_API_TOKEN (video stage)'], imageKeys: ['no key for default agy provider; META_API_KEY only for meta-muse fallback'], conditionalKeys:['GEMINI_API_KEY (shipped Codex media review)'], optionalKeys:['ELEVENLABS_API_KEY (generated music/effects; imports need no key)'], credentialsRead: false, productionStageLimit: 'supervised v1 through private finalization; every media lock needs human review and every video request needs exact human authorization; qualified policy remains available; real production proof not performed' });
     if (Object.values(tools).some(v => !v)) process.exitCode = 1; return;
   }
   if (command === 'schema') {
@@ -227,6 +227,23 @@ async function main() {
       await verifySubmission(status,event);
       print(presentation(await workflow.respond('project', event))); return;
     }
+    if (command === 'upgrade-workflow') {
+      const target = Number(option('to', args[0] ?? '5')); if (args.length) args.shift();
+      const message = option('message'); if (!message || args.length) throw new Error('upgrade-workflow needs --to 5 and --message "<actual human instruction>".');
+      if (target !== 5) throw new Error('Only upgrade to workflow revision 5 is supported.');
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'upgrade-workflow', workflowRevision: 5, message }))); return;
+    }
+    if (command === 'import-sheet') {
+      const character = option('character'); const filePath = option('file'); const message = option('message');
+      if (!character || !filePath || !message || args.length) throw new Error('import-sheet needs --character <id> --file <abs path> --message "<operator note>".');
+      if (!filePath.startsWith('/')) throw new Error('import-sheet --file must be an absolute path.');
+      const imported = await importMedia(resolve(filePath), runDir);
+      if (!imported.width || !imported.height || imported.durationSeconds) throw new Error('import-sheet needs a measured still image.');
+      const { basename: base } = await import('node:path');
+      const provenance = { source: 'operator-import', originalPath: base(resolve(filePath)), sha256: imported.sha256, importedAt: new Date().toISOString(), message };
+      await verifyFiles(imported);
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'import-sheet', characterId: character, importFile: imported, importProvenance: provenance, message }))); return;
+    }
     if (command === 'generate' || command === 'collect') {
       const { project, pending } = status; const job = pending.job;
       if (pending.gate !== 'collect' || !job) throw new Error('Only a current authorized generation request can be executed/collected.');
@@ -250,7 +267,7 @@ async function main() {
       if(command==='collect'&&job.status==='authorized')throw new Error('NOT_SUBMITTED: collection cannot start a paid request.');
       await verifyFiles(job.request);
       let key='';
-      if(command==='generate'||job.plan.provider==='replicate'){
+      if((command==='generate'||job.plan.provider==='replicate')&&job.plan.provider!=='agy'){
         try{key=await loadKey(job.plan.provider,secretsPath);}catch(e){throw new Error(`${e.message}\n${remediation(job.plan.provider,secretsPath)}`);}
       }
       if(command==='generate')await runtimeEvent('begin');
@@ -264,7 +281,7 @@ async function main() {
         await runtimeEvent('provider-error',{message:diagnostic});throw new Error(`${diagnostic}\n${remediation(job.plan.provider,secretsPath)}`);
       }return;
     }
-    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
+    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
   } catch(error){
     const latest=await workflow.status('project').catch(()=>null);
     if(latest?.project.debug?.enabled&&!latest.project.debug.paused)await workflow.respond('project',{taskId:latest.pending.taskId,actor:'runtime',action:'debug-stop',message:'Command stopped: '+error.message});

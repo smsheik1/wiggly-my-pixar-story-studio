@@ -3,17 +3,48 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { roleFor, crewRoles } from '../runtime/crew.mjs';
 import { initialProject, taskFor } from '../runtime/workflow.mjs';
+import { requestDescriptor } from '../runtime/providers.mjs';
+import { requireBudget, spendSummary } from '../runtime/budget.mjs';
+import { imageUnitCostFor } from '../runtime/instructions.mjs';
 import { inputs, file, approved, reviewed, authored, send } from './helpers.mjs';
 
 test("Max SKILL.md Muse image estimate matches studio.json configured rate", () => {
   const studioJson = JSON.parse(readFileSync(new URL('../studio.json', import.meta.url), 'utf8'));
   const skillText = readFileSync(new URL('../crew/max/SKILL.md', import.meta.url), 'utf8');
-  const configuredRate = studioJson.generation.image.estimatedUnitCostUsd;
+  const configuredRate = studioJson.generation.image.metaMuseEstimatedUnitCostUsd ?? studioJson.generation.image.estimatedUnitCostUsd;
 
   const match = skillText.match(/Meta Muse images[^\n]*\$([0-9.]+)/);
   assert.ok(match, 'Meta Muse image dollar rate not found in Max SKILL.md');
   const skillRate = Number(match[1]);
   assert.equal(skillRate, configuredRate, `Muse rate in SKILL.md ($${skillRate}) differs from studio.json ($${configuredRate})`);
+
+  assert.equal(studioJson.generation.image.agyEstimatedUnitCostUsd, 0, 'agy rate must be $0 in studio.json');
+  assert.match(skillText, /local agy images, cost is \$0\.00/, 'agy $0 rate not found in Max SKILL.md');
+});
+
+test('agy images cost $0 end to end while meta-muse costs $0.01 per image', () => {
+  const studioJson = JSON.parse(readFileSync(new URL('../studio.json', import.meta.url), 'utf8'));
+  assert.equal(studioJson.generation.image.agyEstimatedUnitCostUsd, 0);
+  assert.equal(studioJson.generation.image.metaMuseEstimatedUnitCostUsd ?? studioJson.generation.image.estimatedUnitCostUsd, 0.01);
+  const p = initialProject('image-costs', inputs, { reviewMode: 'supervised' });
+  p.characterId = 'alex';
+  p.artifacts.push({ key: 'roster', valid: true, content: { characters: [{ id: 'alex', references: [{ path: '/isolated-test/ref.png', sha256: file().sha256, bytes: 100, width: 1600, height: 900 }] }] } });
+  assert.equal(imageUnitCostFor(p, 'agy'), 0);
+  assert.equal(imageUnitCostFor(p, 'meta-muse'), 0.01);
+  // plan estimate + cost check: agy $0 passes, muse needs $0.01 x n (n=3 candidates)
+  const agyReq = requestDescriptor(p, { provider: 'agy', operation: 'candidates', estimatedCostUsd: 0, parameters: { prompt: 'ISOLATED sheet prompt' } });
+  assert.equal(agyReq.n, 3);
+  assert.equal(agyReq.estimatedUnitCostUsd, 0);
+  const museReq = requestDescriptor(p, { provider: 'meta-muse', operation: 'candidates', estimatedCostUsd: 0.03, parameters: { prompt: 'ISOLATED sheet prompt' } });
+  assert.equal(museReq.n, 3);
+  assert.throws(() => requestDescriptor(p, { provider: 'meta-muse', operation: 'candidates', estimatedCostUsd: 0.02, parameters: { prompt: 'ISOLATED sheet prompt' } }), /every requested image/);
+  // budget/spend accounting: $0 needs no budget, $0.03 exceeds the default zero budget
+  requireBudget(p, 0);
+  assert.throws(() => requireBudget(p, 0.03), /PROJECT_BUDGET_EXCEEDED/);
+  // job record: an authorized agy job reserves $0
+  p.jobs.push({ id: 'job-1', key: 'candidates:alex', plan: { provider: 'agy', operation: 'candidates', estimatedCostUsd: 0, parameters: { prompt: 'ISOLATED sheet prompt' } }, request: agyReq, dependencies: [], digest: 'isolated-cost', status: 'authorized', authorization: { message: 'ISOLATED', at: new Date().toISOString() } });
+  assert.equal(spendSummary(p).generationReservedUsd, 0);
+  assert.equal(spendSummary(p).totalReservedUsd, 0);
 });
 
 test("Max SKILL.md provider model ids match studio.json configured models", () => {

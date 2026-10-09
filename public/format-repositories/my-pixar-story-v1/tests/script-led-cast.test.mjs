@@ -12,7 +12,7 @@ const approveExact=(p,extra={})=>send(p,'approve',{artifactId:current(p).id,arti
 test('new intake locks memories without casting or photos; writer must propose cast before script approval',()=>{
  for(const relationshipToRecipient of ['parent','grandparent']){
   const source={...inputs,subject:{...inputs.subject,relationshipToRecipient}};
-  let p=initialProject('new-'+relationshipToRecipient,source);assert.equal(p.workflowRevision,4);
+  let p=initialProject('new-'+relationshipToRecipient,source);assert.equal(p.workflowRevision,5);
   p=reviewed(send(p,'artifact',{workerId:'writer',content:{inputs:source,sourceInputDigest:digest(source),commonSenseChecks:[]}}));
   assert.throws(()=>assertAllowed(p,'script'),/ANSWERS_LOCK_REQUIRED/);
   p=approveExact(p);assert.equal(p.step,'script');assert.equal(current(p,'answers').intakeConfirmation,undefined);
@@ -70,13 +70,13 @@ test('script and cast are delivered together after SQLite restart; no intake inv
   await submit('artifact',{workerId:'writer',content:{...script,commonSenseChecks:[],proposedCast}});await submit('review',mirror(s.project));
   w.close();w=openWorkflow(join(dir,'state.sqlite'));s=await w.status('project');const delivered=await presentDeliverable(s);
   assert.match(delivered.markdown,/Proposed on-screen cast/);assert.match(delivered.markdown,/Narrator appears in the memory/);assert.equal(delivered.intakeConfirmationRequired,false);
-  assert.equal(s.project.workflowRevision,4);assert.equal(s.project.step,'script');assert.equal(current(s.project).approvedBy,undefined);assert.equal(s.project.jobs.length,0);
+  assert.equal(s.project.workflowRevision,5);assert.equal(s.project.step,'script');assert.equal(current(s.project).approvedBy,undefined);assert.equal(s.project.jobs.length,0);
  }finally{w.close();await rm(dir,{recursive:true});}
 });
 
 test('workers receive the verified workflow revision and approved cast proposal, never caller replacements',async()=>{
  const {prepareCrewTask}=await import('../runtime/crew.mjs');
- let p=initialProject('packet',inputs);let task=taskFor(p);const packet=await prepareCrewTask(p,task);assert.equal(packet.workflowRevision,4);
+ let p=initialProject('packet',inputs);let task=taskFor(p);const packet=await prepareCrewTask(p,task);assert.equal(packet.workflowRevision,5);
  await assert.rejects(prepareCrewTask(p,{...task,workflowRevision:3}),/TASK_INPUT_MISMATCH/);
  p=reviewed(send(p,'artifact',{workerId:'writer',content:{inputs,sourceInputDigest:digest(inputs),commonSenseChecks:[]}}));p=approveExact(p);
  p=reviewed(send(p,'artifact',{workerId:'writer',content:{...script,commonSenseChecks:[],proposedCast}}));p=approveExact(p);task=taskFor(p);

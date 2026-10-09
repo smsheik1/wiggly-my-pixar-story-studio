@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {Project,criteria,digest} from '../runtime/contracts.mjs';
 import {initialProject,current,characterRecipeSha256,characterPromptRecipeSha256} from '../runtime/workflow.mjs';
-import {image,author,registry,brief,prompt,ownerChecked} from './background-helpers.mjs';
+import {image,sheetImage,author,registry,brief,prompt,ownerChecked} from './background-helpers.mjs';
 import {shotPlan,composition,generated} from './shot-helpers.mjs';
 import {videoPlan} from './studio-helpers.mjs';
 import {inputs,script,file,send,authored,reviewed,approved,produce,intakeFixture,answersLocked} from './helpers.mjs';
@@ -29,9 +29,9 @@ export function supervisedCharacters(){
  p=approved(reviewed(author(p,{characters:[{id:'alex',name:'Alex',ageVariant:'adult',important:true,references:[image(1)],notes:'Invented persona protocol fixture'}]},'cast-owner')));
  const c=current(p,'roster').content.characters[0];
  p=approved(reviewed(author(p,{prompt:'character',characterDigest:digest(c),referenceHashes:c.references.map(f=>f.sha256),recipeSha256:characterPromptRecipeSha256},'cast-owner')));
- p=confirmed(reviewed(produce(p,{files:[1,2,3].map(image),prompt:'character'})),{selection:0});
+ p=confirmed(reviewed(produce(p,{files:[1,2,3].map(sheetImage),prompt:'character'})),{selection:0});
  p=approved(reviewed(author(p,{prompt:'sheet',recipeSha256:characterRecipeSha256,referenceSha256:image(1).sha256,turnaround:['front','three-quarter','profile','back'],expressions:Array(8).fill('expression')},'sheet-writer')));
- return confirmed(reviewed(produce(p,{files:[image(4)],prompt:'sheet'})));
+ return confirmed(reviewed(produce(p,{files:[sheetImage(4)],prompt:'sheet'})));
 }
 export function supervisedBackgrounds(){
  let p=supervisedCharacters();p=approved(reviewed(author(p,{...registry,...shotPlan},'shot-planner')));

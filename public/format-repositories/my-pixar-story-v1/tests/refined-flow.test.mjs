@@ -11,7 +11,7 @@ import {importMedia,narrationWindow,measureAudio} from '../runtime/media.mjs';
 import {requestDescriptor,executeJob} from '../runtime/providers.mjs';
 import {inputs,script,send,authored,reviewed,approved,answersLocked,questionnaire,intakeFixture,produce} from './helpers.mjs';
 import {confirmed,supervisedAudio,supervisedCharacters} from './supervised-helpers.mjs';
-import {image,author} from './background-helpers.mjs';
+import {image,sheetImage,author} from './background-helpers.mjs';
 const promptFor=p=>{const c=current(p,'roster').content.characters.find(c=>c.id===p.characterId);return {prompt:'Exact full-body character design',characterDigest:digest(c),referenceHashes:c.references.map(f=>f.sha256),recipeSha256:characterPromptRecipeSha256};};
 function promptReady(){let p=confirmed(supervisedAudio());return approved(reviewed(author(p,{characters:[{id:'alex',name:'Alex',ageVariant:'adult',important:true,references:[image(1)],notes:'ISOLATED'}]},'cast-owner')));}
 
@@ -68,8 +68,8 @@ test('Cleo prompt is bound/reviewed/human-approved before exactly three Muse ref
  const wrong={provider:'meta-muse',operation:'candidates',estimatedCostUsd:.03,parameters:{prompt:'Unapproved override'}};assert.throws(()=>send(p,'plan',{plan:wrong}),/approved character design prompt/);
  assert.throws(()=>send(p,'plan',{plan:{...wrong,provider:'replicate',parameters:{prompt:prompt.prompt}}}),/Provider/);
  const plan={...wrong,parameters:{prompt:prompt.prompt}},request=requestDescriptor(p,plan);assert.equal(request.n,3);assert.equal(request.model,'muse-image-1.0');assert.equal(request.endpoint,'https://api.meta.ai/v1/images/edits');assert.deepEqual(request.images,[image(1)]);
- p=reviewed(produce(p,{files:[1,2,3].map(image),prompt:prompt.prompt}),'rejected');assert.equal(p.step,'characterPrompt');assert.equal(p.gate,'author');assert.match(taskFor(p).feedback[0].message,/Restore the bicycle/);
- p=approved(reviewed(author(p,promptFor(p),'cast-owner')));p=reviewed(produce(p,{files:[1,2,3].map(image),prompt:current(p,'characterPrompt:alex').content.prompt}),'rejected');assert.equal(p.gate,'escalate');
+ p=reviewed(produce(p,{files:[1,2,3].map(sheetImage),prompt:prompt.prompt}),'rejected');assert.equal(p.step,'characterPrompt');assert.equal(p.gate,'author');assert.match(taskFor(p).feedback[0].message,/Restore the bicycle/);
+ p=approved(reviewed(author(p,promptFor(p),'cast-owner')));p=reviewed(produce(p,{files:[1,2,3].map(sheetImage),prompt:current(p,'characterPrompt:alex').content.prompt}),'rejected');assert.equal(p.gate,'escalate');
 });
 
 test('15-second window appends exact digital silence without changing a single speech sample; overlong stem is untouched',async()=>{
