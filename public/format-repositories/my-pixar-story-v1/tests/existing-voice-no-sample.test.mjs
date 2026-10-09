@@ -5,28 +5,18 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {initialProject,current,taskFor,revisionImpact,openWorkflow} from '../runtime/workflow.mjs';
+import {initialProject,current,taskFor,revisionImpact,openWorkflow,crewReviewEligible} from '../runtime/workflow.mjs';
 import {digest} from '../runtime/contracts.mjs';
-import {voiceBasis,narrationLocked,assertAllowed} from '../runtime/gates.mjs';
+import {voiceBasis,narrationLocked,assertAllowed,consentedVoiceIdentity} from '../runtime/gates.mjs';
 import {requestDescriptor} from '../runtime/providers.mjs';
 import {producerUpdate} from '../runtime/presentation.mjs';
 import {prepareCrewTask,runCrewTask,crewRoles} from '../runtime/crew.mjs';
 import {importMedia,sha} from '../runtime/media.mjs';
 import {createCartesiaTranscriptionTool} from '../runtime/cartesia-stt.mjs';
-import {inputs,script,send,event,approved,reviewed,file,produce,captureEvents,qualifyTestAudio} from './helpers.mjs';
+import {inputs,script,send,event,approved,reviewed,file,produce,captureEvents,qualifyTestAudio,audioProject} from './helpers.mjs';
 
-// Isolated mechanics only: synthetic identities/audio, mocked provider/perception results.
-export const choice={voiceId:'00000000-0000-4000-8000-000000000002',name:'ISOLATED reused clone',consentMessage:'ISOLATED own-voice consent',reuseWithoutSample:true};
-export const lookup={voiceId:choice.voiceId,name:choice.name,language:'en',isOwner:true,status:'active',access:'private',apiVersion:'2026-08-14',checkedAt:'2026-10-04T00:00:00Z',endpoint:`https://api.cartesia.ai/voices/${choice.voiceId}`,httpStatus:200};
-export const draft={...script,commonSenseChecks:[],proposedCast:[{id:'alex',name:'Alex',ageVariant:'adult',minor:false,storyPurpose:'ISOLATED memories'}]};
-export function start(options={}){let p=initialProject('project',inputs,options);p=approved(reviewed(send(p,'artifact',{workerId:'writer',content:{inputs:p.inputs,sourceInputDigest:digest(p.inputs),commonSenseChecks:[]}})));return approved(reviewed(send(p,'artifact',{workerId:'writer',content:draft})));}
-export const choose=(p,content=choice)=>send(p,'choose-voice',{actor:'human',message:'ISOLATED reuse my existing clone',content});
-export const verify=p=>send(p,'voice-verified',{actor:'runtime',content:lookup});
-export const ready=()=>verify(choose(start()));
-export function audition(){let p=ready();p=send(p,'set-budget',{actor:'human',message:'ISOLATED ceiling',budgetLimitUsd:1});return produce(p,{files:[file(1)],voiceId:choice.voiceId,transcript:draft.beats[0].narration});}
-export function reviewEvent(p){const a=current(p);return event(p,'review',{workerId:'audio-reviewer',artifactId:a.id,artifactDigest:a.digest,review:{decision:'provisional',perception:'direct-audio',modelVersion:'ISOLATED-model',capabilityVersion:'ISOLATED-tools',coverage:{artifactSha256:a.content.files[0].sha256,audioFiles:a.content.files.map(f=>({sha256:f.sha256,seconds:f.durationSeconds}))},checks:taskFor(p).criteria.map(criterion=>({criterion,status:criterion==='voice-match'?'inconclusive':'pass',evidence:criterion==='voice-match'?'ISOLATED: no original recording; actual human must recognize their voice.':'ISOLATED mock check',location:'whole fixture',repair:''})),measurements:{identityBasis:'human-recognition',transcripts:a.content.transcript?[a.content.transcript]:a.content.transcripts,speechToTextMethod:'ISOLATED mock STT',speakingRateWpm:a.content.files.map(()=>80),silenceSeconds:a.content.files.map(()=>0),measurementNotes:'ISOLATED: no biometric comparison or production-quality claim.'}}});}
-const passReview=p=>send(p,'review',{...reviewEvent(p)});
-function humanApprove(p){const a=current(p);return approved(p,{humanReview:{decision:'approved',perception:'direct-audio',checks:taskFor(p).criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED actual human recognizes own voice and approves this fixture',location:'whole fixture',repair:''}))}});}
+import { choice, lookup, draft, start, choose, verify, ready, audition, reviewEvent, passReview, humanApprove } from './helpers/existing-voice.mjs';
+export { choice, lookup, draft, start, choose, verify, ready, audition, reviewEvent, passReview, humanApprove };
 
 test('new clone requires a genuine sample; verified existing clone reaches audition with no recording, dummy artifact or generation job',()=>{
  const fresh=start();assert.equal(fresh.step,'voiceSample');assert.match(producerUpdate({project:fresh,pending:taskFor(fresh)}).message,/Record 20–30 seconds/);
@@ -122,13 +112,14 @@ test('canonical worker packet includes existing voice basis and actual review br
  const task=taskFor(p);await assert.rejects(prepareCrewTask(p,{...task,voiceBasis:{...task.voiceBasis,language:'xx'}}),/TASK_INPUT_MISMATCH: voiceBasis/);
  const tools={listenAudio:async()=>({perception:'direct-audio',seconds:12}),transcribe:async()=>({transcript:draft.beats[0].narration,method:'ISOLATED mock transcriber'})};
  const runForBasis = async (project, expectedBasis) => await runCrewTask(project,taskFor(project),{tools,runTask:async(t,{callTool})=>{assert.equal(t.voiceReference,null);assert.equal(t.voiceBasis.language,'en');await assert.rejects(callTool('speakerSimilarity',{sha256:f.sha256,referenceSha256:f.sha256}),/VOICE_REFERENCE_UNAVAILABLE/);for(const name of ['listenAudio','measureAudio','transcribe'])await callTool(name,{sha256:f.sha256});
-  const r = reviewEvent(project);
-  r.review.measurements.identityBasis = expectedBasis;
-  if (expectedBasis === 'consented-voice-id') {
-    const identityCheck = r.review.checks.find(c => c.criterion === 'voice-match');
-    if (identityCheck) identityCheck.status = 'pass';
-  }
-  return r;
+   const r = reviewEvent(project);
+   r.review.measurements.identityBasis = expectedBasis;
+   if (expectedBasis === 'consented-voice-id') {
+     const identityCheck = r.review.checks.find(c => c.criterion === 'voice-match');
+     if (identityCheck) identityCheck.status = 'pass';
+     r.review.decision = 'approved'; // every check passes, so the verdict must be approved
+   }
+   return r;
  }});
  const result=await runForBasis(p, 'consented-voice-id');
  assert.equal(result.review.measurements.identityBasis,'consented-voice-id');assert.equal(result.review.measurements.referenceSha256,undefined);assert.equal(result.review.measurements.speakerSimilarity,undefined);p=send(p,'review',{...result});assert.equal(p.gate,'human');
@@ -163,35 +154,158 @@ test('crew-review human approval logic', () => {
  const p = audition();
  const p2 = structuredClone(p);
  p2.jobs[0].request = { voice: choice.voiceId };
- p2.jobs[0].result = { voiceId: choice.voiceId };
+  p2.jobs[0].result = { voiceId: choice.voiceId };
+
+  // Item 5: verify jobIds uses j.id and is non-empty
+ const voiceIdState = consentedVoiceIdentity(p2, current(p2));
+ assert.equal(voiceIdState.verified, true);
+ assert.equal(voiceIdState.boundVoiceId, choice.voiceId);
+ assert.deepEqual(voiceIdState.jobIds, [p2.jobs[0].id]);
+ assert.ok(p2.jobs[0].id);
+
  const e2 = reviewEvent(p2);
  e2.review.measurements.identityBasis = 'consented-voice-id';
  e2.review.checks.find(c => c.criterion === 'voice-match').status = 'pass';
  e2.review.decision = 'approved';
  const reviewedConsented = send(p2, 'review', {...e2});
  
- // human approve with crew-review
  const crewApprove = {
    decision: 'approved',
    perception: 'crew-review',
-   checks: taskFor(p2).criteria.map(c => ({criterion: c, status: 'pass', evidence: 'crew', location: 'file', repair: ''}))
- };
- const res = send(reviewedConsented, 'approve', {actor: 'human', artifactId: current(reviewedConsented).id, artifactDigest: current(reviewedConsented).digest, message: 'approved', humanReview: crewApprove});
+    checks: taskFor(p2).criteria.map(c => ({criterion: c, status: 'pass', evidence: 'crew', location: 'file', repair: ''}))
+  };
+
+  // Item 1: crew-review without truePeakDb and comfort measurements throws
+ assert.throws(() => send(reviewedConsented, 'approve', {actor: 'human', artifactId: current(reviewedConsented).id, artifactDigest: current(reviewedConsented).digest, message: 'approved', humanReview: crewApprove}), /HUMAN_MEDIA_REVIEW_REQUIRED/);
+
+ // Human approve with crew-review succeeds when measurements are present and clean
+ const eWithMeasurements = structuredClone(e2);
+ eWithMeasurements.review.measurements.truePeakDb = [-6];
+ eWithMeasurements.review.measurements.comfort = [{ harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false }];
+ const reviewedWithMeasurements = send(p2, 'review', {...eWithMeasurements});
+ const res = send(reviewedWithMeasurements, 'approve', {actor: 'human', artifactId: current(reviewedWithMeasurements).id, artifactDigest: current(reviewedWithMeasurements).digest, message: 'approved', humanReview: crewApprove});
  assert.equal(res.step, 'narration');
  
  // direct-audio still accepted
  const directApprove = structuredClone(crewApprove);
  directApprove.perception = 'direct-audio';
- assert.doesNotThrow(() => send(reviewedConsented, 'approve', {actor: 'human', artifactId: current(reviewedConsented).id, artifactDigest: current(reviewedConsented).digest, message: 'approved', humanReview: directApprove}));
+ assert.doesNotThrow(() => send(reviewedWithMeasurements, 'approve', {actor: 'human', artifactId: current(reviewedWithMeasurements).id, artifactDigest: current(reviewedWithMeasurements).digest, message: 'approved', humanReview: directApprove}));
 
- // rejected if check fails
- const badApprove = structuredClone(crewApprove);
- badApprove.checks[0].status = 'fail';
- assert.throws(() => send(reviewedConsented, 'approve', {actor: 'human', artifactId: current(reviewedConsented).id, artifactDigest: current(reviewedConsented).digest, message: 'approved', humanReview: badApprove}), /HUMAN_MEDIA_REVIEW_REQUIRED/);
+  // unsafe peak evidence can never be recorded as a passing review...
+  const eUnsafePeak = structuredClone(eWithMeasurements);
+  eUnsafePeak.review.measurements.truePeakDb = [0.5];
+  assert.throws(() => send(p2, 'review', {...eUnsafePeak}), /SAFETY_EVIDENCE_MISMATCH/);
+  // ...and even a hand-built approved review with an unsafe peak is refused crew-review
+  const smuggled = structuredClone(reviewedWithMeasurements);
+  current(smuggled).review.measurements.truePeakDb = [0.5];
+  assert.throws(() => send(smuggled, 'approve', {actor: 'human', artifactId: current(smuggled).id, artifactDigest: current(smuggled).digest, message: 'approved', humanReview: crewApprove}), /HUMAN_MEDIA_REVIEW_REQUIRED/);
 
- // rejected if provisional
- const eProv = structuredClone(e2);
- eProv.review.decision = 'provisional';
- const reviewedProv = send(p2, 'review', {...eProv});
- assert.throws(() => send(reviewedProv, 'approve', {actor: 'human', artifactId: current(reviewedProv).id, artifactDigest: current(reviewedProv).digest, message: 'approved', humanReview: crewApprove}), /HUMAN_MEDIA_REVIEW_REQUIRED/);
+  // rejected if comfort flag true
+  const eUnsafeComfort = structuredClone(eWithMeasurements);
+  eUnsafeComfort.review.measurements.comfort = [{ harshness: true, sibilance: false, clippingOrDistortion: false, suddenSpikes: false }];
+  assert.throws(() => send(p2, 'review', {...eUnsafeComfort}), /SAFETY_EVIDENCE_MISMATCH/);
+
+  // rejected if check fails
+  const badApprove = structuredClone(crewApprove);
+  badApprove.checks[0].status = 'fail';
+  assert.throws(() => send(reviewedWithMeasurements, 'approve', {actor: 'human', artifactId: current(reviewedWithMeasurements).id, artifactDigest: current(reviewedWithMeasurements).digest, message: 'approved', humanReview: badApprove}), /HUMAN_MEDIA_REVIEW_REQUIRED/);
+
+  // item 9 (manual path): an all-pass review marked provisional is rejected
+  const eProv = structuredClone(eWithMeasurements);
+  eProv.review.decision = 'provisional';
+  assert.throws(() => send(p2, 'review', {...eProv}), /REVIEW_VERDICT_MISMATCH/);
+});
+
+test('crew-review limited to existing-clone with verified consented voice identity; recorded-sample must use direct-audio', () => {
+ const p = audioProject();
+ p.step = 'audition';
+ p.reviewMode = 'supervised';
+ p.gate = 'human';
+ const a = current(p);
+ a.review = {
+   decision: 'approved',
+   perception: 'direct-audio',
+   modelVersion: 'ISOLATED-model',
+   capabilityVersion: 'ISOLATED-tools',
+   coverage: { artifactSha256: a.content.files[0].sha256, audioFiles: a.content.files.map(f => ({ sha256: f.sha256, seconds: f.durationSeconds })) },
+   checks: taskFor(p).criteria.map(c => ({ criterion: c, status: 'pass', evidence: 'ISOLATED', location: 'whole fixture', repair: '' })),
+   measurements: {
+     transcripts: ['transcript'],
+     speechToTextMethod: 'ISOLATED',
+     measurementNotes: 'notes',
+     speakingRateWpm: [80],
+     silenceSeconds: [0],
+     identityBasis: 'recorded-reference',
+     referenceSha256: current(p, 'voiceSample').content.files[0].sha256,
+     speakerSimilarity: 0.95,
+     speakerSimilarityMethod: 'ISOLATED',
+     truePeakDb: [-6],
+     comfort: [{ harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false }]
+   }
+ };
+ const crewApprove = {
+   decision: 'approved',
+   perception: 'crew-review',
+   checks: taskFor(p).criteria.map(c => ({ criterion: c, status: 'pass', evidence: 'crew', location: 'file', repair: '' }))
+ };
+ // Recorded-reference must reject crew-review
+ assert.throws(() => send(p, 'approve', { actor: 'human', artifactId: a.id, artifactDigest: a.digest, message: 'approved', humanReview: crewApprove }), /HUMAN_MEDIA_REVIEW_REQUIRED/);
+
+ // Direct-audio is accepted
+ const directApprove = structuredClone(crewApprove);
+ directApprove.perception = 'direct-audio';
+ assert.doesNotThrow(() => send(p, 'approve', { actor: 'human', artifactId: a.id, artifactDigest: a.digest, message: 'approved', humanReview: directApprove }));
+});
+
+test('crew-review rejected when voice ID is not verified', () => {
+ const p = audition();
+ const p2 = structuredClone(p);
+ p2.jobs[0].request = { voice: choice.voiceId };
+ p2.jobs[0].result = { voiceId: 'mismatched-voice' }; // wrong voice ID -> verified is false
+ const voiceState = consentedVoiceIdentity(p2, current(p2));
+ assert.equal(voiceState.verified, false);
+
+ const e2 = reviewEvent(p2);
+ e2.review.measurements.identityBasis = 'human-recognition';
+ e2.review.measurements.truePeakDb = [-6];
+ e2.review.measurements.comfort = [{ harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false }];
+ e2.review.checks.find(c => c.criterion === 'voice-match').status = 'inconclusive';
+ e2.review.decision = 'provisional';
+ const reviewed = send(p2, 'review', { ...e2 });
+
+ const crewApprove = {
+   decision: 'approved',
+   perception: 'crew-review',
+   checks: taskFor(p2).criteria.map(c => ({ criterion: c, status: 'pass', evidence: 'crew', location: 'file', repair: '' }))
+ };
+ assert.throws(() => send(reviewed, 'approve', { actor: 'human', artifactId: current(reviewed).id, artifactDigest: current(reviewed).digest, message: 'approved', humanReview: crewApprove }), /HUMAN_MEDIA_REVIEW_REQUIRED/);
+});
+
+test('safety inconclusive with clean measurements throws on manual respond path', () => {
+ const p = audition();
+ const p2 = structuredClone(p);
+ p2.jobs[0].request = { voice: choice.voiceId };
+ p2.jobs[0].result = { voiceId: choice.voiceId };
+ const e2 = reviewEvent(p2);
+ e2.review.measurements.identityBasis = 'consented-voice-id';
+ e2.review.measurements.truePeakDb = [-6];
+ e2.review.measurements.comfort = [{ harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false }];
+ e2.review.checks.find(c => c.criterion === 'safety').status = 'inconclusive';
+ e2.review.decision = 'inconclusive';
+
+ assert.throws(() => send(p2, 'review', { ...e2 }), /SAFETY_EVIDENCE_MISMATCH/);
+});
+
+test('crew-review rejected for keyframe, video, and film', () => {
+ // The approve gate accepts crew-review only via the shared crewReviewEligible
+ // predicate, so a false step gate there is a HUMAN_MEDIA_REVIEW_REQUIRED refusal.
+ const eligibleReview = {
+   decision: 'approved',
+   checks: [{criterion: 'integrity', status: 'pass'}],
+   measurements: {truePeakDb: [-6], comfort: [{harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false}]}
+ };
+ for (const step of ['keyframe', 'video', 'film']) {
+   const a = {content: {files: [{sha256: 'f1', durationSeconds: 5}]}, review: eligibleReview};
+   assert.equal(crewReviewEligible({step, artifacts: []}, a), false);
+ }
 });

@@ -27,7 +27,7 @@ export function consentedVoiceIdentity(p, artifact) {
     if (readyJobs.length > 0 && readyJobs.every(j => j.request.voice === candidateId && j.result?.voiceId === candidateId)) {
       verified = true;
       boundVoiceId = candidateId;
-      jobIds = readyJobs.map(j => j.jobId);
+      jobIds = readyJobs.map(j => j.id);
     }
   }
   return { verified, boundVoiceId, jobIds };

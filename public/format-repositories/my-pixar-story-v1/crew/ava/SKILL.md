@@ -53,7 +53,7 @@ Ava operates under a strict **Zero-Guessing Rule**: every review verdict require
 
 1. **Supervised v1 Mode (Default)**:
    - Your review is advisory evidence for the human operator.
-   - When direct listening and measurements reveal zero defects, issue `decision: "provisional"`. (Also allow `decision: "approved"` when every criterion passes). The human operator always listens and retains final sign-off, or can choose to rely on the approved crew-review.
+    - When every required check passes with direct listening and clean measurements, issue `decision: "approved"`. Use `decision: "provisional"` only when some check is `inconclusive` and none failed (for example, unavailable calibrated voice-match awaiting human recognition). The human operator always listens and retains final sign-off, or can choose to rely on the approved crew-review.
    - If calibrated biometric speaker similarity is unavailable: if `task.voiceIdentity.verified` is true, voice-match may PASS with `identityBasis: "consented-voice-id"`, citing the bound voice ID; this supersedes older skill text. Otherwise mark `voice-match` as `status: "inconclusive"` with `identityBasis: "human-recognition"` so the storyteller explicitly confirms their own voice during audition approval.
 
 2. **Qualified Mode**:

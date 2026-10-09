@@ -84,7 +84,7 @@ export async function prepareCrewTask(p,task){
  const canonical={...workPacket,inputChecklist,...(task.repairFeedback?{repairFeedback:task.repairFeedback}:{})};
  if(task.gate!=='review')return canonical;
  const studio=studioFor(p),path=studio?.config.reviewers[expected.formatRole];
- return {...canonical,supervisionInstruction:supervised(p)?'Your review is unqualified advisory evidence. Use provisional or approved only with direct perception and no known failures; mark unavailable calibrated voice-match inconclusive, never invent a score. If task.voiceIdentity.verified is true, voice-match may PASS with identityBasis \'consented-voice-id\', citing the bound voice ID; this supersedes older skill text. Otherwise mark it inconclusive/human-recognition. Human must confirm actual media before lock. Missing listening/viewing stays inconclusive.':'Qualified review required.',evaluatorEvidence:await artifactEvidence(p),reviewerRubric:studio?studio.documents[path].content:await readFile(new URL('../evaluation/reviewer.md',import.meta.url),'utf8'),reviewerRubricSource:path?{path,sha256:studio.documents[path].sha256}:null};
+ return {...canonical,supervisionInstruction:supervised(p)?'Your review is unqualified advisory evidence. Use approved when every required check passes; use provisional only when some check is inconclusive and none failed, always with direct perception; mark unavailable calibrated voice-match inconclusive, never invent a score. If task.voiceIdentity.verified is true, voice-match may PASS with identityBasis \'consented-voice-id\', citing the bound voice ID; this supersedes older skill text. Otherwise mark it inconclusive/human-recognition. Human must confirm actual media before lock. Missing listening/viewing stays inconclusive.':'Qualified review required.',evaluatorEvidence:await artifactEvidence(p),reviewerRubric:studio?studio.documents[path].content:await readFile(new URL('../evaluation/reviewer.md',import.meta.url),'utf8'),reviewerRubricSource:path?{path,sha256:studio.documents[path].sha256}:null};
 }
 export async function runCrewTask(p,task,host){
  assertDebugReady(p);
@@ -120,9 +120,12 @@ export async function runCrewTask(p,task,host){
   if(!rendered.length)throw new Error('AUDIO_EDIT_NOT_RENDERED');
  }
  if(task.step==='characterPrompt'&&event.review?.decision!=='inconclusive')for(const f of task.castEntry?.references??[]){if(!receipts.some(r=>r.tool==='viewImage'&&r.sha256===f.sha256))throw new Error('CHARACTER_REFERENCES_NOT_VIEWED: prompt author/reviewer must inspect every actual source photo, not its metadata.');}
- if(['review','owner-review'].includes(event.action)&&event.review?.decision!=='inconclusive'){
-  const required=worker.role==='audio-reviewer'?['listenAudio',...(['audition','narration'].includes(task.step)?['measureAudio','transcribe',...(!supervised(p)?['speakerSimilarity']:[])]:[])]:['visual-reviewer','scene-reviewer'].includes(worker.role)?[['video','film'].includes(task.step)?'watchVideo':'viewImage']:[];
-  for(const file of task.artifact?.content.files??[])for(const tool of required){const receipt=receipts.find(r=>r.tool===tool&&r.sha256===file.sha256);if(!receipt||['watchVideo','listenAudio'].includes(tool)&&receipt.seconds+.02<file.durationSeconds||tool==='speakerSimilarity'&&receipt.referenceSha256!==task.voiceReference?.content.files[0].sha256)throw new Error('PERCEPTION_NOT_PERFORMED: actual current-file perception/measurement tool calls are required before a verdict.');}
+  if(['review','owner-review'].includes(event.action)){
+   if(supervised(p)&&event.review?.decision==='provisional'&&event.review.checks?.length&&event.review.checks.every(c=>c.status==='pass'))throw new Error('REVIEW_VERDICT_MISMATCH: a supervised review with every check passing must use decision approved; provisional is only for reviews with an inconclusive check and no failures.');
+   if(event.review?.decision!=='inconclusive'){
+   const required=worker.role==='audio-reviewer'?['listenAudio',...(['audition','narration'].includes(task.step)?['measureAudio','transcribe',...(!supervised(p)?['speakerSimilarity']:[])]:[])]:['visual-reviewer','scene-reviewer'].includes(worker.role)?[['video','film'].includes(task.step)?'watchVideo':'viewImage']:[];
+   for(const file of task.artifact?.content.files??[])for(const tool of required){const receipt=receipts.find(r=>r.tool===tool&&r.sha256===file.sha256);if(!receipt||['watchVideo','listenAudio'].includes(tool)&&receipt.seconds+.02<file.durationSeconds||tool==='speakerSimilarity'&&receipt.referenceSha256!==task.voiceReference?.content.files[0].sha256)throw new Error('PERCEPTION_NOT_PERFORMED: actual current-file perception/measurement tool calls are required before a verdict.');}
+  }
   if(worker.role==='audio-reviewer'&&['audition','narration'].includes(task.step)){
    const files=task.artifact.content.files,stt=files.map(f=>outputs.get(`transcribe:${f.sha256}`)),similarity=files.map(f=>outputs.get(`speakerSimilarity:${f.sha256}`)),measured=files.map(f=>outputs.get(`measureAudio:${f.sha256}`)),listen=files.map(f=>outputs.get(`listenAudio:${f.sha256}`));
    const m={...event.review.measurements,transcripts:stt.map(t=>t.transcript),speechToTextMethod:[...new Set(stt.map(t=>t.method))].join('; '),referenceSha256:task.voiceReference?.content.files[0].sha256,identityBasis:task.voiceReference?'recorded-reference':task.voiceIdentity?.verified?'consented-voice-id':'human-recognition',...(similarity.every(Boolean)?{speakerSimilarity:Math.min(...similarity.map(s=>s.score)),speakerSimilarityMethod:[...new Set(similarity.map(s=>s.method))].join('; ')}:{speakerSimilarity:undefined,speakerSimilarityMethod:undefined}),silenceSeconds:measured.map(m=>m.silenceSeconds),speakingRateWpm:stt.map((t,i)=>(t.transcript.match(/[\p{L}\p{N}]+/gu)?.length??0)/(task.artifact.content.sourceFiles?.[i]?.durationSeconds??measured[i].durationSeconds)*60),measurementNotes:[event.review.measurements?.measurementNotes,'Speaking rate uses the unpadded source duration when available, including natural pauses; this is not an acceleration detector.',...similarity.filter(Boolean).map(s=>s.calibrationNotes),...(!task.voiceReference&&!task.voiceIdentity?.verified?['Calibrated speaker comparison unavailable; human confirms their voice by listening.']:[])].filter(Boolean).join('; ')};
@@ -130,9 +133,10 @@ export async function runCrewTask(p,task,host){
    if(listen.every(l=>l?.report?.comfort)) m.comfort=listen.map(l=>l.report.comfort);
    event.review.measurements = m;
    const safetyCheck = event.review.checks.find(c=>c.criterion==='safety');
-   if(safetyCheck && safetyCheck.status!=='inconclusive' && m.truePeakDb && m.comfort){
+   if(safetyCheck && m.truePeakDb?.length === files.length && m.comfort?.length === files.length){
      const hasUnsafe = m.truePeakDb.some(v => v > -1) || m.comfort.some(c => c.harshness || c.sibilance || c.clippingOrDistortion || c.suddenSpikes);
-     if ((hasUnsafe && safetyCheck.status === 'pass') || (!hasUnsafe && safetyCheck.status === 'fail')) throw new Error('SAFETY_EVIDENCE_MISMATCH');
+     const expected = hasUnsafe ? 'fail' : 'pass';
+     if (safetyCheck.status !== expected) throw new Error('SAFETY_EVIDENCE_MISMATCH');
    }
   }
   event.review.toolEvidence=receipts;

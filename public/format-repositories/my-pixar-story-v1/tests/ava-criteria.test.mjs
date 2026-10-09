@@ -6,7 +6,7 @@ import { filmAudioCriteria } from '../runtime/workflow.mjs';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { send } from './helpers.mjs';
-import { audition, choice } from './existing-voice-no-sample.test.mjs';
+import { audition, choice } from './helpers/existing-voice.mjs';
 
 export function parseAvaExampleReview(skillText) {
   const match = skillText.match(/### Output Review Event:\s*```json\s*([\s\S]*?)\s*```/);
