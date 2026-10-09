@@ -8,6 +8,30 @@ export function voiceBasis(p){
  const sample=current(p,'voiceSample'),clone=current(p,'clone');
  return {kind:sample?'recorded-reference':clone?.content.origin?.kind==='existing'&&p.voiceChoice?.reuseWithoutSample?'existing-clone':'unavailable',language:sample?.content.language??clone?.content.origin?.lookup.language??null,referenceSha256:sample?.content.files[0].sha256??null,voiceId:clone?.content.voiceId??null};
 }
+export function consentedVoiceIdentity(p, artifact) {
+  let verified = false;
+  let boundVoiceId = null;
+  let jobIds = [];
+  const basis = voiceBasis(p);
+  const clone = current(p, 'clone');
+  if (
+    basis.kind === 'existing-clone' &&
+    clone?.content?.origin?.kind === 'existing' &&
+    clone.content.origin.consentMessage &&
+    p.voiceChoice?.voiceId === clone.content.voiceId &&
+    p.voiceChoice?.consentMessage &&
+    artifact?.content?.voiceId === clone.content.voiceId
+  ) {
+    const candidateId = p.voiceChoice.voiceId;
+    const readyJobs = (p.jobs || []).filter(j => j.key === artifact.key && j.status === 'ready');
+    if (readyJobs.length > 0 && readyJobs.every(j => j.request.voice === candidateId && j.result?.voiceId === candidateId)) {
+      verified = true;
+      boundVoiceId = candidateId;
+      jobIds = readyJobs.map(j => j.jobId);
+    }
+  }
+  return { verified, boundVoiceId, jobIds };
+}
 export const miniProduction = p => p.productionProfile === 'seedance-mini-480p';
 export const refinedWorkflow = p => p.workflowRevision >= 3;
 export const reviewPassed = r => ['approved','provisional'].includes(r?.decision);

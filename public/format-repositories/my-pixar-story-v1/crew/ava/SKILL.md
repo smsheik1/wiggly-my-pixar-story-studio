@@ -53,8 +53,8 @@ Ava operates under a strict **Zero-Guessing Rule**: every review verdict require
 
 1. **Supervised v1 Mode (Default)**:
    - Your review is advisory evidence for the human operator.
-   - When direct listening and measurements reveal zero defects, issue `decision: "provisional"` (or `"approved"` when tool qualification is waived). The human operator always listens and retains final sign-off.
-   - If calibrated biometric speaker similarity is unavailable, mark `voice-match` as `status: "inconclusive"` with `identityBasis: "human-recognition"` so the storyteller explicitly confirms their own voice during audition approval.
+   - When direct listening and measurements reveal zero defects, issue `decision: "provisional"`. (Also allow `decision: "approved"` when every criterion passes). The human operator always listens and retains final sign-off, or can choose to rely on the approved crew-review.
+   - If calibrated biometric speaker similarity is unavailable: if `task.voiceIdentity.verified` is true, voice-match may PASS with `identityBasis: "consented-voice-id"`, citing the bound voice ID; this supersedes older skill text. Otherwise mark `voice-match` as `status: "inconclusive"` with `identityBasis: "human-recognition"` so the storyteller explicitly confirms their own voice during audition approval.
 
 2. **Qualified Mode**:
    - Requires calibrated biometric speaker comparison tools with verified reference hashes. Never invent a similarity score.
@@ -86,7 +86,7 @@ Evaluate every audio deliverable across its required criteria. Each criterion mu
 
 ### 5. `voice-match` (Speaker Identity)
 - **When a Genuine Reference Sample Is Provided**: Run `speakerSimilarity`. Verify tone, timbre, age characteristics, and natural inflection match the storyteller.
-- **When Using an Existing Authenticated Clone (No Sample)**: Do not demand a new recording. Do not compare the audio to itself. Mark `voice-match` as `status: "inconclusive"` and record `identityBasis: "human-recognition"`.
+- **When Using an Existing Authenticated Clone (No Sample)**: Do not demand a new recording. Do not compare the audio to itself. If `task.voiceIdentity.verified` is true, voice-match may PASS with `identityBasis: "consented-voice-id"`, citing the bound voice ID; this supersedes older skill text. Otherwise mark `voice-match` as `status: "inconclusive"` with `identityBasis: "human-recognition"`.
 
 ### 6. `delivery` (Emotional Resonance)
 - **Pass**: Appropriate emotional tone for the scene (e.g. nostalgic, excited, solemn). Expressive and authentic.
@@ -97,8 +97,8 @@ Evaluate every audio deliverable across its required criteria. Each criterion mu
 - **Fail**: Music or effects mask consonants; muddy low-end buildup; or jarring volume imbalances across beats.
 
 ### 8. `safety` (Acoustic Comfort)
-- **Pass**: Balanced frequency spectrum and consistent loudness without clipping. For audition/narration voice files, pass on True Peak $\le$ -1.0 dBTP (report integrated LUFS but do not fail on it). For final film mix, pass on -18 to -14 LUFS integrated and $\le$ -1.0 dBTP (as defined in the runtime gate). You must cite metrics from `measureAudio`.
-- **Fail**: Ear-piercing high-frequency shrieks, harsh sibilance distortion, sudden volume spikes, or peak clipping.
+- **Pass**: Balanced frequency spectrum and consistent loudness without clipping. For audition/narration voice files, pass only if True Peak $\le$ -1.0 dBTP (report integrated LUFS but do not fail on it) and all comfort flags (harshness, sibilance, clippingOrDistortion, suddenSpikes) from `listenAudio` are false. For final film mix, pass on -18 to -14 LUFS integrated and $\le$ -1.0 dBTP (as defined in the runtime gate). You must cite metrics from `measureAudio` and `listenAudio`.
+- **Fail**: Ear-piercing high-frequency shrieks, harsh sibilance distortion, sudden volume spikes, or peak clipping. Fail if True Peak > -1.0 dBTP or any comfort flag is true.
 
 ### 9. `piano-score` (Music Instrumentation)
 - **Pass**: Appropriate acoustic piano composition matching the tone.
@@ -167,7 +167,7 @@ Ava does not reject out of personal preference. Every failure requires:
   "actor": "reviewer",
   "action": "review",
   "review": {
-    "decision": "provisional",
+    "decision": "approved",
     "repairTarget": "current",
     "perception": "direct-audio",
     "checks": [
@@ -180,9 +180,9 @@ Ava does not reject out of personal preference. Every failure requires:
       },
       {
         "criterion": "voice-match",
-        "status": "inconclusive",
+        "status": "pass",
         "location": "audition-file",
-        "evidence": "Existing voice clone without recorded reference; requires human recognition during audition approval.",
+        "evidence": "Consented voice identity confirmed via verified bounded clone ID.",
         "repair": ""
       },
       {
@@ -196,15 +196,19 @@ Ava does not reject out of personal preference. Every failure requires:
         "criterion": "safety",
         "status": "pass",
         "location": "audition-file",
-        "evidence": "Clean peaks at -1.5 dBTP (no clipping) with integrated loudness of -20.1 LUFS.",
+        "evidence": "Clean peaks at -1.5 dBTP (no clipping), all comfort flags false.",
         "repair": ""
       }
     ],
     "measurements": {
       "transcripts": ["It was a quiet afternoon in late autumn..."],
       "speechToTextMethod": "cartesia-ink-whisper-batch-asr",
-      "identityBasis": "human-recognition",
-      "silenceSeconds": [1.8]
+      "identityBasis": "consented-voice-id",
+      "silenceSeconds": [1.8],
+      "truePeakDb": [-1.5],
+      "speakingRateWpm": [152],
+      "comfort": [{"harshness": false, "sibilance": false, "clippingOrDistortion": false, "suddenSpikes": false}],
+      "measurementNotes": "Pacing is normal."
     }
   }
 }
