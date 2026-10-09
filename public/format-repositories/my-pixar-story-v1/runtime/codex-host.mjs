@@ -20,6 +20,43 @@ const tool={type:'function',name:'wiggly_tool',description:'Call an allowed form
 async function readJson(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;}}
 async function saveJson(path,value){await writeFile(path+'.tmp',JSON.stringify(value)+'\n',{mode:0o600});await rename(path+'.tmp',path);}
 
+// Failed-turn detail comes from the native turn error. Codex app-server
+// reports {message, codexErrorInfo}, e.g. codexErrorInfo 'usageLimitExceeded'
+// with "...try again at 9:34 PM." in the message; codexErrorInfo may also be an
+// object keyed by its variant. Without error detail the cause is uncertain and
+// the turn stays unreconciled.
+function errorInfoName(error){
+ const info=error?.codexErrorInfo;
+ if(typeof info==='string')return info;
+ if(info&&typeof info==='object')return Object.keys(info)[0]??'';
+ return '';
+}
+function turnErrorDetail(turn){
+ const error=turn?.error;
+ if(error==null)return String(turn?.status??'unknown');
+ if(typeof error==='string')return error.replace(/\.+$/,'');
+ const name=errorInfoName(error)||error.code||error.type||'',message=String(error.message??'').trim().replace(/\.+$/,'');
+ return (name&&message?`${name}: ${message}`:name||message)||JSON.stringify(error);
+}
+function turnRetryAfter(error){
+ if(!error||typeof error!=='object')return null;
+ for(const key of ['retryAfter','retry_after','resetsAt','resetAt'])if(error[key]!=null)return error[key];
+ const said=/try again (?:at|in|after) ([^.]+?)\s*(?:\.|$)/i.exec(String(error.message??''));
+ return said?said[1]:null;
+}
+function isUsageLimitFailure(turn,detail){
+ const error=turn?.error,code=error&&typeof error==='object'?(errorInfoName(error)||error.code||error.type||''):'';
+ return /usage.?limit|rate.?limit|too.?many.?requests|quota|\b429\b/i.test(`${code} ${detail}`);
+}
+function turnFailureMessage(turn){
+ const detail=turnErrorDetail(turn);
+ if(isUsageLimitFailure(turn,detail)){
+  const after=turnRetryAfter(turn?.error);
+  return after!=null?`Codex usage limit reached; retry after ${after}. No model/provider fallback was submitted.`:`Codex usage limit reached (${detail}). No model/provider fallback was submitted.`;
+ }
+ return `CODEX_TURN_FAILED: ${detail}. No model/provider fallback was submitted.`;
+}
+
 export class CodexHost {
  constructor({cwd,spawnProcess=spawn,timeoutMs=180000,onProgress=()=>{},perceptionTools={},perceptionProfile=null}={}){
   this.cwd=cwd;this.timeoutMs=timeoutMs;this.onProgress=onProgress;this.sequence=0;this.pending=new Map();this.active=null;this.perceptionProfile=perceptionProfile;
@@ -39,7 +76,7 @@ export class CodexHost {
   const entry=this.pending.get(message.id);
   if(entry){clearTimeout(entry.timer);this.pending.delete(message.id);message.error?entry.reject(new Error(`CODEX_HOST_ERROR: ${message.error.message}`)):entry.resolve(message.result);return;}
   if(this.active&&message.params?.threadId===this.active.threadId&&!this.active.turnId){this.active.buffer.push(message);return;}
-  if(message.method==='item/tool/call'&&message.id!==undefined){void this.toolCall(message);return;}
+  if(message.method==='item/tool/call'&&message.id!==undefined){const target=this.active;if(target)target.pendingTools=(target.pendingTools??0)+1;void Promise.resolve(this.toolCall(message)).finally(()=>{if(target)target.pendingTools=Math.max(0,(target.pendingTools??1)-1);});return;}
   if(message.id!==undefined){this.send({id:message.id,error:{code:-32601,message:'This client only permits the scoped format tool.'}});this.active?.reject(new Error('UNEXPECTED_HOST_REQUEST: human approvals and ambient actions are not delegated.'));return;}
   const active=this.active;if(!active||message.params?.threadId!==active.threadId||message.params?.turnId&&message.params.turnId!==active.turnId)return;
   if(message.method==='item/completed'&&message.params.item?.type==='agentMessage')active.output=message.params.item.text;
@@ -47,7 +84,14 @@ export class CodexHost {
   if(message.method==='turn/completed'){
    const turn=message.params.turn;
    if(turn.id!==active.turnId)return;
-   if(turn.status!=='completed'){active.reject(new Error(`CODEX_TURN_FAILED: ${turn.error?.message??turn.status}. No model/provider fallback was submitted.`));return;}
+   if(turn.status!=='completed'){
+    const error=new Error(turnFailureMessage(turn));
+    error.turnStatus=turn.status;error.turnError=turn?.error??null;
+    // A failed turn that produced no final message and left no tool call in
+    // progress is safe to retry; flag it so the driver records the outcome
+    // instead of leaving the receipt started. Anything else stays uncertain.
+    if(turn.status==='failed'&&!active.output&&(active.pendingTools??0)===0)error.safeRetryWithoutOutput=true;
+    active.reject(error);return;}
    active.resolve(active.output);
   }
  }
@@ -118,7 +162,7 @@ export class CodexHost {
  async turn(worker,input,callTool=async()=>{throw new Error('No tools are permitted during initialization.');},outputSchema){
   if(this.active)throw new Error('CODEX_HOST_BUSY: one graph task at a time.');
   let resolve,reject;const done=new Promise((yes,no)=>{resolve=yes;reject=no;});
-  this.active={threadId:worker.workerId,worker,callTool,resolve,reject,output:'',buffer:[]};
+  this.active={threadId:worker.workerId,worker,callTool,resolve,reject,output:'',buffer:[],pendingTools:0};
   // Attach a handler immediately; a transport can fail before turn/start returns.
   done.catch(()=>{});
   const timer=setTimeout(()=>reject(new Error('CODEX_TURN_TIMEOUT: inspect saved worker progress; no automatic retry.')),this.timeoutMs);
@@ -139,13 +183,20 @@ export async function reconcileDispatch(task,host,{receiptDirectory,turnId,messa
  const turn=result.thread?.turns?.find(t=>t.id===turnId);
  const input=turn?.items?.find(i=>i.type==='userMessage')?.content?.find(c=>c.type==='text')?.text;
  let packet;try{packet=JSON.parse(input);}catch{}
- if(result.thread?.id!==receipt.worker.workerId||turn?.status!=='interrupted'||turn.items.some(i=>i.type==='agentMessage')||turn.items.some(i=>i.type==='dynamicToolCall'&& !['completed','failed'].includes(i.status))||packet?.task?.taskId!==task.taskId||packet?.task?.worker?.workerId!==receipt.worker.workerId)throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: exact interrupted turn without a final result or pending tool required; no retry permitted.');
- const archive=path+`.interrupted-${receipt.attempt}.json`,evidence=path+`.native-turn-${receipt.attempt}.json`;
+  // A failed turn with no final agent message and no tool call left in
+  // progress never produced output, so it is as safe to retry as an
+  // interrupted turn. The native error detail is required to record a clear
+  // reason; without it the cause is uncertain and the turn stays refused, as
+  // do failed turns with a final message or any in-flight tool call.
+ const cleanFailed=turn?.status==='failed'&&turn?.error!=null;
+ if(result.thread?.id!==receipt.worker.workerId||!(turn?.status==='interrupted'||cleanFailed)||turn.items.some(i=>i.type==='agentMessage')||turn.items.some(i=>i.type==='dynamicToolCall'&& !['completed','failed'].includes(i.status))||packet?.task?.taskId!==task.taskId||packet?.task?.worker?.workerId!==receipt.worker.workerId)throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: exact interrupted or clean-failed turn without a final result, pending tool or missing failure detail required; no retry permitted.');
+ const failed=turn.status==='failed',detail=turnErrorDetail(turn);
+ const archive=path+`.${failed?'failed':'interrupted'}-${receipt.attempt}.json`,evidence=path+`.native-turn-${receipt.attempt}.json`;
  for(const [target,value] of [[archive,receipt],[evidence,turn]]){
   const prior=await readJson(target);if(prior&&digest(prior)!==digest(value))throw new Error('DISPATCH_RECEIPT_CONFLICT');
   if(!prior)await writeFile(target,JSON.stringify(value)+'\n',{flag:'wx',mode:0o600});
  }
- const reconciled={...receipt,status:'rejected',error:'Confirmed native interruption without final result. Continue the saved investigation; existing local draft and paid-call attempts remain consumed. Reuse compatible finished tool receipts; do not repeat invalid or unknown provider calls.',event:{savedTools:turn.items.filter(i=>i.type==='dynamicToolCall')},reconciliation:{outcome:'confirmed-interrupted',turnId,message,evidencePath:evidence,at:new Date().toISOString()}};
+ const reconciled={...receipt,status:'rejected',error:failed?`turn failed before producing output: ${detail}. Continue the saved investigation; existing local draft and paid-call attempts remain consumed. Reuse compatible finished tool receipts; do not repeat invalid or unknown provider calls.`:'Confirmed native interruption without final result. Continue the saved investigation; existing local draft and paid-call attempts remain consumed. Reuse compatible finished tool receipts; do not repeat invalid or unknown provider calls.',event:{savedTools:turn.items.filter(i=>i.type==='dynamicToolCall')},reconciliation:{outcome:failed?'confirmed-failed':'confirmed-interrupted',turnId,message,evidencePath:evidence,at:new Date().toISOString()}};
  await saveJson(path,reconciled);return reconciled;
 }
 
@@ -184,7 +235,15 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
    // Recheck old completed receipts too; changed/missing bytes cannot trap repair.
    await verifySubmission(status,event);
   }catch(error){
-   if(!event&&!error.knownFinished){if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});throw error;}
+    // The host observed a clean native failure (no output, no pending tool):
+    // record it so the receipt is not left started and the task can be
+    // retried without a manual reconcile. Anything else stays uncertain.
+    if(!event&&error?.safeRetryWithoutOutput){
+     await saveJson(path,{...started,status:'rejected',error:error.message});
+     if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
+     throw error;
+    }
+    if(!event&&!error.knownFinished){if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});throw error;}
    await saveJson(path,{...started,status:'rejected',event:event??error.finishedResult,error:error.message});
    if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
    throw new Error(`CODEX_RESULT_REJECTED: known finished worker result violates the contract: ${error.message}. Inspect ${path}; use --repair-invalid true for a bounded repair.`);
