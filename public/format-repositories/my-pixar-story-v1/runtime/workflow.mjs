@@ -517,7 +517,7 @@ export function applyEvent(project, raw) {
         const hasUnsafe = m.truePeakDb.some(v => v > -1) || m.comfort.some(c => c.harshness || c.sibilance || c.clippingOrDistortion || c.suddenSpikes);
         const expected = hasUnsafe ? 'fail' : 'pass';
         if (safetyCheck.status !== expected) throw new Error('SAFETY_EVIDENCE_MISMATCH');
-      } else if (safetyCheck?.status === 'pass' && (m?.truePeakDb?.some(v => v > -1) || m?.comfort?.some(c => c.harshness || c.sibilance || c.clippingOrDistortion || c.suddenSpikes))) {
+      } else if (safetyCheck?.status !== 'fail' && (m?.truePeakDb?.some(v => v > -1) || m?.comfort?.some(c => c.harshness || c.sibilance || c.clippingOrDistortion || c.suddenSpikes))) {
         throw new Error('SAFETY_EVIDENCE_MISMATCH');
       }
     }

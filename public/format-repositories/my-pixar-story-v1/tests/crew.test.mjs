@@ -156,6 +156,14 @@ test('safety logic matches expected bounds', async () => {
   await runWith(safeFile, {harshness: false, sibilance: true, clippingOrDistortion: false, suddenSpikes: false}, 'fail');
   await assert.rejects(runWith(safeFile, {harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false}, 'inconclusive', 'inconclusive'), /SAFETY_EVIDENCE_MISMATCH/);
 
+  // listening unavailable: an honest inconclusive review without tool calls must not crash
+  {
+   const p = structuredClone(pBase); const a = current(p); a.content.files = [safeFile]; a.digest = digest(a.content); const task = taskFor(p);
+   const res = await runCrewTask(p, task, {tools: {}, runTask: async (_task, {worker}) => event(p, 'review', {workerId: worker.workerId, artifactId: a.id, artifactDigest: a.digest, review: {
+     decision: 'inconclusive', perception: 'none', modelVersion: worker.modelVersion, capabilityVersion: worker.capabilityVersion,
+     checks: task.criteria.map(c => ({criterion: c, status: 'inconclusive', evidence: 'listening tool unavailable', location: 'whole fixture'}))}})});
+   assert.equal(res.review.decision, 'inconclusive');
+  }
   } finally { await rm(dir, {recursive: true}); }
 });
 

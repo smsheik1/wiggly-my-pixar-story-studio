@@ -296,6 +296,14 @@ test('safety inconclusive with clean measurements throws on manual respond path'
  assert.throws(() => send(p2, 'review', { ...e2 }), /SAFETY_EVIDENCE_MISMATCH/);
 });
 
+test('partial measurements with a known unsafe peak cannot leave safety inconclusive', () => {
+ const p2 = structuredClone(audition());
+ const e2 = reviewEvent(p2);
+ e2.review.measurements.truePeakDb = [0.5];
+ e2.review.checks.find(c => c.criterion === 'safety').status = 'inconclusive';
+ assert.throws(() => send(p2, 'review', { ...e2 }), /SAFETY_EVIDENCE_MISMATCH/);
+});
+
 test('crew-review rejected for keyframe, video, and film', () => {
  // The approve gate accepts crew-review only via the shared crewReviewEligible
  // predicate, so a false step gate there is a HUMAN_MEDIA_REVIEW_REQUIRED refusal.
