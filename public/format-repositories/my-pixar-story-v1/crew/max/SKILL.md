@@ -31,6 +31,8 @@ Max owns: preparing quotes (cost estimates for a batch), proposing batch start/s
 4. **Conservative Cost Estimation**:
    - For Cartesia speech (`audition`, `narration`), always bind `task.generationEstimate.estimatedCostUsd` when provided, and use the configured model from task/studio config (`task.studioConfig.generation.voice.model`, currently `"sonic-3.6-2026-08-27"`).
    - For Meta Muse images (`candidates`, `sheet`, `backgroundCandidates`, `backgroundAngle`, `keyframe`), use the configured rate from studio.json ($0.01 USD).
+   - For local agy images, cost is $0.00 per image (default `provider: "agy"`).
+   - Character sheets/options are 4:3, backgrounds/keyframes are 16:9.
    - For Replicate video (`video`), estimate standard Seedance prediction cost ($0.50 USD).
 5. **Strict `planning-blocked` Discipline**:
    - Return `action: "planning-blocked"` ONLY when essential input artifacts or official pricing are genuinely unavailable.
@@ -46,11 +48,11 @@ Max owns: preparing quotes (cost estimates for a batch), proposing batch start/s
 | `clone` | `cartesia` | `{}` | Approved `voiceSample` file |
 | `audition` | `cartesia` | `{ "model": "sonic-3.6-2026-08-27" }` | First beat narration from `task.generationTexts.beats[0]` |
 | `narration` | `cartesia` | `{ "model": "sonic-3.6-2026-08-27" }` | All four beat narrations from `task.generationTexts.beats` |
-| `candidates` | `meta-muse` | `{ "prompt": "<characterPrompt>" }` | Approved `characterPrompt` artifact |
-| `sheet` | `meta-muse` | `{ "prompt": "<sheetPrompt>" }` | Approved `sheetPrompt` artifact |
-| `backgroundCandidates` | `meta-muse` | `{ "prompt": "<backgroundPrompt>" }` | Approved `backgroundPrompt` artifact |
-| `backgroundAngle` | `meta-muse` | `{ "prompt": "<backgroundAnglePrompt>" }` | Approved `backgroundAnglePrompt` artifact |
-| `keyframe` | `meta-muse` | `{ "prompt": "<keyframePrompt>" }` | Approved `keyframePrompt` artifact |
+| `candidates` | `agy` (default) / `meta-muse` | `{ "prompt": "<characterPrompt>" }` | Approved `characterPrompt` artifact |
+| `sheet` | `agy` (default) / `meta-muse` | `{ "prompt": "<sheetPrompt>" }` | Approved `sheetPrompt` artifact |
+| `backgroundCandidates` | `agy` (default) / `meta-muse` | `{ "prompt": "<backgroundPrompt>" }` | Approved `backgroundPrompt` artifact |
+| `backgroundAngle` | `agy` (default) / `meta-muse` | `{ "prompt": "<backgroundAnglePrompt>" }` | Approved `backgroundAnglePrompt` artifact |
+| `keyframe` | `agy` (default) / `meta-muse` | `{ "prompt": "<keyframePrompt>" }` | Approved `keyframePrompt` artifact |
 | `video` | `replicate` | `{ "prompt": "<videoPrompt>" }` | Approved `videoPrompt` artifact |
 | `music` | `elevenlabs` | `{ "prompt": "<musicPrompt>" }` | Approved `soundPlan.music` prompt |
 | `effect` | `elevenlabs` | `{ "prompt": "<effectPrompt>" }` | Approved `soundPlan.effects` prompt |

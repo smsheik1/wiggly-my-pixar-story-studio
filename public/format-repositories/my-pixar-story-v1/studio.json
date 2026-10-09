@@ -177,9 +177,10 @@
       "apiVersion": "2026-08-14"
     },
     "image": {
-      "provider": "meta-muse",
+      "provider": "agy",
       "model": "muse-image-1.0",
-      "estimatedUnitCostUsd": 0.01
+      "estimatedUnitCostUsd": 0.01,
+      "agyEstimatedUnitCostUsd": 0
     },
     "video": {
       "provider": "replicate",

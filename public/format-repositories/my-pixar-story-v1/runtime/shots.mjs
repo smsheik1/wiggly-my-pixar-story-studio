@@ -1,11 +1,11 @@
-import { current, locked, supervised } from './gates.mjs';
+import { current, locked, supervised, characterSheet, characterSheetArtifact, sheetKeyFor } from './gates.mjs';
 import { digest } from './contracts.mjs';
 export const shotFor = p => current(p, 'shots')?.content.shots.find(s => s.id === p.shotId);
 export function shotReferences(p, shot = shotFor(p)) {
   const background = current(p, shot.angleId ? `backgroundAngle:${shot.locationId}:${shot.angleId}` : `backgroundCandidates:${shot.locationId}`);
   const setting = background.content.files[shot.angleId ? 0 : background.selection];
   return [{ role: 'setting', artifactId: background.id, sha256: setting.sha256, file: setting }, ...shot.characterIds.map(characterId => {
-    const sheet = current(p, `sheet:${characterId}`), file = sheet.content.files[0];
+    const sheet = characterSheetArtifact(p, characterId), file = characterSheet(p, characterId);
     return { role: 'character', characterId, artifactId: sheet.id, sha256: file.sha256, file };
   })];
 }
@@ -48,6 +48,6 @@ export function planningReferences(p) {
   return current(p, 'backgrounds').content.locations.map(l => ({ id: l.id, name: l.name, scenes: l.scenes,
     master: current(p, `backgroundCandidates:${l.id}`),
     angles: l.angles.map(a => ({ ...a, artifact: current(p, `backgroundAngle:${l.id}:${a.id}`) })),
-    characterSheets: [...new Set(l.scenes.flatMap(s => s.characterIds))].map(id => current(p, `sheet:${id}`)),
+    characterSheets: [...new Set(l.scenes.flatMap(s => s.characterIds))].map(id => characterSheetArtifact(p, id)),
   }));
 }

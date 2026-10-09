@@ -7,6 +7,7 @@ export function spendSummary(p){
 }
 export function requireBudget(p,cost){
  if(p.reviewMode!=='supervised')return;
- if(!Number.isFinite(cost)||cost<=0)throw new Error('ACCOUNT_ESTIMATE_REQUIRED: supply a positive sourced request estimate.');
+ if(!Number.isFinite(cost)||cost<0)throw new Error('ACCOUNT_ESTIMATE_REQUIRED: supply a sourced request estimate.');
+ if(cost===0)return;
  if(spendSummary(p).totalReservedUsd+cost>(p.budget?.maxCostUsd??0)+1e-9)throw new Error('PROJECT_BUDGET_EXCEEDED: no provider request is permitted; obtain an explicit human budget increase.');
 }

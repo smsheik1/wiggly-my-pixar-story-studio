@@ -34,6 +34,19 @@ export function consentedVoiceIdentity(p, artifact) {
 }
 export const miniProduction = p => p.productionProfile === 'seedance-mini-480p';
 export const refinedWorkflow = p => p.workflowRevision >= 3;
+export const sheetWorkflow = p => p.workflowRevision >= 5;
+// In rev 5 the 3 candidates ARE full sheets; the selected candidate file is the final sheet.
+export const sheetKeyFor = (p, id) => sheetWorkflow(p) ? `candidates:${id}` : `sheet:${id}`;
+export function characterSheetArtifact(p, id) { return current(p, sheetKeyFor(p, id)); }
+export function characterSheet(p, id) {
+  const a = characterSheetArtifact(p, id);
+  if (!a) return null;
+  if (sheetWorkflow(p)) {
+    if (a.selection === undefined || a.selection === null) return a.content.files[0] ?? null;
+    return a.content.files[a.selection] ?? null;
+  }
+  return a.content.files[0] ?? null;
+}
 export const reviewPassed = r => ['approved','provisional'].includes(r?.decision);
 export const locked = (p, key) => { const a = current(p, key); if (p.sqlValidationView === true) return a?.sqlAcceptanceVerified === true; return !!(a?.approvedBy && reviewPassed(a.review) && (!supervised(p) || !a.content.files || a.humanReview?.decision === 'approved') && (a.kind!=='film'||reviewPassed(a.visualReview)&&reviewPassed(a.audioReview)&&a.visualReviewedBy!==a.audioReviewedBy)); };
 const matchesWorker=(p,role,q)=>{const w=p.crew?.workers.find(w=>w.role===role);return !w||w.workerId===q?.workerId&&w.modelVersion===q?.modelVersion&&w.capabilityVersion===q?.capabilityVersion;};
@@ -60,7 +73,7 @@ export function assertAllowed(p, kind) {
   if(supervised(p)&&kind==='sheet'&&(!locked(p,`candidates:${p.characterId}`)||!locked(p,`sheetPrompt:${p.characterId}`)))throw new Error('CHARACTER_PROMPT_LOCK_REQUIRED: approve the selected character and sheet prompt before sheet generation.');
   if ([...backgroundSteps, 'backgrounds', 'shotIntentions', 'shots', 'keyframePrompt', 'background', 'keyframe', 'video'].includes(kind)) {
     const roster = current(p, 'roster');
-    if (!locked(p, 'roster') || !roster.content.characters.every(c => locked(p, `sheet:${c.id}`))) throw new Error('CHARACTER_LOCK_REQUIRED: every required character needs its own approved sheet.');
+    if (!locked(p, 'roster') || !roster.content.characters.every(c => locked(p, sheetKeyFor(p, c.id)))) throw new Error('CHARACTER_LOCK_REQUIRED: every required character needs its own approved sheet.');
     if(supervised(p)&&kind==='backgrounds'&&!locked(p,'shotIntentions'))throw new Error('SHOT_INTENTIONS_REQUIRED: plan story shots before backgrounds.');
     if (['shots', 'keyframePrompt', 'keyframe'].includes(kind)) {
       const registry = current(p, 'backgrounds');

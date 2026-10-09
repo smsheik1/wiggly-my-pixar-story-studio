@@ -1,7 +1,8 @@
-import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, copyFile, unlink, stat } from 'node:fs/promises';
 import {assertDebugReady} from './debug.mjs';
 import { join, extname, resolve } from 'node:path';
-import {legacyGeneration,studioFor} from './instructions.mjs';
+import {legacyGeneration,studioFor,imageUnitCostFor,imageAspectFor,metaMuseSizeFor} from './instructions.mjs';
+import { generateAgyImage, agyBrainDir, agyBinary, agyTimeoutMs } from './agy-image.mjs';
 import { videoBinding, effectFor } from './studio.mjs';
 import { executeVideo } from './video-provider.mjs';
 import { shotReferences } from './shots.mjs';
@@ -57,24 +58,32 @@ export function requestDescriptor(p, plan) {
     images = plan.operation === 'sheet' ? [selected.content.files[selected.selection]] : artifact(p, 'roster').content.characters.find(c => c.id === p.characterId).references;
     n = plan.operation === 'sheet' ? 1 : 3;
   }
-  if (plan.estimatedCostUsd < n * generation.image.estimatedUnitCostUsd) throw new Error('Muse estimate must account for every requested image ($0.01 each).');
-  return { endpoint: `https://api.meta.ai/v1/images/${images.length ? 'edits' : 'generations'}`, model: generation.image.model, prompt: plan.parameters.prompt, images, n, size: '1536x864', response_format: 'b64_json', output_format: 'webp',
+  const aspectRatio = imageAspectFor(plan.operation);
+  const provider = plan.provider;
+  if (!['agy', 'meta-muse'].includes(provider)) throw new Error('Image provider must be agy or meta-muse.');
+  const unitCost = imageUnitCostFor(p, provider);
+  if (plan.estimatedCostUsd + 1e-9 < n * unitCost) throw new Error(provider === 'agy' ? 'agy estimate must account for every requested image ($0 each).' : 'Muse estimate must account for every requested image ($0.01 each).');
+  if (provider === 'agy') return { provider: 'agy', prompt: plan.parameters.prompt, images, n, aspectRatio, estimatedUnitCostUsd: 0 };
+  return { endpoint: `https://api.meta.ai/v1/images/${images.length ? 'edits' : 'generations'}`, model: generation.image.model, prompt: plan.parameters.prompt, images, n, size: metaMuseSizeFor(aspectRatio), aspectRatio, response_format: 'b64_json', output_format: 'webp',
     tool_enablement: { enable_web_search: false, enable_image_search: false, enable_shell: false } };
 }
 export async function atomicJson(path, value) { const temp = `${path}.tmp`; await writeFile(temp, JSON.stringify(value, null, 2), { mode: 0o600 }); await rename(temp, path); }
 // Operator guidance is canonical data, not a claim that an API request failed.
 export function planningAccountGuide(p){
- const provider=['clone','audition','narration'].includes(p.step)?'Cartesia':['music','effect'].includes(p.step)?'ElevenLabs':p.step==='video'?'Replicate':'Muse Image';
- const accountStep={Cartesia:'Open https://play.cartesia.ai/subscription and sign in to the account used by this project. Check the Subscription page’s current plan and credits.',ElevenLabs:'Sign in at https://elevenlabs.io. Click your profile icon at the top right, then Subscription; check your plan and credits.',Replicate:'Open https://replicate.com/account/billing and sign in to the account used by this project. Check the credit balance and billing status.','Muse Image':'Open https://dev.meta.ai and sign in to the account used by this project. Find its billing and usage information.'}[provider];
- return {problem:`A sourced cost estimate for this ${provider} request is missing.`,solution:'Obtain the provider rate and estimate this exact request, then use the existing approval and budget gates.',steps:[`Check ${provider==='Cartesia'?'https://cartesia.ai/pricing':provider==='Replicate'?'https://replicate.com/bytedance/seedance-2.0-mini':provider==='ElevenLabs'?'https://elevenlabs.io/pricing':'https://dev.meta.ai'} for the applicable rate.`,"Calculate the estimate for this exact request; identify the rate source and any uncertainty.","Present the estimate and obtain authorization within the project budget. Unknown credits alone do not block planning.",accountStep]};
+ const imageProvider=(studioFor(p)?.config.generation??legacyGeneration).image.provider??'meta-muse';
+ const provider=['clone','audition','narration'].includes(p.step)?'Cartesia':['music','effect'].includes(p.step)?'ElevenLabs':p.step==='video'?'Replicate':imageProvider==='agy'?'agy':'Muse Image';
+ const accountStep={Cartesia:'Open https://play.cartesia.ai/subscription and sign in to the account used by this project. Check the Subscription page’s current plan and credits.',ElevenLabs:'Sign in at https://elevenlabs.io. Click your profile icon at the top right, then Subscription; check your plan and credits.',Replicate:'Open https://replicate.com/account/billing and sign in to the account used by this project. Check the credit balance and billing status.','Muse Image':'Open https://dev.meta.ai and sign in to the account used by this project. Find its billing and usage information.',agy:'Verify the local agy CLI is installed (`agy --version`) and the configured brain directory is writable. No API key or paid balance is required.'}[provider];
+ return {problem:`A sourced cost estimate for this ${provider} request is missing.`,solution:'Obtain the provider rate and estimate this exact request, then use the existing approval and budget gates.',steps:[`Check ${provider==='Cartesia'?'https://cartesia.ai/pricing':provider==='Replicate'?'https://replicate.com/bytedance/seedance-2.0-mini':provider==='ElevenLabs'?'https://elevenlabs.io/pricing':provider==='agy'?'local agy installation (no paid rate)':'https://dev.meta.ai'} for the applicable rate.`,"Calculate the estimate for this exact request; identify the rate source and any uncertainty.","Present the estimate and obtain authorization within the project budget. Unknown credits alone do not block planning.",accountStep]};
 }
 
 export function remediation(provider, secretsPath) {
   if(provider==='gemini')return `STOP: Gemini media review failed. No fallback or retry was submitted.\n1. Open https://aistudio.google.com/api-keys and sign in; select the key's Google Cloud project.\n2. Open Dashboard → Usage/Billing (https://aistudio.google.com/usage); check quota, billing and payment for that project.\n3. Open API keys → Create API key; verify Gemini API access and any key restrictions.\n4. Open ${resolve(secretsPath)} and set GEMINI_API_KEY=<your-key> on its own line. Never paste the key in chat.\n5. Inspect the run's gemini-reviews receipts before another request. An uncertain request is never automatically repeated; HTTP 429 requires waiting for the quota window.`;
+  if(provider==='agy')return `STOP: agy image generation failed. No fallback or retry was submitted.\n1. Run \`${agyBinary()} --version\` locally; reinstall the Antigravity CLI if missing.\n2. Check WIGGLY_AGY_BIN and WIGGLY_AGY_BRAIN_DIR env values and brain-dir write access.\n3. Inspect receipts/<jobId> started markers and receipts; reconcile the uncertain subrequest, never duplicate it.\n4. No API key is required for agy.`;
   const cartesia = provider === 'cartesia'; const key = {cartesia:'CARTESIA_API_KEY','meta-muse':'META_API_KEY',replicate:'REPLICATE_API_TOKEN',elevenlabs:'ELEVENLABS_API_KEY'}[provider];
   return `STOP: ${provider} failed. No fallback or retry was submitted.\n1. Open ${{cartesia:'https://play.cartesia.ai','meta-muse':'https://dev.meta.ai',replicate:'https://replicate.com/account/billing',elevenlabs:'https://elevenlabs.io/app/settings/subscription'}[provider]} and sign in.\n2. Open the account's Billing/Usage page; check credits and payment, and add funds if needed.\n3. Open API Keys, verify access to ${{cartesia:'voice cloning and Sonic TTS','meta-muse':'Muse Image',replicate:'Seedance video; API tokens at https://replicate.com/account/api-tokens',elevenlabs:'Music/Sound Effects; API keys at https://elevenlabs.io/app/settings/api-keys'}[provider]}, and copy a valid key.\n4. Open ${resolve(secretsPath)} and set ${key}=<your-key> on its own line. Never paste the key in chat.\n5. Read status and reconcile the recorded job before another request. For 429, wait for the provider retry window; for an outage, check the provider status/support page.`;
 }
 export async function loadKey(provider, secretsPath) {
+  if(provider==='agy')throw new Error('agy needs no API key; do not call loadKey for agy.');
   const name = {cartesia:'CARTESIA_API_KEY','meta-muse':'META_API_KEY',replicate:'REPLICATE_API_TOKEN',elevenlabs:'ELEVENLABS_API_KEY',gemini:'GEMINI_API_KEY'}[provider];if(!name)throw new Error('Unknown provider.');
   const source = await readFile(secretsPath, 'utf8');
   const match = source.match(new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=\\s*(.+)\\s*$`, 'm'));
@@ -97,10 +106,21 @@ export async function lookupExistingVoice(p,secretsPath,fetcher=fetch){
  }catch(e){throw new Error(`${key?e.message.replaceAll(key,'[redacted]'):e.message}\n${remediation('cartesia',secretsPath)}`);}
 }
 // Metadata-only checks cannot establish paid generation entitlement or output quality.
-export async function checkProvider(provider,secretsPath,fetcher=fetch){
+export async function checkProvider(provider,secretsPath,fetcher=fetch,spawnFn){
+ if(provider==='agy'){
+  const { spawnSync } = await import('node:child_process');
+  const bin = process.env.WIGGLY_AGY_BIN || 'agy';
+  const run = spawnFn ?? spawnSync;
+  let result;
+  try { result = run(bin, ['--version'], { encoding: 'utf8' }); }
+  catch (e) { throw new Error(`agy binary not found at ${bin}: ${e.message}\n${remediation('agy', secretsPath)}`); }
+  if(result.error?.code==='ENOENT')throw new Error(`agy binary not found at ${bin}.\n${remediation('agy', secretsPath)}`);
+  if(result.status!==0)throw new Error(`agy --version failed: ${(result.stderr||result.stdout||'').slice(0,400)}\n${remediation('agy', secretsPath)}`);
+  return {provider:'agy',checkedAt:new Date().toISOString(),status:'binary-verified',binary:bin,version:(result.stdout||'').trim().slice(0,200),authenticatedRead:false,generationReady:true,unverified:['actual generation/output quality'],mediaGenerationCalls:0,projectStateMutated:false};
+ }
  const definitions={cartesia:{urls:['https://api.cartesia.ai/voices?limit=1'],docs:'https://docs.cartesia.ai/api-reference/voices/list'},'meta-muse':{urls:['https://api.meta.ai/v1/models/muse-image-1.0'],docs:'https://dev.meta.ai/docs/api-reference/models/retrieve-model'},replicate:{urls:['https://api.replicate.com/v1/account','https://api.replicate.com/v1/models/bytedance/seedance-2.0-mini'],docs:'https://replicate.com/docs/reference/http'},elevenlabs:{urls:['https://api.elevenlabs.io/v1/user/subscription'],docs:'https://elevenlabs.io/docs/api-reference/user/subscription/get'}};
  definitions.gemini={urls:['https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash'],docs:'https://ai.google.dev/api/models#method:-models.get'};
- const definition=definitions[provider];if(!definition)throw new Error('Use cartesia, meta-muse, replicate, elevenlabs or gemini.');
+ const definition=definitions[provider];if(!definition)throw new Error('Use cartesia, meta-muse, agy, replicate, elevenlabs or gemini.');
  let apiKey;
  try{
   apiKey=await loadKey(provider,secretsPath);const bodies=[];
@@ -166,6 +186,22 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
       const edits=result.audioEdits?.filter(e=>e.beat!==scope.beat);if(edits?.length)result.audioEdits=edits;else delete result.audioEdits;
       result.audioRegenerations=[...(result.audioRegenerations??[]).filter(e=>e.beat!==scope.beat),{beat:scope.beat,spokenText:scope.spokenText,parentArtifactId:scope.artifactId,parentArtifactDigest:scope.artifactDigest,jobId:job.id,requestDigest:job.digest}];
     }
+  } else if (job.plan.provider === 'agy') {
+    const agy = async (index) => {
+      const receipt = join(dir, `${index}.json`); const started = join(dir, `${index}.started`);
+      try { return JSON.parse(await readFile(receipt, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+      if (collectOnly) throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${index}; no completed receipt exists. Collection will not submit it.`);
+      try { await writeFile(started, JSON.stringify({ jobId: job.id, digest: job.digest, index }), { flag: 'wx', mode: 0o600 }); }
+      catch (e) { if (e.code === 'EEXIST') throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${index}. Reconcile its existing result; never duplicate it.`); throw e; }
+      const outPath = join(dir, `${index}.png`);
+      const { outputPath } = await generateAgyImage({ prompt: request.prompt, aspectRatio: request.aspectRatio, imageName: `${job.id}-${index}`, imagePaths: request.images.map(f => f.path), outputPath: outPath, brainDir: process.env.WIGGLY_AGY_BRAIN_DIR ? resolve(process.env.WIGGLY_AGY_BRAIN_DIR) : undefined, bin: process.env.WIGGLY_AGY_BIN || undefined, timeoutMs: process.env.WIGGLY_AGY_TIMEOUT_MS ? Number(process.env.WIGGLY_AGY_TIMEOUT_MS) : undefined });
+      const file = await importMedia(outputPath, runDir);
+      const recorded = { file };
+      await atomicJson(receipt, recorded); return recorded;
+    };
+    const files = [];
+    for (let i = 0; i < request.n; i++) files.push((await agy(i)).file);
+    result = { files, prompt: request.prompt, provider: 'agy' };
   } else {
     const images = await Promise.all(request.images.map(async f => ({ image_url: `data:image/${extname(f.path).slice(1).replace('jpg', 'jpeg')};base64,${(await readFile(f.path)).toString('base64')}` })));
     const { endpoint, images: _refs, ...body } = request;

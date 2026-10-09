@@ -17,8 +17,12 @@ import {scriptQuoteChecks,transcriptDiff} from './evaluators.mjs';
 import {AudioEditReceipt,AUDIO_EDIT_PROFILE,validateAudioEdit,validateEditingInvestigation} from './audio-edit.mjs';
 import { VERSION, Inputs, Project, Content, Review, Event, Plans, IntakeConfirmation, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, criteria, digest } from './contracts.mjs';
 
-import { keyFor, current, locked, audioLocked, assertAllowed, backgroundSteps, imageSteps, authorSteps, supervised, reviewPassed, refinedWorkflow, miniProduction, voiceBasis, consentedVoiceIdentity } from './gates.mjs';
-export { keyFor, current, locked, audioLocked, assertAllowed, voiceBasis, consentedVoiceIdentity } from './gates.mjs';
+import { keyFor, current, locked, audioLocked, assertAllowed, backgroundSteps, imageSteps, authorSteps, supervised, reviewPassed, refinedWorkflow, miniProduction, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact, sheetWorkflow } from './gates.mjs';
+export { keyFor, current, locked, audioLocked, assertAllowed, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact } from './gates.mjs';
+export function criteriaFor(p, step = p.step) {
+  if (step === 'candidates' && sheetWorkflow(p)) return criteria.sheet;
+  return criteria[step] ?? [];
+}
 const characterRecipe=readFileSync(new URL('../character-sheet-recipe.md',import.meta.url),'utf8');
 export const characterRecipeSha256=createHash('sha256').update(characterRecipe).digest('hex');
 export const backgroundRecipe = readFileSync(new URL('../background-prompter.md', import.meta.url), 'utf8');
@@ -33,7 +37,7 @@ const promptKey = p => `${p.step === 'backgroundAngle' ? 'backgroundAnglePrompt'
 const isPrompt = p => ['backgroundPrompt', 'backgroundAnglePrompt'].includes(p.step);
 const audioEditingEnabled=p=>studioFor(p)?.config.agents['voice-director'].tools.includes('renderAudioEdit');
 export function initialProject(id, inputs, options = {}) {
-  const workflowRevision=options.workflowRevision ?? (options.reviewMode==='qualified'?2:4),studio=options.studio??loadStudio();
+  const workflowRevision=options.workflowRevision ?? (options.reviewMode==='qualified'?2:5),studio=options.studio??loadStudio();
   return Project.parse({ formatVersion: VERSION, schemaVersion: 2, studio, workflowRevision, productionProfile:options.productionProfile??studio.config.generation.video.profile, id, reviewMode:options.reviewMode ?? 'supervised', budget:{maxCostUsd:studio.config.limits.initialSpendCeilingUsd,reservations:[]}, inputs: Inputs.parse(inputs), step: workflowRevision>=3?'answers':'script', gate: 'author', characterId: null,
     sequence: 0, artifacts: [], jobs: [], history: [], allowances: [], feedback: [], reviewDisagreements: 0 });
 }
@@ -63,8 +67,8 @@ export function dependencies(p) {
     answers: [], script: refinedWorkflow(p)?['answers']:[], voiceSample: [], clone: p.voiceChoice?.reuseWithoutSample&&!current(p,'voiceSample')?[]:['voiceSample'], audioReviewerQualification: [], audition: ['clone', 'script','audioReviewerQualification'],
     narration: ['script', 'clone', 'audition','audioReviewerQualification'], roster: p.workflowRevision>=4?['script','narration']:['script'],
     characterPrompt:['roster','script'], candidates: refinedWorkflow(p)?['roster',`characterPrompt:${p.characterId}`]:['roster'], sheetPrompt: [`candidates:${p.characterId}`],
-    shotIntentions:['script','narration','roster',...(current(p,'roster')?.content.characters??[]).map(c=>`sheet:${c.id}`)],
-    sheet: [`candidates:${p.characterId}`, `sheetPrompt:${p.characterId}`], backgrounds: [...(supervised(p)?['shotIntentions']:[]),'script', 'narration', 'roster', ...(current(p, 'roster')?.content.characters ?? []).map(c => `sheet:${c.id}`)],
+    shotIntentions:['script','narration','roster',...(current(p,'roster')?.content.characters??[]).map(c=>sheetKeyFor(p,c.id))],
+    sheet: [`candidates:${p.characterId}`, `sheetPrompt:${p.characterId}`], backgrounds: [...(supervised(p)?['shotIntentions']:[]),'script', 'narration', 'roster', ...(current(p, 'roster')?.content.characters ?? []).map(c => sheetKeyFor(p,c.id))],
     backgroundBrief: ['backgrounds'], backgroundPrompt: [`backgroundBrief:${p.locationId}`],
     backgroundCandidates: [`backgroundPrompt:${p.locationId}`],
     backgroundAngleBrief: ['backgrounds', `backgroundCandidates:${p.locationId}`],
@@ -83,10 +87,16 @@ function next(p) {
   if (i >= 0 && i < steps.length - 1) p.step = steps[i + 1];
   else if (p.step === 'roster') { p.characterId = current(p, 'roster').content.characters[0].id; p.step = refinedWorkflow(p)?'characterPrompt':'candidates'; }
   else if (p.step === 'characterPrompt') p.step='candidates';
-  else if (p.step === 'candidates') p.step = 'sheetPrompt';
+  else if (p.step === 'candidates') {
+    if (sheetWorkflow(p)) {
+      const missing = current(p, 'roster').content.characters.find(c => !locked(p, sheetKeyFor(p, c.id)));
+      p.characterId = missing?.id ?? null;
+      p.step = missing ? 'characterPrompt' : supervised(p)?'shotIntentions':'backgrounds';
+    } else p.step = 'sheetPrompt';
+  }
   else if (p.step === 'sheetPrompt') p.step = 'sheet';
   else if (p.step === 'sheet') {
-    const missing = current(p, 'roster').content.characters.find(c => !locked(p, `sheet:${c.id}`));
+    const missing = current(p, 'roster').content.characters.find(c => !locked(p, sheetKeyFor(p, c.id)));
     p.characterId = missing?.id ?? null;
     p.step = missing ? (refinedWorkflow(p)?'characterPrompt':'candidates') : supervised(p)?'shotIntentions':'backgrounds';
   }
@@ -131,7 +141,8 @@ export function validateArtifactContent(p, content, author, previous=current(p))
   if(p.workflowRevision>=4&&p.step==='script'&&!parsed.proposedCast)throw new Error('SCRIPT_CAST_PROPOSAL_REQUIRED: the writer must propose the necessary on-screen people and age variants, with a story purpose.');
   if(p.step==='characterPrompt'){
     const cast=current(p,'roster').content.characters.find(c=>c.id===p.characterId);
-    if(!locked(p,'roster')||parsed.characterDigest!==digest(cast)||digest(parsed.referenceHashes)!==digest(cast.references.map(f=>f.sha256))||parsed.recipeSha256!==recipeFor(p,'characterPrompt',{sha256:characterPromptRecipeSha256}).sha256)throw new Error('CHARACTER_PROMPT_BINDING_REQUIRED: bind the exact approved cast, ordered photos and packaged recipe.');
+    const expectedRecipe = sheetWorkflow(p) ? recipeFor(p,'sheetPrompt',{sha256:characterRecipeSha256}).sha256 : recipeFor(p,'characterPrompt',{sha256:characterPromptRecipeSha256}).sha256;
+    if(!locked(p,'roster')||parsed.characterDigest!==digest(cast)||digest(parsed.referenceHashes)!==digest(cast.references.map(f=>f.sha256))||parsed.recipeSha256!==expectedRecipe)throw new Error('CHARACTER_PROMPT_BINDING_REQUIRED: bind the exact approved cast, ordered photos and packaged recipe.');
   }
   if(refinedWorkflow(p)&&p.step==='candidates'&&parsed.prompt!==current(p,`characterPrompt:${p.characterId}`).content.prompt)throw new Error('Candidates must use the human-approved character prompt exactly.');
   if (p.step === 'voiceSample' && (!parsed.files[0].durationSeconds || parsed.files[0].durationSeconds < 10)) throw new Error('Voice sample must contain at least 10 seconds of measured audio.');
@@ -182,6 +193,7 @@ export function validateArtifactContent(p, content, author, previous=current(p))
   }
 
   if (imageSteps.includes(p.step) && parsed.files.some(f => !f.width || !f.height || f.durationSeconds)) throw new Error('Character generations must contain measured still images.');
+  if (['candidates', 'sheet'].includes(p.step) && parsed.files.some(f => Math.abs(f.width / f.height - 4 / 3) > 0.05)) throw new Error('Character sheets/options must be measured 4:3.');
   if (p.step === 'sheetPrompt') {
     const candidate = current(p, `candidates:${p.characterId}`);
     if(parsed.recipeSha256!==recipeFor(p,'sheetPrompt',{sha256:characterRecipeSha256}).sha256)throw new Error('Sheet prompt must bind the packaged character sheet recipe hash.');
@@ -248,18 +260,35 @@ function hasDependency(p,ids,target){
  const queue=[...ids],seen=new Set();while(queue.length){const id=queue.pop();if(id===target)return true;if(seen.has(id))continue;seen.add(id);queue.push(...(p.artifacts.find(a=>a.id===id)?.dependencies??[]));}return false;
 }
 export function crewReviewEligible(p, a = current(p)) {
-  if (!a || !['audition', 'narration'].includes(p.step)) return false;
-  const files = a.content?.files ?? [];
-  if (!files.length) return false;
-  if (a.review?.decision !== 'approved') return false;
-  if (!a.review.checks?.length || !a.review.checks.every(c => c.status === 'pass')) return false;
-  if (voiceBasis(p).kind !== 'existing-clone' || !consentedVoiceIdentity(p, a).verified) return false;
-  const m = a.review.measurements;
-  if (!m || !Array.isArray(m.truePeakDb) || !Array.isArray(m.comfort)) return false;
-  if (m.truePeakDb.length !== files.length || m.comfort.length !== files.length) return false;
-  if (!m.truePeakDb.every(v => typeof v === 'number' && v <= -1)) return false;
-  if (!m.comfort.every(c => c && !c.harshness && !c.sibilance && !c.clippingOrDistortion && !c.suddenSpikes)) return false;
-  return true;
+  if (!a) return false;
+  if (['audition', 'narration'].includes(p.step)) {
+    const files = a.content?.files ?? [];
+    if (!files.length) return false;
+    if (a.review?.decision !== 'approved') return false;
+    if (!a.review.checks?.length || !a.review.checks.every(c => c.status === 'pass')) return false;
+    if (voiceBasis(p).kind !== 'existing-clone' || !consentedVoiceIdentity(p, a).verified) return false;
+    const m = a.review.measurements;
+    if (!m || !Array.isArray(m.truePeakDb) || !Array.isArray(m.comfort)) return false;
+    if (m.truePeakDb.length !== files.length || m.comfort.length !== files.length) return false;
+    if (!m.truePeakDb.every(v => typeof v === 'number' && v <= -1)) return false;
+    if (!m.comfort.every(c => c && !c.harshness && !c.sibilance && !c.clippingOrDistortion && !c.suddenSpikes)) return false;
+    return true;
+  }
+  if (['candidates', 'backgroundCandidates', 'backgroundAngle', 'keyframe', 'sheet'].includes(p.step)) {
+    const files = a.content?.files ?? [];
+    if (!files.length) return false;
+    if (a.review?.decision !== 'approved') return false;
+    if (a.review?.perception !== 'direct-image') return false;
+    const needed = criteriaFor(p, p.step);
+    const checks = a.review.checks ?? [];
+    if (checks.length !== needed.length || needed.some(c => !checks.some(x => x.criterion === c && x.status === 'pass'))) return false;
+    const evidence = a.review.toolEvidence ?? [];
+    for (const f of files) {
+      if (!evidence.some(r => r.tool === 'viewImage' && r.sha256 === f.sha256)) return false;
+    }
+    return true;
+  }
+  return false;
 }
 export function taskFor(p) {
   const a = current(p), loaded=workerInstructions(p,roleFor(p));
@@ -273,7 +302,7 @@ export function taskFor(p) {
     voiceIdentity: {basis: voiceBasis(p).kind==='recorded-reference'?'recorded-reference':voiceIdState.verified?'consented-voice-id':'human-recognition', verified: voiceIdState.verified, boundVoiceId: voiceIdState.boundVoiceId},
     productionProfile:p.productionProfile,repairNotices:repairNotices(p),workflowRevision:p.workflowRevision, step: p.step, gate: p.gate, clipId:p.clipId,effectId:p.effectId, characterId: p.characterId, locationId: p.locationId, angleId: p.angleId, shotId: p.shotId,
     shot,
-    ...(backgroundSteps.includes(p.step)?{locationEntry:sceneLocation,characterReferences:(current(p,'roster')?.content.characters??[]).filter(c=>sceneLocation?.scenes.some(scene=>scene.characterIds.includes(c.id))).map(c=>{const sheet=current(p,`sheet:${c.id}`);return {characterId:c.id,name:c.name,ageVariant:c.ageVariant,artifactId:sheet.id,file:sheet.content.files[0]};})}:{}),
+    ...(backgroundSteps.includes(p.step)?{locationEntry:sceneLocation,characterReferences:(current(p,'roster')?.content.characters??[]).filter(c=>sceneLocation?.scenes.some(scene=>scene.characterIds.includes(c.id))).map(c=>{const art=characterSheetArtifact(p,c.id),file=characterSheet(p,c.id);return {characterId:c.id,name:c.name,ageVariant:c.ageVariant,artifactId:art.id,file};})}:{}),
     ...(['videoPlan','videoPrompt','video'].includes(p.step)?{narration:current(p,'narration')}:{}),
     ...(['videoPlan','film'].includes(p.step)?{visualReferences:current(p,'shots').content.shots.map(shot=>({shot,keyframe:current(p,`keyframe:${shot.id}`),references:shotReferences(p,shot)}))}:{}),
     shotIntentions:current(p,'shotIntentions')??null,
@@ -290,7 +319,7 @@ export function taskFor(p) {
     ...(p.step==='answers'?{questionnaire,sourceInputs:p.inputs,sourceInputDigest:digest(p.inputs),originalInputsRequired:!p.feedback.some(f=>f.key==='answers'&&f.intent&&f.message)}:{}),
     ...(['characterPrompt','candidates','sheetPrompt','sheet'].includes(p.step)?{castEntry:current(p,'roster')?.content.characters.find(c=>c.id===p.characterId)}:{}),
     approvedScript: current(p, 'script') ?? null, inputPriority: ['characterPrompt','candidates','sheetPrompt','sheet'].includes(p.step)?['approvedScript','castEntry','castEntry.references','inputs.answers']:['immediateScenes', 'approvedScript', 'inputs.answers'],
-    ...(p.step==='characterPrompt'?{recipe:recipeFor(p,'characterPrompt',{content:characterPromptRecipe,sha256:characterPromptRecipeSha256})}:{}),
+    ...(p.step==='characterPrompt'?{recipe:sheetWorkflow(p)?recipeFor(p,'sheetPrompt',{content:characterRecipe,sha256:characterRecipeSha256}):recipeFor(p,'characterPrompt',{content:characterPromptRecipe,sha256:characterPromptRecipeSha256})}:{}),
     ...(p.step==='sheetPrompt'?{recipe:recipeFor(p,'sheetPrompt',{content:characterRecipe,sha256:characterRecipeSha256})}:{}),
     ...(isPrompt(p) ? { recipe: recipeFor(p,p.step,{content:backgroundRecipe,sha256:backgroundRecipeSha256}), ownerWorkerId: current(p, briefKey(p))?.authoredBy } : {}),
     ...(p.step==='videoPrompt'||p.step==='video'?{videoBinding:videoBinding(p)}:{}),
@@ -299,7 +328,7 @@ export function taskFor(p) {
     proposedCast:current(p,'script')?.content.proposedCast??null, intakeConfirmation:current(p,'roster')?.intakeConfirmation??current(p,'script')?.intakeConfirmation??current(p,'answers')?.intakeConfirmation??null, artifact: a ?? null, job: job ?? null, inputs: effectiveInputs(p),
     dependencies: dependencies(p).map(id => p.artifacts.find(a => a.id === id)),
     creativeDirections:p.creativeDirections??[],
-    feedback: p.feedback.filter(f => f.key === keyFor(p)), criteria: p.step==='film'&&p.gate==='review'?filmCriteria(p):criteria[p.step] ?? [],
+    feedback: p.feedback.filter(f => f.key === keyFor(p)), criteria: p.step==='film'&&p.gate==='review'?filmCriteria(p):criteriaFor(p),
     instruction: p.gate==='produce'&&p.step!=='film' ? `Prepare the assigned generation plan from the canonical task inputs. For audition, generationTexts contains the FIRST locked story beat; no separate audition text or approval is needed. For narration it contains all four locked beats unless generationTexts.regeneration is present: then plan ONLY its human-selected beat and spelling/punctuation pronunciation clarification. The three other files and the locked script/clone/audition are retained. Never widen a scoped repair into a batch. Use generationEstimate when supplied: it is a sourced conservative reservation, not verified account billing. Unknown credit balance, untested generation access, or a zero project budget do not block PLANNING. Return a plan; the runtime owns authorization, budget enforcement and submission. Do not demand a dashboard screenshot or admin key merely to plan. If a rate truly is unavailable and no generationEstimate is supplied, return planning-blocked using the canonical planningGuide. If essential inputs are missing, return missing-input with specific evidence and baby steps. Actual provider errors stop submission through the runtime, with no fallback or automatic retry. Never invent prices, provider receipts, approvals or a new recording requirement for an existing clone. Follow the attached skill for the remaining procedure.` : loaded && ['author','owner-review','review','produce'].includes(p.gate) ? `Follow the attached ${loaded.skill.path} for this ${p.step}/${p.gate} task and return only the assigned Event.` : legacyInstruction(p),
   };
 }
@@ -378,6 +407,52 @@ export function applyEvent(project, raw) {
   }else if(e.action==='upgrade-studio'){
     requiredActor(e,'human');if(!e.message||p.artifacts.length||p.jobs.length||p.crew)throw new Error('STUDIO_UPGRADE_LOCKED: upgrade only a pristine project before work/crew binding; use a separate new project for a different bundle after work begins. No approvals are migrated.');
     p.studio=loadStudio();
+  }else if(e.action==='upgrade-workflow'){
+    requiredActor(e,'human');
+    if(!e.message||e.workflowRevision!==5)throw new Error('WORKFLOW_UPGRADE_SCOPE: only an explicit upgrade to revision 5.');
+    if(p.workflowRevision!==4)throw new Error('WORKFLOW_UPGRADE_LOCKED: only revision-4 projects upgrade to revision 5.');
+    if(p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status)))throw new Error('Reconcile outstanding jobs before upgrading workflow.');
+    if(p.artifacts.some(a=>a.valid&&a.approvedBy&&a.kind==='sheet'))throw new Error('WORKFLOW_UPGRADE_LOCKED: no approved character sheet may exist; upgrade before sheet approval.');
+    p.workflowRevision=5;
+    for (const a of p.artifacts.filter(a=>['characterPrompt','candidates','sheetPrompt','sheet'].includes(a.kind)&&a.valid)) a.valid=false;
+    const roster=current(p,'roster');
+    if(!roster)throw new Error('WORKFLOW_UPGRADE_LOCKED: roster must exist before upgrading.');
+    p.characterId=p.characterId??roster.content.characters[0]?.id??null;
+    if(!p.characterId)throw new Error('WORKFLOW_UPGRADE_LOCKED: no character to reset.');
+    p.step='characterPrompt';p.gate='author';
+    p.feedback.push({key:keyFor(p),message:e.message});
+  }else if(e.action==='import-sheet'){
+    requiredActor(e,'human');
+    const characterId=e.characterId??p.characterId;
+    if(!e.message||!characterId)throw new Error('import-sheet needs --character, --file and --message.');
+    const file=e.importFile;
+    if(!file||!file.path||!file.sha256||!file.width||!file.height||file.durationSeconds)throw new Error('import-sheet needs a measured still image.');
+    if(Math.abs(file.width/file.height-4/3)>0.05)throw new Error('Imported sheet must be measured 4:3.');
+    if(sheetWorkflow(p)) {
+      if(p.step!=='candidates'||p.characterId!==characterId)throw new Error('import-sheet in rev 5 requires the current candidates step for that character.');
+      const prompt=current(p,`characterPrompt:${characterId}`);
+      if(!prompt||!locked(p,`characterPrompt:${characterId}`))throw new Error('CHARACTER_DESIGN_PROMPT_LOCK_REQUIRED: approve the rev-5 sheet-format prompt before importing.');
+      const provenance=e.importProvenance??{source:'operator-import',message:e.message};
+      const content={files:[file,file,file],prompt:prompt.content.prompt,provenance};
+      const key=keyFor(p),previous=current(p);
+      const parsed=Content.candidates.parse(content);
+      for (const a of p.artifacts.filter(a=>a.key===key&&a.valid)) invalidate(p,a.id);
+      const version=p.artifacts.filter(a=>a.key===key).length+1;
+      p.artifacts.push({id:`${key}@${version}`,key,kind:p.step,version,digest:digest(parsed),content:parsed,dependencies:dependencies(p),valid:true,authoredBy:'operator-import'});
+      p.gate='review';
+    } else {
+      if(p.step!=='sheet'||p.characterId!==characterId)throw new Error('import-sheet in rev 4 requires the current sheet step for that character.');
+      const prompt=current(p,`sheetPrompt:${characterId}`);
+      if(!prompt||!locked(p,`sheetPrompt:${characterId}`))throw new Error('CHARACTER_PROMPT_LOCK_REQUIRED: approve the sheet prompt before importing.');
+      const provenance=e.importProvenance??{source:'operator-import',message:e.message};
+      const content={files:[file],prompt:prompt.content.prompt,provenance};
+      const key=keyFor(p);
+      const parsed=Content.sheet.parse(content);
+      for (const a of p.artifacts.filter(a=>a.key===key&&a.valid)) invalidate(p,a.id);
+      const version=p.artifacts.filter(a=>a.key===key).length+1;
+      p.artifacts.push({id:`${key}@${version}`,key,kind:p.step,version,digest:digest(parsed),content:parsed,dependencies:dependencies(p),valid:true,authoredBy:'operator-import'});
+      p.gate='review';
+    }
   }else if(e.action==='refresh-writing-instructions'){
     requiredActor(e,'human');
     if(!e.message||p.step!=='script'||!p.studio||locked(p,'script')||p.jobs.length||p.artifacts.some(a=>a.approvedBy&&a.kind!=='answers'))throw new Error('WRITING_REFRESH_LOCKED: explicitly refresh only unapproved script work before media; approved answers and prior review evidence remain unchanged.');
@@ -496,7 +571,7 @@ export function applyEvent(project, raw) {
       if(!passConsented && identity?.status==='pass')throw new Error('HUMAN_VOICE_IDENTITY_REQUIRED: no original reference; never invent speaker similarity, source hashes or an automated identity pass.');
       if(reviewPassed(r)&&(!supervised(p)||!( (identity?.status==='inconclusive'&&m?.identityBasis==='human-recognition') || passConsented )))throw new Error('HUMAN_VOICE_IDENTITY_REQUIRED: use supervised human recognition without an original recording.');
     }
-    const required=p.step==='film'?filmCriteria(p):criteria[p.step];
+    const required=p.step==='film'?filmCriteria(p):criteriaFor(p);
     const names = r.checks.map(c => c.criterion);
     if (names.length !== required.length || new Set(names).size !== names.length || required.some(c => !names.includes(c))) throw new Error('Every required criterion needs exactly one evidenced finding.');
     const perception = ['audition', 'narration'].includes(p.step) ? 'direct-audio' : imageSteps.includes(p.step) ? 'direct-image' : p.step==='video'?'direct-video':p.step==='film'?(reviewPassed(a.visualReview)?'direct-audio':'direct-video'):['music','effect'].includes(p.step)?'direct-audio':'direct-text';
@@ -579,10 +654,15 @@ export function applyEvent(project, raw) {
     }
     if (['candidates', 'backgroundCandidates'].includes(p.step)) { if (![0, 1, 2].includes(e.selection)) throw new Error('Choose one of the three candidate indexes: 0, 1, 2.'); a.selection = e.selection; }
     if(supervised(p)&&a.content.files){
-      const h=Review.parse(e.humanReview);const needed=criteria[p.step],humanPerception=p.step==='film'?'direct-audiovisual':imageSteps.includes(p.step)?'direct-image':p.step==='video'?'direct-video':'direct-audio';
+      const h=Review.parse(e.humanReview);const needed=criteriaFor(p),humanPerception=p.step==='film'?'direct-audiovisual':imageSteps.includes(p.step)?'direct-image':p.step==='video'?'direct-video':'direct-audio';
       const isCrewReview = h.perception === 'crew-review' && crewReviewEligible(p, a);
-      if(h.decision!=='approved'||(h.perception!==humanPerception && !isCrewReview)||h.checks.length!==needed.length||needed.some(c=>!h.checks.some(x=>x.criterion===c&&x.status==='pass')))throw new Error('HUMAN_MEDIA_REVIEW_REQUIRED: confirm every criterion on the actual current media.');
-      a.humanReview=h;
+      if (isCrewReview && imageSteps.includes(p.step)) {
+        if(h.decision!=='approved')throw new Error('HUMAN_MEDIA_REVIEW_REQUIRED: confirm the crew-reviewed image selection.');
+        a.humanReview=h;
+      } else {
+        if(h.decision!=='approved'||(h.perception!==humanPerception && !isCrewReview)||h.checks.length!==needed.length||needed.some(c=>!h.checks.some(x=>x.criterion===c&&x.status==='pass')))throw new Error('HUMAN_MEDIA_REVIEW_REQUIRED: confirm every criterion on the actual current media.');
+        a.humanReview=h;
+      }
     }
     a.approvedBy = { message: e.message, at: new Date().toISOString() }; next(p);
   } else if (e.action === 'resolve') {
@@ -621,7 +701,8 @@ export function applyEvent(project, raw) {
     if(p.step==='clone'&&p.voiceChoice)throw new Error('EXISTING_VOICE_SELECTED: verify and reuse the selected voice; never create a replacement clone.');
     assertAllowed(p, p.step);
     const plan = Plans.parse(e.plan);
-    if (plan.operation !== p.step || plan.provider !== (imageSteps.includes(p.step)?'meta-muse':p.step==='video'?'replicate':['music','effect'].includes(p.step)?'elevenlabs':'cartesia')) throw new Error('Provider/operation does not match the current stage.');
+    if (plan.operation !== p.step || plan.provider !== (imageSteps.includes(p.step)?plan.provider:p.step==='video'?'replicate':['music','effect'].includes(p.step)?'elevenlabs':'cartesia')) throw new Error('Provider/operation does not match the current stage.');
+    if (imageSteps.includes(p.step) && !['agy', 'meta-muse'].includes(plan.provider)) throw new Error('Provider/operation does not match the current stage.');
     if(refinedWorkflow(p)&&p.step==='candidates'&&plan.parameters.prompt!==current(p,`characterPrompt:${p.characterId}`).content.prompt)throw new Error('Use the human-approved character design prompt exactly.');
     if (imageSteps.includes(p.step) && !plan.parameters.prompt) throw new Error('Image plan needs an authored prompt.');
     if (['backgroundCandidates', 'backgroundAngle'].includes(p.step) && (!locked(p, promptKey(p)) || plan.parameters.prompt !== current(p, promptKey(p)).content.prompt)) throw new Error('Use the human-approved background prompt exactly.');

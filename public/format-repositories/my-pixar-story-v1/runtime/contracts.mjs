@@ -38,6 +38,7 @@ const Scene = z.object({ id: slug, beat: z.number().int().min(1).max(4), descrip
 const Brief = z.object({ direction: text, sceneIds: z.array(slug).min(1), knownDetails: z.array(text), proposedDetails: z.array(text), continuityNotes: text, references: z.array(File).default([]) });
 const BackgroundPrompt = z.object({ prompt: text, recipeSha256: text, briefDigest: text, changeSummary: text });
 const Origin = z.object({ source: z.enum(['generated','imported']), description: text, usageRights: text });
+export const SheetProvenance = z.object({ source: z.enum(['generated', 'operator-import']), originalPath: text.optional(), sha256: text.optional(), importedAt: text.optional(), message: text.optional() }).strict();
 export const NarrationRegeneration=z.object({beat:z.number().int().min(1).max(4),spokenText:text}).strict();
 const NarrationRegenerationReceipt=NarrationRegeneration.extend({parentArtifactId:text,parentArtifactDigest:text,jobId:text,requestDigest:text}).strict();
 export const Content = {
@@ -68,11 +69,11 @@ export const Content = {
   audition: z.object({ files: z.array(File).length(1), voiceId: text, transcript: text }),
   narration: z.object({ files: z.array(File).length(4), voiceId: text, transcripts: z.array(text).length(4), model: text, sourceFiles:z.array(File).length(4).optional(), tailSilenceSeconds:z.array(z.number().nonnegative()).length(4).optional(),audioEdits:z.array(z.unknown()).min(1).max(4).optional(),audioRegenerations:z.array(NarrationRegenerationReceipt).min(1).max(4).optional() }),
   roster: z.object({ characters: z.array(Character).min(1).refine(xs => new Set(xs.map(c => c.id)).size === xs.length, 'Unique character IDs') }),
-  candidates: z.object({ files: z.array(File).length(3), prompt: text }),
+  candidates: z.object({ files: z.array(File).length(3), prompt: text, provenance: SheetProvenance.optional() }),
   sheetPrompt: z.object({ prompt: text, recipeSha256: text, referenceSha256: text,
     turnaround: z.tuple([z.literal('front'), z.literal('three-quarter'), z.literal('profile'), z.literal('back')]),
     expressions: z.array(text).length(8) }),
-  sheet: z.object({ files: z.array(File).length(1), prompt: text }),
+  sheet: z.object({ files: z.array(File).length(1), prompt: text, provenance: SheetProvenance.optional() }),
 };
 Content.shotIntentions = z.object({locations:Content.backgrounds.shape.locations,shots:Content.shots.shape.shots});
 export const criteria = {
@@ -113,10 +114,10 @@ export const Review = z.object({
   decision: z.enum(['approved', 'provisional', 'rejected', 'inconclusive']), repairTarget: z.enum(['current', 'script']).default('current'), repairArtifactId:text.optional(),
   perception: z.enum(['direct-text', 'direct-image', 'direct-audio', 'direct-video', 'direct-audiovisual', 'unavailable', 'crew-review']),
   checks: z.array(z.object({ criterion: text, status: z.enum(['pass', 'fail', 'inconclusive']), evidence: text,
-    location: text, repair: z.string().default('') })).min(1),
+    location: text, repair: z.string().default('') })).min(0),
   modelVersion:text.optional(), capabilityVersion:text.optional(),
   coverage:z.object({artifactSha256:text,videoSeconds:z.number().positive().optional(),audioSeconds:z.number().positive().optional(),audioFiles:z.array(z.object({sha256:text,seconds:z.number().positive()})).optional()}).optional(),
-  toolEvidence:z.array(z.object({tool:text,sha256:text,referenceSha256:text.optional(),seconds:z.number().positive().optional()})).optional(),
+  toolEvidence:z.array(z.object({tool:text,sha256:text,referenceSha256:text.optional(),seconds:z.number().positive().optional(),region:z.object({x:z.number(),y:z.number(),width:z.number(),height:z.number()}).optional()})).optional(),
   measurements: z.object({
     transcripts: z.array(text).optional(), speechToTextMethod: text.optional(),
     speakerSimilarity: z.number().min(0).max(1).optional(), speakerSimilarityMethod: text.optional(),
@@ -125,18 +126,19 @@ export const Review = z.object({
     truePeakDb: z.array(z.number()).optional(), comfort: z.array(z.object({harshness:z.boolean(),sibilance:z.boolean(),clippingOrDistortion:z.boolean(),suddenSpikes:z.boolean()})).optional(),
   }).optional(),
 });
-export const Plans = z.object({ provider: z.enum(['cartesia', 'meta-muse', 'replicate', 'elevenlabs']), operation: z.enum(['clone', 'audition', 'narration', 'candidates', 'sheet', 'backgroundCandidates', 'backgroundAngle', 'keyframe', 'video', 'music', 'effect']),
+export const Plans = z.object({ provider: z.enum(['cartesia', 'meta-muse', 'agy', 'replicate', 'elevenlabs']), operation: z.enum(['clone', 'audition', 'narration', 'candidates', 'sheet', 'backgroundCandidates', 'backgroundAngle', 'keyframe', 'video', 'music', 'effect']),
   estimatedCostUsd: z.number().nonnegative(), parameters: z.object({ model: text.optional(), prompt: text.optional(), cartesiaVersion: text.optional() }).strict() }).strict();
 const CreativeDirection=z.object({scope:z.enum(['script','cast']),direction:text,sourceMessages:z.array(text).min(1)}).strict();
 export const AudioInvestigation=z.object({beat:z.number().int().min(1).max(4),sha256:text,inspection:z.object({durationSeconds:z.number().positive(),method:text,pauses:z.array(z.object({startSeconds:z.number().nonnegative(),endSeconds:z.number().nonnegative()}))}),transcription:z.object({transcript:text,method:text,words:z.array(z.object({word:text,start:z.number().nonnegative(),end:z.number().nonnegative()}))})}).strict();
 export const PlanningBlocker=z.object({kind:z.enum(['account-readiness','missing-input','editing-infeasible']),problem:text.max(180),solution:text.max(240),steps:z.array(text.max(240)).min(1).max(5),beats:z.array(z.number().int().min(1).max(4)).min(1).max(4).optional()}).strict();
-export const Event = z.object({ taskId: text, action: z.enum(['recover-audio-edit','start-narration-regeneration','start-audio-edit','refresh-planning-instructions','planning-blocked','reuse-voice','refresh-audio-instructions','choose-voice','voice-verification-start','voice-verified','configure-debug','debug-next','debug-stop','upgrade-studio','refresh-writing-instructions','configure-crew', 'configure-review','set-budget','reserve-compute', 'start-audio-review', 'audio-qualified', 'artifact', 'owner-review', 'start-backgrounds', 'start-shots', 'start-studio', 'qualified', 'rendered', 'review', 'approve', 'changes', 'redo', 'abandon', 'reject', 'note', 'resolve', 'plan', 'authorize', 'begin', 'job-id', 'receipt', 'provider-error', 'reconcile', 'allowance']),
+export const Event = z.object({ taskId: text, action: z.enum(['recover-audio-edit','start-narration-regeneration','start-audio-edit','refresh-planning-instructions','planning-blocked','reuse-voice','refresh-audio-instructions','choose-voice','voice-verification-start','voice-verified','configure-debug','debug-next','debug-stop','upgrade-studio','upgrade-workflow','import-sheet','refresh-writing-instructions','configure-crew', 'configure-review','set-budget','reserve-compute', 'start-audio-review', 'audio-qualified', 'artifact', 'owner-review', 'start-backgrounds', 'start-shots', 'start-studio', 'qualified', 'rendered', 'review', 'approve', 'changes', 'redo', 'abandon', 'reject', 'note', 'resolve', 'plan', 'authorize', 'begin', 'job-id', 'receipt', 'provider-error', 'reconcile', 'allowance']),
   blocker:PlanningBlocker.optional(), audioInvestigation:z.array(AudioInvestigation).min(1).max(4).optional(),toolEvidence:Review.shape.toolEvidence, creativeDirection:CreativeDirection.optional(), debugEnabled:z.boolean().optional(),
   narrationRegeneration:NarrationRegeneration.optional(),
   budgetLimitUsd:z.number().nonnegative().optional(), reservation:z.object({id:text,provider:z.enum(['gemini','cartesia-stt']),estimatedCostUsd:z.number().positive()}).strict().optional(),
   actor: z.enum(['agent', 'reviewer', 'human', 'runtime']), workerId: text.optional(),
   resolvedFindings:z.array(z.object({findingDigest:text,resolution:text})).optional(), intakeConfirmation:IntakeConfirmation.optional(), impactDigest:text.optional(), artifactId: text.optional(), artifactDigest: text.optional(), message: text.optional(), selection: z.number().int().optional(),
-  reviewMode:z.enum(['supervised','qualified']).optional(), humanReview:Review.optional(), crew:z.unknown().optional(), content: z.unknown().optional(), review: Review.optional(), plan: Plans.optional(), jobId: text.optional(),
+  reviewMode:z.enum(['supervised','qualified']).optional(), workflowRevision:z.number().int().min(2).max(5).optional(), characterId:text.optional(), importFile:z.unknown().optional(), importProvenance:SheetProvenance.optional(),
+  humanReview:Review.optional(), crew:z.unknown().optional(), content: z.unknown().optional(), review: Review.optional(), plan: Plans.optional(), jobId: text.optional(),
   providerJobId: text.optional(), result: z.unknown().optional(), allowance: z.object({ operations: z.array(Plans.shape.operation).min(1), maxRequests: z.number().int().positive(), maxCostUsd: z.number().nonnegative(), repairOf:z.string().optional() }).strict().optional(),
 }).strict();
 export const Project = z.object({
@@ -145,7 +147,7 @@ export const Project = z.object({
   narrationRegeneration:NarrationRegeneration.extend({artifactId:text,artifactDigest:text,message:text}).strict().optional(),
   voiceChoice:VoiceChoiceInput.extend({selectedBy:z.object({message:text,at:text}),lookup:VoiceLookup.optional()}).optional(),
   debug:z.object({enabled:z.boolean(),paused:z.boolean()}).strict().optional(),
-  workflowRevision:z.number().int().min(2).max(4).default(2),
+  workflowRevision:z.number().int().min(2).max(5).default(2),
   productionProfile:z.enum(['legacy-seedance-hd','seedance-mini-480p']).default('legacy-seedance-hd'),
   budget:z.object({maxCostUsd:z.number().nonnegative(),reservations:z.array(z.object({id:text,provider:z.enum(['gemini','cartesia-stt']),estimatedCostUsd:z.number().positive()}))}).optional(), lifecycle:z.enum(['active','abandoned']).default('active'), reviewMode:z.enum(['supervised','qualified']).default('qualified'), crew:z.unknown().optional(), inputs: Inputs, step: z.enum(['answers', 'characterPrompt', 'script', 'voiceSample', 'clone', 'audioReviewerQualification', 'audition', 'narration', 'roster', 'candidates', 'sheetPrompt', 'sheet', 'backgrounds', 'backgroundBrief', 'backgroundPrompt', 'backgroundCandidates', 'backgroundAngleBrief', 'backgroundAnglePrompt', 'backgroundAngle', 'shotIntentions', 'shots', 'keyframePrompt', 'keyframe', 'video', 'reviewerQualification', 'videoPlan', 'videoPrompt', 'soundPlan', 'music', 'effect', 'editPlan', 'film', 'complete']),
   gate: z.enum(['author', 'owner-review', 'review', 'human', 'produce', 'authorize', 'collect', 'escalate', 'pending']),
