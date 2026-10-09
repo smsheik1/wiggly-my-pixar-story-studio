@@ -46,10 +46,21 @@ export async function verifyFiles(value) {
   }
   for (const child of Object.values(value)) await verifyFiles(child);
 }
+export function parseMeasureAudioOutput(stderr) {
+  const silenceSeconds = [...stderr.matchAll(/silence_duration: ([0-9.]+)/g)].reduce((sum, m) => sum + Number(m[1]), 0);
+  const integratedMatch = stderr.match(/I:\s+([-\d.]+)\s+LUFS/);
+  const peakMatch = stderr.match(/Peak:\s+([-\d.]+)\s+dBFS/);
+  return {
+    silenceSeconds,
+    integratedLufs: integratedMatch ? Number(integratedMatch[1]) : undefined,
+    truePeakDb: peakMatch ? Number(peakMatch[1]) : undefined
+  };
+}
+
 export async function measureAudio(file) {
   await verifyFiles(file);
-  const { stderr } = await exec('ffmpeg', ['-hide_banner', '-i', file.path, '-af', 'silencedetect=noise=-40dB:d=0.3', '-f', 'null', '-'], { maxBuffer: 2 ** 20 });
-  const silenceSeconds = [...stderr.matchAll(/silence_duration: ([0-9.]+)/g)].reduce((sum, m) => sum + Number(m[1]), 0);
-  return { path: file.path, sha256: file.sha256, durationSeconds: file.durationSeconds, silenceSeconds,
-    method: 'ffprobe duration; ffmpeg silencedetect -40dB, minimum 0.3s' };
+  const { stderr } = await exec('ffmpeg', ['-hide_banner', '-i', file.path, '-af', 'silencedetect=noise=-40dB:d=0.3,ebur128=peak=true', '-f', 'null', '-'], { maxBuffer: 2 ** 20 });
+  const parsed = parseMeasureAudioOutput(stderr);
+  return { path: file.path, sha256: file.sha256, durationSeconds: file.durationSeconds, ...parsed,
+    method: 'ffprobe duration; ffmpeg silencedetect -40dB, minimum 0.3s; ebur128' };
 }
