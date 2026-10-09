@@ -498,6 +498,13 @@ export function applyEvent(project, raw) {
     const next=loadStudio(),config=p.studio.config,documents={...p.studio.documents};
     for(const path of ['crew/vera/SKILL.md','evaluation/rubrics/visual.md']){if(!next.documents[path]||!p.studio.documents[path])throw new Error(`VISUAL_REFRESH_SCOPE: ${path} is not bound in this studio.`);documents[path]=next.documents[path];}
     p.studio={config,documents,sha256:digest({config,documents})};
+  }else if(e.action==='refresh-keyframe-instructions'){
+    requiredActor(e,'human');
+    if(!e.message||!p.studio||!['candidates','sheet','backgroundCandidates','backgroundAngle','keyframe'].includes(p.step)||!['produce','review','human','escalate'].includes(p.gate)||p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status))||p.artifacts.some(a=>a.key===keyFor(p)&&a.approvedBy))throw new Error('KEYFRAME_REFRESH_LOCKED: refresh June instructions explicitly for the current unapproved image item with reconciled jobs.');
+    // Copy ONLY June's skill and the scene rubric from the kit; config and every other document stay pinned.
+    const next=loadStudio(),config=p.studio.config,documents={...p.studio.documents};
+    for(const path of ['crew/june/SKILL.md','evaluation/rubrics/scene.md']){if(!next.documents[path]||!p.studio.documents[path])throw new Error(`KEYFRAME_REFRESH_SCOPE: ${path} is not bound in this studio.`);documents[path]=next.documents[path];}
+    p.studio={config,documents,sha256:digest({config,documents})};
   }else if(e.action==='prefer-image-provider'){
     requiredActor(e,'human');
     if(!e.message||!['meta-muse','agy'].includes(e.provider))throw new Error('prefer-image-provider needs --provider meta-muse|agy and --message "<text>".');

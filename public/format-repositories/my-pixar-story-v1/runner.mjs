@@ -16,7 +16,7 @@ import {prepareComposition, servePreview, verifyRenderer} from './runtime/remoti
 import { assemblyManifest, assertFilmInspection } from './runtime/studio.mjs';
 import {presentDeliverable,producerUpdate} from './runtime/presentation.mjs';
 import {Crew,crewRoles,runCrewTask,prepareCrewTask} from './runtime/crew.mjs';
-import {CodexHost,driveCrew,reconcileDispatch} from './runtime/codex-host.mjs';
+import {CodexHost,driveCrew,reconcileDispatch,reconcileNotDispatched} from './runtime/codex-host.mjs';
 import {createGeminiReviewTools,GEMINI_REVIEW_PROFILE} from './runtime/gemini-review.mjs';
 import {createCartesiaTranscriptionTool,CARTESIA_STT_PROFILE} from './runtime/cartesia-stt.mjs';
 import {createAudioEditTools,AUDIO_EDIT_PROFILE} from './runtime/audio-edit.mjs';
@@ -140,8 +140,13 @@ async function main() {
       const host=new CodexHost({cwd:join(runDir,'host-workspace'),timeoutMs:600000,perceptionTools,perceptionProfile:{media:GEMINI_REVIEW_PROFILE,transcription:CARTESIA_STT_PROFILE,audioEditing:AUDIO_EDIT_PROFILE},tracer,onProgress:({worker,item})=>process.stderr.write(`${worker}: ${item}\n`)});
       try{
         if(command==='dispatch-reconcile'){
-          const turnId=option('turn'),message=option('message');if(args.length)throw new Error('Unknown reconciliation arguments.');
-          await host.initialize();print(await reconcileDispatch(status.pending,host,{receiptDirectory:join(runDir,'host-dispatch'),turnId,message}));return;
+          const turnId=option('turn',null),notDispatched=option('not-dispatched',null),message=option('message');if(args.length)throw new Error('Unknown reconciliation arguments. Use --turn <id> --message "<direction>" or --not-dispatched true --message "<direction>".');
+          await host.initialize();
+          if(notDispatched!=null){
+           if(notDispatched!=='true'||turnId!=null)throw new Error('dispatch-reconcile --not-dispatched true needs --message and no --turn.');
+           print(await reconcileNotDispatched(status.pending,host,{receiptDirectory:join(runDir,'host-dispatch'),message}));return;
+          }
+          print(await reconcileDispatch(status.pending,host,{receiptDirectory:join(runDir,'host-dispatch'),turnId,message}));return;
         }
         if(['crew-start','crew-refresh'].includes(command)){
           if(command==='crew-refresh'){
@@ -254,6 +259,11 @@ async function main() {
       if (!message || args.length) throw new Error('refresh-visual-instructions needs --message "<actual human instruction>" --run <run>.');
       print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'refresh-visual-instructions', message }))); return;
     }
+    if (command === 'refresh-keyframe-instructions') {
+      const message = option('message');
+      if (!message || args.length) throw new Error('refresh-keyframe-instructions needs --message "<actual human instruction>" --run <run>.');
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'refresh-keyframe-instructions', message }))); return;
+    }
     if (command === 'generate' || command === 'collect') {
       const { project, pending } = status; const job = pending.job;
       if (pending.gate !== 'collect' || !job) throw new Error('Only a current authorized generation request can be executed/collected.');
@@ -294,7 +304,7 @@ async function main() {
         await runtimeEvent('provider-error',{message:diagnostic});throw new Error(`${diagnostic}\n${remediation(job.plan.provider,secretsPath)}`);
       }return;
     }
-    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, prefer-image-provider, refresh-visual-instructions, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
+    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
   } catch(error){
     const latest=await workflow.status('project').catch(()=>null);
     if(latest?.project.debug?.enabled&&!latest.project.debug.paused)await workflow.respond('project',{taskId:latest.pending.taskId,actor:'runtime',action:'debug-stop',message:'Command stopped: '+error.message});

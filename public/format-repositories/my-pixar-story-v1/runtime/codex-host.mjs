@@ -155,11 +155,17 @@ export class CodexHost {
   return {workers};
  }
 
- async runTask(task,{worker,callTool}){
-  if(this.active)throw new Error('CODEX_HOST_BUSY: one graph task at a time.');
-  if(worker.capabilityVersion!==await this.profile())throw new Error('CODEX_PROFILE_CHANGED: host/tool version differs from the bound crew. Stop for explicit reconfiguration/qualification.');
-  const resumed=await this.call('thread/resume',{threadId:worker.workerId,model:worker.modelVersion,cwd:this.cwd,approvalPolicy:'never',sandbox:'read-only'});
-  if(resumed.model!==worker.modelVersion||resumed.thread.id!==worker.workerId)throw new Error('CODEX_WORKER_CHANGED');
+  // Preflight runs the checks that can fail before any turn starts, so the
+  // driver can refuse before writing a started receipt. runTask keeps the
+  // same checks as defense in depth.
+  async preflight(worker){
+   if(worker.capabilityVersion!==await this.profile())throw new Error('CODEX_PROFILE_CHANGED: host/tool version differs from the bound crew. Stop for explicit reconfiguration/qualification.');
+   const resumed=await this.call('thread/resume',{threadId:worker.workerId,model:worker.modelVersion,cwd:this.cwd,approvalPolicy:'never',sandbox:'read-only'});
+   if(resumed.model!==worker.modelVersion||resumed.thread.id!==worker.workerId)throw new Error('CODEX_WORKER_CHANGED');
+  }
+  async runTask(task,{worker,callTool}){
+   if(this.active)throw new Error('CODEX_HOST_BUSY: one graph task at a time.');
+   await this.preflight(worker);
   const contentSchema=Content[task.step]?z.toJSONSchema(Content[task.step]):null;
   if(task.step==='answers'){
    contentSchema.properties.sourceInputDigest.const=task.sourceInputDigest;
@@ -218,6 +224,40 @@ export async function reconcileDispatch(task,host,{receiptDirectory,turnId,messa
  await saveJson(path,reconciled);return reconciled;
 }
 
+// Explicit not-dispatched recovery for a stranded started receipt that has no
+// Codex turn behind it (e.g. preflight refused before any turn started).
+// Never modifies the receipt unless native thread/read proves no turn exists,
+// is running, or references this task.
+export async function reconcileNotDispatched(task,host,{receiptDirectory,message}){
+ const path=join(receiptDirectory,task.taskId+'.json'),receipt=await readJson(path);
+ if(typeof message!=='string'||!message.trim()||receipt?.status!=='started'||receipt.taskId!==task.taskId||receipt.workerDigest!==digest(task.crewWorker))throw new Error('DISPATCH_RECONCILIATION_DENIED: current started receipt, exact worker and human direction required.');
+ if(receipt.turnId!=null||receipt.turn!=null||receipt.event!=null||receipt.reconciliation!=null)throw new Error('DISPATCH_RECONCILIATION_DENIED: receipt records a turn reference; use the --turn path.');
+ let result;try{result=await host.call('thread/read',{threadId:receipt.worker.workerId,includeTurns:true});}catch{throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: native thread/read failed; no retry permitted.');}
+ const thread=result?.thread;
+ // Missing turns is not proof of no turns: a durable crew thread always has its READY turn.
+ if(!thread||thread.id!==receipt.worker.workerId||!Array.isArray(thread.turns)||!thread.turns.length)throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: unexpected native thread; no retry permitted.');
+ for(const turn of thread.turns){
+  if(!turn||typeof turn.id!=='string'||typeof turn.status!=='string'||!Array.isArray(turn.items))throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: unexpected native turn; no retry permitted.');
+  if(!['completed','interrupted','failed'].includes(turn.status))throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: a turn may still be running; no retry permitted.');
+  for(const item of turn.items){
+   if(item?.type!=='userMessage')continue;
+   for(const part of item.content??[]){
+    if(part?.type!=='text'||typeof part.text!=='string')continue;
+    if(part.text.includes(task.taskId))throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: a native turn may reference this task; no retry permitted.');
+    let packet;try{packet=JSON.parse(part.text);}catch{continue;}
+    if(packet?.task?.taskId===task.taskId)throw new Error('DISPATCH_RECONCILIATION_UNCONFIRMED: a native turn references this task; no retry permitted.');
+   }
+  }
+ }
+ const archive=path+`.not-dispatched-${receipt.attempt}.json`,evidence=path+`.native-thread-${receipt.attempt}.json`;
+ for(const [target,value] of [[archive,receipt],[evidence,thread]]){
+  const prior=await readJson(target);if(prior&&digest(prior)!==digest(value))throw new Error('DISPATCH_RECEIPT_CONFLICT');
+  if(!prior)await writeFile(target,JSON.stringify(value)+'\n',{flag:'wx',mode:0o600});
+ }
+ const reconciled={...receipt,status:'not-dispatched',reconciliation:{outcome:'confirmed-not-dispatched',message,evidencePath:evidence,at:new Date().toISOString()}};
+ await saveJson(path,reconciled);return reconciled;
+}
+
 export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,repairInvalid=false,recoveryAttempt,verifySubmission=async()=>{},onProgress=()=>{},tracer=null}={}){
  maxTasks??=limitsFor((await workflow.status(thread)).project).crewTasksPerDispatch;
  if(!Number.isInteger(maxTasks)||maxTasks<1||maxTasks>32)throw new Error('Use a bounded maxTasks between 1 and 32.');
@@ -231,10 +271,14 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
   if(!['author','owner-review','review','produce'].includes(task.gate)||task.gate==='produce'&&task.step==='film'||['audioReviewerQualification','reviewerQualification'].includes(task.step))return {completed,stop:'graph-gate',status};
   onProgress({step:task.step,gate:task.gate});
    const path=join(receiptDirectory,task.taskId+'.json'),receipt=await readJson(path);
-   if(receipt&&receipt.workerDigest!==digest(task.crewWorker)&&!((receipt.status==='rejected'||receipt.status==='deferred')&&digest({...receipt.worker,capabilityVersion:null})===digest({...task.crewWorker,capabilityVersion:null})))throw new Error('DISPATCH_WORKER_CHANGED');
-   if(receipt?.status==='started')throw new Error(`CODEX_DISPATCH_UNCERTAIN: inspect ${path} and the saved worker turn before reconciling. No automatic rerun.`);
-   const attempt=receipt?.status==='deferred'?(receipt.attempt||1):((receipt?.attempt??0)+(receipt?.status==='rejected'?1:0)||1);
-   if(receipt?.status==='deferred'){
+    if(receipt&&receipt.workerDigest!==digest(task.crewWorker)&&!((receipt.status==='rejected'||receipt.status==='deferred'||receipt.status==='not-dispatched')&&digest({...receipt.worker,capabilityVersion:null})===digest({...task.crewWorker,capabilityVersion:null})))throw new Error('DISPATCH_WORKER_CHANGED');
+    if(receipt?.status==='started')throw new Error(`CODEX_DISPATCH_UNCERTAIN: inspect ${path} and the saved worker turn before reconciling. No automatic rerun.`);
+    const attempt=(receipt?.status==='deferred'||receipt?.status==='not-dispatched')?(receipt.attempt||1):((receipt?.attempt??0)+(receipt?.status==='rejected'?1:0)||1);
+    let event=receipt?.status==='completed'?receipt.event:null;
+    // Preflight before any receipt write so a refused dispatch leaves no
+    // stranded started receipt and never changes an existing receipt.
+    if(!event&&typeof host.preflight==='function')await host.preflight(task.crewWorker);
+    if(receipt?.status==='deferred'){
     if(receipt.reason!=='usage-limit')throw new Error(`CODEX_DISPATCH_UNKNOWN_DEFERRED: inspect ${path}.`);
     const archive=path+`.deferred-${receipt.attempt}.json`,prior=await readJson(archive);
     if(prior&&digest(prior)!==digest(receipt))throw new Error('DISPATCH_RECEIPT_CONFLICT');
@@ -247,8 +291,9 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
     if(prior&&digest(prior)!==digest(receipt))throw new Error('DISPATCH_RECEIPT_CONFLICT');
     if(!prior)await writeFile(archive,JSON.stringify(receipt)+'\n',{flag:'wx',mode:0o600});
    }
-  let event=receipt?.status==='completed'?receipt.event:null;
-  const started={status:'started',taskId:task.taskId,worker:task.crewWorker,workerDigest:digest(task.crewWorker),attempt,...(attempt>limitsFor(status.project).finishedWorkerAttempts?{recoveryAuthorization:{actor:'human',...recoveryAttempt,at:new Date().toISOString()}}:{})};
+   // A not-dispatched receipt was already archived by reconciliation; the new
+   // started receipt overwrites it at the same attempt without conflict.
+   const started={status:'started',taskId:task.taskId,worker:task.crewWorker,workerDigest:digest(task.crewWorker),attempt,...(attempt>limitsFor(status.project).finishedWorkerAttempts?{recoveryAuthorization:{actor:'human',...recoveryAttempt,at:new Date().toISOString()}}:{})};
   if(!event){
    if(receipt)await saveJson(path,started);else await writeFile(path,JSON.stringify(started)+'\n',{flag:'wx',mode:0o600});
   }
