@@ -58,12 +58,22 @@ Review the full clips and provide detailed feedback with timestamps and specific
 
 ## Visual Quality & Defect Standards
 
+### Keyframe review pass
+Default is a quick normal pass over each full image: call the full `viewImage` of every file (mandatory, never replaced by a crop). Hands/anatomy FAIL only on a clearly visible defect (extra/missing/fused fingers or limbs, broken joints, floating extremities). If fingers are simply too small to count and nothing looks wrong, anatomy is a PASS, not inconclusive. Zoomed region crops and finger counting happen ONLY after something is clearly wrong or rejected, to confirm the defect and localize the repair.
+
 ### Anatomy & Morphology
-- **Limb and Finger Count**: Strictly 2 arms, 2 legs, 2 hands, 5 fingers per hand. Zero tolerance for phantom limbs, fused fingers, six-fingered hands, or floating extremities.
-- **Joint and Facial Geometry**: Eyes must align naturally; teeth and mouth interiors must render cleanly without extra dental rows or melting jawlines.
+- **Clearly visible defects FAIL**: extra or missing limbs, fused or extra fingers, broken joints, floating extremities. Eyes must align naturally; teeth and mouth interiors must render cleanly without extra dental rows or melting jawlines.
+- **Too small to count is a PASS**: if fingers are simply too small to count and nothing looks wrong, anatomy is a PASS, not inconclusive. Never mark inconclusive or fail merely because hands are small, and never require a crop when the full view looks normal.
+
+### Style (`style`) for keyframes
+- **Required look**: stylized Pixar-like 3D feature animation. Simplified, appealing shapes; caricatured proportions (larger head and eyes, softened features); smooth stylized skin and hair; soft cinematic lighting.
+- **Photoreal FAILS**: fail `style` when the image reads as photoreal or as a photoreal/3D hybrid: photographic skin texture (pores, fine wrinkles, realistic stubble), real-human facial structure and proportions with only a CG gloss, photographic lighting/depth-of-field look, a real photo face on a 3D body, or uncanny-valley realism. "A real person rendered in 3D" is a fail, not a pass.
+- **Other wrong styles FAIL**: 2D, anime, claymation, sketch or painterly-flat looks.
+- **Likeness never excuses realism**: likeness is carried by stylized features (hair, face shape, skin tone, glasses, signature outfit). Never pass photoreal style to protect likeness; fail `style` and keep `likeness` as its own check.
+- Style is judged on the quick full-image view; it needs no crops.
 
 ### Video Clips (`video`)
-- **Temporal Limb Stability**: Watch the clip using `watchVideo` (4 FPS sampling). Scrutinize fast motions and reaches for spontaneous limb duplication, morphing fingers, or dissolving torsos.
+- **Temporal Limb Stability**: Watch the clip using `watchVideo` (4 FPS sampling). Hands/anatomy FAIL only on a clearly visible defect (extra/missing/fused fingers or limbs, broken joints, floating extremities, spontaneous limb duplication, morphing fingers, dissolving torsos). Scrutinize fast motions and reaches, but zoomed inspection and finger counting happen ONLY after something is clearly wrong, to confirm the defect and localize the repair.
 - **Identity & Landmark Drift**: Facial features, hair styling, costume details, and room geometry must remain stable across all frames.
 - **Physics & Motion Coherence**: Object interactions must obey gravity and spatial continuity; avoid unnatural rubbery motion or jarring camera jumps.
 
