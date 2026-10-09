@@ -198,6 +198,9 @@ test('Max can report a pricing blocker with canonical audition text without inve
  let calls=0;const host={runTask:async(task,{worker})=>{calls++;assert.deepEqual(task.generationTexts.beats,[{beat:1,text:script.beats[0].narration}]);assert.match(task.instruction,/no separate audition text/);return {taskId:task.taskId,actor:'agent',workerId:worker.workerId,action:'planning-blocked',message,blocker:{kind:'account-readiness',...task.planningGuide}};}};
  try{
   await assert.rejects(runCrewTask(p,task,{runTask:async()=>({taskId:task.taskId,actor:'agent',workerId:'not-max',action:'planning-blocked',message})}),/PERMISSION_DENIED/);
+  const injectedEvent = await runCrewTask(p,task,{runTask:async()=>({taskId:task.taskId,actor:'agent',action:'planning-blocked',message,blocker:{kind:'account-readiness',...task.planningGuide}})});
+  assert.equal(injectedEvent.workerId, task.crewWorker.workerId);
+
   await assert.rejects(runCrewTask(p,{...task,generationTexts:{...task.generationTexts,beats:[]} },host),/TASK_INPUT_MISMATCH/);
   assert.throws(()=>send(p,'planning-blocked',{actor:'human',message}),/agent authority|assigned worker/);
   const result=await driveCrew(workflow,'run',host,{receiptDirectory:dir});assert.equal(result.completed,1);assert.equal(p.gate,'escalate');assert.equal(p.debug.paused,true);assert.equal(p.jobs.length,0);assert.equal(calls,1);assert.deepEqual(p.artifacts.map(a=>JSON.stringify(a)),prior);assert.equal(JSON.stringify(p.budget),budget);

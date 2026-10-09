@@ -4,10 +4,11 @@ import { join } from 'node:path';
 import { criteria as contractsCriteria } from '../runtime/contracts.mjs';
 import { filmAudioCriteria } from '../runtime/workflow.mjs';
 
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 test('Ava SKILL.md criteria match runtime', () => {
-  const skillPath = join(new URL('.', import.meta.url).pathname, '../crew/ava/SKILL.md');
+  const skillPath = join(fileURLToPath(new URL('.', import.meta.url)), '../crew/ava/SKILL.md');
   const skillText = readFileSync(skillPath, 'utf8');
 
   const expectedStages = {

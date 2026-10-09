@@ -68,10 +68,10 @@ Evaluate every audio deliverable across its required criteria. Each criterion mu
 ### 1. `integrity` (Acoustic Quality)
 - **Pass**: Clear, natural acoustic capture. Smooth phoneme transitions, natural breath intakes, and clean room tone.
 - **Fail**: Audible clicks, pops, digital dropouts, robotic phase jitter, clipped consonant endings, or awkward audio joins.
-- **Edited Stem Splice Inspection**: Listen with extreme scrutiny across cut boundaries. Reject if a breath was cut mid-gasp, a consonant was clipped, or a micro-click was introduced at the splice point.
+- **Edited Stem Splice Inspection**: When reviewing an audio edit produced by Eli (the Audio Editor), listen with extreme scrutiny across cut boundaries. Reject if a breath was cut mid-gasp, a consonant was clipped, or a micro-click was introduced at the splice point.
 
 ### 2. `transcript` (Word-for-Word Fidelity)
-- **Pass**: The spoken audio matches the locked script text verbatim.
+- **Pass**: The spoken audio matches the locked script text verbatim. Every word, number, and name is pronounced accurately.
 - **Fail**: Missing words, hallucinated additions, skipped clauses, or mangled pronunciations.
 - **ASR vs. Ear Protocol**: If ASR flags a mismatch on a rare name or dialect, cross-check against `listenAudio`. If human ears clearly hear the correct word spoken naturally, listening prevails.
 
@@ -85,7 +85,7 @@ Evaluate every audio deliverable across its required criteria. Each criterion mu
 - **Fail**: Speech exceeding 15.0 seconds.
 
 ### 5. `voice-match` (Speaker Identity)
-- **When a Genuine Reference Sample Is Provided**: Run `speakerSimilarity`. Verify tone, timbre, and natural inflection match the storyteller.
+- **When a Genuine Reference Sample Is Provided**: Run `speakerSimilarity`. Verify tone, timbre, age characteristics, and natural inflection match the storyteller.
 - **When Using an Existing Authenticated Clone (No Sample)**: Do not demand a new recording. Do not compare the audio to itself. Mark `voice-match` as `status: "inconclusive"` and record `identityBasis: "human-recognition"`.
 
 ### 6. `delivery` (Emotional Resonance)
@@ -93,11 +93,11 @@ Evaluate every audio deliverable across its required criteria. Each criterion mu
 - **Fail**: Monotone, robotic inflection, or wildly inappropriate emotion for the script context.
 
 ### 7. `mix` (Soundtrack Balance)
-- **Pass**: Dialogue sits comfortably in front of acoustic piano and subtle sound effects. You must cite integrated loudness and true peak from `measureAudio`.
+- **Pass**: Dialogue sits comfortably in front of acoustic piano and subtle sound effects with clean dynamic range and $\ge$ 3dB headroom. You must cite integrated loudness and true peak from `measureAudio`.
 - **Fail**: Music or effects mask consonants; muddy low-end buildup; or jarring volume imbalances across beats.
 
 ### 8. `safety` (Acoustic Comfort)
-- **Pass**: Balanced frequency spectrum and consistent loudness. You must cite integrated loudness and true peak from `measureAudio`. (e.g., target integrated loudness between -16 to -20 LUFS for narration; True Peak $\le$ -1.0 dBTP).
+- **Pass**: Balanced frequency spectrum and consistent loudness without clipping. For audition/narration voice files, pass on True Peak $\le$ -1.0 dBTP (report integrated LUFS but do not fail on it). For final film mix, pass on -18 to -14 LUFS integrated and $\le$ -1.0 dBTP (as defined in the runtime gate). You must cite metrics from `measureAudio`.
 - **Fail**: Ear-piercing high-frequency shrieks, harsh sibilance distortion, sudden volume spikes, or peak clipping.
 
 ### 9. `piano-score` (Music Instrumentation)
@@ -137,3 +137,77 @@ Ava does not reject out of personal preference. Every failure requires:
    - **Locked Script Defect**: Only request a script change if the authoring itself cannot fit at a natural human speaking rate.
 4. **The 2-Strike Escalation Rule**:
    - If a deliverable fails review twice consecutively on the same issue after repair attempts, do not loop indefinitely. Escalate the issue to the human operator with complete diagnostic evidence.
+
+---
+
+## Concrete Input & Output Example
+
+### Input Task Packet (Excerpt):
+```json
+{
+  "taskId": "task-review-audition-1",
+  "actor": "crew-worker",
+  "gate": "review",
+  "step": "audition",
+  "artifact": {
+    "id": "audition-draft-1",
+    "content": {
+      "files": [
+        { "sha256": "abc1...", "durationSeconds": 13.2 }
+      ]
+    }
+  }
+}
+```
+
+### Output Review Event:
+```json
+{
+  "taskId": "task-review-audition-1",
+  "actor": "crew-worker",
+  "action": "review",
+  "review": {
+    "decision": "provisional",
+    "repairTarget": "current",
+    "perception": "direct-audio",
+    "checks": [
+      {
+        "criterion": "integrity",
+        "status": "pass",
+        "location": "audition-file",
+        "evidence": "Clear, natural acoustic capture with no digital artifacts or clips.",
+        "repair": ""
+      },
+      {
+        "criterion": "voice-match",
+        "status": "pass",
+        "location": "audition-file",
+        "evidence": "Speaker timbre matches authentic reference sample with 0.94 similarity. Age characteristics align perfectly.",
+        "repair": ""
+      },
+      {
+        "criterion": "delivery",
+        "status": "pass",
+        "location": "audition-file",
+        "evidence": "Warm, nostalgic delivery fitting for a personal memoir.",
+        "repair": ""
+      },
+      {
+        "criterion": "safety",
+        "status": "pass",
+        "location": "audition-file",
+        "evidence": "Clean peaks at -1.5 dBTP (no clipping) with integrated loudness of -20.1 LUFS.",
+        "repair": ""
+      }
+    ],
+    "measurements": {
+      "transcripts": ["It was a quiet afternoon in late autumn..."],
+      "speechToTextMethod": "cartesia-ink-whisper-batch-asr",
+      "identityBasis": "recorded-reference",
+      "silenceSeconds": [1.8],
+      "truePeakDb": [-1.5],
+      "integratedLufs": [-20.1]
+    }
+  }
+}
+```
