@@ -264,6 +264,11 @@ async function main() {
       if (!message || args.length) throw new Error('refresh-keyframe-instructions needs --message "<actual human instruction>" --run <run>.');
       print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'refresh-keyframe-instructions', message }))); return;
     }
+    if (command === 'refresh-text-instructions') {
+      const message = option('message');
+      if (!message || args.length) throw new Error('refresh-text-instructions needs --message "<actual human instruction>" --run <run>.');
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'refresh-text-instructions', message }))); return;
+    }
     if (command === 'generate' || command === 'collect') {
       const { project, pending } = status; const job = pending.job;
       if (pending.gate !== 'collect' || !job) throw new Error('Only a current authorized generation request can be executed/collected.');
@@ -304,7 +309,7 @@ async function main() {
         await runtimeEvent('provider-error',{message:diagnostic});throw new Error(`${diagnostic}\n${remediation(job.plan.provider,secretsPath)}`);
       }return;
     }
-    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
+    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, refresh-text-instructions, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
   } catch(error){
     const latest=await workflow.status('project').catch(()=>null);
     if(latest?.project.debug?.enabled&&!latest.project.debug.paused)await workflow.respond('project',{taskId:latest.pending.taskId,actor:'runtime',action:'debug-stop',message:'Command stopped: '+error.message});

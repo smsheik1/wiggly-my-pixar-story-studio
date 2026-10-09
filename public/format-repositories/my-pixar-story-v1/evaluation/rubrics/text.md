@@ -19,7 +19,7 @@ The task's `step` and required criteria determine the review. Apply shared groun
 | roster | Necessary roles/age looks and rights/reference evidence or explicit interpreted likeness. Birthday differences alone do not establish distinct looks. |
 | characterPrompt / sheetPrompt | Cast/reference fit and the supplied recipe; sheet layout specifies the turnaround and eight expressions while preserving the selected identity. |
 | shotIntentions / shots | Coverage of locked beats, timing, scene fit, available references, workable staging and continuity. |
-| backgrounds | Required locations and angles derived from the reviewed shots, with essential dependencies flagged. |
+| backgrounds | Required locations and angles derived from the reviewed shots, with essential dependencies flagged. Master-plate-only coverage (`angles: []`) passes when all approved shots have null angle bindings. |
 | backgroundBrief / backgroundAngleBrief | Immediate scene intent, grounded place facts, spatial action and continuity. Script is primary; questionnaire supports it. |
 | backgroundPrompt / backgroundAnglePrompt | Fidelity to the approved brief, style recipe, space for the action and consistent location geometry. |
 | keyframePrompt | Scene intent, exact character/background references, staging, camera and continuity. |

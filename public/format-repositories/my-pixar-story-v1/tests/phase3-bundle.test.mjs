@@ -12,8 +12,9 @@ import { loadStudio } from '../runtime/instructions.mjs';
 import { digest, criteria } from '../runtime/contracts.mjs';
 import { runCrewTask } from '../runtime/crew.mjs';
 import { audioProject, inputs, file, send, reviewed, approved } from './helpers.mjs';
-import { image, author } from './background-helpers.mjs';
-import { supervisedAudio, confirmed } from './supervised-helpers.mjs';
+import { image, author, registry } from './background-helpers.mjs';
+import { shotPlan } from './shot-helpers.mjs';
+import { supervisedAudio, confirmed, supervisedCharacters } from './supervised-helpers.mjs';
 
 const sha = s => createHash('sha256').update(s).digest('hex');
 
@@ -208,4 +209,37 @@ test('Vera skill and visual rubric fail photoreal or 3D-hybrid style and keep th
   }
   assert.match(vera, /Never pass photoreal style to protect likeness/);
   assert.doesNotMatch(vera, /five distinct fingers/);
+});
+
+test('refresh-text-instructions applies only Sage skill and text rubric', () => {
+  let p = initialProject('refresh-sage', inputs, { workflowRevision: 2 });
+  const kit = loadStudio();
+  const oldSage = kit.documents['crew/sage/SKILL.md'].content + '\n<!-- isolated old sage -->';
+  const oldRubric = kit.documents['evaluation/rubrics/text.md'].content + '\n<!-- isolated old text rubric -->';
+  p.studio.documents['crew/sage/SKILL.md'] = { content: oldSage, sha256: sha(oldSage) };
+  p.studio.documents['evaluation/rubrics/text.md'] = { content: oldRubric, sha256: sha(oldRubric) };
+  p.studio.sha256 = digest({ config: p.studio.config, documents: p.studio.documents });
+  p = send(p, 'refresh-text-instructions', { actor: 'human', message: 'ISOLATED refresh Sage for script' });
+  assert.equal(p.studio.documents['crew/sage/SKILL.md'].content, kit.documents['crew/sage/SKILL.md'].content);
+  assert.equal(p.studio.documents['evaluation/rubrics/text.md'].content, kit.documents['evaluation/rubrics/text.md'].content);
+});
+
+test('refresh-text-instructions works at backgrounds step in supervised mode', () => {
+  let p = supervisedCharacters();
+  p = approved(reviewed(author(p, { ...registry, ...shotPlan }, 'shot-planner')));
+  assert.equal(p.step, 'backgrounds');
+  assert.equal(p.gate, 'author');
+  const kit = loadStudio();
+  const oldSage = kit.documents['crew/sage/SKILL.md'].content + '\n<!-- isolated old sage -->';
+  p.studio.documents['crew/sage/SKILL.md'] = { content: oldSage, sha256: sha(oldSage) };
+  p.studio.sha256 = digest({ config: p.studio.config, documents: p.studio.documents });
+  p = send(p, 'refresh-text-instructions', { actor: 'human', message: 'ISOLATED refresh Sage for backgrounds' });
+  assert.equal(p.studio.documents['crew/sage/SKILL.md'].content, kit.documents['crew/sage/SKILL.md'].content);
+});
+
+test('Sage skill and text rubric specify that master-plate-only coverage with empty angles array passes', () => {
+  const kit = loadStudio();
+  const sage = kit.documents['crew/sage/SKILL.md'].content, textRubric = kit.documents['evaluation/rubrics/text.md'].content;
+  assert.match(sage, /Master-plate coverage \(`angles: \[\]`\) passes when all approved shots use master plates/);
+  assert.match(textRubric, /Master-plate-only coverage \(`angles: \[\]`\) passes when all approved shots have null angle bindings/);
 });
