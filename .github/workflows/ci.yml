@@ -32,8 +32,10 @@ jobs:
         run: |
           pass=$(grep -c "^ok " /tmp/studio.tap || true)
           fail=$(grep -c "^not ok" /tmp/studio.tap || true)
-          echo "studio pass=$pass fail=$fail"
+          summary=$(grep "^# pass " /tmp/studio.tap | awk '{print $3}')
+          echo "studio pass=$pass summary_pass=$summary fail=$fail"
           test "$fail" = "0"
+          test "$summary" = "123"
           test "$pass" = "123"
       - run: npm run check
   kit:
@@ -58,11 +60,20 @@ jobs:
         timeout-minutes: 1
       - run: npm --prefix public/format-repositories/my-pixar-story-v1 ci
       - run: npm --prefix public/format-repositories/my-pixar-story-v1 rebuild better-sqlite3 esbuild
+      - name: Install official Memoir renderer (hash-verified, same archive as npm run setup)
+        run: |
+          archive=scripts/studio-spike/format-packages/memoir-v2.0.0.tgz
+          expected=$(grep -oE 'MEMOIR_PACKAGE_SHA256 = "[0-9a-f]{64}"' scripts/studio-spike/memoir-format.ts | grep -oE '[0-9a-f]{64}')
+          test -n "$expected"
+          echo "$expected  $archive" | sha256sum -c -
+          mkdir -p public/format-repositories/my-pixar-story-v1/build
+          tar -xzf "$archive" -C public/format-repositories/my-pixar-story-v1 build/remotion
+          test -f public/format-repositories/my-pixar-story-v1/build/remotion/renderer-manifest.json
       - name: Kit tests shard ${{ matrix.shard }}/4
         run: |
           set -o pipefail
           cd public/format-repositories/my-pixar-story-v1
-          node --test --test-concurrency=6 --test-shard=${{ matrix.shard }}/4 --test-reporter=tap "tests/*.test.mjs" 2>&1 | tee /tmp/kit-shard-${{ matrix.shard }}.tap
+          node --test --test-concurrency=2 --test-shard=${{ matrix.shard }}/4 --test-reporter=tap "tests/*.test.mjs" 2>&1 | tee /tmp/kit-shard-${{ matrix.shard }}.tap
       - uses: actions/upload-artifact@v4
         with:
           name: kit-tap-${{ matrix.shard }}
@@ -75,10 +86,14 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: /tmp/kit-taps
-      - name: Assert kit totals (278 tests across 4 shards, 0 failures)
+      - name: Assert kit totals (279 tests across 4 shards, 0 failures)
         run: |
-          pass=$(grep -h "^ok " /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l)
-          fail=$(grep -h "^not ok" /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l || true)
-          echo "kit pass=$pass fail=$fail"
+          shards=$(( $(ls /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l) ))
+          pass=$(( $(grep -h "^ok " /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l) ))
+          fail=$(( $(grep -h "^not ok" /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l) ))
+          summary=$(grep -h "^# pass " /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | awk '{s+=$3} END {print s+0}')
+          echo "kit shards=$shards pass=$pass summary_pass=$summary fail=$fail"
+          test "$shards" = "4"
           test "$fail" = "0"
-          test "$pass" = "278"
+          test "$pass" = "279"
+          test "$summary" = "279"

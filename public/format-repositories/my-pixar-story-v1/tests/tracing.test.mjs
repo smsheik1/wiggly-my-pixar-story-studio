@@ -105,3 +105,27 @@ test('throwing tracing backend never breaks driveCrew',async()=>{
   assert.equal(result.completed,1);
  }finally{workflow.close();await rm(dir,{recursive:true});}
 });
+
+test('live LangSmith path ends every run, keeps digests and scrubs any secrets-file value (fake fetch, no network)',async()=>{
+ const {dir,path}=await secretsFile('OTHER_TOKEN=zz-unlisted-secret-999\n');
+ const bodies=[];
+ const fetcher=async(url,init={})=>{let body=init.body;if(body&&typeof body!=='string')body=await new Response(body).text();bodies.push(String(body??''));return new Response(JSON.stringify({batch_ingest_config:{use_multipart_endpoint:false}}),{status:200,headers:{'content-type':'application/json'}});};
+ try{
+  const tracer=await createTracer({secretsPath:path,runId:'live-check',fetcher});
+  assert.equal(tracer.enabled,true);
+  const sha='a'.repeat(64);
+  const turn=tracer.turn({role:'visual-reviewer',taskId:'t1',note:'zz-unlisted-secret-999',key:fakeSecret,evidence:{imageUrl:fakePngDataUrl,sha256:sha}});
+  turn.end({outcome:'completed',durationMs:1});
+  await new Promise(resolve=>setTimeout(resolve,20));
+  await tracer.flush(5000);
+  const sent=bodies.join('\n');
+  assert.ok(!sent.includes('zz-unlisted-secret-999'),'unlisted secrets-file value leaked');
+  assert.ok(!sent.includes(fakeSecret),'secret value leaked');
+  assert.ok(!sent.includes('base64,'),'data URL leaked');
+  assert.ok(sent.includes(sha),'hex digest was wrongly omitted');
+  const runs=sent.split('\n').filter(Boolean).flatMap(line=>{try{const batch=JSON.parse(line);return [...(batch.post??[]),...(batch.patch??[])];}catch{return [];}});
+  const ended=new Set(runs.filter(run=>run.end_time).map(run=>run.name));
+  assert.ok(ended.has('drive-codex'),'root run never ended');
+  assert.ok(ended.has('crew-turn:visual-reviewer'),'child run never ended');
+ }finally{await rm(dir,{recursive:true});}
+});

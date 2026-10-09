@@ -7,6 +7,8 @@ export const TRACING_PROJECT='wiggly-my-pixar-story';
 function sha256Hex(bytes){return createHash('sha256').update(bytes).digest('hex');}
 function isBase64Blob(s){
  if(typeof s!=='string'||s.length<64)return false;
+ // Hex digests (sha256 etc.) are safe identifiers, not media payloads.
+ if(/^[0-9a-f]{64,128}$/i.test(s))return false;
  if(s.length>200000)return true;
  return /^[A-Za-z0-9+/=_-]+$/.test(s.slice(0,2048))&&/^[A-Za-z0-9+/]+={0,2}$/.test(s.slice(0,512))&&s.length%4===0;
 }
@@ -84,10 +86,11 @@ export async function createTracer({secretsPath,runId='local',projectName=TRACIN
  try{source=await readFile(secretsPath,'utf8');}catch{return disabledTracer();}
  const apiKey=extractValue(source,'LANGSMITH_API_KEY');
  if(!apiKey)return disabledTracer();
+ // Every value in the secrets file is scrubbed, not only known key names.
  const secrets=[apiKey];
- for(const name of ['CARTESIA_API_KEY','META_API_KEY','REPLICATE_API_TOKEN','ELEVENLABS_API_KEY','GEMINI_API_KEY']){
-  const value=extractValue(source,name);
-  if(value)secrets.push(value);
+ for(const match of source.matchAll(/^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=\s*(.+?)\s*$/gm)){
+  const value=match[1].replace(/^(['"])(.*)\1$/,'$2');
+  if(value&&value.length>=8)secrets.push(value);
  }
  const tags=[`run:${runId}`];
  const safe=(value)=>{try{return sanitize(value,secrets);}catch{return {sanitize_failed:true};}};
@@ -122,7 +125,8 @@ export async function createTracer({secretsPath,runId='local',projectName=TRACIN
    try{
     const tree=new RunTree({name,run_type,parent_run:root,inputs:safe(fields),project_name:projectName,tags,metadata:safe(fields),client:ls});
     tree.postRun().catch(error=>warnOnce(error.message));
-    return {end:(outputs={},errorText)=>{try{tree.end(safe(outputs),errorText).catch(error=>warnOnce(error.message));}catch(error){warnOnce(error.message);}}};
+    // RunTree.end() only records locally; patchRun() sends the end time/outputs.
+    return {end:(outputs={},errorText)=>{try{Promise.resolve(tree.end(safe(outputs),errorText)).then(()=>tree.patchRun()).catch(error=>warnOnce(error.message));}catch(error){warnOnce(error.message);}}};
    }catch(error){warnOnce(error.message);return {end(){}};}
   };
   let flushed=false;
@@ -134,8 +138,10 @@ export async function createTracer({secretsPath,runId='local',projectName=TRACIN
    paidJob:(fields={})=>{child(`paid-job:${fields.provider??'unknown'}`,'tool',fields).end({provider:fields.provider,estimatedCostUsd:fields.estimatedCostUsd,actualCostUsd:fields.actualCostUsd});},
    flush:async(timeoutMs=5000)=>{
     if(flushed)return;flushed=true;
-    try{await Promise.race([ls.awaitPendingTraceBatches(),new Promise(resolve=>setTimeout(resolve,timeoutMs))]);}
+    let timer;
+    try{await Promise.race([(async()=>{await root.end(safe({runId}));await root.patchRun();await ls.awaitPendingTraceBatches();})(),new Promise(resolve=>{timer=setTimeout(resolve,timeoutMs);timer.unref?.();})]);}
     catch(error){warnOnce(error.message);}
+    finally{clearTimeout(timer);}
    },
   };
  }catch(error){warnOnce(error.message);return disabledTracer();}
