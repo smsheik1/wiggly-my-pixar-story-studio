@@ -247,6 +247,20 @@ const generationScope=p=>current(p,p.step==='candidates'?'roster':p.step==='shee
 function hasDependency(p,ids,target){
  const queue=[...ids],seen=new Set();while(queue.length){const id=queue.pop();if(id===target)return true;if(seen.has(id))continue;seen.add(id);queue.push(...(p.artifacts.find(a=>a.id===id)?.dependencies??[]));}return false;
 }
+export function crewReviewEligible(p, a = current(p)) {
+  if (!a || !['audition', 'narration'].includes(p.step)) return false;
+  const files = a.content?.files ?? [];
+  if (!files.length) return false;
+  if (a.review?.decision !== 'approved') return false;
+  if (!a.review.checks?.length || !a.review.checks.every(c => c.status === 'pass')) return false;
+  if (voiceBasis(p).kind !== 'existing-clone' || !consentedVoiceIdentity(p, a).verified) return false;
+  const m = a.review.measurements;
+  if (!m || !Array.isArray(m.truePeakDb) || !Array.isArray(m.comfort)) return false;
+  if (m.truePeakDb.length !== files.length || m.comfort.length !== files.length) return false;
+  if (!m.truePeakDb.every(v => typeof v === 'number' && v <= -1)) return false;
+  if (!m.comfort.every(c => c && !c.harshness && !c.sibilance && !c.clippingOrDistortion && !c.suddenSpikes)) return false;
+  return true;
+}
 export function taskFor(p) {
   const a = current(p), loaded=workerInstructions(p,roleFor(p));
   const shot = ['keyframePrompt', 'keyframe'].includes(p.step) ? shotFor(p) : ['videoPrompt','video'].includes(p.step)?videoBinding(p).shot:null;
@@ -254,7 +268,7 @@ export function taskFor(p) {
   const job = p.jobs.findLast(j => j.key === keyFor(p) && !['ready', 'failed'].includes(j.status));
   const voiceIdState = consentedVoiceIdentity(p, a);
   return { ...loaded, communication:communicationFor(p),studioConfig:studioFor(p)?.config??null,taskId: digest({ id: p.id, sequence: p.sequence, step: p.step, gate: p.gate }), projectId: p.id,
-    reviewPolicy:{mode:p.reviewMode,qualificationRequired:!supervised(p),humanMediaConfirmationRequired:supervised(p)&&!( ['audition','narration'].includes(p.step) && current(p)?.review?.decision === 'approved' ),speakerMeasurementRequired:!supervised(p),automaticVideoRepairAllowed:!supervised(p)&&!miniProduction(p)},
+    reviewPolicy:{mode:p.reviewMode,qualificationRequired:!supervised(p),humanMediaConfirmationRequired:supervised(p)&&!crewReviewEligible(p,a),speakerMeasurementRequired:!supervised(p),automaticVideoRepairAllowed:!supervised(p)&&!miniProduction(p)},
     lifecycle:p.lifecycle,budget:spendSummary(p),
     voiceIdentity: {basis: voiceBasis(p).kind==='recorded-reference'?'recorded-reference':voiceIdState.verified?'consented-voice-id':'human-recognition', verified: voiceIdState.verified, boundVoiceId: voiceIdState.boundVoiceId},
     productionProfile:p.productionProfile,repairNotices:repairNotices(p),workflowRevision:p.workflowRevision, step: p.step, gate: p.gate, clipId:p.clipId,effectId:p.effectId, characterId: p.characterId, locationId: p.locationId, angleId: p.angleId, shotId: p.shotId,
@@ -487,6 +501,7 @@ export function applyEvent(project, raw) {
     if (names.length !== required.length || new Set(names).size !== names.length || required.some(c => !names.includes(c))) throw new Error('Every required criterion needs exactly one evidenced finding.');
     const perception = ['audition', 'narration'].includes(p.step) ? 'direct-audio' : imageSteps.includes(p.step) ? 'direct-image' : p.step==='video'?'direct-video':p.step==='film'?(reviewPassed(a.visualReview)?'direct-audio':'direct-video'):['music','effect'].includes(p.step)?'direct-audio':'direct-text';
     if(r.decision==='provisional'&&(!supervised(p)||r.perception!==perception||r.checks.some(c=>c.status==='fail')))throw new Error('Provisional review requires supervised mode, actual perception and no known failures.');
+    if(r.decision==='provisional'&&supervised(p)&&r.checks.every(c=>c.status==='pass'))throw new Error('REVIEW_VERDICT_MISMATCH: a supervised review with every check passing must use decision approved; provisional is only for reviews with an inconclusive check and no failures.');
     if (r.decision === 'approved' && (r.perception !== perception || r.checks.some(c => c.status !== 'pass'))) throw new Error('Cannot approve missing perception or failing/inconclusive checks.');
     if (r.decision === 'rejected' && !r.checks.some(c => c.status === 'fail' && c.repair.trim())) throw new Error('Rejection requires a failed criterion and a specific repair.');
     if (r.checks.some(c => c.status === 'fail' && !c.repair.trim())) throw new Error('Every failure requires a specific repair.');
@@ -495,14 +510,20 @@ export function applyEvent(project, raw) {
     const filmAudio=p.step==='film'&&reviewPassed(a.visualReview);
     if(r.decision!=='inconclusive'&&(p.step==='video'||p.step==='film'&&!filmAudio)){const q=supervised(p)?{workerId:e.workerId,modelVersion:r.modelVersion,capabilityVersion:r.capabilityVersion}:current(p,'reviewerQualification').content;if(!supervised(p))requireVisualQualification(q,'video');if(r.perception!==perception||e.workerId!==q.workerId||r.modelVersion!==q.modelVersion||(q.capabilityVersion&&r.capabilityVersion!==q.capabilityVersion)||r.coverage?.artifactSha256!==a.content.files[0].sha256||(!r.coverage.videoSeconds||r.coverage.videoSeconds+1/30<a.content.files[0].durationSeconds))throw new Error('Qualified reviewer must directly inspect the entire current video/audio and bind its hash/model.');}
     if(r.decision!=='inconclusive'&&(['audition','narration','music','effect'].includes(p.step)||filmAudio)){const q=supervised(p)?{workerId:e.workerId,modelVersion:r.modelVersion,capabilityVersion:r.capabilityVersion}:current(p,'audioReviewerQualification')?.content;if(!supervised(p))requireAudioQualification(q);if(r.perception!==perception||!supervised(p)&&!locked(p,'audioReviewerQualification')||e.workerId!==q.workerId||r.modelVersion!==q.modelVersion||r.capabilityVersion!==q.capabilityVersion||e.workerId===a.visualReviewedBy)throw new Error('Qualified independent audio reviewer must bind its model and tool profile.');const coverage=r.coverage?.audioFiles;if(!coverage||coverage.length!==a.content.files.length||a.content.files.some((f,i)=>coverage[i].sha256!==f.sha256||coverage[i].seconds+.02<f.durationSeconds))throw new Error('Audio reviewer must hear every entire current file and bind its hash.');}
+    if (['audition', 'narration'].includes(p.step)) {
+      const m = r.measurements;
+      const safetyCheck = r.checks.find(c => c.criterion === 'safety');
+      if (safetyCheck && m?.truePeakDb?.length === a.content.files.length && m?.comfort?.length === a.content.files.length) {
+        const hasUnsafe = m.truePeakDb.some(v => v > -1) || m.comfort.some(c => c.harshness || c.sibilance || c.clippingOrDistortion || c.suddenSpikes);
+        const expected = hasUnsafe ? 'fail' : 'pass';
+        if (safetyCheck.status !== expected) throw new Error('SAFETY_EVIDENCE_MISMATCH');
+      } else if (safetyCheck?.status !== 'fail' && (m?.truePeakDb?.some(v => v > -1) || m?.comfort?.some(c => c.harshness || c.sibilance || c.clippingOrDistortion || c.suddenSpikes))) {
+        throw new Error('SAFETY_EVIDENCE_MISMATCH');
+      }
+    }
     if (reviewPassed(r) && ['audition', 'narration'].includes(p.step)) {
       if (a.content.files.some(f => f.durationSeconds > 15)) throw new Error('Overlong narration cannot be approved; return the affected text to the writer, never accelerate it.');
       const m = r.measurements,basis=voiceBasis(p);
-      if (m?.truePeakDb || m?.comfort) {
-        if (m.truePeakDb?.some(v => v > -1) || m.comfort?.some(c => c.harshness || c.sibilance || c.clippingOrDistortion || c.suddenSpikes)) {
-          throw new Error('SAFETY_EVIDENCE_MISMATCH');
-        }
-      }
       if (!m || !m.speechToTextMethod || (!supervised(p)&&(!m.speakerSimilarityMethod || m.speakerSimilarity === undefined)) || !m.measurementNotes || basis.kind==='unavailable' || (basis.kind==='recorded-reference'&&m.referenceSha256!==basis.referenceSha256) || m.transcripts?.length !== a.content.files.length || m.speakingRateWpm?.length !== a.content.files.length || m.silenceSeconds?.length !== a.content.files.length) throw new Error('Audio review requires transcript, speaking-rate/silence measurements, notes and truthful identity evidence for the current voice basis.');
       if (m.transcripts.some((t, i) => transcriptDiff(a.content.audioRegenerations?.find(x=>x.beat===i+1)?.spokenText??current(p, 'script').content.beats[i].narration,t).editDistance)) throw new Error('Speech-to-text differs from the locked script.');
     }
@@ -559,8 +580,7 @@ export function applyEvent(project, raw) {
     if (['candidates', 'backgroundCandidates'].includes(p.step)) { if (![0, 1, 2].includes(e.selection)) throw new Error('Choose one of the three candidate indexes: 0, 1, 2.'); a.selection = e.selection; }
     if(supervised(p)&&a.content.files){
       const h=Review.parse(e.humanReview);const needed=criteria[p.step],humanPerception=p.step==='film'?'direct-audiovisual':imageSteps.includes(p.step)?'direct-image':p.step==='video'?'direct-video':'direct-audio';
-      const crewReviewAudioPass = ['audition','narration'].includes(p.step) && a.review?.decision==='approved' && a.review?.checks.every(c=>c.status==='pass') && (voiceBasis(p).kind!=='existing-clone' || consentedVoiceIdentity(p,a).verified);
-      const isCrewReview = h.perception === 'crew-review' && crewReviewAudioPass;
+      const isCrewReview = h.perception === 'crew-review' && crewReviewEligible(p, a);
       if(h.decision!=='approved'||(h.perception!==humanPerception && !isCrewReview)||h.checks.length!==needed.length||needed.some(c=>!h.checks.some(x=>x.criterion===c&&x.status==='pass')))throw new Error('HUMAN_MEDIA_REVIEW_REQUIRED: confirm every criterion on the actual current media.');
       a.humanReview=h;
     }

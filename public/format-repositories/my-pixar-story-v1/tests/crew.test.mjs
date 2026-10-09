@@ -122,7 +122,7 @@ test('safety logic matches expected bounds', async () => {
   const q = current(pBase, 'audioReviewerQualification').content;
   pBase.crew = {workers: crew.workers.map(w => w.role === 'audio-reviewer' ? {...w, workerId: q.workerId, modelVersion: q.modelVersion, capabilityVersion: q.capabilityVersion} : w)};
   
-  const runWith = async (file, flags, safeStatus) => {
+  const runWith = async (file, flags, safeStatus, decision = 'approved') => {
    const p = structuredClone(pBase);
    const a = current(p);
    a.content.files = [file];
@@ -135,10 +135,10 @@ test('safety logic matches expected bounds', async () => {
     speakerSimilarity: async () => ({score: 0.99, method: 'ISOLATED', calibrationNotes: 'test'})
    };
    
-   return runCrewTask(p, task, {tools, runTask: async (_task, {worker, callTool}) => {
-    for (const name of ['listenAudio', 'measureAudio', 'transcribe', 'speakerSimilarity']) await callTool(name, {sha256: file.sha256, referenceSha256: sample.sha256});
-    const r = event(p, 'review', {workerId: worker.workerId, artifactId: a.id, artifactDigest: a.digest, review: {
-      decision: 'approved', perception: 'direct-audio', modelVersion: worker.modelVersion, capabilityVersion: worker.capabilityVersion,
+    return runCrewTask(p, task, {tools, runTask: async (_task, {worker, callTool}) => {
+     for (const name of ['listenAudio', 'measureAudio', 'transcribe', 'speakerSimilarity']) await callTool(name, {sha256: file.sha256, referenceSha256: sample.sha256});
+     const r = event(p, 'review', {workerId: worker.workerId, artifactId: a.id, artifactDigest: a.digest, review: {
+       decision, perception: 'direct-audio', modelVersion: worker.modelVersion, capabilityVersion: worker.capabilityVersion,
       coverage: {artifactSha256: file.sha256, audioFiles: [{sha256: file.sha256, seconds: file.durationSeconds}]},
       checks: task.criteria.map(c => ({criterion: c, status: c === 'safety' ? safeStatus : 'pass', evidence: 'ISOLATED', location: 'whole fixture'})),
       measurements: {transcripts: [script.beats[0].narration]}
@@ -154,6 +154,28 @@ test('safety logic matches expected bounds', async () => {
   await runWith(loudFile, {harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false}, 'fail');
   await assert.rejects(runWith(safeFile, {harshness: false, sibilance: true, clippingOrDistortion: false, suddenSpikes: false}, 'pass'), /SAFETY_EVIDENCE_MISMATCH/);
   await runWith(safeFile, {harshness: false, sibilance: true, clippingOrDistortion: false, suddenSpikes: false}, 'fail');
-  
- } finally { await rm(dir, {recursive: true}); }
+  await assert.rejects(runWith(safeFile, {harshness: false, sibilance: false, clippingOrDistortion: false, suddenSpikes: false}, 'inconclusive', 'inconclusive'), /SAFETY_EVIDENCE_MISMATCH/);
+
+  // listening unavailable: an honest inconclusive review without tool calls must not crash
+  {
+   const p = structuredClone(pBase); const a = current(p); a.content.files = [safeFile]; a.digest = digest(a.content); const task = taskFor(p);
+   const res = await runCrewTask(p, task, {tools: {}, runTask: async (_task, {worker}) => event(p, 'review', {workerId: worker.workerId, artifactId: a.id, artifactDigest: a.digest, review: {
+     decision: 'inconclusive', perception: 'none', modelVersion: worker.modelVersion, capabilityVersion: worker.capabilityVersion,
+     checks: task.criteria.map(c => ({criterion: c, status: 'inconclusive', evidence: 'listening tool unavailable', location: 'whole fixture'}))}})});
+   assert.equal(res.review.decision, 'inconclusive');
+  }
+  } finally { await rm(dir, {recursive: true}); }
+});
+
+test('review-gate runCrewTask fills missing model/capability versions from the assigned worker',async()=>{
+ let p=bind(initialProject('crew-versions',inputs,{workflowRevision:2}));p=send(p,'artifact',{workerId:'host-script-writer',content:script});const task=taskFor(p),worker=task.crewWorker;
+ const result=await runCrewTask(p,task,{runTask:async()=>event(p,'review',{workerId:worker.workerId,artifactId:current(p).id,artifactDigest:current(p).digest,review:{decision:'approved',perception:'direct-text',checks:task.criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED',location:'whole'}))}})});
+ assert.equal(result.workerId,worker.workerId);assert.equal(result.review.modelVersion,worker.modelVersion);assert.equal(result.review.capabilityVersion,worker.capabilityVersion);
+});
+
+test('all-pass review marked provisional is a bounded-repair rejection on the crew path',async()=>{
+ let p=bind(initialProject('crew-verdict',inputs,{workflowRevision:2}));p=send(p,'artifact',{workerId:'host-script-writer',content:script});const task=taskFor(p),worker=task.crewWorker;
+ const review=decision=>event(p,'review',{workerId:worker.workerId,artifactId:current(p).id,artifactDigest:current(p).digest,review:{decision,perception:'direct-text',modelVersion:worker.modelVersion,capabilityVersion:worker.capabilityVersion,checks:task.criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED',location:'whole'}))}});
+ await assert.rejects(runCrewTask(p,task,{runTask:async()=>review('provisional')}),e=>e.knownFinished&&/REVIEW_VERDICT_MISMATCH/.test(e.message));
+ const result=await runCrewTask(p,task,{runTask:async()=>review('approved')});assert.equal(result.review.decision,'approved');assert.equal(applyEvent(p,result).gate,'human');
 });

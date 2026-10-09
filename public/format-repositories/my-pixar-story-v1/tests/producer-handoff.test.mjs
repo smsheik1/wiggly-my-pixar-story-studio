@@ -15,7 +15,7 @@ const crew={workers:Object.entries(crewRoles).map(([role,{name}])=>({workerId:`I
 const bind=p=>send(p,'configure-crew',{actor:'human',message:'ISOLATED configure test workers',crew});
 const status=p=>({project:p,pending:taskFor(p)});
 const author=p=>send(p,'artifact',{workerId:taskFor(p).crewWorker.workerId,content:script});
-function review(p,decision='provisional'){
+function review(p,decision='approved'){ // all checks pass, so the verdict must be approved (all-pass provisional is REVIEW_VERDICT_MISMATCH)
  const task=taskFor(p),worker=task.crewWorker;
  return send(p,'review',{workerId:worker.workerId,artifactId:task.artifact.id,artifactDigest:task.artifact.digest,review:{decision,perception:'direct-text',modelVersion:worker.modelVersion,capabilityVersion:worker.capabilityVersion,checks:task.criteria.map((criterion,i)=>({criterion,status:decision==='rejected'&&i===0?'fail':'pass',evidence:'ISOLATED source comparison',location:'ISOLATED Beat 1',repair:decision==='rejected'&&i===0?'ISOLATED repair the unsupported event.':''}))}});
 }
