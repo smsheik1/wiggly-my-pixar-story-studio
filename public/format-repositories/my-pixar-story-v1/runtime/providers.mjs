@@ -10,6 +10,8 @@ import { shotReferences } from './shots.mjs';
 import { digest, VoiceLookup } from './contracts.mjs';
 import { assertAllowed, keyFor, miniProduction, voiceBasis } from './gates.mjs';
 import { importMedia, verifyFiles, narrationWindow } from './media.mjs';
+import { planTotalCost } from './budget.mjs';
+import { paidJobTimer } from './tracing.mjs';
 const artifact = (p, key) => p.artifacts.findLast(a => a.key === key && a.valid);
 // Published Pro overage rate is a conservative reservation, not an account balance
 // or a claim that included subscription credits incur an additional charge.
@@ -148,17 +150,17 @@ export async function checkProvider(provider,secretsPath,fetcher=fetch,spawnFn){
  }catch(error){const message=apiKey?error.message.replaceAll(apiKey,'[redacted]'):error.message;throw new Error(`${message}\n${remediation(provider,secretsPath)}`);}
 }
 // Each subrequest has a durable started marker and result. Unknown outcomes are never retried.
-export async function executeJob(p, job, runDir, apiKey, fetcher = fetch, collectOnly = false, onJobId) {
+export async function executeJob(p, job, runDir, apiKey, fetcher = fetch, collectOnly = false, onJobId, { tracer = null } = {}) {
   if(!collectOnly)assertDebugReady(p);
   const recorded = p.jobs.find(j => j.id === job.id && j.digest === job.digest);
   if (p.gate !== 'collect' || p.step !== job.plan.operation || !recorded?.authorization || !['submitting', 'submitted', 'uncertain'].includes(recorded.status) || recorded.key !== keyFor(p) || digest({ plan: job.plan, request: job.request, dependencies: job.dependencies }) !== recorded.digest || job.dependencies.some(id => !p.artifacts.some(a => a.id === id && a.valid))) throw new Error('UNAUTHORIZED_PROVIDER_CALL: use the current recorded request after the runner checkpoints submission.');
   assertAllowed(p, p.step);
   if(job.request.regeneration){const parent=artifact(p,'narration'),scope=job.request.regeneration;if(!p.narrationRegeneration||parent?.id!==scope.artifactId||parent.digest!==scope.artifactDigest||digest(parent)!==digest(scope.parent)||digest(requestDescriptor(p,job.plan))!==digest(job.request))throw new Error('NARRATION_REGENERATION_STALE: exact current parent, human scope and request required.');}
-  return executeMediaRequest(job, runDir, apiKey, fetcher, collectOnly, onJobId);
+  return executeMediaRequest(job, runDir, apiKey, fetcher, collectOnly, onJobId, { tracer });
 }
 // Trusted transport boundary. The caller must authorize and persist the exact request
 // before entry; workers never receive this function or provider credentials.
-export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, collectOnly = false, onJobId) {
+export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, collectOnly = false, onJobId, { tracer = null } = {}) {
   const request = job.request; await verifyFiles(request);
   const dir = join(runDir, 'receipts', job.id); await mkdir(dir, { recursive: true });
   if(job.plan.provider==='replicate'){const cached=join(dir,'result.json');try{return JSON.parse(await readFile(cached,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}const result=await executeVideo({...job,request:{...job.request,runDir}},dir,apiKey,fetcher,collectOnly,onJobId);if(!result.pending)await atomicJson(cached,result);return result;}
@@ -168,11 +170,34 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
     if (collectOnly) throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${index}; no completed receipt exists. Collection will not submit it.`);
     try { await writeFile(started, JSON.stringify({ jobId: job.id, digest: job.digest, index }), { flag: 'wx', mode: 0o600 }); }
     catch (e) { if (e.code === 'EEXIST') throw new Error(`UNCERTAIN_SUBREQUEST: ${job.id}/${index}. Reconcile its existing result; never duplicate it.`); throw e; }
-    const response = await fetcher(request.endpoint, { method: 'POST', headers: { ...(job.plan.provider==='elevenlabs'?{'xi-api-key':apiKey}:{Authorization:`Bearer ${apiKey}`}), ...headers }, body, signal: AbortSignal.timeout(180000) });
-    if (!response.ok) { const diagnostic = (await response.text()).replaceAll(apiKey, '[redacted]').slice(0, 800); throw new Error(`HTTP ${response.status}: ${diagnostic}`); }
+    const estimatedCostUsd = planTotalCost(job.plan);
+    const timer = paidJobTimer(tracer, {
+      provider: job.plan.provider,
+      jobId: job.id,
+      operation: job.plan.operation,
+      step: job.plan.operation,
+      estimatedCostUsd,
+      actualCostUsd: estimatedCostUsd,
+      actualCostSource: 'estimate',
+    });
+    let response;
+    try {
+      response = await fetcher(request.endpoint, { method: 'POST', headers: { ...(job.plan.provider==='elevenlabs'?{'xi-api-key':apiKey}:{Authorization:`Bearer ${apiKey}`}), ...headers }, body, signal: AbortSignal.timeout(180000) });
+    } catch (err) {
+      timer.fail(err);
+      throw err;
+    }
+    if (!response.ok) {
+      const diagnostic = (await response.text()).replaceAll(apiKey, '[redacted]').slice(0, 800);
+      const err = new Error(`HTTP ${response.status}: ${diagnostic}`);
+      err.status = response.status;
+      timer.fail(err);
+      throw err;
+    }
     let result;
     if (binary) { const path = join(dir, `${index}.${job.plan.provider==='elevenlabs'?'mp3':'wav'}`); await writeFile(path, Buffer.from(await response.arrayBuffer()), { mode: 0o600 }); result = { file: await importMedia(path, runDir) }; }
     else result = await response.json();
+    timer.ok();
     await atomicJson(receipt, result); return result;
   };
   let result;
@@ -228,12 +253,37 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
       }
       const images = await Promise.all(request.images.map(async f => ({ image_url: `data:image/${extname(f.path).slice(1).replace('jpg', 'jpeg')};base64,${(await readFile(f.path)).toString('base64')}` })));
       const body = museRequestBody({ model: fallback.model, prompt: request.prompt, n: indices.length, size: fallback.size, response_format: fallback.response_format, output_format: fallback.output_format, tool_enablement: fallback.tool_enablement }, images);
+      const museEstimate = (fallback.unitCostUsd ?? 0.01) * indices.length;
+      const museTimer = paidJobTimer(tracer, {
+        provider: 'meta-muse',
+        jobId: job.id,
+        operation: job.plan.operation,
+        step: job.plan.operation,
+        estimatedCostUsd: museEstimate,
+        actualCostUsd: museEstimate,
+        actualCostSource: 'estimate',
+        fallbackFrom: 'agy',
+      });
       let response;
       try { response = await fetcher(fallback.endpoint, { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(180000) }); }
-      catch (e) { throw new Error((apiKey ? e.message.replaceAll(apiKey, '[redacted]') : e.message)); }
-      if (!response.ok) { const diagnostic = (await response.text()).replaceAll(apiKey, '[redacted]').slice(0, 800); throw new Error(`HTTP ${response.status}: ${diagnostic}`); }
+      catch (e) {
+        museTimer.fail(e);
+        throw new Error((apiKey ? e.message.replaceAll(apiKey, '[redacted]') : e.message));
+      }
+      if (!response.ok) {
+        const diagnostic = (await response.text()).replaceAll(apiKey, '[redacted]').slice(0, 800);
+        const err = new Error(`HTTP ${response.status}: ${diagnostic}`);
+        err.status = response.status;
+        museTimer.fail(err);
+        throw err;
+      }
       const parsed = await response.json();
-      if (!Array.isArray(parsed.data) || parsed.data.length !== indices.length || parsed.data.some(d => !d.b64_json)) throw new Error('Muse must return the exact requested image count as base64; no remote-image fallback.');
+      if (!Array.isArray(parsed.data) || parsed.data.length !== indices.length || parsed.data.some(d => !d.b64_json)) {
+        const err = new Error('Muse must return the exact requested image count as base64; no remote-image fallback.');
+        museTimer.fail(err);
+        throw err;
+      }
+      const museFiles = [];
       for (const [k, j] of indices.entries()) {
         if (files[j]) continue;
         const path = join(dir, `${j}.${fallback.output_format}`);
@@ -242,7 +292,9 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
         const recorded = { file, provider: 'meta-muse', costUsd: fallback.unitCostUsd };
         await atomicJson(join(dir, `${j}.json`), recorded);
         files[j] = file; providers[j] = { index: j, provider: 'meta-muse', costUsd: fallback.unitCostUsd };
+        museFiles.push({ sha256: file.sha256, bytes: file.bytes });
       }
+      museTimer.ok({ files: museFiles });
     };
     if (collectOnly) {
       const miss = missingIndices();
@@ -274,6 +326,15 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
           await runMuseFallback(miss);
           break;
         }
+        const agyTimer = paidJobTimer(tracer, {
+          provider: 'agy',
+          jobId: job.id,
+          operation: job.plan.operation,
+          step: job.plan.operation,
+          estimatedCostUsd: 0,
+          actualCostUsd: 0,
+          actualCostSource: 'free',
+        });
         try {
           const outPath = join(dir, `${i}.png`);
           const { outputPath } = await generateAgyImage({ prompt: request.prompt, aspectRatio: request.aspectRatio, imageName: `${job.id}-${i}`, imagePaths: request.images.map(f => f.path), outputPath: outPath, brainDir: process.env.WIGGLY_AGY_BRAIN_DIR ? resolve(process.env.WIGGLY_AGY_BRAIN_DIR) : undefined, bin: process.env.WIGGLY_AGY_BIN || undefined, timeoutMs: process.env.WIGGLY_AGY_TIMEOUT_MS ? Number(process.env.WIGGLY_AGY_TIMEOUT_MS) : undefined });
@@ -281,7 +342,9 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
           const recorded = { file, provider: 'agy', costUsd: 0 };
           await atomicJson(join(dir, `${i}.json`), recorded);
           files[i] = file; providers[i] = { index: i, provider: 'agy', costUsd: 0 };
+          agyTimer.ok({ files: [{ sha256: file.sha256, bytes: file.bytes }] });
         } catch (e) {
+          agyTimer.fail(e);
           if (!isAgyQuotaError(e.message)) throw e;
           const reset = parseAgyQuotaReset(e.message);
           const diagnostic = String(e.message ?? e).slice(0, 800);

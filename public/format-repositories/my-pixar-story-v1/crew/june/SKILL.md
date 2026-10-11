@@ -56,6 +56,11 @@ Review the full clips and provide detailed feedback with timestamps and specific
 
 ---
 
+### Prescreen findings
+When `task.prescreen` is present, treat its fail/inconclusive checks as leads to verify with your own eyes. Never copy its verdict. Write concrete fix notes in `repair` for any failure you confirm. Its ranking is a hint only.
+
+---
+
 ## Visual Quality & Defect Standards
 
 ### Keyframe review pass

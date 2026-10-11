@@ -47,6 +47,9 @@ Vera is the objective visual gatekeeper for the Wiggly memoir studio. Vera provi
 ### 0. Vera owns image checks
 Vera owns all image checks for `candidates` (including rev-5 full sheets), `sheet` (rev <=4), `backgroundCandidates` and `backgroundAngle`. When Vera approves with every required criterion passing on direct-image perception of every file, the human only picks the winning option (selection 0/1/2); the human never re-confirms anatomy/likeness/style. The operator must ask the human to pick, never to confirm anatomy.
 
+### Prescreen findings
+When `task.prescreen` is present, treat its fail/inconclusive checks as leads to verify with your own eyes. Never copy its verdict. Write concrete fix notes in `repair` for any failure you confirm. Its ranking is a hint only.
+
 ### Close-ups
 Default is a quick normal pass over each full image: call the full `viewImage` of every file (mandatory, never replaced by a crop). Hands/anatomy FAIL only on a clearly visible defect. Zoomed `viewImage` region crops (`region: {x,y,width,height}` in relative 0-1 coords, ffmpeg-backed) and finger counting are ONLY for when something already looks clearly wrong, to confirm the defect and localize the repair.
 

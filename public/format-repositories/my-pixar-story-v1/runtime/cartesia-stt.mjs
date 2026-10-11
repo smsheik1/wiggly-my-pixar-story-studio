@@ -11,7 +11,7 @@ const mime={'.wav':'audio/wav','.mp3':'audio/mpeg','.m4a':'audio/mp4','.flac':'a
 async function readJson(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;}}
 
 // Independent ASR: send only audio and its declared language, never the script.
-export function createCartesiaTranscriptionTool({secretsPath,receiptDirectory,maxCalls=0,beforeRequest,fetcher=fetch}={}){
+export function createCartesiaTranscriptionTool({secretsPath,receiptDirectory,maxCalls=0,beforeRequest,afterResponse,fetcher=fetch}={}){
  if(!secretsPath||!receiptDirectory)throw new Error('Cartesia transcription needs canonical secrets and durable receipts.');
  if(!Number.isInteger(maxCalls)||maxCalls<0||maxCalls>32)throw new Error('Use a bounded --transcription-calls between 0 and 32.');
  let submitted=0;const inFlight=new Map();
@@ -50,6 +50,7 @@ export function createCartesiaTranscriptionTool({secretsPath,receiptDirectory,ma
    const response=await fetcher('https://api.cartesia.ai/stt',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Cartesia-Version':CARTESIA_STT_PROFILE.version},body:form,redirect:'error',signal:AbortSignal.timeout(180000)});
    if(!response.ok)throw new Error(`Cartesia STT HTTP ${response.status}: ${(await response.text()).replaceAll(key,'[redacted]').slice(0,600)}`);
    const raw=await response.json();await atomicJson(join(dir,'response.json'),{requestDigest,responseDigest:digest(raw),response:raw});
+   await afterResponse?.({requestDigest,provider:'cartesia-stt'});
    return await finish(raw);
   }catch(error){const message=error.code==='EEXIST'?`STT_REQUEST_UNCERTAIN: inspect ${dir}; another process owns this request; no duplicate submitted.`:key?error.message.replaceAll(key,'[redacted]'):error.message;throw Object.assign(new Error(`${message}\n${remediation('cartesia',secretsPath).replace('voice cloning and Sonic TTS','batch speech-to-text (Ink-Whisper)')}\nInspect ${dir} before any further transcription.`),{stopDispatch:true});}
   };
