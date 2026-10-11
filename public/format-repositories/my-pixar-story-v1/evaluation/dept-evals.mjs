@@ -55,7 +55,7 @@ export const GoldenCase = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/),
   dept: z.enum(Object.keys(DEPARTMENTS)),
   priority: z.number().int().positive(),
-  source: z.object({ key: z.string(), gate: z.enum(['author', 'review', 'owner-review']), version: z.number().int().positive().nullable() }).strict(),
+  source: z.object({ key: z.string(), gate: z.enum(['author', 'review', 'owner-review']), version: z.number().int().positive().nullable(), workflowRevision: z.number().int().positive().optional() }).strict(),
   truth: z.object({ authority: z.enum(['shaz', 'operator-for-shaz', 'objective']), summary: z.string().min(10), history: z.array(z.number().int().nonnegative()) }).strict(),
   asserts: z.array(Assertion).min(1),
 }).strict();
@@ -322,6 +322,8 @@ export async function executeCase(caseDef, { states, studio, secretsPath, fetche
   if (!source) return { event: null, valid: false, gateAccepted: false, error: `SOURCE_STATE_NOT_FOUND: ${caseDef.source.key} ${caseDef.source.gate} v${caseDef.source.version}` };
   const p = structuredClone(source);
   p.studio = studio;
+  // Replay an older run's state under a newer workflow revision (e.g. r4 cast state -> rev 5 photo-to-sheet by Pia).
+  if (caseDef.source.workflowRevision) p.workflowRevision = caseDef.source.workflowRevision;
   if (roleFor(p) !== role) return { event: null, valid: false, gateAccepted: false, error: `ROLE_MISMATCH: gate belongs to ${roleFor(p)}, case says ${role}` };
   const agent = studio.config.agents[role];
   const host = new OpenRouterHost({ cwd, secretsPath, model: agent.model, fetcher, timeoutMs: DEPT_EVAL_HOST_TIMEOUT_MS });

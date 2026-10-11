@@ -95,4 +95,4 @@ node runner.mjs dept-eval --dept vera --live --confirm-spend --run agent-runs/ph
 - **Exit codes:** 0 ok, 1 regression versus baseline (an assertion that passed at baseline now fails; `--strict` also fails on stale/missing), 2 usage/refused.
 - **Recordings** hold request digests and response messages (reasoning stripped), the final event and cost. They are refused if they contain media bytes (`data:...;base64`), API keys or long base64 runs; paths are aliased to `<RUN>`, `<KIT>`, `<HOME>`.
 - **When to run live:** after changing a role's skill, rubric, recipe or model (CI shows those cases as stale), and before a live studio run. Re-record only the affected department: `--dept <name> --live --confirm-spend ... --update-baseline` once you accept the new result.
-- **Coverage gaps:** June (scene-reviewer) has no cases because r4 stopped before keyframes; Ava stays on Gemini audio and needs audio perception adapters, so she is not in this suite yet.
+- **Coverage gaps:** June, scene reviewer, has no cases because r4 stopped before keyframes; Ava stays on Gemini audio and needs audio perception adapters, so she is not in this suite yet.

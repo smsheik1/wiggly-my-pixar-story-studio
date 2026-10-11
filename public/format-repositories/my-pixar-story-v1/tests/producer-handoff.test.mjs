@@ -26,8 +26,8 @@ test('producer names the completed author and next reviewer without claiming ass
  p=send(p,'configure-debug',{actor:'human',message:'ISOLATED enable debug',debugEnabled:true});
  p=send(p,'debug-next',{actor:'human',message:'ISOLATED continue'});p=author(p);
  const before=JSON.stringify(p),u=producerUpdate(status(p));
- assert.equal(u.reporter,'Orchestrator (Producer)');assert.match(u.message,/Leo \(Script Engineer\) submitted/);
- assert.match(u.message,/Sage \(Script Reviewer\) is next to review/);assert.match(u.message,/Waiting for your debug check/);assert.doesNotMatch(u.message,/paused/i);
+ assert.equal(u.reporter,'Orchestrator (Producer)');assert.match(u.message,/Leo, script writer submitted/);
+ assert.match(u.message,/Sage, text reviewer is next to review/);assert.match(u.message,/Waiting for your debug check/);assert.doesNotMatch(u.message,/paused/i);
  assert.equal(u.completion.artifactDigest,current(p).digest);assert.equal(u.completion.worker.workerId,current(p).authoredBy);
  assert.equal(u.nextWorker.status,'waiting-for-debug-continuation');assert.match(u.nextDecision,/approves nothing/);
  assert.doesNotMatch(u.message,/is preparing|is reviewing|is running/);assert.equal(JSON.stringify(p),before);
@@ -35,15 +35,15 @@ test('producer names the completed author and next reviewer without claiming ass
 
 test('passing review is reported as a review result and human approval remains the next decision in debug mode',()=>{
  let p=review(author(start()));p=send(p,'configure-debug',{actor:'human',message:'ISOLATED enable debug',debugEnabled:true});
- const u=producerUpdate(status(p));assert.match(u.message,/Sage \(Script Reviewer\) completed the review: 6 checks passed/);
+ const u=producerUpdate(status(p));assert.match(u.message,/Sage, text reviewer completed the review: 6 checks passed/);
  assert.equal(u.nextWorker,null);assert.match(u.nextDecision,/Review this version/);assert.doesNotMatch(u.nextDecision,/continue|release/);
  assert.equal(current(p).approvedBy,undefined);assert.equal(u.completion.actor,'reviewer');
 });
 
 test('repair output names the actual reviewer and routes evidenced notes to the author, never previewing failed media',()=>{
  const p=review(author(start()),'rejected'),u=producerUpdate(status(p));
- assert.match(u.message,/Sage \(Script Reviewer\).*rejected with repair notes/);
- assert.match(u.message,/Leo \(Script Engineer\) is next to write/);assert.equal(u.nextWorker.status,'ready-for-dispatch');
+ assert.match(u.message,/Sage, text reviewer.*rejected with repair notes/);
+ assert.match(u.message,/Leo, script writer is next to write/);assert.equal(u.nextWorker.status,'ready-for-dispatch');
  assert.equal(u.completion.findings[0].repair,'ISOLATED repair the unsupported event.');
  assert.equal(u.completion.findings[0].location,'ISOLATED Beat 1');assert.equal(current(p).approvedBy,undefined);
 });
@@ -91,7 +91,7 @@ test('provider planning and unknown submission outcomes are reported without cla
  const sampleUpdate=producerUpdate(status(p));assert.equal(sampleUpdate.completion.worker,null);assert.match(sampleUpdate.completion.message,/You submitted/);
  p=send(p,'set-budget',{actor:'human',message:'ISOLATED budget',budgetLimitUsd:1});
  p=send(p,'plan',{workerId:taskFor(p).crewWorker.workerId,plan:{provider:'cartesia',operation:'clone',estimatedCostUsd:.05,parameters:{}}});
- let u=producerUpdate(status(p));assert.match(u.message,/Max \(Line Producer & Production Manager\) prepared a request and cost estimate for voice clone/);assert.equal(u.completion.jobId,p.jobs.at(-1).id);assert.match(u.nextDecision,/spend/);
+ let u=producerUpdate(status(p));assert.match(u.message,/Max, generation planner prepared a request and cost estimate for voice clone/);assert.equal(u.completion.jobId,p.jobs.at(-1).id);assert.match(u.nextDecision,/spend/);
  const job=p.jobs.at(-1);p=send(p,'authorize',{actor:'human',jobId:job.id,artifactDigest:job.digest,message:'ISOLATED authorize exact test request'});
  u=producerUpdate(status(p));assert.match(u.message,/ready for submission/);assert.equal(u.nextWorker,null);assert.doesNotMatch(u.message,/prepare the exact request|clone complete/);
  p=send(p,'begin',{jobId:job.id,artifactDigest:job.digest});u=producerUpdate(status(p));assert.match(u.completion.message,/outcome is not confirmed/);
@@ -159,7 +159,7 @@ test('billing readiness alert requires problem, solution and canonical baby step
   assert.throws(()=>send(p,'planning-blocked',{...base,blocker:{kind:'account-readiness',...task.planningGuide,...replacement}}),/PLANNING_HELP_BINDING/);
  }
  const q=send(p,'planning-blocked',{...base,blocker:{kind:'account-readiness',...task.planningGuide}}),bytes=JSON.stringify(q),u=producerUpdate(status(q));
- assert.equal(u.alert.severity,'stop');assert.equal(u.alert.reportedBy,'Max (Line Producer & Production Manager)');assert.equal(u.alert.problem,task.planningGuide.problem);assert.equal(u.alert.solution,task.planningGuide.solution);assert.deepEqual(u.alert.steps,task.planningGuide.steps);assert.match(u.message,/STOP/);assert.match(u.message,/https:\/\/play.cartesia.ai\/subscription/);assert.match(u.message,/Unknown credits alone do not block planning/);assert.doesNotMatch(u.message,/technical identifiers|which plan|HTTP 402|API failed/);assert.equal(u.diagnostic,message);assert.equal(u.nextWorker,null);assert.equal(q.jobs.length,0);assert.equal(JSON.stringify(q),bytes);
+ assert.equal(u.alert.severity,'stop');assert.equal(u.alert.reportedBy,'Max, generation planner');assert.equal(u.alert.problem,task.planningGuide.problem);assert.equal(u.alert.solution,task.planningGuide.solution);assert.deepEqual(u.alert.steps,task.planningGuide.steps);assert.match(u.message,/STOP/);assert.match(u.message,/https:\/\/play.cartesia.ai\/subscription/);assert.match(u.message,/Unknown credits alone do not block planning/);assert.doesNotMatch(u.message,/technical identifiers|which plan|HTTP 402|API failed/);assert.equal(u.diagnostic,message);assert.equal(u.nextWorker,null);assert.equal(q.jobs.length,0);assert.equal(JSON.stringify(q),bytes);
  assert.deepEqual(Project.parse(q).history.at(-1).blocker,u.completion.blocker);assert.equal(u.stage,'clone');assert.doesNotMatch(u.message,/paused|audition/i);assert.equal(u.debugNote,null);
 });
 

@@ -1,9 +1,9 @@
 {
  "caseId": "sage-script-slash-abbrev",
- "recordedAt": "2026-10-11T14:41:25.098Z",
+ "recordedAt": "2026-10-11T20:51:00.026Z",
  "model": "meta/muse-spark-1.3-contributor",
  "mode": "live",
- "fingerprint": "8a0855d9c83ee546dae52ec0924ce3dbfadca4e740643fe97d4cd9f25903ab11",
+ "fingerprint": "b64e4f832fac3010738c4ecd97ee182c63b84be604fe63e14814f6237948ae94",
  "fingerprintParts": {
   "model": "meta/muse-spark-1.3-contributor",
   "backend": "openrouter",
@@ -13,16 +13,27 @@
   ],
   "skill": {
    "path": "crew/sage/SKILL.md",
-   "sha256": "c9542bf7fd6a32a216e0e897be3583f3063876e60243ce17cc8dbdde1448675e"
+   "sha256": "7812b87353aa6ea1d55d6cf0d9410db1fa4baea6dda28c2d3f532e3f1af73cbc"
   },
   "rubric": {
    "path": "evaluation/rubrics/text.md",
-   "sha256": "9f63661a714e8844e6585580c26261ff19d5d3f2eac84a18828375b2ff6ffaf5"
+   "sha256": "3845150ebb23f77c599d0a24354b966a50587bcb3278f6f82c9f58beaf14807a"
   },
   "recipes": {
-   "character-prompter.md": "af2ade078cd958898cfa96c70b7dce4b74ff16f54adaefc8423f0bc513b854e8",
-   "character-sheet-recipe.md": "25e531524ebfccc084a56025a04dd70526b76406a17b490ed2dea6b3840dc8f9",
-   "background-prompter.md": "39895d6dbd7db8298fb5301f5be52f6cbc9c7c4374e9e518ab561a9ee6d7b61c"
+   "character-prompter.md": "235dadf0cb428eedf1edf2b782247f72cd6cd45aa4c7d27a9c6334a1256962af",
+   "character-sheet-recipe.md": "caab53afd48de0b91e77b04da50a688da273aeeb5c86335aa807cf12d60ac143",
+   "background-prompter.md": "4a5f3ac96581dc854b3f184c8a6520196203989338c766919ad0d47a469247dc"
+  },
+  "craft": {
+   "house-style": "b95494eb4b67a8aeb7f1459ada27e811283fd5eae1aa51054f8ade61305a2783",
+   "script-craft": "fed7726674482cfc50ae682c4c9f07bb058536c3cb1e0bc8b8d8c7f6403159f0",
+   "character-design": "4f211109b20406a51a788788981ad9f19fbbb4af22f43239c9dda3cd04c8adfd",
+   "prompt-rules": "695bcaf66bf660f9e50b132b3989a38607dbf3c306241da94106102c8844b7c5",
+   "identity": "d7b647fc5302672cb720c9bf05310ac1a9b3d64390ec77d2a98172756b07ec1c",
+   "character-sheet": "4e8f13843f2d47c138ad5fc2fc35e8034b2129b85df9f4032d6ca761da65a6ab",
+   "edit-prompts": "fa03e26afdf3e19d4622a8038e60cb8a2491557a43f7f9bba8c19634e91934ec",
+   "locations": "4df46006322bee4704d544d0ba6bbb1f12611796e95d68055ee2a96cdfa323be",
+   "working-method": "1ea99fc7df46276f47d812b5918b878a625ac15c462c4c6699fab66b7416daa3"
   },
   "traits": {
    "reasoning": "always-on",
@@ -37,22 +48,22 @@
   "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
   "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
  },
- "wallMs": 71231,
- "costUsd": 0.0046845,
+ "wallMs": 91544,
+ "costUsd": 0.0051473,
  "requests": [
   {
    "seq": 1,
-   "requestSha256": "149a296dcc44b447c1463ad2abbba11b2ae8e1042061598888bfc3e0a151fe25",
+   "requestSha256": "78fb07a740ed00da8bbe88fbad079e8aef29b1abaf8d45adf84010490ca9d347",
    "status": 200,
-   "ms": 71208,
+   "ms": 91503,
    "message": {
-    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"a840faef59c88cb5a402e0ed7e315f2d6b48c5809e2bf901e15863df710e9c2d\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"script@1\\\",\\\"artifactDigest\\\":\\\"cbe38790e74c2d94972228a71ab9b11de056ab8dd0388949ed607d6c18b7b516\\\",\\\"review\\\":{\\\"decision\\\":\\\"rejected\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-text\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"facts\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Every autobiographical claim traces to locked answers: Beat 1 sunglasses, scientist wish, not knowing why, mom excitement and seemed pride matches scene1Childhood; Beat 2 Honda faded paint and mine, ages 17 and 19, first software job and money relief matches scene2TeenFreedom and scene3LeapOfFaith; Beat 3 Dallas-Chicago, weekly 8pm FaceTime, respected autonomy paraphrased as space, consistency leading to love matches scene4Romance; Beat 4 Mia love assurance and good-people belief matches scene5LegacyFinale. No invented events, motives, promises or ages.\\\",\\\"location\\\":\\\"Beats 1-4\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"I wore sunglasses everywhere and wanted to be a scientist\\\",\\\"i wore sunglasses everywhere, that was my signature style\\\"]},{\\\"criterion\\\":\\\"relationship\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Recipient connection is clear: Shaz as Mia's parent addresses Mia directly in Beat 4, with mother encouragement in Beat 1 and future wife consistency in Beat 3. Roles stay consistent with locked subject and family and romance answers, without confusing she references.\\\",\\\"location\\\":\\\"Beat 4 and Beats 1, 3, proposedCast\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Mia, I love you very much, even if I don't always show it\\\",\\\"I love her very much even if I may not always show it\\\"]},{\\\"criterion\\\":\\\"clarity\\\",\\\"status\\\":\\\"fail\\\",\\\"evidence\\\":\\\"Beat 2 sentence 1 uses slash abbreviation in my Honda had faded paint and no A/C. TTS reads slash aloud as A slash C, so any slash in narration is a material defect. Source memory also writes no A/C, but script must still spell out air conditioning or AC with no slash.\\\",\\\"location\\\":\\\"Beat 2, sentence 1\\\",\\\"repair\\\":\\\"Replace no A/C with no air conditioning (or no AC with no slash) in Beat 2 sentence 1; leave all other wording unchanged.\\\",\\\"quotes\\\":[\\\"my Honda had faded paint and no A/C. But it was mine.\\\"]},{\\\"criterion\\\":\\\"emotional-purpose\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each beat carries distinct purpose culminating in earned message: Beat 1 introduces quiet child, Beat 2 shows independence relief, Beat 3 shows gradual love through dependability, Beat 4 gives direct assurance and personal belief about attention. Plain I love you line is earned by preceding specifics.\\\",\\\"location\\\":\\\"Beats 1 through 4\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Give Mia a direct assurance of love and her parent's personal belief about choosing where to place attention.\\\"]},{\\\"criterion\\\":\\\"timing\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Estimate only at natural conversational pace 120-140wpm (30-35 words per 15s): Beat 1 about 30 words, Beat 2 about 31 words, Beat 3 about 30 words, Beat 4 about 32 words. Each plausibly fits its 15-second window. Actual duration belongs to audio measurement; no faster speech demanded.\\\",\\\"location\\\":\\\"Beats 1-4 pacing\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"At eight, I wore sunglasses everywhere and wanted to be a scientist.\\\"]},{\\\"criterion\\\":\\\"common-sense\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Actions are feasible: driving after licensing, owning cherished car, accelerated schooling and bootcamp before salaried job, weekly long-distance calls. ProposedCast preserves factual 17 and 19 in narration while grouping one shared late-teen design minor true per human direction, with minimal necessary roles and no impossible staging.\\\",\\\"location\\\":\\\"ProposedCast and Beats 1-4 staging\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Use one shared late-teen character design for Shaz at story ages 17 and 19\\\",\\\"shared-late-teen-17-and-19\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\"}}\"}"
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"a840faef59c88cb5a402e0ed7e315f2d6b48c5809e2bf901e15863df710e9c2d\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"script@1\\\",\\\"artifactDigest\\\":\\\"cbe38790e74c2d94972228a71ab9b11de056ab8dd0388949ed607d6c18b7b516\\\",\\\"review\\\":{\\\"decision\\\":\\\"rejected\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-text\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"facts\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All autobiographical claims trace to locked answers: age 8 scientist/sunglasses/mom excitement and apparent pride, Honda faded paint/no AC/mine, age 19 first software job/money relief, Dallas/Chicago weekly 8 FaceTime/consistency/love, Mia love and belief about good people. No invented events, motives, promises or direct quotes.\\\",\\\"location\\\":\\\"Beats 1-4\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"At eight, I wore sunglasses everywhere and wanted to be a scientist.\\\",\\\"i wore sunglasses everywhere, that was my signature style.\\\"]},{\\\"criterion\\\":\\\"relationship\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Recipient and family bonds are clear: narrator as Mia's parent addresses Mia directly, mother provides childhood encouragement, future wife in Chicago provides adult romance. Pronoun 'she' in Beat 3 clearly binds to future wife.\\\",\\\"location\\\":\\\"Beats 1, 3, 4 and proposedCast\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Mia, I love you very much, even if I don't always show it.\\\",\\\"My future wife was in Chicago.\\\"]},{\\\"criterion\\\":\\\"clarity\\\",\\\"status\\\":\\\"fail\\\",\\\"evidence\\\":\\\"Beat 2 sentence 1 contains slash abbreviation A/C in 'my Honda had faded paint and no A/C.' TTS reads slash aloud as 'A slash C'; rubric requires spelling out. Otherwise language is child-accessible, but slash is material defect.\\\",\\\"location\\\":\\\"Beat 2, sentence 1\\\",\\\"repair\\\":\\\"Replace 'no A/C' with 'no AC' or 'no air conditioning' (e.g., 'had faded paint and no air conditioning') and keep all other wording and facts unchanged.\\\",\\\"quotes\\\":[\\\"my Honda had faded paint and no A/C.\\\"]},{\\\"criterion\\\":\\\"emotional-purpose\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each beat carries distinct emotional purpose with recipient connection: quiet child with encouragement, growing independence, gradual love through consistency, direct assurance to Mia. No stock phrase or invented ending required.\\\",\\\"location\\\":\\\"Beats 1-4\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Show love growing gradually through a dependable weekly connection that respected Shaz's autonomy.\\\"]},{\\\"criterion\\\":\\\"timing\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Estimate at natural conversational pace 120-140 wpm: Beats 1,3 ~30 words, Beat 2 ~31 words, Beat 4 ~32 words, each plausibly fits 15.0s window. Estimate only; actual duration belongs to audio measurement, no speedup demanded.\\\",\\\"location\\\":\\\"Beats 1-4 pacing\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Every week at eight, she showed up on FaceTime.\\\"]},{\\\"criterion\\\":\\\"common-sense\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Ages move forward 8 to 17 to 19 to adult; shared late-teen design preserves both factual ages per human direction and marks minor true; Dallas/Chicago, Honda, FaceTime and job actions are feasible. No impossible staging or extra cast.\\\",\\\"location\\\":\\\"Beats 1-4 and proposedCast shaz-late-teen\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"One shared design for Shaz driving at seventeen and becoming a software engineer at nineteen, preserving both factual ages.\\\",\\\"Use one shared late-teen character design for Shaz at story ages 17 and 19.\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\"}}\"}"
    },
    "usage": {
-    "prompt_tokens": 21961,
-    "completion_tokens": 12442,
-    "reasoning_tokens": 11187,
-    "cost": 0.0046845
+    "prompt_tokens": 27451,
+    "completion_tokens": 12011,
+    "reasoning_tokens": 10871,
+    "cost": 0.0051473
    }
   }
  ],
@@ -72,64 +83,64 @@
      {
       "criterion": "facts",
       "status": "pass",
-      "evidence": "Every autobiographical claim traces to locked answers: Beat 1 sunglasses, scientist wish, not knowing why, mom excitement and seemed pride matches scene1Childhood; Beat 2 Honda faded paint and mine, ages 17 and 19, first software job and money relief matches scene2TeenFreedom and scene3LeapOfFaith; Beat 3 Dallas-Chicago, weekly 8pm FaceTime, respected autonomy paraphrased as space, consistency leading to love matches scene4Romance; Beat 4 Mia love assurance and good-people belief matches scene5LegacyFinale. No invented events, motives, promises or ages.",
+      "evidence": "All autobiographical claims trace to locked answers: age 8 scientist/sunglasses/mom excitement and apparent pride, Honda faded paint/no AC/mine, age 19 first software job/money relief, Dallas/Chicago weekly 8 FaceTime/consistency/love, Mia love and belief about good people. No invented events, motives, promises or direct quotes.",
       "location": "Beats 1-4",
       "repair": "",
       "quotes": [
-       "I wore sunglasses everywhere and wanted to be a scientist",
-       "i wore sunglasses everywhere, that was my signature style"
+       "At eight, I wore sunglasses everywhere and wanted to be a scientist.",
+       "i wore sunglasses everywhere, that was my signature style."
       ]
      },
      {
       "criterion": "relationship",
       "status": "pass",
-      "evidence": "Recipient connection is clear: Shaz as Mia's parent addresses Mia directly in Beat 4, with mother encouragement in Beat 1 and future wife consistency in Beat 3. Roles stay consistent with locked subject and family and romance answers, without confusing she references.",
-      "location": "Beat 4 and Beats 1, 3, proposedCast",
+      "evidence": "Recipient and family bonds are clear: narrator as Mia's parent addresses Mia directly, mother provides childhood encouragement, future wife in Chicago provides adult romance. Pronoun 'she' in Beat 3 clearly binds to future wife.",
+      "location": "Beats 1, 3, 4 and proposedCast",
       "repair": "",
       "quotes": [
-       "Mia, I love you very much, even if I don't always show it",
-       "I love her very much even if I may not always show it"
+       "Mia, I love you very much, even if I don't always show it.",
+       "My future wife was in Chicago."
       ]
      },
      {
       "criterion": "clarity",
       "status": "fail",
-      "evidence": "Beat 2 sentence 1 uses slash abbreviation in my Honda had faded paint and no A/C. TTS reads slash aloud as A slash C, so any slash in narration is a material defect. Source memory also writes no A/C, but script must still spell out air conditioning or AC with no slash.",
+      "evidence": "Beat 2 sentence 1 contains slash abbreviation A/C in 'my Honda had faded paint and no A/C.' TTS reads slash aloud as 'A slash C'; rubric requires spelling out. Otherwise language is child-accessible, but slash is material defect.",
       "location": "Beat 2, sentence 1",
-      "repair": "Replace no A/C with no air conditioning (or no AC with no slash) in Beat 2 sentence 1; leave all other wording unchanged.",
+      "repair": "Replace 'no A/C' with 'no AC' or 'no air conditioning' (e.g., 'had faded paint and no air conditioning') and keep all other wording and facts unchanged.",
       "quotes": [
-       "my Honda had faded paint and no A/C. But it was mine."
+       "my Honda had faded paint and no A/C."
       ]
      },
      {
       "criterion": "emotional-purpose",
       "status": "pass",
-      "evidence": "Each beat carries distinct purpose culminating in earned message: Beat 1 introduces quiet child, Beat 2 shows independence relief, Beat 3 shows gradual love through dependability, Beat 4 gives direct assurance and personal belief about attention. Plain I love you line is earned by preceding specifics.",
-      "location": "Beats 1 through 4",
+      "evidence": "Each beat carries distinct emotional purpose with recipient connection: quiet child with encouragement, growing independence, gradual love through consistency, direct assurance to Mia. No stock phrase or invented ending required.",
+      "location": "Beats 1-4",
       "repair": "",
       "quotes": [
-       "Give Mia a direct assurance of love and her parent's personal belief about choosing where to place attention."
+       "Show love growing gradually through a dependable weekly connection that respected Shaz's autonomy."
       ]
      },
      {
       "criterion": "timing",
       "status": "pass",
-      "evidence": "Estimate only at natural conversational pace 120-140wpm (30-35 words per 15s): Beat 1 about 30 words, Beat 2 about 31 words, Beat 3 about 30 words, Beat 4 about 32 words. Each plausibly fits its 15-second window. Actual duration belongs to audio measurement; no faster speech demanded.",
+      "evidence": "Estimate at natural conversational pace 120-140 wpm: Beats 1,3 ~30 words, Beat 2 ~31 words, Beat 4 ~32 words, each plausibly fits 15.0s window. Estimate only; actual duration belongs to audio measurement, no speedup demanded.",
       "location": "Beats 1-4 pacing",
       "repair": "",
       "quotes": [
-       "At eight, I wore sunglasses everywhere and wanted to be a scientist."
+       "Every week at eight, she showed up on FaceTime."
       ]
      },
      {
       "criterion": "common-sense",
       "status": "pass",
-      "evidence": "Actions are feasible: driving after licensing, owning cherished car, accelerated schooling and bootcamp before salaried job, weekly long-distance calls. ProposedCast preserves factual 17 and 19 in narration while grouping one shared late-teen design minor true per human direction, with minimal necessary roles and no impossible staging.",
-      "location": "ProposedCast and Beats 1-4 staging",
+      "evidence": "Ages move forward 8 to 17 to 19 to adult; shared late-teen design preserves both factual ages per human direction and marks minor true; Dallas/Chicago, Honda, FaceTime and job actions are feasible. No impossible staging or extra cast.",
+      "location": "Beats 1-4 and proposedCast shaz-late-teen",
       "repair": "",
       "quotes": [
-       "Use one shared late-teen character design for Shaz at story ages 17 and 19",
-       "shared-late-teen-17-and-19"
+       "One shared design for Shaz driving at seventeen and becoming a software engineer at nineteen, preserving both factual ages.",
+       "Use one shared late-teen character design for Shaz at story ages 17 and 19."
       ]
      }
     ],

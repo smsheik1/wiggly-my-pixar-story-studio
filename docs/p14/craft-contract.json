@@ -168,6 +168,12 @@
      ]
     },
     {
+     "id": "C-TODDLER-TORSO",
+     "check": [
+      "none"
+     ]
+    },
+    {
      "id": "C-SIGNATURE",
      "check": [
       "sage",
@@ -347,7 +353,6 @@
     {
      "id": "R-SHEET-HEX",
      "check": [
-      "vera",
       "sage"
      ]
     },
@@ -786,5 +791,17 @@
     }
    ]
   }
- }
+ },
+ "amendments": [
+  {
+   "date": "2026-10-11",
+   "by": "Shaz (3:17 PM CT)",
+   "changes": [
+    "R-SHEET-FAILURES: Vera checks only turnaround views same height and scale, close-up face matches the reference, adult oversized child-like head, dark skin rendering grey, anything held in the hands",
+    "R-SHEET-HEX: check vera,sage -> sage (Vera's background colour check removed; writer instruction kept)",
+    "C-TODDLER-TORSO: new character-design writing tip, check none (was a Vera failure-table row)",
+    "Dropped as Vera checks: headless-panel head, neutral drifts to a smile, background varies between panels, tattoo, two characters look related"
+   ]
+  }
+ ]
 }

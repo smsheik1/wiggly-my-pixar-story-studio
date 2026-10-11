@@ -36,6 +36,7 @@ Prompts are built from fixed lines (same for every character, encoding how the h
 - [C-EXAGGERATION] (check: sage) Push one feature well past life size and push its neighbours the opposite way; an exaggeration stated alone gets averaged back.
 - [C-HEADS-TALL] (check: vera) Height in heads: toddler 4, child 5, teen 6-6.5, adult 7.
 - [C-CHILD-RIDER] (check: sage, vera) Child proportions are for children only: long torso, short legs, low centre of gravity, enlarged head, narrow shoulders; never carry this rider onto adults.
+- [C-TODDLER-TORSO] (check: none) Writing tip: describe a toddler's torso as slim and flat; "round belly" or "full cheeks" comes back as a paunch.
 - [C-SIGNATURE] (check: sage, vera) Give each character one signature element that is worn or attached, never held, and carries the only saturated colour in an otherwise muted palette.
 - [C-WEAR] (check: none) Wear tells a story: grime where hands touch, pale worn edges, one thing undone or broken.
 - [C-HANDS] (check: vera) Design hands from a few large rounded forms with thick blunt fingertips and minimal knuckle detail; vary only what the character justifies.
@@ -76,10 +77,10 @@ Format B (turnaround plus expressions) is the only sheet format. For people with
 - [R-SHEET-NEUTRAL] (check: vera) Keep everything neutral: closed-lip expression, head level, eyes to camera, arms relaxed, hands open and empty, feet flat and parallel; no smile, no acting, no signature pose.
 - [R-SHEET-VIEWS] (check: vera, sage) Top row is four full-body views of the same character in one identical neutral pose (front, three-quarter, profile, back), exactly the same height and scale on one shared baseline, evenly spaced and clear of the frame edges.
 - [R-SHEET-EIGHT] (check: vera, sage) Below are eight head-and-shoulders close-ups in two even rows of four, all facing camera, in this fixed order: neutral, happy, delighted, sad, surprised, confused, angry, talking; a character detail may sit inside a slot.
-- [R-SHEET-HEX] (check: vera, sage) Background is flat #B5B5B5 across the whole canvas, written as the hex in every prompt.
+- [R-SHEET-HEX] (check: sage) Background is flat #B5B5B5 across the whole canvas, written as the hex in every prompt.
 - [R-SHEET-NO-TEXT] (check: vera, sage) No text or labels on the sheet.
 - [R-SHEET-PROPS] (check: none) Props and non-humanoid subjects use the props variant: front, back, and a detail close-up on the identifying feature, with neutral framing.
-- [R-SHEET-FAILURES] (check: vera) Check the sheet against the failure table: bodies different sizes; face not matching the reference; neutral drifting to a smile; background not uniform; ink or tattoo marks; toddler paunch; two characters looking related; held objects in sheet hands (headless-panel failures are not applicable to Format B).
+- [R-SHEET-FAILURES] (check: vera) Check the sheet against the failure table: the four turnaround views not the same height and scale; the close-up face not matching the reference; an adult with an oversized child-like head; dark skin rendering grey; anything held in the hands on the sheet.
 - [R-SHEET-PHOTO-REF] (check: sage) For people with photos, the photos are the reference and there is no master render; where a kept render and the prompt disagree, describe the render.
 - [R-SHEET-NO-PHOTO] (check: none) PENDING (later PR, not wired anywhere): a person with no photo gets one approved full-body render first, then the sheet is built from it.
 

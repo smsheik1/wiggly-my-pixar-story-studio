@@ -1,0 +1,217 @@
+{
+ "caseId": "sage-sheet-prompt-r4-old-rules",
+ "recordedAt": "2026-10-11T20:56:03.631Z",
+ "model": "meta/muse-spark-1.3-contributor",
+ "mode": "live",
+ "fingerprint": "b64e4f832fac3010738c4ecd97ee182c63b84be604fe63e14814f6237948ae94",
+ "fingerprintParts": {
+  "model": "meta/muse-spark-1.3-contributor",
+  "backend": "openrouter",
+  "tools": [
+   "readAsset",
+   "viewImage"
+  ],
+  "skill": {
+   "path": "crew/sage/SKILL.md",
+   "sha256": "7812b87353aa6ea1d55d6cf0d9410db1fa4baea6dda28c2d3f532e3f1af73cbc"
+  },
+  "rubric": {
+   "path": "evaluation/rubrics/text.md",
+   "sha256": "3845150ebb23f77c599d0a24354b966a50587bcb3278f6f82c9f58beaf14807a"
+  },
+  "recipes": {
+   "character-prompter.md": "235dadf0cb428eedf1edf2b782247f72cd6cd45aa4c7d27a9c6334a1256962af",
+   "character-sheet-recipe.md": "caab53afd48de0b91e77b04da50a688da273aeeb5c86335aa807cf12d60ac143",
+   "background-prompter.md": "4a5f3ac96581dc854b3f184c8a6520196203989338c766919ad0d47a469247dc"
+  },
+  "craft": {
+   "house-style": "b95494eb4b67a8aeb7f1459ada27e811283fd5eae1aa51054f8ade61305a2783",
+   "script-craft": "fed7726674482cfc50ae682c4c9f07bb058536c3cb1e0bc8b8d8c7f6403159f0",
+   "character-design": "4f211109b20406a51a788788981ad9f19fbbb4af22f43239c9dda3cd04c8adfd",
+   "prompt-rules": "695bcaf66bf660f9e50b132b3989a38607dbf3c306241da94106102c8844b7c5",
+   "identity": "d7b647fc5302672cb720c9bf05310ac1a9b3d64390ec77d2a98172756b07ec1c",
+   "character-sheet": "4e8f13843f2d47c138ad5fc2fc35e8034b2129b85df9f4032d6ca761da65a6ab",
+   "edit-prompts": "fa03e26afdf3e19d4622a8038e60cb8a2491557a43f7f9bba8c19634e91934ec",
+   "locations": "4df46006322bee4704d544d0ba6bbb1f12611796e95d68055ee2a96cdfa323be",
+   "working-method": "1ea99fc7df46276f47d812b5918b878a625ac15c462c4c6699fab66b7416daa3"
+  },
+  "traits": {
+   "reasoning": "always-on",
+   "inputs": [
+    "text",
+    "image",
+    "video"
+   ],
+   "productionEffort": "xhigh",
+   "maxTokens": 32000
+  },
+  "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
+  "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
+ },
+ "wallMs": 190794,
+ "costUsd": 0.013252822000000001,
+ "requests": [
+  {
+   "seq": 1,
+   "requestSha256": "12b3e35736db6d2abb715e78cd2ee082b6f6d84aa7942a1aa05e07d70d3cdf08",
+   "status": 200,
+   "ms": 70244,
+   "message": {
+    "content": "Reviewing the sheetPrompt draft, I'll inspect the reference images to verify identity and layout.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a12cbe762774608772fb86abc556e1",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"2c29eaede5143451f7f021c5de3d84d9cea7f2dd38319428758732fb77d2f6aa\",\"referenceSha256\":\"null\",\"region\":\"null\",\"edit\":\"null\"}"
+      }
+     },
+     {
+      "type": "function",
+      "index": 1,
+      "id": "call_01a12cbe783b711688b66a9c8f12bc31",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"437f52e87b3c3512414bcefd5a3b1d8895e1f23f6affc5d51ab6d9b1031ab1ec\",\"referenceSha256\":\"null\",\"region\":\"null\",\"edit\":\"null\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 43274,
+    "completion_tokens": 8032,
+    "reasoning_tokens": 7486,
+    "cost": 0.0059338
+   }
+  },
+  {
+   "seq": 2,
+   "requestSha256": "28895b61d96072f9ef0d5c938cc1593b44e2435f00d97f527cf3ce8099f57f89",
+   "status": 200,
+   "ms": 24184,
+   "message": {
+    "content": "I need genuine perception before verdict — retrying image inspection with correct tool syntax.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a12cbed5d9778fb9490bff5acd7449",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"2c29eaede5143451f7f021c5de3d84d9cea7f2dd38319428758732fb77d2f6aa\",\"referenceSha256\":\"437f52e87b3c3512414bcefd5a3b1d8895e1f23f6affc5d51ab6d9b1031ab1ec\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 43836,
+    "completion_tokens": 1562,
+    "reasoning_tokens": 1308,
+    "cost": 0.004696
+   }
+  },
+  {
+   "seq": 3,
+   "requestSha256": "46d707133331ea839d480d37d69901ae08b2d9dee72aa401f929146b733ba40b",
+   "status": 200,
+   "ms": 96065,
+   "message": {
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"287857e2ba700b9d4e273afba782fde688fa234e6159cc7e48733a9032252fe6\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"sheetPrompt:shaz-child@1\\\",\\\"artifactDigest\\\":\\\"b87404f6a8949b58e8e74f57c66b04e675a05d8841624eb924b20422e31ea4d7\\\",\\\"review\\\":{\\\"decision\\\":\\\"rejected\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"reference-grounding\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Prompt binds human-selected candidate 2 as identity and wardrobe reference and preserves grounded child-8 design. Sunglasses signature and burgundy striped shirt match locked answers and candidate 2 viewed via viewImage. referenceSha256 matches selection index 1.\\\",\\\"location\\\":\\\"prompt opening sentence; referenceSha256 field\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"using the attached selected candidate as the identity and wardrobe reference\\\",\\\"i wore sunglasses everywhere\\\"]},{\\\"criterion\\\":\\\"layout\\\",\\\"status\\\":\\\"fail\\\",\\\"evidence\\\":\\\"Draft replaces required fixed eight neutral, happy, delighted, sad, surprised, confused, angry, talking per recipe with custom set neutral, warm smile, pure joy, thoughtful concentration plus determined resolve, gentle surprise, tender concern, playful mischief. Backdrop sentence omits required flat #B5B5B5 hex and adds three-point lighting, violating P-GREY-NO-LIGHTING; explicit no-text prohibition missing.\\\",\\\"location\\\":\\\"expressions array; Middle row and Bottom row sentences; backdrop sentence\\\",\\\"repair\\\":\\\"Replace expressions array and prompt rows with fixed order neutral, happy, delighted, sad, surprised, confused, angry, talking in two rows of four; rewrite backdrop as flat #B5B5B5 with hex and no lighting or grade lines; add explicit No text, labels, captions, expression names or watermarks line; keep all other identity and wardrobe.\\\",\\\"quotes\\\":[\\\"Middle row, left to right: neutral, warm smile, pure joy, thoughtful concentration.\\\",\\\"Clean neutral grey studio backdrop with soft consistent three-point lighting\\\"]},{\\\"criterion\\\":\\\"identity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Prompt preserves eight-year-old child proportions, warm medium skin, dark-brown eyes, short straight black hair with side-swept fringe, visible-eyes sunglasses, burgundy striped shirt, dark trousers and sneakers matching candidate 2 viewed via viewImage. No adult drift or invented autobiographical fact; expression changes explicitly preserve age and outfit.\\\",\\\"location\\\":\\\"identity and wardrobe sentences throughout prompt\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Preserve Shaz's eight-year-old appearance: enlarged rounded head\\\",\\\"Match the burgundy crew-neck short-sleeved shirt with alternating paired thin cream horizontal stripes and muted olive horizontal stripes\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\",\\\"toolEvidence\\\":[{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"2c29eaede5143451f7f021c5de3d84d9cea7f2dd38319428758732fb77d2f6aa\\\",\\\"referenceSha256\\\":\\\"437f52e87b3c3512414bcefd5a3b1d8895e1f23f6affc5d51ab6d9b1031ab1ec\\\"}]}}\"}"
+   },
+   "usage": {
+    "prompt_tokens": 44148,
+    "completion_tokens": 12484,
+    "reasoning_tokens": 11483,
+    "cost": 0.002623022
+   }
+  }
+ ],
+ "outcome": {
+  "event": {
+   "taskId": "287857e2ba700b9d4e273afba782fde688fa234e6159cc7e48733a9032252fe6",
+   "action": "review",
+   "actor": "reviewer",
+   "workerId": "dept-eval:text-reviewer",
+   "artifactId": "sheetPrompt:shaz-child@1",
+   "artifactDigest": "b87404f6a8949b58e8e74f57c66b04e675a05d8841624eb924b20422e31ea4d7",
+   "review": {
+    "decision": "rejected",
+    "repairTarget": "current",
+    "perception": "direct-image",
+    "checks": [
+     {
+      "criterion": "reference-grounding",
+      "status": "pass",
+      "evidence": "Prompt binds human-selected candidate 2 as identity and wardrobe reference and preserves grounded child-8 design. Sunglasses signature and burgundy striped shirt match locked answers and candidate 2 viewed via viewImage. referenceSha256 matches selection index 1.",
+      "location": "prompt opening sentence; referenceSha256 field",
+      "repair": "",
+      "quotes": [
+       "using the attached selected candidate as the identity and wardrobe reference",
+       "i wore sunglasses everywhere"
+      ]
+     },
+     {
+      "criterion": "layout",
+      "status": "fail",
+      "evidence": "Draft replaces required fixed eight neutral, happy, delighted, sad, surprised, confused, angry, talking per recipe with custom set neutral, warm smile, pure joy, thoughtful concentration plus determined resolve, gentle surprise, tender concern, playful mischief. Backdrop sentence omits required flat #B5B5B5 hex and adds three-point lighting, violating P-GREY-NO-LIGHTING; explicit no-text prohibition missing.",
+      "location": "expressions array; Middle row and Bottom row sentences; backdrop sentence",
+      "repair": "Replace expressions array and prompt rows with fixed order neutral, happy, delighted, sad, surprised, confused, angry, talking in two rows of four; rewrite backdrop as flat #B5B5B5 with hex and no lighting or grade lines; add explicit No text, labels, captions, expression names or watermarks line; keep all other identity and wardrobe.",
+      "quotes": [
+       "Middle row, left to right: neutral, warm smile, pure joy, thoughtful concentration.",
+       "Clean neutral grey studio backdrop with soft consistent three-point lighting"
+      ]
+     },
+     {
+      "criterion": "identity",
+      "status": "pass",
+      "evidence": "Prompt preserves eight-year-old child proportions, warm medium skin, dark-brown eyes, short straight black hair with side-swept fringe, visible-eyes sunglasses, burgundy striped shirt, dark trousers and sneakers matching candidate 2 viewed via viewImage. No adult drift or invented autobiographical fact; expression changes explicitly preserve age and outfit.",
+      "location": "identity and wardrobe sentences throughout prompt",
+      "repair": "",
+      "quotes": [
+       "Preserve Shaz's eight-year-old appearance: enlarged rounded head",
+       "Match the burgundy crew-neck short-sleeved shirt with alternating paired thin cream horizontal stripes and muted olive horizontal stripes"
+      ]
+     }
+    ],
+    "modelVersion": "meta/muse-spark-1.3-contributor",
+    "capabilityVersion": "bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e",
+    "toolEvidence": [
+     {
+      "tool": "viewImage",
+      "sha256": "72c14c1075e7db442d7c2a1ef6ad9eddad01c5f791ca981a1ccd9ef399acd5b6"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "2c29eaede5143451f7f021c5de3d84d9cea7f2dd38319428758732fb77d2f6aa"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "192696049af968c5da4b9bd957f8d79571925d1838ee39a5d27586f4049ea955"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "437f52e87b3c3512414bcefd5a3b1d8895e1f23f6affc5d51ab6d9b1031ab1ec"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "2c29eaede5143451f7f021c5de3d84d9cea7f2dd38319428758732fb77d2f6aa",
+      "referenceSha256": "437f52e87b3c3512414bcefd5a3b1d8895e1f23f6affc5d51ab6d9b1031ab1ec"
+     }
+    ]
+   }
+  },
+  "valid": true,
+  "gateAccepted": true,
+  "error": null
+ }
+}

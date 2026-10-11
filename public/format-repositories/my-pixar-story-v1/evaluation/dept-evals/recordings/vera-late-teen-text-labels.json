@@ -1,9 +1,9 @@
 {
  "caseId": "vera-late-teen-text-labels",
- "recordedAt": "2026-10-11T07:53:58.938Z",
+ "recordedAt": "2026-10-11T20:45:32.712Z",
  "model": "meta/muse-spark-1.3-contributor",
  "mode": "live",
- "fingerprint": "eccaa6ffa3829c1a012bbfae89184c6a605ff13d4947115aefeb12bd4718b3ca",
+ "fingerprint": "a842a6ab709ba138e27672e9d2dc5a72c3753fdf9f8e542fe1c0c260277933ee",
  "fingerprintParts": {
   "model": "meta/muse-spark-1.3-contributor",
   "backend": "openrouter",
@@ -14,16 +14,19 @@
   ],
   "skill": {
    "path": "crew/vera/SKILL.md",
-   "sha256": "576488212eb64f723a4aa4c9a312a7f6662392e52ca35fcef9fa9df67f91157d"
+   "sha256": "183d527e631370858a41c7c04102538a1f25d94642c1516dbd7480393da2f714"
   },
   "rubric": {
    "path": "evaluation/rubrics/visual.md",
-   "sha256": "145bba0ef8769f47f0e1c20fa8cc239b7d420f3c106cf287e60609e86690596b"
+   "sha256": "2a6994a595c1e064d9fafe19f11828034e892ecf198b9be668cbf8bb16d96138"
   },
-  "recipes": {
-   "character-prompter.md": "af2ade078cd958898cfa96c70b7dce4b74ff16f54adaefc8423f0bc513b854e8",
-   "character-sheet-recipe.md": "25e531524ebfccc084a56025a04dd70526b76406a17b490ed2dea6b3840dc8f9",
-   "background-prompter.md": "39895d6dbd7db8298fb5301f5be52f6cbc9c7c4374e9e518ab561a9ee6d7b61c"
+  "recipes": {},
+  "craft": {
+   "house-style": "b95494eb4b67a8aeb7f1459ada27e811283fd5eae1aa51054f8ade61305a2783",
+   "character-design": "4f211109b20406a51a788788981ad9f19fbbb4af22f43239c9dda3cd04c8adfd",
+   "identity": "d7b647fc5302672cb720c9bf05310ac1a9b3d64390ec77d2a98172756b07ec1c",
+   "character-sheet": "4e8f13843f2d47c138ad5fc2fc35e8034b2129b85df9f4032d6ca761da65a6ab",
+   "locations": "4df46006322bee4704d544d0ba6bbb1f12611796e95d68055ee2a96cdfa323be"
   },
   "traits": {
    "reasoning": "always-on",
@@ -38,48 +41,99 @@
   "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
   "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
  },
- "wallMs": 148623,
- "costUsd": 0.010725,
+ "wallMs": 215514,
+ "costUsd": 0.020072346,
  "requests": [
   {
    "seq": 1,
-   "requestSha256": "0624a9513c28e85f1cba13e5a20f9d32faef13f23ff5f75750b09421a612185c",
+   "requestSha256": "ce766443dbe1bf2876fbf08fcf16275412c54d6b504cd4a549632b3b563856c6",
    "status": 200,
-   "ms": 76405,
+   "ms": 8921,
    "message": {
-    "content": "Vera reviewing the late-teen sheets — inspecting each candidate for style, likeness, and layout.",
+    "content": "Vera reviewing late-teen candidates — inspecting each sheet against likeness and craft criteria.",
     "tool_calls": [
      {
       "type": "function",
       "index": 0,
-      "id": "call_01a129f32d7570d5aeffc30939ce5228",
+      "id": "call_01a12cb3879c77ddba69b5c53a22bae6",
       "function": {
        "name": "wiggly_tool",
        "arguments": "{\"name\":\"viewImage\",\"sha256\":\"7dbb97442e824988322114ca3e0f2406f5933dedfc4b4b9e6f851ab944edce43\",\"referenceSha256\":\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\"}"
       }
-     },
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 37917,
+    "completion_tokens": 762,
+    "reasoning_tokens": 542,
+    "cost": 0.0039441
+   }
+  },
+  {
+   "seq": 2,
+   "requestSha256": "fd8f7f6793385139a6c17cab640f19365fd26c9e6f961e6a87c9f81ab335a5f3",
+   "status": 200,
+   "ms": 31715,
+   "message": {
+    "content": "Vera is inspecting the three late-teen sheets against likeness and the six required checks — calling the remaining views to complete direct evidence.",
+    "tool_calls": [
      {
       "type": "function",
-      "index": 1,
-      "id": "call_01a129f32f2d71c6a800c84b256b6be8",
+      "index": 0,
+      "id": "call_01a12cb403c072eab082fbf46d7330c7",
       "function": {
        "name": "wiggly_tool",
        "arguments": "{\"name\":\"viewImage\",\"sha256\":\"210aa2ce62bb21de6021c4bb769f4e44470f26df1c2dee782f6207d80cb847ae\",\"referenceSha256\":\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\"}"
       }
-     },
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 38228,
+    "completion_tokens": 3161,
+    "reasoning_tokens": 2866,
+    "cost": 0.004455
+   }
+  },
+  {
+   "seq": 3,
+   "requestSha256": "a98aa7d996f7e70dc21a81e41a8c6c27ef042cb2da9eaae8170f37dcdbdd8d73",
+   "status": 200,
+   "ms": 55647,
+   "message": {
+    "content": "I’ve confirmed two options with direct viewing; now I’ll verify the final option and the reference photo to complete the required likeness evidence.",
+    "tool_calls": [
      {
       "type": "function",
-      "index": 2,
-      "id": "call_01a129f330af752d9a868d5d8a2a0a92",
+      "index": 0,
+      "id": "call_01a12cb4dd4575f1abeddf2000998615",
       "function": {
        "name": "wiggly_tool",
        "arguments": "{\"name\":\"viewImage\",\"sha256\":\"f509bc3536a1d425f919a57cece00ae08db231721d71dec4981ff01b64d3ceb5\",\"referenceSha256\":\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\"}"
       }
-     },
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 38546,
+    "completion_tokens": 5186,
+    "reasoning_tokens": 4822,
+    "cost": 0.0048918
+   }
+  },
+  {
+   "seq": 4,
+   "requestSha256": "51a976b9207104d264e17e4b470badf3083319cc869bfecb07d3d0c3ce5ae2e6",
+   "status": 200,
+   "ms": 62887,
+   "message": {
+    "content": "Vera has direct views of all three sheets; now I'll verify likeness against the approved reference photo to finalize the six checks.",
+    "tool_calls": [
      {
       "type": "function",
-      "index": 3,
-      "id": "call_01a129f3322c7173b83378d0c0e8c34b",
+      "index": 0,
+      "id": "call_01a12cb5d37a768985024aa5560b15a8",
       "function": {
        "name": "wiggly_tool",
        "arguments": "{\"name\":\"viewImage\",\"sha256\":\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\",\"referenceSha256\":\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\"}"
@@ -88,25 +142,25 @@
     ]
    },
    "usage": {
-    "prompt_tokens": 33908,
-    "completion_tokens": 9329,
-    "reasoning_tokens": 8438,
-    "cost": 0.0052566
+    "prompt_tokens": 38860,
+    "completion_tokens": 6982,
+    "reasoning_tokens": 6531,
+    "cost": 0.0052824
    }
   },
   {
-   "seq": 2,
-   "requestSha256": "d1f1c9573351a5d40c0e98269a673326a02de07de5789179d55bd4ec885f09f9",
+   "seq": 5,
+   "requestSha256": "54e5eb900150a8c561c4e196212a4f93172c08a02e5a31d61be48bb602932c41",
    "status": 200,
-   "ms": 71875,
+   "ms": 55798,
    "message": {
-    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"5a62ae39f18e5d0b1162668f6b47cbbc3ddf878b4b6669487f00863252a4cb6c\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:visual-reviewer\\\",\\\"artifactId\\\":\\\"candidates:shaz-late-teen@2\\\",\\\"artifactDigest\\\":\\\"2592c18116685ba344e0a10ff1e8be19ae0bf7015f487a725ecff316fcdced39\\\",\\\"review\\\":{\\\"decision\\\":\\\"rejected\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"likeness\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Directly inspected reference 7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81 (warm medium complexion, softly squared jaw, broad rounded nose, full lips, dark-brown eyes, thick dark brows, black rectangular clear-lens glasses, short black hair with trimmed sides and lifted textured top, light moustache and jaw/chin hair, dark teal-blue dotted shirt over black undershirt) against all three sheets. All three preserve glasses shape, hairstyle, brow thickness, facial-hair design, complexion and dotted teal shirt with black undershirt in stylized form.\\\",\\\"location\\\":\\\"All 4 turnaround figures and 8 portraits in each of the 3 options\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"fail\\\",\\\"evidence\\\":\\\"Candidate index 1 (210aa2ce62bb21de6021c4bb769f4e44470f26df1c2dee782f6207d80cb847ae) renders baked-in text labels: \\\\\\\"FRONT VIEW\\\\\\\", \\\\\\\"THREE-QUARTER VIEW\\\\\\\", \\\\\\\"PROFILE VIEW\\\\\\\", \\\\\\\"BACK VIEW\\\\\\\", \\\\\\\"NEUTRAL\\\\\\\", \\\\\\\"WARM SMILE\\\\\\\", \\\\\\\"PURE JOY\\\\\\\", \\\\\\\"THOUGHTFUL CONCENTRATION\\\\\\\", \\\\\\\"DETERMINED RESOLVE\\\\\\\", \\\\\\\"GENTLE SURPRISE\\\\\\\", \\\\\\\"TENDER CONCERN\\\\\\\", \\\\\\\"PLAYFUL MISCHIEF\\\\\\\". Otherwise all three show stylized Pixar-like 3D feature animation with enlarged head, large spherical eyes, smooth matte skin with no pores, sculpted hair clumps and graphic facial-hair shading, not photoreal.\\\",\\\"location\\\":\\\"Candidate index 1 second sheet, text above/below top-row full-body cells and below each portrait cell\\\",\\\"repair\\\":\\\"Regenerate candidate index 1 with identical stylized geometry, smooth skin, graphic facial hair and outfit but with zero rendered text, labels, captions or watermarks; keep 12 image-only cells.\\\"},{\\\"criterion\\\":\\\"anatomy\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Quick full-view pass over every file: two arms, two legs and normal-looking hands in every pose; no clearly visible extra or missing limbs, fused or extra fingers, broken joints or floating extremities. Profile occlusions are natural. Some fingers too small to count which is a pass. Hand-on-chin portrait shows no clearly visible deformity.\\\",\\\"location\\\":\\\"Hands and limbs in all top-row figures and hand-on-chin portrait in candidate index 2 middle-row column 4\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"turnaround\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each option shows exactly four neutral full-body figures at equal scale on one baseline ordered front, three-quarter at ~45 degrees, profile at 90 degrees, back at 180 degrees, with complete hair crown to shoe soles plus space above hair and below shoes. No duplicate front/back views, intermediate additions, fifth columns or thigh crops. Fixes prior six-figure and cropped defects.\\\",\\\"location\\\":\\\"Top row of each of the 3 sheets, 4 cells per sheet\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"expressions\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each option shows exactly eight distinct head-and-shoulder portraits in two rows of four with readable neutral, warm smile, pure joy, thoughtful concentration, determined resolve, gentle surprise, tender concern, playful mischief. No duplicate neutral/surprise and no ten-portrait layout. Candidate index 1 labels confirm order; candidates 0 and 2 show same distinct range without text.\\\",\\\"location\\\":\\\"Middle and bottom rows of each sheet, 8 portrait cells per sheet\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"consistency\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Within each option, outfit (dotted teal-blue shirt, black undershirt, charcoal trousers, dark low-top sneakers), hairstyle, glasses, facial-hair design, skin tone, age presentation and six-head-tall proportions remain identical across all 4 turnarounds and 8 portraits.\\\",\\\"location\\\":\\\"Full 12-cell grid of each option\\\",\\\"repair\\\":\\\"\\\"}],\\\"recommendation\\\":{\\\"selection\\\":0,\\\"ranking\\\":[0,2],\\\"reason\\\":\\\"Candidate 0 (7dbb97) is cleanest text-free sheet with fully readable distinct expressions and faithful glasses/hair/outfit; candidate 2 is also text-free but uses hand prop and closed-eye joy.\\\"},\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\",\\\"toolEvidence\\\":[{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"7dbb97442e824988322114ca3e0f2406f5933dedfc4b4b9e6f851ab944edce43\\\",\\\"referenceSha256\\\":\\\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"210aa2ce62bb21de6021c4bb769f4e44470f26df1c2dee782f6207d80cb847ae\\\",\\\"referenceSha256\\\":\\\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"f509bc3536a1d425f919a57cece00ae08db231721d71dec4981ff01b64d3ceb5\\\",\\\"referenceSha256\\\":\\\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\\\",\\\"referenceSha256\\\":\\\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\\\"}]}}\"}"
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"5a62ae39f18e5d0b1162668f6b47cbbc3ddf878b4b6669487f00863252a4cb6c\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:visual-reviewer\\\",\\\"artifactId\\\":\\\"candidates:shaz-late-teen@2\\\",\\\"artifactDigest\\\":\\\"2592c18116685ba344e0a10ff1e8be19ae0bf7015f487a725ecff316fcdced39\\\",\\\"review\\\":{\\\"decision\\\":\\\"rejected\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"likeness\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Directly inspected reference 7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81 and all three candidates. Reference shows warm medium complexion, black rectangular glasses, short black hair with trimmed sides and lifted top, light moustache and jaw/chin hair, teal-blue dotted shirt over black undershirt. All three options preserve these in stylized form: same complexion, glasses shape, hair volume, graphic facial-hair shading, and dotted teal-blue shirt.\\\",\\\"location\\\":\\\"All 4 turnaround views and 8 portraits in each of the 3 files\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"fail\\\",\\\"evidence\\\":\\\"Candidates 0 (7dbb9744) and 2 (f509bc35) read as stylized feature-quality 3D animation with smooth matte skin, sculpted hair clumps and graphic facial-hair shading and no rendered text. Candidate 1 (210aa2ce) has baked-in text across the full canvas: 'FRONT VIEW', 'THREE-QUARTER VIEW', 'PROFILE VIEW', 'BACK VIEW' top and bottom, and 'NEUTRAL', 'WARM SMILE', 'PURE JOY', 'THOUGHTFUL CONCENTRATION', 'DETERMINED RESOLVE', 'GENTLE SURPRISE', 'TENDER CONCERN', 'PLAYFUL MISCHIEF' on portraits. Any baked-in text FAILS style per [R-SHEET-NO-TEXT].\\\",\\\"location\\\":\\\"Candidate index 1 (210aa2ce62bb21de6021c4bb769f4e44470f26df1c2dee782f6207d80cb847ae), top row and both portrait rows\\\",\\\"repair\\\":\\\"Regenerate candidate 1 without any rendered text, labels, captions or watermarks; keep identical stylized character, outfit and layout with blank grey background.\\\"},{\\\"criterion\\\":\\\"anatomy\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Quick full-view pass over all three sheets: two arms, two legs and normal-looking hands in every full-body view and portrait; no clearly visible extra, fused or missing fingers or limbs, no broken joints, floating extremities or melting jawlines. Some fingers are too small to count, which is a pass. No crop needed as nothing looks wrong.\\\",\\\"location\\\":\\\"Hands and limbs in all views across all 3 files\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"turnaround\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each option shows exactly four uncropped full-body neutral figures at equal scale on one baseline: cell 1 front, cell 2 three-quarter at ~45 degrees, cell 3 profile at 90 degrees, cell 4 back at 180 degrees, with complete hair crown to shoe soles, visible margins, empty hands, same dotted teal-blue shirt front/sides/back. No duplicate front/back views, intermediate additions, fifth columns, or cropped legs/shoes.\\\",\\\"location\\\":\\\"Top row of each of the 3 candidates\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"expressions\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each option shows exactly eight distinct head-and-shoulders portraits in two rows of four: neutral, warm smile, pure joy, thoughtful concentration, determined resolve, gentle surprise, tender concern, playful mischief with coordinated eyes, lids, brows, cheeks and mouth preserving identity. No duplicate neutral or surprise, no fifth column.\\\",\\\"location\\\":\\\"Middle and bottom rows of each of the 3 candidates\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"consistency\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Within each sheet, outfit (teal-blue dotted shirt, black undershirt, charcoal trousers, dark sneakers with pale soles), glasses, hairstyle, age presentation, skin tone and youthful ~6-head-tall proportions remain identical across 4 turnarounds and 8 portraits. Identity is preserved across the three options as same late-teen design.\\\",\\\"location\\\":\\\"Full sheets of all 3 candidates\\\",\\\"repair\\\":\\\"\\\"}],\\\"recommendation\\\":{\\\"selection\\\":0,\\\"ranking\\\":[0,2],\\\"reason\\\":\\\"Option 0 is the cleanest passing full sheet: exact 4+8 layout, no baked-in text, simplified stylization with distinct readable expressions. Option 2 also passes but uses eyes-closed joy and hand-to-chin.\\\"},\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\",\\\"toolEvidence\\\":[{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"7dbb97442e824988322114ca3e0f2406f5933dedfc4b4b9e6f851ab944edce43\\\",\\\"referenceSha256\\\":\\\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"210aa2ce62bb21de6021c4bb769f4e44470f26df1c2dee782f6207d80cb847ae\\\",\\\"referenceSha256\\\":\\\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"f509bc3536a1d425f919a57cece00ae08db231721d71dec4981ff01b64d3ceb5\\\",\\\"referenceSha256\\\":\\\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\\\",\\\"referenceSha256\\\":\\\"7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81\\\"}]}}\"}"
    },
    "usage": {
-    "prompt_tokens": 35094,
-    "completion_tokens": 9795,
-    "reasoning_tokens": 7968,
-    "cost": 0.0054684
+    "prompt_tokens": 39200,
+    "completion_tokens": 6453,
+    "reasoning_tokens": 4747,
+    "cost": 0.001499046
    }
   }
  ],
@@ -126,43 +180,43 @@
      {
       "criterion": "likeness",
       "status": "pass",
-      "evidence": "Directly inspected reference 7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81 (warm medium complexion, softly squared jaw, broad rounded nose, full lips, dark-brown eyes, thick dark brows, black rectangular clear-lens glasses, short black hair with trimmed sides and lifted textured top, light moustache and jaw/chin hair, dark teal-blue dotted shirt over black undershirt) against all three sheets. All three preserve glasses shape, hairstyle, brow thickness, facial-hair design, complexion and dotted teal shirt with black undershirt in stylized form.",
-      "location": "All 4 turnaround figures and 8 portraits in each of the 3 options",
+      "evidence": "Directly inspected reference 7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81 and all three candidates. Reference shows warm medium complexion, black rectangular glasses, short black hair with trimmed sides and lifted top, light moustache and jaw/chin hair, teal-blue dotted shirt over black undershirt. All three options preserve these in stylized form: same complexion, glasses shape, hair volume, graphic facial-hair shading, and dotted teal-blue shirt.",
+      "location": "All 4 turnaround views and 8 portraits in each of the 3 files",
       "repair": ""
      },
      {
       "criterion": "style",
       "status": "fail",
-      "evidence": "Candidate index 1 (210aa2ce62bb21de6021c4bb769f4e44470f26df1c2dee782f6207d80cb847ae) renders baked-in text labels: \"FRONT VIEW\", \"THREE-QUARTER VIEW\", \"PROFILE VIEW\", \"BACK VIEW\", \"NEUTRAL\", \"WARM SMILE\", \"PURE JOY\", \"THOUGHTFUL CONCENTRATION\", \"DETERMINED RESOLVE\", \"GENTLE SURPRISE\", \"TENDER CONCERN\", \"PLAYFUL MISCHIEF\". Otherwise all three show stylized Pixar-like 3D feature animation with enlarged head, large spherical eyes, smooth matte skin with no pores, sculpted hair clumps and graphic facial-hair shading, not photoreal.",
-      "location": "Candidate index 1 second sheet, text above/below top-row full-body cells and below each portrait cell",
-      "repair": "Regenerate candidate index 1 with identical stylized geometry, smooth skin, graphic facial hair and outfit but with zero rendered text, labels, captions or watermarks; keep 12 image-only cells."
+      "evidence": "Candidates 0 (7dbb9744) and 2 (f509bc35) read as stylized feature-quality 3D animation with smooth matte skin, sculpted hair clumps and graphic facial-hair shading and no rendered text. Candidate 1 (210aa2ce) has baked-in text across the full canvas: 'FRONT VIEW', 'THREE-QUARTER VIEW', 'PROFILE VIEW', 'BACK VIEW' top and bottom, and 'NEUTRAL', 'WARM SMILE', 'PURE JOY', 'THOUGHTFUL CONCENTRATION', 'DETERMINED RESOLVE', 'GENTLE SURPRISE', 'TENDER CONCERN', 'PLAYFUL MISCHIEF' on portraits. Any baked-in text FAILS style per [R-SHEET-NO-TEXT].",
+      "location": "Candidate index 1 (210aa2ce62bb21de6021c4bb769f4e44470f26df1c2dee782f6207d80cb847ae), top row and both portrait rows",
+      "repair": "Regenerate candidate 1 without any rendered text, labels, captions or watermarks; keep identical stylized character, outfit and layout with blank grey background."
      },
      {
       "criterion": "anatomy",
       "status": "pass",
-      "evidence": "Quick full-view pass over every file: two arms, two legs and normal-looking hands in every pose; no clearly visible extra or missing limbs, fused or extra fingers, broken joints or floating extremities. Profile occlusions are natural. Some fingers too small to count which is a pass. Hand-on-chin portrait shows no clearly visible deformity.",
-      "location": "Hands and limbs in all top-row figures and hand-on-chin portrait in candidate index 2 middle-row column 4",
+      "evidence": "Quick full-view pass over all three sheets: two arms, two legs and normal-looking hands in every full-body view and portrait; no clearly visible extra, fused or missing fingers or limbs, no broken joints, floating extremities or melting jawlines. Some fingers are too small to count, which is a pass. No crop needed as nothing looks wrong.",
+      "location": "Hands and limbs in all views across all 3 files",
       "repair": ""
      },
      {
       "criterion": "turnaround",
       "status": "pass",
-      "evidence": "Each option shows exactly four neutral full-body figures at equal scale on one baseline ordered front, three-quarter at ~45 degrees, profile at 90 degrees, back at 180 degrees, with complete hair crown to shoe soles plus space above hair and below shoes. No duplicate front/back views, intermediate additions, fifth columns or thigh crops. Fixes prior six-figure and cropped defects.",
-      "location": "Top row of each of the 3 sheets, 4 cells per sheet",
+      "evidence": "Each option shows exactly four uncropped full-body neutral figures at equal scale on one baseline: cell 1 front, cell 2 three-quarter at ~45 degrees, cell 3 profile at 90 degrees, cell 4 back at 180 degrees, with complete hair crown to shoe soles, visible margins, empty hands, same dotted teal-blue shirt front/sides/back. No duplicate front/back views, intermediate additions, fifth columns, or cropped legs/shoes.",
+      "location": "Top row of each of the 3 candidates",
       "repair": ""
      },
      {
       "criterion": "expressions",
       "status": "pass",
-      "evidence": "Each option shows exactly eight distinct head-and-shoulder portraits in two rows of four with readable neutral, warm smile, pure joy, thoughtful concentration, determined resolve, gentle surprise, tender concern, playful mischief. No duplicate neutral/surprise and no ten-portrait layout. Candidate index 1 labels confirm order; candidates 0 and 2 show same distinct range without text.",
-      "location": "Middle and bottom rows of each sheet, 8 portrait cells per sheet",
+      "evidence": "Each option shows exactly eight distinct head-and-shoulders portraits in two rows of four: neutral, warm smile, pure joy, thoughtful concentration, determined resolve, gentle surprise, tender concern, playful mischief with coordinated eyes, lids, brows, cheeks and mouth preserving identity. No duplicate neutral or surprise, no fifth column.",
+      "location": "Middle and bottom rows of each of the 3 candidates",
       "repair": ""
      },
      {
       "criterion": "consistency",
       "status": "pass",
-      "evidence": "Within each option, outfit (dotted teal-blue shirt, black undershirt, charcoal trousers, dark low-top sneakers), hairstyle, glasses, facial-hair design, skin tone, age presentation and six-head-tall proportions remain identical across all 4 turnarounds and 8 portraits.",
-      "location": "Full 12-cell grid of each option",
+      "evidence": "Within each sheet, outfit (teal-blue dotted shirt, black undershirt, charcoal trousers, dark sneakers with pale soles), glasses, hairstyle, age presentation, skin tone and youthful ~6-head-tall proportions remain identical across 4 turnarounds and 8 portraits. Identity is preserved across the three options as same late-teen design.",
+      "location": "Full sheets of all 3 candidates",
       "repair": ""
      }
     ],
@@ -172,7 +226,7 @@
       0,
       2
      ],
-     "reason": "Candidate 0 (7dbb97) is cleanest text-free sheet with fully readable distinct expressions and faithful glasses/hair/outfit; candidate 2 is also text-free but uses hand prop and closed-eye joy."
+     "reason": "Option 0 is the cleanest passing full sheet: exact 4+8 layout, no baked-in text, simplified stylization with distinct readable expressions. Option 2 also passes but uses eyes-closed joy and hand-to-chin."
     },
     "modelVersion": "meta/muse-spark-1.3-contributor",
     "capabilityVersion": "bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e",

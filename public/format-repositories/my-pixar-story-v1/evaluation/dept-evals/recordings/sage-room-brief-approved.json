@@ -1,9 +1,9 @@
 {
  "caseId": "sage-room-brief-approved",
- "recordedAt": "2026-10-11T14:42:00.427Z",
+ "recordedAt": "2026-10-11T20:52:02.792Z",
  "model": "meta/muse-spark-1.3-contributor",
  "mode": "live",
- "fingerprint": "8a0855d9c83ee546dae52ec0924ce3dbfadca4e740643fe97d4cd9f25903ab11",
+ "fingerprint": "b64e4f832fac3010738c4ecd97ee182c63b84be604fe63e14814f6237948ae94",
  "fingerprintParts": {
   "model": "meta/muse-spark-1.3-contributor",
   "backend": "openrouter",
@@ -13,16 +13,27 @@
   ],
   "skill": {
    "path": "crew/sage/SKILL.md",
-   "sha256": "c9542bf7fd6a32a216e0e897be3583f3063876e60243ce17cc8dbdde1448675e"
+   "sha256": "7812b87353aa6ea1d55d6cf0d9410db1fa4baea6dda28c2d3f532e3f1af73cbc"
   },
   "rubric": {
    "path": "evaluation/rubrics/text.md",
-   "sha256": "9f63661a714e8844e6585580c26261ff19d5d3f2eac84a18828375b2ff6ffaf5"
+   "sha256": "3845150ebb23f77c599d0a24354b966a50587bcb3278f6f82c9f58beaf14807a"
   },
   "recipes": {
-   "character-prompter.md": "af2ade078cd958898cfa96c70b7dce4b74ff16f54adaefc8423f0bc513b854e8",
-   "character-sheet-recipe.md": "25e531524ebfccc084a56025a04dd70526b76406a17b490ed2dea6b3840dc8f9",
-   "background-prompter.md": "39895d6dbd7db8298fb5301f5be52f6cbc9c7c4374e9e518ab561a9ee6d7b61c"
+   "character-prompter.md": "235dadf0cb428eedf1edf2b782247f72cd6cd45aa4c7d27a9c6334a1256962af",
+   "character-sheet-recipe.md": "caab53afd48de0b91e77b04da50a688da273aeeb5c86335aa807cf12d60ac143",
+   "background-prompter.md": "4a5f3ac96581dc854b3f184c8a6520196203989338c766919ad0d47a469247dc"
+  },
+  "craft": {
+   "house-style": "b95494eb4b67a8aeb7f1459ada27e811283fd5eae1aa51054f8ade61305a2783",
+   "script-craft": "fed7726674482cfc50ae682c4c9f07bb058536c3cb1e0bc8b8d8c7f6403159f0",
+   "character-design": "4f211109b20406a51a788788981ad9f19fbbb4af22f43239c9dda3cd04c8adfd",
+   "prompt-rules": "695bcaf66bf660f9e50b132b3989a38607dbf3c306241da94106102c8844b7c5",
+   "identity": "d7b647fc5302672cb720c9bf05310ac1a9b3d64390ec77d2a98172756b07ec1c",
+   "character-sheet": "4e8f13843f2d47c138ad5fc2fc35e8034b2129b85df9f4032d6ca761da65a6ab",
+   "edit-prompts": "fa03e26afdf3e19d4622a8038e60cb8a2491557a43f7f9bba8c19634e91934ec",
+   "locations": "4df46006322bee4704d544d0ba6bbb1f12611796e95d68055ee2a96cdfa323be",
+   "working-method": "1ea99fc7df46276f47d812b5918b878a625ac15c462c4c6699fab66b7416daa3"
   },
   "traits": {
    "reasoning": "always-on",
@@ -37,22 +48,22 @@
   "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
   "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
  },
- "wallMs": 63311,
- "costUsd": 0.0061863,
+ "wallMs": 76898,
+ "costUsd": 0.0061787,
  "requests": [
   {
    "seq": 1,
-   "requestSha256": "a84028d5c8909acf4941a790881f79cb07af1d2aa729ba356b26a98f08f81516",
+   "requestSha256": "22e9490c6349e1ac6b495e7c016753fb47fb63cfb6acbb0e85b1bd0cf5196913",
    "status": 200,
-   "ms": 63127,
+   "ms": 76739,
    "message": {
-    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"d7eab149edaffde57b08ff5ecff58b18f8ef1520e65157f2372a4e880ef288e9\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"backgroundBrief:childhood-room@2\\\",\\\"artifactDigest\\\":\\\"3cf158353fb01fe5b229dcf07f7d012fdb0771e9d525d7d65b41ae04c82dbc46\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"perception\\\":\\\"direct-text\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-fit\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Brief reads as lived-in Pixar set, not empty/generic: sculpted forms with Toy Story lived-in specificity and Ratatouille light, bold saturated palette, chunky furniture with designed wear, story-dressed props for 8yo collector/viewer/scientist dream, warm motivated sunlight with bounced fill, detail around clear central area with clean face space, and explicit empty-of-people rule without empty set. No ivory/oatmeal/neutral/restrained palette, plain unmarked room, or blank calm walls describe the room.\\\",\\\"location\\\":\\\"direction Pixar form/light/color sentences through bunk/CRT/card/science/prayer-rug dressing; continuityNotes dressed-room-behind-faces sentence\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"appealing sculpted forms, expressive everyday objects and rich dimensional warmth of a Pixar feature film\\\",\\\"blue-green painted walls, honey-colored wood, deep blue bedding and lively orange and yellow accents\\\",\\\"Warm late-afternoon sun enters through slatted blinds on the left wall\\\",\\\"Render zero people, zero characters and zero silhouettes\\\"]},{\\\"criterion\\\":\\\"facts\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All place facts trace to locked answers/script and human direction, with furnishings explicitly marked interpretation: age 8 quiet sunglasses, scientist ambition without known motive with excited/proud mother, Yu-Gi-Oh GX watching/collecting/battling with older sister and younger brother, 7-year and 2-year gaps, Muslim family mid-2000s Dallas/McKinney setting, seated pride moment. Bunk sharing, CRT, cards, science kit, sunglasses, prayer rug are proposed, not remembered events; no experiment, costume, dialogue or trademarked logos/characters asserted; absolute no-text rule enforced.\\\",\\\"location\\\":\\\"knownDetails all five entries; proposedDetails six entries labeled Proposed/interpreted; direction no-text/no-logo sentences\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"when i was 8 years old, i wanted to be a scientist\\\",\\\"He wanted to become a scientist without knowing why; his mother became excited when he said so and seemed proud of him.\\\",\\\"the locked childhood answer does not document the room architecture or furnishings\\\",\\\"no Yu-Gi-Oh logos, franchise characters or recognizable card artwork\\\"]},{\\\"criterion\\\":\\\"spatial-action\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Space supports locked encouragement action: clear central conversation area with detail pushed to edges, mother seated screen-right chair angled to Shaz standing screen-left at similar depth/focal plane facing inward, practical adult chair with grounded feet, unobstructed straight push retaining both faces, props/cables/shoes/toys kept outside feet and camera path, sun stripes kept off faces while bounced fill connects face positions for readable sunglasses/hijab.\\\",\\\"location\\\":\\\"direction central-area and chair sentences; continuityNotes shot-preservation and keep-out sentences; shotIntentions shot-childhood-encouragement staging\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"around the edges of a clear central conversation area\\\",\\\"The mother\\\\u2019s simple chair remains screen-right, angled toward Shaz\\\\u2019s standing position screen-left.\\\",\\\"Shaz stands screen-left and his mother sits screen-right on a simple chair\\\"]},{\\\"criterion\\\":\\\"continuity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Preserves locked child-eye-level medium-wide two-shot geometry, chair scale, furniture/props/window/doorway/light direction through push and tail hold, bounced light for translucent sunglasses and teal hijab, dressed room behind faces without blank walls, no siblings/other participants with characters composited later, science props replace superseded ban without new experiment/costume/dialogue/event, absolute no-text/no-figure rules, revised master replaces generic room with no secondary angle matching backgrounds@2 angles [] and all shotIntentions angleId null.\\\",\\\"location\\\":\\\"continuityNotes full; backgrounds@2 childhood-room angles []; shotIntentions angleId null\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Preserve the locked shot: child-eye-level medium-wide two-shot, Shaz standing screen-left and mother seated screen-right\\\",\\\"illuminate the mother\\\\u2019s teal hijab\\\",\\\"This revised master replaces the earlier generic room design; no secondary angle is added.\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\"}}\"}"
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"d7eab149edaffde57b08ff5ecff58b18f8ef1520e65157f2372a4e880ef288e9\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"backgroundBrief:childhood-room@2\\\",\\\"artifactDigest\\\":\\\"3cf158353fb01fe5b229dcf07f7d012fdb0771e9d525d7d65b41ae04c82dbc46\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-text\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-fit\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Brief reads as a Pixar feature set, not generic: sculpted chunky forms, warm motivated late-afternoon light, and lived-in story dressing specific to quiet 8yo Shaz (bunk bed, CRT viewing nook, card binders and battle spread, toy microscope, spare sunglasses, prayer rug). Muted woods/blue-green with lively orange/yellow accent satisfies palette; no empty catalog room, no plain unmarked objects, no blank calm walls. Empty-of-people preserved while set stays dressed.\\\",\\\"location\\\":\\\"direction bunk-bed through lighting sentences\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"with the lived-in specificity of Toy Story\\\",\\\"A wooden bunk bed occupies the rear-left wall\\\",\\\"Warm late-afternoon sun enters through slatted blinds on the left wall\\\"]},{\\\"criterion\\\":\\\"facts\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"KnownDetails preserve locked answers: age 8, quiet, sunglasses signature, scientist ambition without motive, maternal excitement and apparent pride, GX viewing with siblings and card battling. Mid-2000s Dallas/McKinney and Muslim family explicitly attributed to human direction; room architecture and all furnishings marked as proposed interpretation, not documented memory. Science/card dressing framed as illustration, not remembered experiment; no invented event, motive, dialogue or direct quote.\\\",\\\"location\\\":\\\"knownDetails; proposedDetails; direction interpretation disclaimer\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"He wanted to become a scientist without knowing why\\\",\\\"i wore sunglasses everywhere\\\",\\\"are proposed interpretation, not documented memories\\\"]},{\\\"criterion\\\":\\\"spatial-action\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Layout supports approved child-eye-level two-shot: Shaz standing screen-left, mother seated screen-right on practical chair, facing inward at similar depth with faces close in height, clear central conversation area, unobstructed straight push retaining both faces, props/cables/toys kept outside foot positions and camera path, bounced fill to keep eyes readable through sunglasses and illuminate teal hijab.\\\",\\\"location\\\":\\\"direction chair and central area sentences; continuityNotes locked-shot paragraph\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Shaz standing screen-left and mother seated screen-right\\\",\\\"Shaz stands screen-left and his mother sits screen-right on a simple chair\\\",\\\"Keep both in one focal plane, facing inward across clear space\\\"]},{\\\"criterion\\\":\\\"continuity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Preserves master geometry, window/doorway/light direction and approved designs composited later; excludes siblings, additional participants, scientist costume, experiment, dialogue or new event. Enforces absolute no-text and no-figure rules for cards, drawings, TV, reflections and rug, uses generic abstract cards with dark TV, and notes this master replaces earlier generic design with no secondary angle, matching backgrounds@2 angles [].\\\",\\\"location\\\":\\\"continuityNotes; direction no-people and no-text sentences\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Render zero people, zero characters and zero silhouettes\\\",\\\"Absolutely no text, letters, numbers, logos, labels or signage anywhere.\\\",\\\"no siblings or other participants appear in this plate\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\"}}\"}"
    },
    "usage": {
-    "prompt_tokens": 38657,
-    "completion_tokens": 11603,
-    "reasoning_tokens": 10292,
-    "cost": 0.0061863
+    "prompt_tokens": 44147,
+    "completion_tokens": 8820,
+    "reasoning_tokens": 7756,
+    "cost": 0.0061787
    }
   }
  ],
@@ -72,51 +83,49 @@
      {
       "criterion": "scene-fit",
       "status": "pass",
-      "evidence": "Brief reads as lived-in Pixar set, not empty/generic: sculpted forms with Toy Story lived-in specificity and Ratatouille light, bold saturated palette, chunky furniture with designed wear, story-dressed props for 8yo collector/viewer/scientist dream, warm motivated sunlight with bounced fill, detail around clear central area with clean face space, and explicit empty-of-people rule without empty set. No ivory/oatmeal/neutral/restrained palette, plain unmarked room, or blank calm walls describe the room.",
-      "location": "direction Pixar form/light/color sentences through bunk/CRT/card/science/prayer-rug dressing; continuityNotes dressed-room-behind-faces sentence",
+      "evidence": "Brief reads as a Pixar feature set, not generic: sculpted chunky forms, warm motivated late-afternoon light, and lived-in story dressing specific to quiet 8yo Shaz (bunk bed, CRT viewing nook, card binders and battle spread, toy microscope, spare sunglasses, prayer rug). Muted woods/blue-green with lively orange/yellow accent satisfies palette; no empty catalog room, no plain unmarked objects, no blank calm walls. Empty-of-people preserved while set stays dressed.",
+      "location": "direction bunk-bed through lighting sentences",
       "repair": "",
       "quotes": [
-       "appealing sculpted forms, expressive everyday objects and rich dimensional warmth of a Pixar feature film",
-       "blue-green painted walls, honey-colored wood, deep blue bedding and lively orange and yellow accents",
-       "Warm late-afternoon sun enters through slatted blinds on the left wall",
-       "Render zero people, zero characters and zero silhouettes"
+       "with the lived-in specificity of Toy Story",
+       "A wooden bunk bed occupies the rear-left wall",
+       "Warm late-afternoon sun enters through slatted blinds on the left wall"
       ]
      },
      {
       "criterion": "facts",
       "status": "pass",
-      "evidence": "All place facts trace to locked answers/script and human direction, with furnishings explicitly marked interpretation: age 8 quiet sunglasses, scientist ambition without known motive with excited/proud mother, Yu-Gi-Oh GX watching/collecting/battling with older sister and younger brother, 7-year and 2-year gaps, Muslim family mid-2000s Dallas/McKinney setting, seated pride moment. Bunk sharing, CRT, cards, science kit, sunglasses, prayer rug are proposed, not remembered events; no experiment, costume, dialogue or trademarked logos/characters asserted; absolute no-text rule enforced.",
-      "location": "knownDetails all five entries; proposedDetails six entries labeled Proposed/interpreted; direction no-text/no-logo sentences",
+      "evidence": "KnownDetails preserve locked answers: age 8, quiet, sunglasses signature, scientist ambition without motive, maternal excitement and apparent pride, GX viewing with siblings and card battling. Mid-2000s Dallas/McKinney and Muslim family explicitly attributed to human direction; room architecture and all furnishings marked as proposed interpretation, not documented memory. Science/card dressing framed as illustration, not remembered experiment; no invented event, motive, dialogue or direct quote.",
+      "location": "knownDetails; proposedDetails; direction interpretation disclaimer",
       "repair": "",
       "quotes": [
-       "when i was 8 years old, i wanted to be a scientist",
-       "He wanted to become a scientist without knowing why; his mother became excited when he said so and seemed proud of him.",
-       "the locked childhood answer does not document the room architecture or furnishings",
-       "no Yu-Gi-Oh logos, franchise characters or recognizable card artwork"
+       "He wanted to become a scientist without knowing why",
+       "i wore sunglasses everywhere",
+       "are proposed interpretation, not documented memories"
       ]
      },
      {
       "criterion": "spatial-action",
       "status": "pass",
-      "evidence": "Space supports locked encouragement action: clear central conversation area with detail pushed to edges, mother seated screen-right chair angled to Shaz standing screen-left at similar depth/focal plane facing inward, practical adult chair with grounded feet, unobstructed straight push retaining both faces, props/cables/shoes/toys kept outside feet and camera path, sun stripes kept off faces while bounced fill connects face positions for readable sunglasses/hijab.",
-      "location": "direction central-area and chair sentences; continuityNotes shot-preservation and keep-out sentences; shotIntentions shot-childhood-encouragement staging",
+      "evidence": "Layout supports approved child-eye-level two-shot: Shaz standing screen-left, mother seated screen-right on practical chair, facing inward at similar depth with faces close in height, clear central conversation area, unobstructed straight push retaining both faces, props/cables/toys kept outside foot positions and camera path, bounced fill to keep eyes readable through sunglasses and illuminate teal hijab.",
+      "location": "direction chair and central area sentences; continuityNotes locked-shot paragraph",
       "repair": "",
       "quotes": [
-       "around the edges of a clear central conversation area",
-       "The mother’s simple chair remains screen-right, angled toward Shaz’s standing position screen-left.",
-       "Shaz stands screen-left and his mother sits screen-right on a simple chair"
+       "Shaz standing screen-left and mother seated screen-right",
+       "Shaz stands screen-left and his mother sits screen-right on a simple chair",
+       "Keep both in one focal plane, facing inward across clear space"
       ]
      },
      {
       "criterion": "continuity",
       "status": "pass",
-      "evidence": "Preserves locked child-eye-level medium-wide two-shot geometry, chair scale, furniture/props/window/doorway/light direction through push and tail hold, bounced light for translucent sunglasses and teal hijab, dressed room behind faces without blank walls, no siblings/other participants with characters composited later, science props replace superseded ban without new experiment/costume/dialogue/event, absolute no-text/no-figure rules, revised master replaces generic room with no secondary angle matching backgrounds@2 angles [] and all shotIntentions angleId null.",
-      "location": "continuityNotes full; backgrounds@2 childhood-room angles []; shotIntentions angleId null",
+      "evidence": "Preserves master geometry, window/doorway/light direction and approved designs composited later; excludes siblings, additional participants, scientist costume, experiment, dialogue or new event. Enforces absolute no-text and no-figure rules for cards, drawings, TV, reflections and rug, uses generic abstract cards with dark TV, and notes this master replaces earlier generic design with no secondary angle, matching backgrounds@2 angles [].",
+      "location": "continuityNotes; direction no-people and no-text sentences",
       "repair": "",
       "quotes": [
-       "Preserve the locked shot: child-eye-level medium-wide two-shot, Shaz standing screen-left and mother seated screen-right",
-       "illuminate the mother’s teal hijab",
-       "This revised master replaces the earlier generic room design; no secondary angle is added."
+       "Render zero people, zero characters and zero silhouettes",
+       "Absolutely no text, letters, numbers, logos, labels or signage anywhere.",
+       "no siblings or other participants appear in this plate"
       ]
      }
     ],

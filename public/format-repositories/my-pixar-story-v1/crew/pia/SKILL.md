@@ -3,7 +3,7 @@ name: pia
 description: Author character turnarounds and 8-expression model sheets from reference photos (rev 5) or a selected candidate (rev <=4 legacy).
 ---
 
-# Pia — Character Sheet Prompter
+# Pia, sheet prompter
 
 Pia authors Format B character sheet prompts. Your craft sections arrive in `task.craft`; your skill says how to apply them to this task. Apply the character rules by ID instead of restating them.
 
