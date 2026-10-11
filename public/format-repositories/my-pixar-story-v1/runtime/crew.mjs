@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {assertDebugReady} from './debug.mjs';
+import {assertBibleReady} from './bible.mjs';
 import {readFile} from 'node:fs/promises';
 import {text,File,digest,Content,Event} from './contracts.mjs';
 import {loadStudio,studioFor,maximumTools,backendForAgent} from './instructions.mjs';
@@ -42,7 +43,8 @@ export function wigglyToolDefinition(){
 }
 // Quote evidence (Sage/Ava): normalize whitespace + curly/straight quotes,
 // case-sensitive otherwise, minimum 8 chars, must appear verbatim in the
-// artifact, dependencies/criteria text, or this task's tool outputs.
+// artifact, dependencies/criteria text, the SIGNED production bible, or this
+// task's tool outputs.
 export const QUOTE_ROLES=['text-reviewer','audio-reviewer'];
 export function normalizeQuote(s){
  return String(s??'').replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/\s+/g,' ').trim();
@@ -60,6 +62,9 @@ function collectQuoteHaystacks(task,outputs){
  };
  strings(task.artifact?.content);
  strings(task.dependencies);
+ // The signed production bible is a locked source: quoting it is valid evidence.
+ // An unsigned draft is not in force and never counts.
+ if(task.productionBible?.status==='signed')strings(task.productionBible.sections);
  for(const value of outputs.values()){
   if(typeof value==='string'){haystacks.push(value);continue;}
   if(!value||typeof value!=='object')continue;
@@ -185,7 +190,7 @@ export async function prepareCrewTask(p,task){
  const expected=taskFor(p);
  if(task.taskId!==expected.taskId||task.step!==p.step||task.gate!==p.gate)throw new Error('STALE_TASK: read current status before dispatch.');
  // No worker can receive replaced, omitted, stale or invented project context.
- const fields=['generationEstimate','planningGuide','generationTexts','voiceIdentity','voiceBasis','voiceChoice','imageProviderPreference','imageProviderDirective','creativeDirections','workflowRevision','proposedCast','locationEntry','characterReferences','narration','projectId','artifact','dependencies','approvedScript','lockedAnswers','inputs','sourceInputs','sourceInputDigest','originalInputsRequired','questionnaire','castEntry','recipe','references','referenceBindings','availableLocations','shotIntentions','immediateScenes','shot','videoBinding','visualReferences','voiceReference','intakeConfirmation','feedback','criteria','formatRole','crewWorker','skill','allowedTools','studioConfig','studioSha256','instruction'];
+ const fields=['generationEstimate','planningGuide','generationTexts','voiceIdentity','voiceBasis','voiceChoice','imageProviderPreference','imageProviderDirective','creativeDirections','productionBible','workflowRevision','proposedCast','locationEntry','characterReferences','narration','projectId','artifact','dependencies','approvedScript','lockedAnswers','inputs','sourceInputs','sourceInputDigest','originalInputsRequired','questionnaire','castEntry','recipe','references','referenceBindings','availableLocations','shotIntentions','immediateScenes','shot','videoBinding','visualReferences','voiceReference','intakeConfirmation','feedback','criteria','formatRole','crewWorker','skill','allowedTools','studioConfig','studioSha256','instruction'];
  for(const field of fields)if(digest(task[field]??null)!==digest(expected[field]??null))throw new Error(`TASK_INPUT_MISMATCH: ${field} is missing, changed or stale; read the current task packet.`);
  if(['author','produce'].includes(p.gate))assertAllowed(p,p.step);
  for(const a of expected.dependencies??[])if(!a.valid||(!a.approvedBy&&a.kind!=='clone')||current(p,a.key)?.id!==a.id)throw new Error(`TASK_INPUT_NOT_LOCKED: ${a.key}`);
@@ -202,6 +207,7 @@ export async function prepareCrewTask(p,task){
 }
 export async function runCrewTask(p,task,host){
  assertDebugReady(p);
+ assertBibleReady(p);
  const worker=assignedWorker(p);if(!worker)throw new Error('CREW_NOT_CONFIGURED: bind real host workers first.');
  if(!['author','owner-review','review','produce'].includes(task.gate))throw new Error('Crew cannot operate a human/runtime gate.');
  if(typeof host.runTask!=='function')throw new Error('Host adapter must export runTask(task, {worker, callTool}).');

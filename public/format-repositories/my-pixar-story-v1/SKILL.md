@@ -223,6 +223,25 @@ V1 approves the four narration stems as one set. A changed narration set conserv
 
 Family-media lifecycle: this is a private local run directory with immutable imports, receipts and SQLite history. Only authorized provider requests upload their bound references/audio. There is no automatic publishing, cloud storage service, retention timer or provider-clone deletion. Abandon stops production while retaining audit/job evidence; use the original provider dashboard and exact `reconcile` event for outstanding outcomes. Export means retain/copy the full run folder with its absolute media paths; portability requires keeping paths or a separately verified relocation. Local deletion and remote clone/upload deletion are explicit operator tasks, never implied by abandon.
 
+## Frozen production bible (sign once, every agent reads it)
+
+The production bible is ONE locked brief: logline and locked script (inline, with a pointer to the locked script artifact), cast (each character's locked sheet artifact and pick, locked description, wardrobe/prop continuity facts, reference-photo status), style, and a scene digest (location, who is in it, time of day, mood, key story props, set dressing). It has a version and a content hash and is schema-validated (`runtime/bible.mjs`).
+
+```sh
+node runner.mjs bible-draft --run /absolute/run --message "<actual human instruction>" [--file /absolute/bible.json]
+node runner.mjs bible-render --run /absolute/run [--out /absolute/bible.md]
+node runner.mjs bible-status --run /absolute/run
+node runner.mjs bible-validate --file /absolute/bible.json      # no run needed
+node runner.mjs bible-render --file /absolute/bible.json         # no run needed
+node runner.mjs bible-sign --run /absolute/run --by <name> --hash <12+ chars from bible-render>   # THE HUMAN ONLY
+```
+
+- **States:** every `bible-draft` makes a new `draft` version. Only `bible-sign` turns the latest draft into `signed`; it runs only in an interactive terminal and asks the human to type the hash back, so agents, scripts, pipes and CI cannot sign. Operators must never run `bible-sign` for the human, even under a standing permission. A signed version is frozen: any change is a new draft that needs a new signature; until then work continues against the last signed version.
+- **Signing refuses** a hash that is not the latest draft, any open question, any `UNRESOLVED` field, and sources that are not the current locked script/sheet picks of the run (every roster character needs a locked sheet in the bible). A compiled draft (no `--file`) binds the locked sources and leaves creative summaries `UNRESOLVED` for the operator to write; it never invents them.
+- **Packets:** every crew task packet carries `productionBible` with the signed version, hash and the role's slice (`BIBLE_SLICES`). Reviewers (Sage, Vera, June) get an instruction to check the deliverable against it and quote the line that is contradicted. The signed bible is a locked source for Sage's quote check; an unsigned draft never counts. The rule for quotes from locked answers, creative directions and shot plans is unchanged.
+- **No signed bible:** new runs (`init` default `--bible required`) make every department after the script/cast stage (shot planning, backgrounds, shots, keyframes, video, sound, edit) wait: no agent work is accepted and the crew driver stops with `bible-unsigned` before any worker call or spend. `--bible advisory` runs those departments with a loud `NO SIGNED PRODUCTION BIBLE` warning instead. Historical runs without a bible keep their compatible path and byte-identical packets; `bible-draft` on such a run opts it in as advisory.
+- **Stale work:** each new artifact records the signed bible version it was made against. `status`/`bible-status` list valid downstream work made before signing or against an older signed version, and reviewer packets carry a `staleWarning`. Nothing is invalidated automatically; use `impact` and a human decision to redo it.
+
 ## Crew instructions and project versions
 
 Follow the current task packet’s `skill`, `instruction`, verified `inputChecklist`, agreed `criteria`, scoped `recipe` and independent reviewer rubric if supplied. These are the project-pinned files, not whatever happens to be edited in the package today. Use `communication`/`producer` for concise human updates. Never replace source facts, dependencies, criteria or permissions in a task packet.

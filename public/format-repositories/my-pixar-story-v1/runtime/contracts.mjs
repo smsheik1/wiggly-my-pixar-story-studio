@@ -150,6 +150,9 @@ export const Event = z.object({ taskId: text, action: z.enum(['prefer-image-prov
   humanReview:Review.optional(), crew:z.unknown().optional(), content: z.unknown().optional(), review: Review.optional(), plan: Plans.optional(), jobId: text.optional(),
   providerJobId: text.optional(), result: z.unknown().optional(), allowance: z.object({ operations: z.array(Plans.shape.operation).min(1), maxRequests: z.number().int().positive(), maxCostUsd: z.number().nonnegative(), repairOf:z.string().optional() }).strict().optional(), prescreen: Prescreen.optional(),
 }).strict();
+// Production bible events are human operator events only. They are deliberately NOT in
+// Event, so crew worker packets (which carry Event's schema) never even offer them.
+export const BibleEvent = z.object({ taskId: text, action: z.enum(['bible-draft','bible-sign']), actor: z.enum(['agent', 'reviewer', 'human', 'runtime']), message: text.optional(), content: z.unknown().optional(), artifactDigest: text.optional(), workerId: text.optional() }).strict();
 export const Project = z.object({
   formatVersion: z.literal(VERSION), schemaVersion: z.literal(2), id: text,
   studio:StudioSnapshot.optional(),
@@ -160,6 +163,8 @@ export const Project = z.object({
   productionProfile:z.enum(['legacy-seedance-hd','seedance-mini-480p']).default('legacy-seedance-hd'),
   gatePolicy:z.enum(['per-step','pick-only']).optional(),
   budget:z.object({maxCostUsd:z.number().nonnegative(),reservations:z.array(z.object({id:text,provider:z.enum(['gemini','cartesia-stt','openrouter-decisions']),estimatedCostUsd:z.number().positive()}))}).optional(), lifecycle:z.enum(['active','abandoned']).default('active'), reviewMode:z.enum(['supervised','qualified']).default('qualified'), crew:z.unknown().optional(),
+  // Production bible (runtime/bible.mjs ProjectBible); absent on historical projects.
+  bible:z.unknown().optional(),
   imageProviderPreference:z.object({provider:z.enum(['meta-muse','agy']),message:text,at:text,sequence:z.number().int().nonnegative()}).optional(),
   inputs: Inputs, step: z.enum(['answers', 'characterPrompt', 'script', 'voiceSample', 'clone', 'audioReviewerQualification', 'audition', 'narration', 'roster', 'candidates', 'sheetPrompt', 'sheet', 'backgrounds', 'backgroundBrief', 'backgroundPrompt', 'backgroundCandidates', 'backgroundAngleBrief', 'backgroundAnglePrompt', 'backgroundAngle', 'shotIntentions', 'shots', 'keyframePrompt', 'keyframe', 'video', 'reviewerQualification', 'videoPlan', 'videoPrompt', 'soundPlan', 'music', 'effect', 'editPlan', 'film', 'complete']),
   gate: z.enum(['author', 'owner-review', 'review', 'human', 'produce', 'authorize', 'collect', 'escalate', 'pending']),
@@ -167,6 +172,7 @@ export const Project = z.object({
   artifacts: z.array(z.object({ id: text, key: text, kind: text, version: z.number().int().positive(), digest: text,
     content: z.unknown(), dependencies: z.array(text), valid: z.boolean(), authoredBy: text,
     resolvedFindings:z.array(z.object({findingDigest:text,resolution:text})).optional(), intakeConfirmation:IntakeConfirmation.optional(), humanReview:Review.optional(), visualReview:Review.optional(),audioReview:Review.optional(),visualReviewedBy:text.optional(),audioReviewedBy:text.optional(), ownerReview: Review.optional(), review: Review.optional(), reviewSequence:z.number().int().optional(), approvedBy: z.object({ message: text, at: text }).optional(), selection: z.number().int().optional(), prescreen: Prescreen.optional(),
+    bible: z.object({ version: z.number().int().positive(), hash: text }).strict().optional(),
   })),
   jobs: z.array(z.object({ id: text, key: text, plan: Plans, request: z.record(z.string(), z.unknown()), allowanceId: text.optional(), digest: text, dependencies: z.array(text),
     status: z.enum(['planned', 'authorized', 'submitting', 'submitted', 'ready', 'failed', 'uncertain']),

@@ -29,6 +29,8 @@ import {createAudioEditTools,AUDIO_EDIT_PROFILE} from './runtime/audio-edit.mjs'
 import {AudioCase,audioTask,qualifyAudio,requireAudioQualification} from './evaluation/audio-qualification.mjs';
 import { VisualCase, visualTask, qualifyVisual, requireVisualQualification } from './evaluation/visual-qualification.mjs';
 import { Cassette, recordingFetcher, replayFetcher, recordingSpawn, replaySpawn, normalizeForCassette } from './runtime/cassette.mjs';
+import { bibleSummary, renderBibleMarkdown, parseBible, unresolvedPaths } from './runtime/bible.mjs';
+import { createInterface } from 'node:readline/promises';
 const root = dirname(fileURLToPath(import.meta.url));
 const rawProcessArgv = [...process.argv];
 // Run-dir paths differ between a recording and its replay sandbox; both sides
@@ -56,7 +58,7 @@ function presentation(status) {
   const { project, pending } = status;
   // A failed candidate never becomes the ordinary user-facing deliverable.
   const visible = ['approved','provisional'].includes(pending.artifact?.review?.decision) || pending.gate === 'review' || pending.gate === 'author';
-  return {producer:producerUpdate(status,runDir),debug:project.debug??{enabled:false,paused:false}, formatVersion: VERSION, checkpointId: status.checkpointId, sequence: project.sequence, communication:communicationFor(project),pending: { ...pending, artifact: visible ? pending.artifact : null },
+  return {producer:producerUpdate(status,runDir),debug:project.debug??{enabled:false,paused:false},...(project.bible?{productionBible:bibleSummary(project,runDir)}:{}), formatVersion: VERSION, checkpointId: status.checkpointId, sequence: project.sequence, communication:communicationFor(project),pending: { ...pending, artifact: visible ? pending.artifact : null },
     validArtifacts: project.artifacts.filter(a => a.valid).map(a => ({ id: a.id, digest: a.digest, kind: a.kind, approved: !!a.approvedBy })),
     jobs: project.jobs.map(j => ({ id: j.id, status: j.status, digest: j.digest, providerJobId: j.providerJobId })), allowances: project.allowances };
 }
@@ -94,6 +96,15 @@ async function main() {
       await runEvaluation(dataset, { split, predictions: responses ? await json(responses) : undefined, mediaRoot });
     if (output) { await mkdir(dirname(resolve(output)), { recursive: true }); await writeFile(resolve(output), JSON.stringify(result, null, 2) + '\n', { mode: 0o600 }); print({ path: resolve(output), productionStateMutated: false, apiCalls: 0 }); }
     else print(result);
+    return;
+  }
+  // Production bible files outside a run (e.g. a draft written before the run exists).
+  if(command==='bible-validate'||(command==='bible-render'&&args.includes('--file'))){
+    const file=option('file'),out=option('out');if(!file||args.length)throw new Error(`${command} needs --file <bible.json>${command==='bible-render'?' and optional --out <path>':''}.`);
+    const parsed=parseBible(await json(file));
+    if(command==='bible-validate'){print({valid:true,hash:parsed.hash,openQuestions:parsed.content.openQuestions.length,unresolved:parsed.unresolved,signable:!parsed.content.openQuestions.length&&!parsed.unresolved.length});return;}
+    const md=renderBibleMarkdown({version:0,hash:parsed.hash,state:'draft',content:parsed.content});
+    if(out){await writeFile(resolve(out),md,{mode:0o600});print({path:resolve(out),hash:parsed.hash,state:'unsigned draft (file)'});}else process.stdout.write(md);
     return;
   }
   if (command === 'recipe' || command === 'background-recipe') { const content = await readFile(join(root, command === 'background-recipe' ? 'background-prompter.md' : 'character-sheet-recipe.md'), 'utf8'); print({ path: join(root, command === 'background-recipe' ? 'background-prompter.md' : 'character-sheet-recipe.md'), sha256: (await import('./runtime/media.mjs')).sha(Buffer.from(content)), content }); return; }
@@ -324,7 +335,7 @@ async function main() {
   const release = await lock(); const workflow = openWorkflow(join(runDir, 'checkpoints.sqlite'));
   try {
     if (command === 'init') {
-      const inputs = await json(args[0]); const studioDefaults = loadStudio(); const gates = option('gates', studioDefaults.config.gates?.defaultPolicy ?? 'per-step'); if(!['per-step','pick-only'].includes(gates)) throw new Error('--gates must be per-step|pick-only.'); print(presentation(await workflow.init('project', inputs,{reviewMode:option('review-mode','supervised'),gatePolicy:gates}))); return;
+      const inputs = await json(args[0]); const studioDefaults = loadStudio(); const gates = option('gates', studioDefaults.config.gates?.defaultPolicy ?? 'per-step'); if(!['per-step','pick-only'].includes(gates)) throw new Error('--gates must be per-step|pick-only.'); const biblePolicy = option('bible', 'required'); if(!['required','advisory','off'].includes(biblePolicy)) throw new Error('--bible must be required|advisory|off.'); print(presentation(await workflow.init('project', inputs,{reviewMode:option('review-mode','supervised'),gatePolicy:gates,biblePolicy}))); return;
     }
     if (command === 'import') { print(await importMedia(args[0], runDir)); return; }
     const status = await workflow.status('project');
@@ -351,6 +362,43 @@ async function main() {
       await mkdir(folder,{recursive:true,mode:0o700});
       if(show){const result=spawnSync(process.platform==='darwin'?'open':process.platform==='win32'?'explorer.exe':'xdg-open',[folder],{encoding:'utf8'});if(result.error||result.status!==0)throw new Error(`INPUT_FOLDER_OPEN_FAILED: ${folder}: ${result.error?.message??result.stderr??result.status}`);}
       print({producer,folder,opened:show,providerCalls:0,projectStateMutated:false});return;
+    }
+    if(['bible-draft','bible-sign','bible-status','bible-render'].includes(command)){
+      // Production bible: draft (operator), render (for the human), sign (the human only).
+      if(command==='bible-status'){if(args.length)throw new Error('Unknown bible-status arguments.');print(bibleSummary(status.project,runDir)??{policy:'none',message:'Historical run without a production bible; bible-draft creates one (advisory policy).'});return;}
+      if(command==='bible-render'){
+        const out=option('out'),wanted=option('version');if(args.length)throw new Error('bible-render takes --run, optional --version N and --out <path>.');
+        const versions=status.project.bible?.versions??[],entry=wanted?versions.find(v=>v.version===Number(wanted)):versions.at(-1);
+        if(!entry)throw new Error('BIBLE_MISSING: no production bible version to render; run bible-draft first.');
+        const md=renderBibleMarkdown(entry,{runDir,superseded:entry.state==='signed'&&versions.findLast(v=>v.state==='signed')!==entry});
+        if(out){await writeFile(resolve(out),md,{mode:0o600});print({path:resolve(out),version:entry.version,state:entry.state,hash:entry.hash});}else process.stdout.write(md);
+        return;
+      }
+      const dispatchPath=join(runDir,'host-dispatch',status.pending.taskId+'.json');
+      try{if((await json(dispatchPath)).status==='started')throw new Error('CODEX_DISPATCH_UNCERTAIN: reconcile the saved native dispatch before changing the production bible.');}catch(error){if(error.code!=='ENOENT')throw error;}
+      if(command==='bible-draft'){
+        const message=option('message'),file=option('file');
+        if(!message||args.length)throw new Error('bible-draft needs --message "<actual human instruction>" and optional --file </abs/bible.json> (default: compiled from locked artifacts).');
+        if(file&&!file.startsWith('/'))throw new Error('bible-draft --file must be an absolute path.');
+        const content=file?await json(file):undefined;
+        const result=await workflow.respond('project',{taskId:status.pending.taskId,actor:'human',action:'bible-draft',message,...(content?{content}:{})});
+        const entry=result.project.bible.versions.at(-1);
+        print({...bibleSummary(result.project,runDir),drafted:{version:entry.version,hash:entry.hash,state:entry.state,openQuestions:entry.content.openQuestions.length,unresolved:unresolvedPaths(entry.content)},next:'Render it for the human (bible-render). Only the human signs, with bible-sign in an interactive terminal.'});
+        return;
+      }
+      // bible-sign is a human operator event: it refuses non-interactive callers (agents,
+      // scripts, CI pipes) and needs the hash the human reviewed typed back as confirmation.
+      const by=option('by'),hash=option('hash'),message=option('message');
+      if(!by||!hash||args.length)throw new Error('bible-sign needs --by <your name> --hash <hash shown by bible-render> (optional --message).');
+      if(!process.stdin.isTTY||!process.stdout.isTTY)throw new Error('BIBLE_SIGN_NEEDS_HUMAN_TERMINAL: signing the production bible is a human action. Run it yourself in an interactive Terminal; agents, scripts and pipes cannot sign.');
+      const latest=status.project.bible?.versions.at(-1);
+      if(!latest)throw new Error('BIBLE_MISSING: draft the production bible first.');
+      if(hash.length<12||!latest.hash.startsWith(hash))throw new Error(`BIBLE_HASH_MISMATCH: --hash must be at least 12 characters of the latest draft's hash (v${latest.version} ${latest.hash.slice(0,12)}). Re-render and review it.`);
+      const rl=createInterface({input:process.stdin,output:process.stderr});
+      let typed;try{typed=await rl.question(`Sign production bible v${latest.version} (${latest.hash.slice(0,12)}) as "${by}"? Type those 12 characters to confirm: `);}finally{rl.close();}
+      if(typed.trim()!==latest.hash.slice(0,12))throw new Error('BIBLE_SIGN_NOT_CONFIRMED: nothing was signed.');
+      const result=await workflow.respond('project',{taskId:status.pending.taskId,actor:'human',action:'bible-sign',artifactDigest:latest.hash,content:{by},message:message??`${by} signed production bible v${latest.version} at an interactive terminal.`});
+      print(bibleSummary(result.project,runDir));return;
     }
     if(command==='debug'){
       const mode=args.shift(),message=option('message');
@@ -669,6 +717,7 @@ async function main() {
     if (command === 'respond') {
       const event = await json(args[0]);
       if (event.actor === 'runtime') throw new Error('Runtime events are reserved for the provider collector.');
+      if (['bible-draft','bible-sign'].includes(event.action)) throw new Error('BIBLE_COMMAND_REQUIRED: use bible-draft, and bible-sign (the human, in an interactive terminal), not respond.');
       if(!status.project.crew&&['agent','reviewer'].includes(event.actor)&&event.action!=='note')throw new Error('CREW_NOT_CONFIGURED: run crew-template, bind actual host IDs/model/tools and submit human configure-crew.');
       await verifySubmission(status,event);
       print(presentation(await workflow.respond('project', event))); return;
