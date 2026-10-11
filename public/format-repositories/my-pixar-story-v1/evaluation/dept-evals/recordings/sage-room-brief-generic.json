@@ -1,0 +1,147 @@
+{
+ "caseId": "sage-room-brief-generic",
+ "recordedAt": "2026-10-11T07:54:07.072Z",
+ "model": "meta/muse-spark-1.3-contributor",
+ "mode": "live",
+ "fingerprint": "2a2f7dfdeab36dedb9ed6a5f42194bcde6d509e1f8d571ee1d6efbd438fdf600",
+ "fingerprintParts": {
+  "model": "meta/muse-spark-1.3-contributor",
+  "backend": "openrouter",
+  "tools": [
+   "readAsset",
+   "viewImage"
+  ],
+  "skill": {
+   "path": "crew/sage/SKILL.md",
+   "sha256": "caf59dc9167b0da55cc58c436e19c0351095815a3393861b1ee978c64414e1c0"
+  },
+  "rubric": {
+   "path": "evaluation/rubrics/text.md",
+   "sha256": "c9fd0d08cf39be370a329408fb84bbc975c611b6df9f531b93a782c816c6182f"
+  },
+  "recipes": {
+   "character-prompter.md": "af2ade078cd958898cfa96c70b7dce4b74ff16f54adaefc8423f0bc513b854e8",
+   "character-sheet-recipe.md": "25e531524ebfccc084a56025a04dd70526b76406a17b490ed2dea6b3840dc8f9",
+   "background-prompter.md": "39895d6dbd7db8298fb5301f5be52f6cbc9c7c4374e9e518ab561a9ee6d7b61c"
+  },
+  "traits": {
+   "reasoning": "always-on",
+   "inputs": [
+    "text",
+    "image",
+    "video"
+   ],
+   "productionEffort": "xhigh",
+   "maxTokens": 32000
+  },
+  "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
+  "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
+ },
+ "wallMs": 48280,
+ "costUsd": 0.0052,
+ "requests": [
+  {
+   "seq": 1,
+   "requestSha256": "a1b202905aea233c5c845f776f22d0b9d549dc19c12c041233e24fcb4635554f",
+   "status": 200,
+   "ms": 48138,
+   "message": {
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"232533dbcb9f113aaf6ebcebf01263eefe300721f81d160511002619b388cca3\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"backgroundBrief:childhood-room@1\\\",\\\"artifactDigest\\\":\\\"62c1de5b0798d15a0ec8abefcd6b46e7107de70aced7b368c0749d14697a01d9\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-text\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-fit\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Brief directs a quiet welcoming domestic room for childhood-encouragement, matching the approved simple domestic interior where quiet 8-year-old Shaz shares scientist ambition and mother shows excitement/apparent pride. No new remembered event is staged; furnishings are explicitly production design supporting script Beat 1 emotional purpose.\\\",\\\"location\\\":\\\"sceneIds ['childhood-encouragement']; direction sentences 1-2\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Create a quiet, welcoming domestic room for the childhood encouragement scene\\\",\\\"Eight-year-old Shaz shares his scientist ambition with his mother in a simple domestic interior.\\\"]},{\\\"criterion\\\":\\\"facts\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"KnownDetails preserve age eight, scientist ambition without knowing why, quiet/sunglasses signature, and mother excited/seemed proud, matching lockedAnswers scene1Childhood and script Beat 1. All architecture/furnishings/lighting are explicitly labeled proposed production design, not reconstruction, and continuity forbids scientist equipment, additional relatives or new events.\\\",\\\"location\\\":\\\"knownDetails[0-3]; proposedDetails; continuityNotes no-new-event sentence\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Shaz was eight when he wanted to become a scientist, without knowing why.\\\",\\\"All room architecture, furnishings and lighting are proposed production design, not a reconstruction of a documented childhood home.\\\"]},{\\\"criterion\\\":\\\"spatial-action\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Brief provides child standing screen-left and mother seated screen-right on inward-angled chair with clear space, calm background, floor space for feet/chair, unobstructed straight camera approach at child eye-level medium-wide to medium two-shot, and diffuse daylight readable on both future faces without sunglasses glare, directly enabling the approved two-shot push and inward-facing connection.\\\",\\\"location\\\":\\\"direction chair/window/lighting/framing sentences; continuityNotes floor-space and camera-approach sentences\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Place one modest wooden chair with a plain upholstered seat screen-right, angled inward toward an open standing position screen-left.\\\",\\\"Shaz stands screen-left and his mother sits screen-right on a simple chair, bringing their faces closer in height.\\\"]},{\\\"criterion\\\":\\\"continuity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Brief preserves screen-left/right positions, close-in-height single focal plane and inward orientation, retains window, doorway, cabinet, chair orientation, materials and lighting across the push, supports burgundy-striped child and teal-hijab mother designs with quiet neutral palette without rendering characters, prohibits new events, and declares master-only service with no secondary angle, matching backgrounds@2 angles [] and shot angleId null. Text review does not certify future rendered likeness.\\\",\\\"location\\\":\\\"continuityNotes full; backgrounds@2 childhood-room angles []\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Preserve the approved staging: child standing screen-left, mother seated screen-right\\\",\\\"This master serves the registered scene; no secondary angle is required by the current registry.\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\"}}\"}"
+   },
+   "usage": {
+    "prompt_tokens": 35478,
+    "completion_tokens": 8261,
+    "reasoning_tokens": 7222,
+    "cost": 0.0052
+   }
+  }
+ ],
+ "outcome": {
+  "event": {
+   "taskId": "232533dbcb9f113aaf6ebcebf01263eefe300721f81d160511002619b388cca3",
+   "action": "review",
+   "actor": "reviewer",
+   "workerId": "dept-eval:text-reviewer",
+   "artifactId": "backgroundBrief:childhood-room@1",
+   "artifactDigest": "62c1de5b0798d15a0ec8abefcd6b46e7107de70aced7b368c0749d14697a01d9",
+   "review": {
+    "decision": "approved",
+    "repairTarget": "current",
+    "perception": "direct-text",
+    "checks": [
+     {
+      "criterion": "scene-fit",
+      "status": "pass",
+      "evidence": "Brief directs a quiet welcoming domestic room for childhood-encouragement, matching the approved simple domestic interior where quiet 8-year-old Shaz shares scientist ambition and mother shows excitement/apparent pride. No new remembered event is staged; furnishings are explicitly production design supporting script Beat 1 emotional purpose.",
+      "location": "sceneIds ['childhood-encouragement']; direction sentences 1-2",
+      "repair": "",
+      "quotes": [
+       "Create a quiet, welcoming domestic room for the childhood encouragement scene",
+       "Eight-year-old Shaz shares his scientist ambition with his mother in a simple domestic interior."
+      ]
+     },
+     {
+      "criterion": "facts",
+      "status": "pass",
+      "evidence": "KnownDetails preserve age eight, scientist ambition without knowing why, quiet/sunglasses signature, and mother excited/seemed proud, matching lockedAnswers scene1Childhood and script Beat 1. All architecture/furnishings/lighting are explicitly labeled proposed production design, not reconstruction, and continuity forbids scientist equipment, additional relatives or new events.",
+      "location": "knownDetails[0-3]; proposedDetails; continuityNotes no-new-event sentence",
+      "repair": "",
+      "quotes": [
+       "Shaz was eight when he wanted to become a scientist, without knowing why.",
+       "All room architecture, furnishings and lighting are proposed production design, not a reconstruction of a documented childhood home."
+      ]
+     },
+     {
+      "criterion": "spatial-action",
+      "status": "pass",
+      "evidence": "Brief provides child standing screen-left and mother seated screen-right on inward-angled chair with clear space, calm background, floor space for feet/chair, unobstructed straight camera approach at child eye-level medium-wide to medium two-shot, and diffuse daylight readable on both future faces without sunglasses glare, directly enabling the approved two-shot push and inward-facing connection.",
+      "location": "direction chair/window/lighting/framing sentences; continuityNotes floor-space and camera-approach sentences",
+      "repair": "",
+      "quotes": [
+       "Place one modest wooden chair with a plain upholstered seat screen-right, angled inward toward an open standing position screen-left.",
+       "Shaz stands screen-left and his mother sits screen-right on a simple chair, bringing their faces closer in height."
+      ]
+     },
+     {
+      "criterion": "continuity",
+      "status": "pass",
+      "evidence": "Brief preserves screen-left/right positions, close-in-height single focal plane and inward orientation, retains window, doorway, cabinet, chair orientation, materials and lighting across the push, supports burgundy-striped child and teal-hijab mother designs with quiet neutral palette without rendering characters, prohibits new events, and declares master-only service with no secondary angle, matching backgrounds@2 angles [] and shot angleId null. Text review does not certify future rendered likeness.",
+      "location": "continuityNotes full; backgrounds@2 childhood-room angles []",
+      "repair": "",
+      "quotes": [
+       "Preserve the approved staging: child standing screen-left, mother seated screen-right",
+       "This master serves the registered scene; no secondary angle is required by the current registry."
+      ]
+     }
+    ],
+    "modelVersion": "meta/muse-spark-1.3-contributor",
+    "capabilityVersion": "bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e",
+    "toolEvidence": [
+     {
+      "tool": "viewImage",
+      "sha256": "437f52e87b3c3512414bcefd5a3b1d8895e1f23f6affc5d51ab6d9b1031ab1ec"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "42212cc85c7eabcb347766f3acd591cf82fef0d582306e9dffb7422900d5a011"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "5ae70416c08ac07a8ff631cb0a492227e9e83f60598b22062c085c53151c6b8f"
+     }
+    ]
+   }
+  },
+  "valid": false,
+  "gateAccepted": false,
+  "error": "REVIEW_QUOTE_NOT_FOUND: spatial-action: \"Shaz stands screen-left and his mother sits screen-right on a simple chair, bringing their faces closer in height.\""
+ }
+}

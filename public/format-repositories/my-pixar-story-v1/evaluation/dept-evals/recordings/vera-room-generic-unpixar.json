@@ -1,0 +1,251 @@
+{
+ "caseId": "vera-room-generic-unpixar",
+ "recordedAt": "2026-10-11T07:53:18.788Z",
+ "model": "meta/muse-spark-1.3-contributor",
+ "mode": "live",
+ "fingerprint": "eccaa6ffa3829c1a012bbfae89184c6a605ff13d4947115aefeb12bd4718b3ca",
+ "fingerprintParts": {
+  "model": "meta/muse-spark-1.3-contributor",
+  "backend": "openrouter",
+  "tools": [
+   "readAsset",
+   "viewImage",
+   "watchVideo"
+  ],
+  "skill": {
+   "path": "crew/vera/SKILL.md",
+   "sha256": "576488212eb64f723a4aa4c9a312a7f6662392e52ca35fcef9fa9df67f91157d"
+  },
+  "rubric": {
+   "path": "evaluation/rubrics/visual.md",
+   "sha256": "145bba0ef8769f47f0e1c20fa8cc239b7d420f3c106cf287e60609e86690596b"
+  },
+  "recipes": {
+   "character-prompter.md": "af2ade078cd958898cfa96c70b7dce4b74ff16f54adaefc8423f0bc513b854e8",
+   "character-sheet-recipe.md": "25e531524ebfccc084a56025a04dd70526b76406a17b490ed2dea6b3840dc8f9",
+   "background-prompter.md": "39895d6dbd7db8298fb5301f5be52f6cbc9c7c4374e9e518ab561a9ee6d7b61c"
+  },
+  "traits": {
+   "reasoning": "always-on",
+   "inputs": [
+    "text",
+    "image",
+    "video"
+   ],
+   "productionEffort": "xhigh",
+   "maxTokens": 32000
+  },
+  "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
+  "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
+ },
+ "wallMs": 108468,
+ "costUsd": 0.0204318,
+ "requests": [
+  {
+   "seq": 1,
+   "requestSha256": "6cb81168c1c04612ce603af13f58e4daf3f52cd6b82c64c63c2dce89f68cce71",
+   "status": 200,
+   "ms": 23393,
+   "message": {
+    "content": "Vera reviewing the childhood-room plates — inspecting each candidate for Pixar look and story fit.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a129f263e871458c6b6f42386da426",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f\",\"referenceSha256\":\"null\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 44214,
+    "completion_tokens": 2614,
+    "reasoning_tokens": 2374,
+    "cost": 0.0049442
+   }
+  },
+  {
+   "seq": 2,
+   "requestSha256": "5c4f6eae713fac83231ecdc1d6a786242d2486a0ea22976456e067c8bbab0e42",
+   "status": 200,
+   "ms": 24963,
+   "message": {
+    "content": "Reviewing the three room options — checking each view directly before ruling.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a129f2c5ab7490aa3539a6d5ca42fd",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048\",\"referenceSha256\":\"null\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 44495,
+    "completion_tokens": 2917,
+    "reasoning_tokens": 2659,
+    "cost": 0.0050329
+   }
+  },
+  {
+   "seq": 3,
+   "requestSha256": "0756af18a112fb975480c19510b936618e9f34a60ddc67e61f61153a46cc21b5",
+   "status": 200,
+   "ms": 9917,
+   "message": {
+    "content": "Vera is finishing the direct visual pass over the final candidate to complete the background review.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a129f2ec8670869472a0556932da22",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"referenceSha256\":\"null\",\"sha256\":\"6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 44762,
+    "completion_tokens": 1211,
+    "reasoning_tokens": 1017,
+    "cost": 0.0047184
+   }
+  },
+  {
+   "seq": 4,
+   "requestSha256": "e973191c833a731aba238aaf565ab1978a6335a2b41d9c625a10d721006613e0",
+   "status": 200,
+   "ms": 49588,
+   "message": {
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"2cd7b124c595d5cee1d60decafdcc70c85cd20e57c7cc41f54d1c1609d56d6c5\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:visual-reviewer\\\",\\\"artifactId\\\":\\\"backgroundCandidates:childhood-room@2\\\",\\\"artifactDigest\\\":\\\"e6db511f9550d350f1c08f984a86b87d394d303c0e5462e2db234c587e2e07eb\\\",\\\"review\\\":{\\\"decision\\\":\\\"rejected\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-fit\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Directly inspected all three plates. Each shows child-eye-level medium-wide domestic interior facing rear wall at slight angle revealing left wall: curtained window on left wall above wooden plank floor, exactly one modest wooden chair screen-right angled inward, low wooden cabinet against rear wall outside action area, closed doorway at far-right edge. Matches locked childhood-encouragement simple domestic interior and shot-childhood-encouragement staging without asserting new remembered events, scientist equipment or additional characters.\\\",\\\"location\\\":\\\"All three candidates, full frames; left-wall window, plank floor, screen-right chair, rear cabinet, far-right doorway\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Stylized Pixar-like 3D feature-animation rendering: chunky rounded chair and cabinet forms with broad bevels, curtains sculpted into few generous folds, broad designed wood-grain curves, smooth matte upholstery and warm ivory plaster with clean stylized shaders and soft warm daylight. No fine irregular scratches, chipped plaster, visible fabric weave or strong photographic focus falloff. Floor, chair and rear cabinet remain clearly readable. No baked-in text, labels, captions or watermarks.\\\",\\\"location\\\":\\\"Full frames of candidates 1-3; curtains, chair, cabinet, floor and walls\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"story-specific-set\\\",\\\"status\\\":\\\"fail\\\",\\\"evidence\\\":\\\"All three plates are generic empty catalog rooms in restrained ivory, oatmeal and muted natural-wood palette with blank calm walls and plain unmarked storage objects: candidate 1 three plain tan boxes, candidate 2 plain white/tan pots, candidate 3 three plain boxes on open shelf. No specific lived-in dressing tells whose room it is — no Yugioh/cards, toys, books, child drawings, science curiosity, era or family touches — and no bold saturated Pixar color/shape language. Empty of people is met, but empty set fails story dressing.\\\",\\\"location\\\":\\\"Candidates 1-3 full sets; blank rear/left ivory walls and rear-cabinet tops\\\",\\\"repair\\\":\\\"Redress set from story with specific lived-in props for 8-year-old Shaz family interior (e.g., Yugioh cards/toys, child books/drawings, simple family touches) in bold saturated Pixar color and shape language; replace plain unmarked boxes and restrained ivory/oatmeal palette and blank calm walls while retaining window/chair/cabinet/door geography, empty-of-people and staging clearance. Regenerate without rendered text.\\\"},{\\\"criterion\\\":\\\"empty-environment\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Directly inspected all three plates: zero people, zero silhouettes, zero crowd figures. Window views are blown-out white daylight with no figures; no reflections, artwork figures or humanoid shapes in room, cabinet or floor. Strictly empty of people.\\\",\\\"location\\\":\\\"Full frames of candidates 1-3, including window views, reflections and cabinet areas\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"spatial-action\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each plate leaves clear wooden plank floor for grounded feet, open space between reserved screen-left standing position and screen-right chair at similar depth sharing one focal plane, chair front angled inward, and unobstructed foreground corridor for slow straight push into medium two-shot. Calm wall areas behind future face positions; window, cabinet and doorway kept outside action path.\\\",\\\"location\\\":\\\"Foreground corridor and mid-ground floor between screen-left open area and screen-right chair in all three candidates\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"continuity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each candidate internally retains coherent master geography for closer framing and final hold: left-wall window, rear-wall low cabinet outside action, far-right closed doorway, screen-right chair orientation and diffuse daylight from left curtains. No new events or scientist props. Cross-candidate differences (curtain style, cabinet form, chair back) are expected alternatives at candidates stage; no approved master plate exists to violate.\\\",\\\"location\\\":\\\"Window, cabinet, doorway and chair orientation within each candidate; shot-childhood-encouragement master setup\\\",\\\"repair\\\":\\\"\\\"}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\",\\\"toolEvidence\\\":[{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737\\\"}]}}\"}"
+   },
+   "usage": {
+    "prompt_tokens": 45025,
+    "completion_tokens": 6169,
+    "reasoning_tokens": 4796,
+    "cost": 0.0057363
+   }
+  }
+ ],
+ "outcome": {
+  "event": {
+   "taskId": "2cd7b124c595d5cee1d60decafdcc70c85cd20e57c7cc41f54d1c1609d56d6c5",
+   "action": "review",
+   "actor": "reviewer",
+   "workerId": "dept-eval:visual-reviewer",
+   "artifactId": "backgroundCandidates:childhood-room@2",
+   "artifactDigest": "e6db511f9550d350f1c08f984a86b87d394d303c0e5462e2db234c587e2e07eb",
+   "review": {
+    "decision": "rejected",
+    "repairTarget": "current",
+    "perception": "direct-image",
+    "checks": [
+     {
+      "criterion": "scene-fit",
+      "status": "pass",
+      "evidence": "Directly inspected all three plates. Each shows child-eye-level medium-wide domestic interior facing rear wall at slight angle revealing left wall: curtained window on left wall above wooden plank floor, exactly one modest wooden chair screen-right angled inward, low wooden cabinet against rear wall outside action area, closed doorway at far-right edge. Matches locked childhood-encouragement simple domestic interior and shot-childhood-encouragement staging without asserting new remembered events, scientist equipment or additional characters.",
+      "location": "All three candidates, full frames; left-wall window, plank floor, screen-right chair, rear cabinet, far-right doorway",
+      "repair": ""
+     },
+     {
+      "criterion": "style",
+      "status": "pass",
+      "evidence": "Stylized Pixar-like 3D feature-animation rendering: chunky rounded chair and cabinet forms with broad bevels, curtains sculpted into few generous folds, broad designed wood-grain curves, smooth matte upholstery and warm ivory plaster with clean stylized shaders and soft warm daylight. No fine irregular scratches, chipped plaster, visible fabric weave or strong photographic focus falloff. Floor, chair and rear cabinet remain clearly readable. No baked-in text, labels, captions or watermarks.",
+      "location": "Full frames of candidates 1-3; curtains, chair, cabinet, floor and walls",
+      "repair": ""
+     },
+     {
+      "criterion": "story-specific-set",
+      "status": "fail",
+      "evidence": "All three plates are generic empty catalog rooms in restrained ivory, oatmeal and muted natural-wood palette with blank calm walls and plain unmarked storage objects: candidate 1 three plain tan boxes, candidate 2 plain white/tan pots, candidate 3 three plain boxes on open shelf. No specific lived-in dressing tells whose room it is — no Yugioh/cards, toys, books, child drawings, science curiosity, era or family touches — and no bold saturated Pixar color/shape language. Empty of people is met, but empty set fails story dressing.",
+      "location": "Candidates 1-3 full sets; blank rear/left ivory walls and rear-cabinet tops",
+      "repair": "Redress set from story with specific lived-in props for 8-year-old Shaz family interior (e.g., Yugioh cards/toys, child books/drawings, simple family touches) in bold saturated Pixar color and shape language; replace plain unmarked boxes and restrained ivory/oatmeal palette and blank calm walls while retaining window/chair/cabinet/door geography, empty-of-people and staging clearance. Regenerate without rendered text."
+     },
+     {
+      "criterion": "empty-environment",
+      "status": "pass",
+      "evidence": "Directly inspected all three plates: zero people, zero silhouettes, zero crowd figures. Window views are blown-out white daylight with no figures; no reflections, artwork figures or humanoid shapes in room, cabinet or floor. Strictly empty of people.",
+      "location": "Full frames of candidates 1-3, including window views, reflections and cabinet areas",
+      "repair": ""
+     },
+     {
+      "criterion": "spatial-action",
+      "status": "pass",
+      "evidence": "Each plate leaves clear wooden plank floor for grounded feet, open space between reserved screen-left standing position and screen-right chair at similar depth sharing one focal plane, chair front angled inward, and unobstructed foreground corridor for slow straight push into medium two-shot. Calm wall areas behind future face positions; window, cabinet and doorway kept outside action path.",
+      "location": "Foreground corridor and mid-ground floor between screen-left open area and screen-right chair in all three candidates",
+      "repair": ""
+     },
+     {
+      "criterion": "continuity",
+      "status": "pass",
+      "evidence": "Each candidate internally retains coherent master geography for closer framing and final hold: left-wall window, rear-wall low cabinet outside action, far-right closed doorway, screen-right chair orientation and diffuse daylight from left curtains. No new events or scientist props. Cross-candidate differences (curtain style, cabinet form, chair back) are expected alternatives at candidates stage; no approved master plate exists to violate.",
+      "location": "Window, cabinet, doorway and chair orientation within each candidate; shot-childhood-encouragement master setup",
+      "repair": ""
+     }
+    ],
+    "modelVersion": "meta/muse-spark-1.3-contributor",
+    "capabilityVersion": "bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e",
+    "toolEvidence": [
+     {
+      "tool": "viewImage",
+      "sha256": "c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "437f52e87b3c3512414bcefd5a3b1d8895e1f23f6affc5d51ab6d9b1031ab1ec"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "42212cc85c7eabcb347766f3acd591cf82fef0d582306e9dffb7422900d5a011"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "5ae70416c08ac07a8ff631cb0a492227e9e83f60598b22062c085c53151c6b8f"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f",
+      "referenceSha256": "null"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048",
+      "referenceSha256": "null"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737",
+      "referenceSha256": "null"
+     }
+    ]
+   }
+  },
+  "valid": true,
+  "gateAccepted": true,
+  "error": null
+ }
+}
