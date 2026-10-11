@@ -240,7 +240,9 @@ export async function runHeadToHead({
       invalidToolCalls = (sent.messages ?? []).filter(m => m.role === 'tool' && String(m.content).startsWith('TOOL_ARGUMENTS_INVALID')).length;
       const t0 = Date.now();
       const resp = await fetcher(url, init);
-      const turn = { ms: Date.now() - t0, status: resp.status ?? null, promptTokens: 0, completionTokens: 0, reasoningTokens: 0, costUsd: 0, toolCalls: 0, repair: sent.tool_choice === 'none' };
+      // ms covers the whole turn: it is set only after the full response body has been read below.
+      // ttfbMs is when the response headers arrived (what ms wrongly measured before).
+      const turn = { ms: 0, ttfbMs: Date.now() - t0, status: resp.status ?? null, promptTokens: 0, completionTokens: 0, reasoningTokens: 0, costUsd: 0, toolCalls: 0, repair: sent.tool_choice === 'none' };
       requests++;
       try {
         const cloned = typeof resp.clone === 'function' ? resp.clone() : resp;
@@ -255,6 +257,7 @@ export async function runHeadToHead({
           turn.costUsd = worst;
         }
       } catch { turn.costUsd = worst; }
+      turn.ms = Date.now() - t0;
       promptTokens += turn.promptTokens;
       completionTokens += turn.completionTokens;
       reasoningTokens += turn.reasoningTokens;
