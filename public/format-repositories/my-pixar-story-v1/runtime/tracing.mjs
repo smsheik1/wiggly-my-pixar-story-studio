@@ -99,7 +99,7 @@ export function paidJobTimer(tracer, base = {}) {
         const durationMs = Date.now() - startAt;
         const errorMsg = String(error?.message ?? error ?? '').slice(0, 300);
         const isQuota = /resource_exhausted|exhausted your capacity|quota will reset/i.test(errorMsg)
-          || /402|429|_CREDITS_EXHAUSTED|_RATE_LIMITED/i.test(errorMsg)
+          || /\bHTTP (402|429)\b|_CREDITS_EXHAUSTED|_RATE_LIMITED/.test(errorMsg)
           || error?.status === 402 || error?.status === 429;
         const outcome = isQuota ? 'quota' : 'provider-error';
         tracer?.paidJob?.({

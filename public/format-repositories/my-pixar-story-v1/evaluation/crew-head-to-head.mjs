@@ -1,9 +1,10 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { openRunCopy, projectStates, findState } from './r4-replay.mjs';
 import { OpenRouterHost } from '../runtime/openrouter-host.mjs';
-import { runCrewTask } from '../runtime/crew.mjs';
+import { runCrewTask, taskAssets } from '../runtime/crew.mjs';
 import { taskFor, applyEvent } from '../runtime/workflow.mjs';
 import { Event } from '../runtime/contracts.mjs';
 
@@ -22,10 +23,37 @@ const TASK_DEFS = {
 
 const RUN_ORDER = ['sage-prompt-review', 'theo-room-prompt', 'vera-room-review', 'vera-sheet-review'];
 
+// Estimate one task run: the packet text (~4 chars/token) plus ~1,600 tokens per attached
+// image, re-sent on every tool round, plus thinking/output tokens. Deliberately conservative.
 export function estimateTaskCost(taskObj, model) {
   const price = PRICE_TABLE[model] ?? { inputUsdPerM: 0.30, outputUsdPerM: 1.20 };
-  const approxTokens = 4000; // average task packet + context
-  return (approxTokens / 1_000_000) * price.inputUsdPerM + (500 / 1_000_000) * price.outputUsdPerM;
+  let images = 0;
+  try { images = [...taskAssets(taskObj).values()].filter(f => f.width && !f.durationSeconds).length; } catch {}
+  const packetTokens = Math.ceil(JSON.stringify(taskObj ?? {}).length / 4);
+  const rounds = images ? 4 : 3;
+  const inputTokens = (packetTokens + images * 1600 + 2000) * rounds;
+  const outputTokens = 2500 * rounds;
+  return (inputTokens / 1_000_000) * price.inputUsdPerM + (outputTokens / 1_000_000) * price.outputUsdPerM;
+}
+
+// Worst case for one OpenRouter request, from its real body: text (~4 chars/token, data URLs
+// excluded), ~1,600 tokens per image, and the full max_tokens of output.
+export function worstCaseRequestUsd(body, model) {
+  const price = PRICE_TABLE[model] ?? { inputUsdPerM: 0.30, outputUsdPerM: 1.20 };
+  let parsed = {};
+  try { parsed = typeof body === 'string' ? JSON.parse(body) : (body ?? {}); } catch {}
+  const raw = typeof body === 'string' ? body : JSON.stringify(parsed);
+  const images = (raw.match(/data:image\//g) ?? []).length;
+  const text = raw.replace(/data:[^"]*/g, '').length;
+  const maxOut = Number(parsed.max_tokens) || 16000;
+  return ((text / 4 + images * 1600) / 1_000_000) * price.inputUsdPerM + (maxOut / 1_000_000) * price.outputUsdPerM;
+}
+
+// Actual cost of one response: OpenRouter usage.cost, or the token price if it's missing.
+export function responseCostUsd(usage, model) {
+  if (Number.isFinite(Number(usage?.cost)) && Number(usage.cost) > 0) return Number(usage.cost);
+  const price = PRICE_TABLE[model] ?? { inputUsdPerM: 0.30, outputUsdPerM: 1.20 };
+  return ((Number(usage?.prompt_tokens) || 0) * price.inputUsdPerM + (Number(usage?.completion_tokens) || 0) * price.outputUsdPerM) / 1_000_000;
 }
 
 export async function runHeadToHead({
@@ -149,18 +177,27 @@ export async function runHeadToHead({
     let promptTokens = 0;
     let completionTokens = 0;
 
+    // Hard cap: refuse any request whose worst case could push actual spend past --max-usd.
+    let capStopped = false;
     const wrappedFetcher = async (url, init) => {
+      const worst = worstCaseRequestUsd(init?.body, item.model);
+      if (cumulativeActualCostUsd + callCostUsd + worst > maxUsd) {
+        capStopped = true;
+        throw Object.assign(new Error(`HEAD_TO_HEAD_CAP_REACHED: next request could cost up to $${worst.toFixed(4)}; spent $${(cumulativeActualCostUsd + callCostUsd).toFixed(4)} of $${maxUsd.toFixed(2)}.`), { stopDispatch: true });
+      }
       const resp = await fetcher(url, init);
+      requests++;
       try {
         const cloned = resp.clone();
         const data = await cloned.json();
         if (data?.usage) {
-          requests++;
           promptTokens += Number(data.usage.prompt_tokens) || 0;
           completionTokens += Number(data.usage.completion_tokens) || 0;
-          callCostUsd += Number(data.usage.cost) || 0;
+          callCostUsd += responseCostUsd(data.usage, item.model);
+        } else {
+          callCostUsd += worst;
         }
-      } catch {}
+      } catch { callCostUsd += worst; }
       return resp;
     };
 
@@ -226,8 +263,10 @@ export async function runHeadToHead({
     // Check Sol agreement if Vera task
     let agreementWithSol = null;
     if (role === 'visual-reviewer') {
+      // The source state is at the review gate, so Sol's verdict lives in the newest state.
       const curArt = clone.artifacts?.findLast(a => a.key === item.taskDef.key && (item.version == null || a.version === item.version));
-      const solReview = curArt?.review;
+      const solArt = states[0]?.artifacts?.find(a => a.id === curArt?.id) ?? curArt;
+      const solReview = solArt?.review;
       if (solReview && event?.review) {
         const decisionMatch = solReview.decision === event.review.decision;
         const solChecks = new Map((solReview.checks ?? []).map(c => [c.criterion, c.status]));
@@ -265,6 +304,7 @@ export async function runHeadToHead({
       valid: eventValid,
       gateAccepted,
       gateError,
+      ...(capStopped ? { status: 'stopped (cap)' } : {}),
       event,
       agreementWithSol,
       promptFlags,
@@ -275,7 +315,7 @@ export async function runHeadToHead({
 
   // Generate output files
   const dateStr = new Date().toISOString().replace(/[-:]/g, '').slice(0, 13);
-  const targetDir = outDir ?? join(process.cwd(), 'evaluation', 'local', `head-to-head-${dateStr}`);
+  const targetDir = outDir ?? fileURLToPath(new URL(`./local/head-to-head-${dateStr}`, import.meta.url));
   await mkdir(targetDir, { recursive: true });
 
   await writeFile(join(targetDir, 'results.json'), JSON.stringify(results, null, 2) + '\n');

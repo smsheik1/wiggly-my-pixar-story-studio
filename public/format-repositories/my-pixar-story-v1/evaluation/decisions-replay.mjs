@@ -1,6 +1,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { openRunCopy, veraJudgments } from './r4-replay.mjs';
 import { runPrescreen, estimatePrescreenCost } from '../runtime/decisions-prescreen.mjs';
 import { criteriaFor } from '../runtime/workflow.mjs';
@@ -87,6 +88,25 @@ export function computePrescreenMetrics(evaluations) {
 
 export const replayDecisions = runDecisionsReplay;
 
+// Replay inputs from the real r4 project: sheets get the character's reference photos
+// and cast entry; rooms get the background brief text (and any brief references).
+export function replayInputs(project, j) {
+  const [kind, id] = String(j.key ?? '').split(':');
+  const criteria = criteriaFor(project, kind === 'sheet' ? 'sheet' : j.step);
+  if (kind === 'candidates' || kind === 'sheet') {
+    const roster = project.artifacts.findLast(a => a.key === 'roster' && a.valid);
+    const c = roster?.content?.characters?.find(ch => ch.id === id);
+    return { criteria, references: c?.references ?? [], contextText: c ? `Character: ${c.name} (${c.ageVariant}). ${c.notes ?? ''}`.trim() : '' };
+  }
+  if (kind === 'backgroundCandidates' || kind === 'backgroundAngle') {
+    const brief = project.artifacts.findLast(a => a.key === `backgroundBrief:${id}` && a.valid) ?? project.artifacts.findLast(a => a.key === `backgroundBrief:${id}`);
+    const b = brief?.content ?? {};
+    const known = Array.isArray(b.knownDetails) ? b.knownDetails.map(d => typeof d === 'string' ? d : JSON.stringify(d)).join('; ') : '';
+    return { criteria, references: b.references ?? [], contextText: [b.direction ?? '', known ? `Known details: ${known}` : ''].filter(Boolean).join('\n').slice(0, 6000) };
+  }
+  return { criteria, references: [], contextText: j.artifact?.content?.prompt ?? '' };
+}
+
 export async function runDecisionsReplay({
   runDir,
   secretsPath,
@@ -116,7 +136,7 @@ export async function runDecisionsReplay({
     if (!latestProject) {
       throw new Error(`No project states found in ${runDir}`);
     }
-    judgments = veraJudgments(latestProject);
+    judgments = veraJudgments(latestProject).map(j => ({ ...j, inputs: replayInputs(latestProject, j) }));
   }
 
   if (limit != null) {
@@ -130,12 +150,12 @@ export async function runDecisionsReplay({
   for (const model of models) {
     let modelEst = 0;
     for (const j of judgments) {
-      const criteria = criteriaFor({ step: j.step });
+      const criteria = j.inputs?.criteria ?? criteriaFor({ step: j.step });
       const est = estimatePrescreenCost({
         model,
         files: j.files,
-        references: j.artifact.content?.references ?? [],
-        contextText: j.artifact.content?.prompt ?? '',
+        references: j.inputs?.references ?? j.artifact.content?.references ?? [],
+        contextText: j.inputs?.contextText ?? j.artifact.content?.prompt ?? '',
       });
       modelEst += est;
       planItems.push({ model, judgment: j, est, criteria });
@@ -205,11 +225,12 @@ export async function runDecisionsReplay({
         fetcher,
         step: item.judgment.step,
         files: item.judgment.files,
-        references: item.judgment.artifact.content?.references ?? [],
-        contextText: item.judgment.artifact.content?.prompt ?? '',
+        references: item.judgment.inputs?.references ?? item.judgment.artifact.content?.references ?? [],
+        contextText: item.judgment.inputs?.contextText ?? item.judgment.artifact.content?.prompt ?? '',
         criteria: item.criteria,
       });
-      cost = prescreenResult.usage?.costUsd ?? 0;
+      // If OpenRouter omits usage.cost, count the estimate so the cap still holds.
+      cost = prescreenResult.usage?.costUsd > 0 ? prescreenResult.usage.costUsd : Math.max(prescreenResult.usage?.estimatedCostUsd ?? 0, item.est);
       cumulativeActualCostUsd += cost;
     } catch (e) {
       prescreenResult = {
@@ -242,7 +263,7 @@ export async function runDecisionsReplay({
 
   // Write reports
   const dateStr = new Date().toISOString().replace(/[-:]/g, '').slice(0, 13);
-  const targetDir = outDir ?? join(process.cwd(), 'evaluation', 'local', `decisions-replay-${dateStr}`);
+  const targetDir = outDir ?? fileURLToPath(new URL(`./local/decisions-replay-${dateStr}`, import.meta.url));
   await mkdir(targetDir, { recursive: true });
 
   await writeFile(

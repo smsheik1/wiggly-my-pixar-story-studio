@@ -7,6 +7,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { spawnSync, spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import fs from 'node:fs';
 import { z } from 'zod';
 import { VERSION, Content, Event, Review, Plans, Inputs, IntakeConfirmation, VoiceChoiceInput, digest } from './runtime/contracts.mjs';
@@ -63,6 +64,33 @@ async function verifySubmission(status,event){
   await verifyFiles({content:event.content,intakeConfirmation:event.intakeConfirmation});
   if(['artifact','plan','approve','authorize','owner-review'].includes(event.action)||event.action==='review'&&event.review?.decision!=='inconclusive')await verifyFiles(status.project.artifacts.filter(a=>a.valid));
 }
+// Decisions prescreen inputs: the character's reference photos and cast entry for sheets,
+// the background brief's text (and any references) for rooms. The roster is an artifact.
+function prescreenInputs(p){
+  if(['candidates','sheet'].includes(p.step)){
+    const c=current(p,'roster')?.content?.characters?.find(ch=>ch.id===p.characterId);
+    return {refs:c?.references??[],contextText:c?[`Character: ${c.name} (${c.ageVariant}).`,c.notes??''].join(' ').trim():''};
+  }
+  if(['backgroundCandidates','backgroundAngle'].includes(p.step)){
+    const b=current(p,`backgroundBrief:${p.locationId}`)?.content;
+    const known=Array.isArray(b?.knownDetails)?b.knownDetails.map(d=>typeof d==='string'?d:JSON.stringify(d)).join('; '):'';
+    return {refs:b?.references??[],contextText:[b?.direction??'',known?`Known details: ${known}`:''].filter(Boolean).join('\n').slice(0,6000)};
+  }
+  return {refs:[],contextText:''};
+}
+
+// Test-only Decisions fetcher (NODE_ENV=test + WIGGLY_TEST_DECISIONS_FIXTURE): answers every
+// requested question from a canned fixture. Never active outside tests; no network.
+async function testDecisionsFetcher(){
+  if(process.env.NODE_ENV!=='test'||!process.env.WIGGLY_TEST_DECISIONS_FIXTURE)return undefined;
+  const fx=JSON.parse(await readFile(process.env.WIGGLY_TEST_DECISIONS_FIXTURE,'utf8'));
+  return async(_url,init)=>{
+    const body=JSON.parse(init.body),answers={};
+    for(const name of Object.keys(body.questions??{}))answers[name]=name==='rank'?{type:'choice',...fx.rank}:{type:'noul',noul:fx.noul};
+    return new Response(JSON.stringify({id:'gen-dec-test',model:fx.model??body.model,answers,usage:fx.usage??{input_tokens:100,output_tokens:0,cost:0.0001}}),{status:200,headers:{'Content-Type':'application/json'}});
+  };
+}
+
 async function main() {
   if(command==='check-provider'){const provider=option('provider');if(args.length)throw new Error('Unknown provider check arguments.');print(await checkProvider(provider,secretsPath));return;}
   if(command==='crew-template'){print({workers:Object.entries(crewRoles).map(([role,definition])=>({role,name:definition.name,workerId:`bind-host-${role}`,modelVersion:'inherit-host-model',capabilityVersion:'bind-actual-tools-v1',execution:'host',backend:definition.backend??'codex'})),instruction:'Use your current host model and actual independent worker IDs; replace template model/capability values with the actual deployed versions before configuration. Keep each role on its configured backend (codex|openrouter). No external model is required.'});return;}
@@ -352,7 +380,7 @@ async function main() {
       // Optional live LangSmith tracing: enabled only with LANGSMITH_API_KEY in
       // the --secrets file; off when WIGGLY_TRACING=off or no key. Never breaks a run.
       let budgetQueue=Promise.resolve();
-      const inFlightTimers = new Map();
+      const inFlightTimers = new Map(), perceptionScope = new AsyncLocalStorage();
       const recordIdx = args.indexOf('--record');
       const hasRecordFlag = recordIdx >= 0;
       if (hasRecordFlag) args.splice(recordIdx, 1);
@@ -451,6 +479,7 @@ async function main() {
             actualCostUsd: amount,
             actualCostSource: 'estimate',
           }));
+          perceptionScope.getStore()?.digests.push(requestDigest);
         }
         budgetQueue=budgetQueue.then(async()=>{const latest=await workflow.status('project');if(latest.pending.taskId!==task.taskId)throw new Error('STALE_TASK: inference reservation belongs to an older task.');await workflow.respond('project',{taskId:task.taskId,actor:'runtime',action:'reserve-compute',reservation:{id:provider+':'+requestDigest,provider,estimatedCostUsd:amount}});});
         return budgetQueue;
@@ -474,31 +503,10 @@ async function main() {
         cartesiaFetcher = recordingFetcher(cassette, 'cartesia-stt', fetch);
         orFetcher = recordingFetcher(cassette, 'openrouter', fetch);
       }
-      const wrappingFetcher = (baseFetcher, provider) => async (url, options) => {
-        try {
-          const res = await baseFetcher(url, options);
-          if (!res.ok) {
-            // Find timer and fail
-            for (const [digest, timer] of inFlightTimers.entries()) {
-              if (timer) {
-                inFlightTimers.delete(digest);
-                timer.fail(new Error(`HTTP ${res.status}`));
-              }
-            }
-          }
-          return res;
-        } catch (err) {
-          for (const [digest, timer] of inFlightTimers.entries()) {
-            if (timer) {
-              inFlightTimers.delete(digest);
-              timer.fail(err);
-            }
-          }
-          throw err;
-        }
-      };
 
-      const perceptionTools={...createGeminiReviewTools({secretsPath,receiptDirectory:join(runDir,'gemini-reviews'),maxCalls:reviewCalls,beforeRequest,afterResponse,fetcher:wrappingFetcher(geminiFetcher, 'gemini')}),...createCartesiaTranscriptionTool({secretsPath,receiptDirectory:join(runDir,'cartesia-transcriptions'),maxCalls:transcriptionCalls,beforeRequest,afterResponse,fetcher:wrappingFetcher(cartesiaFetcher, 'cartesia-stt')}),...createAudioEditTools({runDir})};
+      // Each perception call runs in its own async scope: a failed call finishes only its own request traces as failed (concurrent calls are unaffected).
+      const tracedTools=(tools)=>Object.fromEntries(Object.entries(tools).map(([name,fn])=>[name,typeof fn!=='function'?fn:(...callArgs)=>{const scope={digests:[]};return perceptionScope.run(scope,async()=>{try{return await fn(...callArgs);}catch(error){for(const d of scope.digests){const timer=inFlightTimers.get(d);if(timer){inFlightTimers.delete(d);timer.fail(error);}}throw error;}});}]));
+      const perceptionTools={...tracedTools(createGeminiReviewTools({secretsPath,receiptDirectory:join(runDir,'gemini-reviews'),maxCalls:reviewCalls,beforeRequest,afterResponse,fetcher:geminiFetcher})),...tracedTools(createCartesiaTranscriptionTool({secretsPath,receiptDirectory:join(runDir,'cartesia-transcriptions'),maxCalls:transcriptionCalls,beforeRequest,afterResponse,fetcher:cartesiaFetcher})),...createAudioEditTools({runDir})};
       // A four-file review includes twelve tool calls and a structured report.
       // Keep a bounded ten-minute window; timeout still stops without a retry.
       // Sol agents run through CodexHost unchanged; DeepSeek agents run through
@@ -801,20 +809,7 @@ async function main() {
                   const { runPrescreen } = await import('./runtime/decisions-prescreen.mjs');
                   const { criteriaFor } = await import('./runtime/workflow.mjs');
                   const criteria = criteriaFor(pNow);
-                  let refs = [];
-                  let contextText = '';
-                  if (pNow.step === 'candidates') {
-                    const c = pNow.roster?.characters?.find(ch => ch.id === pNow.characterId);
-                    refs = c?.references ?? [];
-                    contextText = c?.notes ?? '';
-                  } else if (['backgroundCandidates', 'backgroundAngle'].includes(pNow.step)) {
-                    const brief = current(pNow, `backgroundBrief:${pNow.locationId}`);
-                    refs = brief?.content?.references ?? [];
-                    contextText = brief?.content?.direction ?? '';
-                  } else if (pNow.step === 'keyframe') {
-                    refs = [];
-                    contextText = '';
-                  }
+                  const { refs, contextText } = prescreenInputs(pNow);
                   const prescreenResult = await runPrescreen({
                     config: pConf,
                     secretsPath,
@@ -868,17 +863,7 @@ async function main() {
       }
       await verifyFiles(art.content.files);
       const isDryRun = args.includes('--dry-run');
-      let refs = [];
-      let contextText = '';
-      if (project.step === 'candidates') {
-        const c = project.roster?.characters?.find(ch => ch.id === project.characterId);
-        refs = c?.references ?? [];
-        contextText = c?.notes ?? '';
-      } else if (['backgroundCandidates', 'backgroundAngle'].includes(project.step)) {
-        const brief = current(project, `backgroundBrief:${project.locationId}`);
-        refs = brief?.content?.references ?? [];
-        contextText = brief?.content?.direction ?? '';
-      }
+      const { refs, contextText } = prescreenInputs(project);
       const { estimatePrescreenCost, buildRequests, runPrescreen } = await import('./runtime/decisions-prescreen.mjs');
       const { criteriaFor } = await import('./runtime/workflow.mjs');
       const criteria = criteriaFor(project);
@@ -896,9 +881,11 @@ async function main() {
         tracer=await tracing.createTracer({secretsPath,runId:basename(runDir)});
       }catch{tracer=fallbackTracer();}
       try {
+        const testFetcher = await testDecisionsFetcher();
         const prescreenResult = await runPrescreen({
           config: pConf,
           secretsPath,
+          ...(testFetcher ? { fetcher: testFetcher } : {}),
           step: project.step,
           files: art.content.files,
           references: refs,

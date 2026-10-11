@@ -28,7 +28,7 @@ const outPath = allOut.length ? allOut[allOut.length - 1] : null;
 const aspect = prompt.includes('16:9') ? '16:9' : '4:3';
 const dims = aspect === '4:3' ? '1200x900' : '1600x900';
 if (outPath) {
-  execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=blue:s=' + dims, '-frames:v', '1', outPath]);
+  execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=blue:s=' + dims, '-frames:v', '1', outPath], { timeout: 20000, killSignal: 'SIGKILL' });
 }
 process.exit(0);
 `;
@@ -117,7 +117,7 @@ test('2. agy image job through executeJob with fake binary -> one trace, provide
       const p = audioProject();
       p.characterId = 'alex';
       const refPath = join(dir, 'ref.png');
-      execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', refPath]);
+      execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', refPath], { timeout: 20000, killSignal: 'SIGKILL' });
       const ref = await importMedia(refPath, dir);
       p.artifacts.push({ key: 'roster', valid: true, content: { characters: [{ id: 'alex', references: [ref] }] } });
 
@@ -164,7 +164,7 @@ test('3. agy quota failure with bound meta-muse fallback -> two traces: agy outc
     const tracer = await createTracer({ secretsPath, runId: 'test-run-3', client: fakeClient });
 
     const musePng = join(dir, 'muse.png');
-    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=green:s=32x32', '-frames:v', '1', musePng]);
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=green:s=32x32', '-frames:v', '1', musePng], { timeout: 20000, killSignal: 'SIGKILL' });
     const museBytes = await readFile(musePng);
 
     const fakeMuseFetcher = async (url, opts) => {
@@ -178,7 +178,7 @@ test('3. agy quota failure with bound meta-muse fallback -> two traces: agy outc
       const p = audioProject();
       p.characterId = 'alex';
       const refPath = join(dir, 'ref3.png');
-      execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', refPath]);
+      execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', refPath], { timeout: 20000, killSignal: 'SIGKILL' });
       const ref = await importMedia(refPath, dir);
       p.artifacts.push({ key: 'roster', valid: true, content: { characters: [{ id: 'alex', references: [ref] }] } });
 
@@ -221,7 +221,7 @@ test('4. meta-muse returning HTTP 500 -> outcome provider-error; error text and 
     const p = audioProject();
     p.characterId = 'alex';
     const refPath = join(dir, 'ref4.png');
-    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', refPath]);
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', refPath], { timeout: 20000, killSignal: 'SIGKILL' });
     const ref = await importMedia(refPath, dir);
     p.artifacts.push({ key: 'roster', valid: true, content: { characters: [{ id: 'alex', references: [ref] }] } });
 
@@ -261,7 +261,7 @@ test('5. Cartesia narration and ElevenLabs jobs with fake fetchers -> one trace 
     const tracer = await createTracer({ secretsPath, runId: 'test-run-5', client: fakeClient });
 
     const audioFile = join(dir, 'sample.wav');
-    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:d=0.2', '-c:a', 'pcm_s16le', audioFile]);
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:d=0.2', '-c:a', 'pcm_s16le', audioFile], { timeout: 20000, killSignal: 'SIGKILL' });
     const audioBytes = await readFile(audioFile);
 
     // Cartesia narration
@@ -336,11 +336,11 @@ test('6. Gemini review tool and Cartesia STT tool with fake fetchers -> exactly 
 
     // Prepare audio and image
     const audioPath = join(dir, 'sample.wav');
-    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:d=0.2', '-c:a', 'pcm_s16le', audioPath]);
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:d=0.2', '-c:a', 'pcm_s16le', audioPath], { timeout: 20000, killSignal: 'SIGKILL' });
     const audioFile = await importMedia(audioPath, dir);
 
     const imagePath = join(dir, 'sample.png');
-    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', imagePath]);
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', imagePath], { timeout: 20000, killSignal: 'SIGKILL' });
     const imageFile = await importMedia(imagePath, dir);
 
     // Track inFlight timers as runner.mjs does
@@ -484,7 +484,7 @@ test('7. Tracer whose paidJob throws never alters job result or error', { timeou
     const p = audioProject();
     p.characterId = 'alex';
     const refPath = join(dir, 'ref7.png');
-    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', refPath]);
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', refPath], { timeout: 20000, killSignal: 'SIGKILL' });
     const ref = await importMedia(refPath, dir);
     p.artifacts.push({ key: 'roster', valid: true, content: { characters: [{ id: 'alex', references: [ref] }] } });
 
@@ -544,7 +544,7 @@ test('9. Collecting an existing receipt sends no paid-job trace', { timeout: 100
     const p = audioProject();
     p.characterId = 'alex';
     const refPath = join(dir, 'ref9.png');
-    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', refPath]);
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=32x32', '-frames:v', '1', refPath], { timeout: 20000, killSignal: 'SIGKILL' });
     const ref = await importMedia(refPath, dir);
     p.artifacts.push({ key: 'roster', valid: true, content: { characters: [{ id: 'alex', references: [ref] }] } });
 

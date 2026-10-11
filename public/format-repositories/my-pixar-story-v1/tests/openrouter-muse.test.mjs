@@ -224,9 +224,9 @@ test('4. Vera on OpenRouter: CrewHost routes Vera to OpenRouterHost, backgroundC
     const raw0 = join(dir, 'raw0.png');
     const raw1 = join(dir, 'raw1.png');
     const raw2 = join(dir, 'raw2.png');
-    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=black:s=1920x1080:d=1', '-frames:v', '1', raw0]);
-    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=1920x1080:d=1', '-frames:v', '1', raw1]);
-    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=blue:s=1920x1080:d=1', '-frames:v', '1', raw2]);
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=black:s=1920x1080:d=1', '-frames:v', '1', raw0], { timeout: 20000, killSignal: 'SIGKILL' });
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=1920x1080:d=1', '-frames:v', '1', raw1], { timeout: 20000, killSignal: 'SIGKILL' });
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=blue:s=1920x1080:d=1', '-frames:v', '1', raw2], { timeout: 20000, killSignal: 'SIGKILL' });
     const file0 = await importMedia(raw0, dir);
     const file1 = await importMedia(raw1, dir);
     const file2 = await importMedia(raw2, dir);

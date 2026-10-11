@@ -281,3 +281,21 @@ test('5. openRunCopy never modifies source sqlite (mtime and sha256 unchanged)',
     await rm(dir, { recursive: true });
   }
 });
+
+test('6. spend guard holds per request: worst case uses max_tokens and images, missing usage.cost falls back to token price, Sol verdict read from the newest state', { timeout: 10000 }, async () => {
+  const { worstCaseRequestUsd, responseCostUsd, estimateTaskCost } = await import('../evaluation/crew-head-to-head.mjs');
+  const body = JSON.stringify({ model: 'deepseek/deepseek-v4.1-flash', max_tokens: 16000, messages: [{ role: 'user', content: [{ type: 'text', text: 'x'.repeat(4000) }, { type: 'image_url', image_url: { url: 'data:image/png;base64,' + 'A'.repeat(200000) } }] }] });
+  const worst = worstCaseRequestUsd(body, 'deepseek/deepseek-v4.1-flash');
+  // 16,000 output tokens at $1.20/M dominate; the base64 bytes are counted as one image, not as text.
+  assert.ok(worst > 0.0192 && worst < 0.0215, String(worst));
+  assert.ok(worstCaseRequestUsd(body, 'meta/muse-spark-1.3-contributor') < worst);
+  assert.equal(responseCostUsd({ cost: 0.0042 }, 'deepseek/deepseek-v4.1-flash'), 0.0042);
+  assert.ok(Math.abs(responseCostUsd({ prompt_tokens: 1_000_000, completion_tokens: 0 }, 'deepseek/deepseek-v4.1-flash') - 0.30) < 1e-9);
+  // A 3-image review task estimates higher than a text-only one.
+  const img = n => ({ path: `/x/${n}.png`, sha256: String(n).repeat(64).slice(0, 64), bytes: 10, width: 1600, height: 900 });
+  assert.ok(estimateTaskCost({ artifact: { content: { files: [img(1), img(2), img(3)] } }, dependencies: [] }, 'deepseek/deepseek-v4.1-flash') > estimateTaskCost({ artifact: { content: { prompt: 'p' } }, dependencies: [] }, 'deepseek/deepseek-v4.1-flash'));
+  // Source-level guard: the fetch wrapper refuses before calling the network, and Sol's verdict comes from states[0].
+  const src = await (await import('node:fs/promises')).readFile(new URL('../evaluation/crew-head-to-head.mjs', import.meta.url), 'utf8');
+  assert.match(src, /HEAD_TO_HEAD_CAP_REACHED[\s\S]*?const resp = await fetcher/);
+  assert.match(src, /states\[0\]\?\.artifacts\?\.find/);
+});

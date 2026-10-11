@@ -15,10 +15,21 @@ import {
 } from '../runtime/decisions-prescreen.mjs';
 import { replayDecisions } from '../evaluation/decisions-replay.mjs';
 import { createTracer } from '../runtime/tracing.mjs';
+import { Prescreen } from '../runtime/contracts.mjs';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { Annotation, START, StateGraph, interrupt } from '@langchain/langgraph';
+import { SqliteSaver } from '@langchain/langgraph-checkpoint-sqlite';
+import { taskFor, applyEvent, current } from '../runtime/workflow.mjs';
+import { importMedia } from '../runtime/media.mjs';
+import { criteria as rubric, digest } from '../runtime/contracts.mjs';
+import { send, reviewed, approved } from './helpers.mjs';
+import { registry, author, brief, prompt } from './background-helpers.mjs';
+import { supervisedCharacters } from './supervised-helpers.mjs';
+import { shotPlan } from './shot-helpers.mjs';
 
-// Local copy of Prescreen contract schema as specified in §3.5 test 6.
-// Note: Part A's contracts.mjs Prescreen schema is the canonical one,
-// and after rebasing on Part A, this can import Prescreen directly.
+// Local copy of the contract (kept as a second guard). Part A's contracts.mjs
+// Prescreen schema is canonical; test 6 validates against both.
 const FileResultSchema = z.object({
   index: z.number().int().nonnegative(),
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
@@ -72,7 +83,7 @@ async function makePng(dir, name, width = 32, height = 32) {
     '-frames:v',
     '1',
     p,
-  ]);
+  ], { timeout: 20000, killSignal: 'SIGKILL' });
   const stat = await readFile(p);
   return { path: p, sha256: '0123456789abcdef'.repeat(4), bytes: stat.length };
 }
@@ -188,7 +199,7 @@ test('2. clef-flash for same set: 3 per-option requests plus 1 ranking request, 
       '-frames:v',
       '1',
       largePng,
-    ]);
+    ], { timeout: 20000, killSignal: 'SIGKILL' });
     let largeBytes = (await readFile(largePng)).length;
     if (largeBytes <= 300 * 1024) {
       // Fallback: write bytes directly into PNG structure or use higher dimension
@@ -204,7 +215,7 @@ test('2. clef-flash for same set: 3 per-option requests plus 1 ranking request, 
         '-frames:v',
         '1',
         largePng,
-      ]);
+      ], { timeout: 20000, killSignal: 'SIGKILL' });
       largeBytes = (await readFile(largePng)).length;
     }
     const f0 = { path: largePng, sha256: fakeSha256('0'), bytes: largeBytes };
@@ -436,7 +447,7 @@ test('5. usage.costUsd sums cost across requests, inputTokens sums input_tokens,
   }
 });
 
-test('6. Output validates against local copy of Prescreen contract schema', { timeout: 10000 }, async () => {
+test('6. Output validates against the canonical Prescreen contract (contracts.mjs)', { timeout: 10000 }, async () => {
   const tmp = await mkdtemp(join(tmpdir(), 'dec-test-6-'));
   try {
     const f0 = await makePng(tmp, 'f0.png');
@@ -470,7 +481,8 @@ test('6. Output validates against local copy of Prescreen contract schema', { ti
     });
 
     // Schema validation check
-    const parsed = PrescreenResultSchema.parse(result);
+    PrescreenResultSchema.parse(result);
+    const parsed = Prescreen.parse(result);
     assert.equal(parsed.provider, 'openrouter-decisions');
     assert.equal(parsed.verdict, 'pass');
     assert.deepEqual(parsed.ranking, [2, 1, 0]);
@@ -558,4 +570,90 @@ test('8. runPrescreen with fake tracer sends one openrouter-decisions paid-job p
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }
+});
+
+// Seed a run directory's checkpoint with an in-memory project, using the same graph shape
+// as openWorkflow (nodes named by gate, each waiting on interrupt(taskFor(project))).
+async function seedRun(runDir, project) {
+  const saver = SqliteSaver.fromConnString(join(runDir, 'checkpoints.sqlite'));
+  const State = Annotation.Root({ project: Annotation({ reducer: (_old, value) => value }) });
+  const gates = ['author', 'owner-review', 'review', 'human', 'produce', 'authorize', 'collect', 'escalate', 'pending'];
+  const route = state => gates.includes(state.project.gate) ? state.project.gate : 'pending';
+  const builder = new StateGraph(State);
+  for (const name of gates) { builder.addNode(name, state => ({ project: applyEvent(state.project, interrupt(taskFor(state.project))) })); builder.addConditionalEdges(name, route); }
+  builder.addConditionalEdges(START, route);
+  const graph = builder.compile({ checkpointer: saver });
+  await graph.invoke({ project }, { configurable: { thread_id: 'project' }, durability: 'sync' });
+  saver.db.close();
+}
+
+test('9. end-to-end: runner prescreen applies a clear pass and forwards the set to the human pick with a ranking', { timeout: 90000 }, async (t) => {
+  const tmp = await mkdtemp(join(tmpdir(), 'dec-e2e-'));
+  t.after(() => rm(tmp, { recursive: true, force: true }));
+  const runDir = join(tmp, 'run');
+  const files = [];
+  for (const [i, c] of ['red', 'green', 'blue'].entries()) {
+    const src = join(tmp, `bg-${i}.png`);
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', `color=c=${c}:s=1600x900`, '-frames:v', '1', src], { timeout: 20000, killSignal: 'SIGKILL' });
+    files.push(await importMedia(src, runDir));
+  }
+  let p = supervisedCharacters();
+  p = approved(reviewed(author(p, { ...registry, ...shotPlan }, 'shot-planner')));
+  p = approved(reviewed(author(p, registry)));
+  p = approved(reviewed(author(p, brief(p))));
+  p = author(p, prompt(p), 'pixar-prompter');
+  const pass = step => criteria => ({ decision: 'approved', perception: 'direct-text', checks: criteria.map(criterion => ({ criterion, status: 'pass', evidence: 'ISOLATED', location: 'x', repair: '' })) });
+  p = send(p, 'owner-review', { workerId: 'background-owner', artifactId: current(p).id, artifactDigest: current(p).digest, review: pass()(rubric[p.step]) });
+  p = send(p, 'review', { workerId: 'sage', artifactId: current(p).id, artifactDigest: current(p).digest, review: pass()(taskFor(p).criteria) });
+  if (p.gate === 'human') p = send(p, 'approve', { artifactId: current(p).id, artifactDigest: current(p).digest, message: 'ISOLATED prompt' });
+  const promptText = current(p, `backgroundPrompt:${p.locationId}`).content.prompt;
+  // Enable prescreen in the pinned snapshot and give the project a budget.
+  p = structuredClone(p);
+  p.studio.config.prescreen = { enabled: true, provider: 'openrouter-decisions', model: 'openai/gpt-6-luna-decisions', steps: ['candidates', 'backgroundCandidates', 'backgroundAngle', 'keyframe'], passAbove: 0.9, failBelow: 0.4, maxPerArtifact: 1, estimatedCostUsdPerCall: 0.002 };
+  p.studio.sha256 = digest({ config: p.studio.config, documents: p.studio.documents });
+  p.budget = { ...(p.budget ?? { reservations: [] }), maxCostUsd: 100 };
+  p = send(p, 'plan', { workerId: 'planner', plan: { provider: 'agy', operation: p.step, estimatedCostUsd: 0, parameters: { prompt: promptText } } });
+  if (p.gate === 'authorize') { const j = p.jobs.at(-1); p = send(p, 'authorize', { jobId: j.id, artifactDigest: j.digest, message: 'ISOLATED auth' }); }
+  const job = p.jobs.at(-1);
+  p = send(p, 'begin', { jobId: job.id, artifactDigest: job.digest });
+  p = send(p, 'receipt', { jobId: job.id, artifactDigest: job.digest, result: { files, prompt: promptText } });
+  assert.equal(p.step, 'backgroundCandidates'); assert.equal(p.gate, 'review');
+  await seedRun(runDir, p);
+
+  const fixture = join(tmp, 'decisions.json'), secrets = join(tmp, 'secrets.env');
+  await writeFile(fixture, JSON.stringify({ model: 'openai/gpt-6-luna-decisions-2026-10-01', noul: 0.97, rank: { choice: '2', confidence: 0.8, probabilities: { '0': 0.15, '1': 0.05, '2': 0.8 } }, usage: { input_tokens: 1200, output_tokens: 0, cost: 0.0002 } }));
+  await writeFile(secrets, 'OPENROUTER_API_KEY=sk-or-test-not-a-real-key-123456\n', { mode: 0o600 });
+  const runner = fileURLToPath(new URL('../runner.mjs', import.meta.url));
+  const r = spawnSync(process.execPath, [runner, 'prescreen', '--run', runDir, '--secrets', secrets], { encoding: 'utf8', timeout: 60000, killSignal: 'SIGKILL', env: { ...process.env, NODE_ENV: 'test', WIGGLY_TEST_DECISIONS_FIXTURE: fixture, WIGGLY_TRACING: 'off' } });
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(!r.stdout.includes('sk-or-test') && !r.stderr.includes('sk-or-test'));
+
+  const { openWorkflow } = await import('../runtime/workflow.mjs');
+  const wf = openWorkflow(join(runDir, 'checkpoints.sqlite'));
+  try {
+    const { project } = await wf.status('project');
+    const a = current(project);
+    assert.equal(project.gate, 'human');
+    assert.equal(a.prescreen.verdict, 'pass');
+    assert.equal(a.prescreen.servedModel, 'openai/gpt-6-luna-decisions-2026-10-01');
+    assert.deepEqual(a.review.recommendation.ranking, [2, 0, 1]);
+    assert.equal(a.review.recommendation.selection, 2);
+    assert.ok(project.budget.reservations.some(x => x.provider === 'openrouter-decisions'));
+  } finally { wf.close(); }
+});
+
+test('10. replay inputs come from the real project: roster photos and rev-5 sheet criteria for sheets, brief text for rooms', { timeout: 10000 }, async () => {
+  const { replayInputs } = await import('../evaluation/decisions-replay.mjs');
+  const photo = { path: '/x/ref.jpg', sha256: 'a'.repeat(64), bytes: 10, width: 640, height: 427 };
+  const project = { workflowRevision: 5, artifacts: [
+    { key: 'roster', valid: true, content: { characters: [{ id: 'kid', name: 'Kid', ageVariant: 'child', references: [photo], notes: 'curly hair' }] } },
+    { key: 'backgroundBrief:room', valid: true, content: { direction: 'A cramped 1990s bedroom.', knownDetails: ['bunk bed', 'cricket bat'], references: [] } },
+  ] };
+  const sheet = replayInputs(project, { key: 'candidates:kid', step: 'candidates', artifact: { content: { files: [], prompt: 'p' } } });
+  assert.deepEqual(sheet.references, [photo]);
+  assert.match(sheet.contextText, /Kid \(child\)\. curly hair/);
+  assert.deepEqual(sheet.criteria, rubric.sheet);
+  const room = replayInputs(project, { key: 'backgroundCandidates:room', step: 'backgroundCandidates', artifact: { content: { files: [] } } });
+  assert.match(room.contextText, /cramped 1990s bedroom[\s\S]*bunk bed; cricket bat/);
+  assert.deepEqual(room.criteria, rubric.backgroundCandidates);
 });
