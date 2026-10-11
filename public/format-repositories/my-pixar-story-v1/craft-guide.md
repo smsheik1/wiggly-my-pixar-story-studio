@@ -6,7 +6,7 @@ House craft for every writer. Each section opens with `## [section-id] Title` an
 
 One look everywhere. Push values further than you want, because generators drift back to defaults.
 
-- [H-STYLE] (check: sage, vera, june) House look: feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon.
+- [H-STYLE] (check: sage, vera, june) Feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon.
 - [H-OVERSHOOT] (check: sage) Overshoot values: write "deeply worn", not "slightly worn"; generators drift back to defaults, so push further than you want.
 - [H-NO-BRANDS] (check: sage, vera, june) No brand, vendor, model, renderer, tool, or film names in any prompt or brief.
 
@@ -105,7 +105,7 @@ Light: morning daylight through side windows, warm and soft, filling the room ev
 - [L-SHOTS-FIRST] (check: beau) Build the room for the shots the script needs: list the scripted actions and positions in that space before writing.
 - [L-MIN-TEXT] (check: vera, sage) Keep text out of plates: prefer no signs or labels at all, and cut to at most 4 names if text must appear.
 - [L-CHILD-DRAWINGS] (check: none) Draw children's drawings as a five-year-old hand works: heads bigger than bodies, arms straight out of the head, colour scribbled outside the lines, heavy uneven pressure, a floating blue strip for sky, a sun wedged in a corner, wobbly oversized letters running out of space, with ability varying across the wall.
-- [L-SETS-DEFAULT] (check: none) Default sets line: lived-in, story-dressed interiors in a muted palette with one saturated accent, empty of people only and never empty.
+- [L-SETS-DEFAULT] (check: none) Lived-in, story-dressed sets in a muted palette with one saturated accent: empty of people, never an empty set.
 
 ## [composition] Composition
 
