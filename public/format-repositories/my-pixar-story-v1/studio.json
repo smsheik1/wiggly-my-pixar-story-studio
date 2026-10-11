@@ -42,8 +42,8 @@
     },
     "background-product-owner": {
       "name": "Beau",
-      "backend": "codex",
-      "model": "gpt-6.1-sol",
+      "backend": "openrouter",
+      "model": "deepseek/deepseek-v4.1-flash",
       "skill": "crew/beau/SKILL.md",
       "tools": [
         "readAsset",
@@ -52,8 +52,8 @@
     },
     "pixar-prompter": {
       "name": "Theo",
-      "backend": "codex",
-      "model": "gpt-6.1-sol",
+      "backend": "openrouter",
+      "model": "deepseek/deepseek-v4.1-flash",
       "skill": "crew/theo/SKILL.md",
       "tools": [
         "readAsset",

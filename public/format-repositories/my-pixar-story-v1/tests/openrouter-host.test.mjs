@@ -20,10 +20,10 @@ const scriptEvent={taskId:'isolated-task',actor:'agent',workerId:'openrouter:tex
 
 test('studio pins Sol agents on codex and DeepSeek agents on openrouter',()=>{
  const agents=loadStudio().config.agents;
- for(const role of ['script-writer','pixar-prompter','visual-reviewer','scene-reviewer','background-product-owner']){
+ for(const role of ['script-writer','visual-reviewer','scene-reviewer']){
   assert.equal(agents[role].backend,'codex');assert.equal(agents[role].model,'gpt-6.1-sol');
  }
- for(const role of ['text-reviewer','cast-designer','sheet-prompter','shot-planner','composition-writer','motion-director','video-prompt-engineer','sound-designer','film-editor','audio-reviewer','generation-planner','voice-director']){
+ for(const role of ['background-product-owner','pixar-prompter','text-reviewer','cast-designer','sheet-prompter','shot-planner','composition-writer','motion-director','video-prompt-engineer','sound-designer','film-editor','audio-reviewer','generation-planner','voice-director']){
   assert.equal(agents[role].backend,'openrouter');assert.equal(agents[role].model,'deepseek/deepseek-v4.1-flash');
  }
 });
