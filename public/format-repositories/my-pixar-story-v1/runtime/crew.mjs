@@ -10,6 +10,8 @@ import {verifyFiles,measureAudio,probe} from './media.mjs';
 import {supervised,reviewPassed} from './gates.mjs';
 import {artifactEvidence} from './evaluators.mjs';
 import {validateEditingInvestigation,AudioEditPlan} from './audio-edit.mjs';
+import {findSlashAbbreviations} from './script-lint.mjs';
+export {findSlashAbbreviations};
 // These are format capabilities, not arbitrary filesystem/network/shell access.
 export const crewRoles=loadStudio().config.agents;
 export const Crew=z.object({workers:z.array(z.object({workerId:text,name:text,role:z.enum(Object.keys(crewRoles)),modelVersion:text,capabilityVersion:text,execution:z.literal('host'),backend:z.enum(['codex','openrouter']).optional()})).min(1)}).strict().superRefine((crew,ctx)=>{
@@ -49,10 +51,18 @@ export const QUOTE_ROLES=['text-reviewer','audio-reviewer'];
 export function normalizeQuote(s){
  return String(s??'').replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/\s+/g,' ').trim();
 }
+export function isApprovedArtifact(a){
+ return Boolean(a&&typeof a==='object'&&a.valid!==false&&(a.approvedBy||a.sqlAcceptanceVerified));
+}
 function collectQuoteHaystacks(task,outputs){
  // Evidence only: the artifact under review, its locked dependencies and this
  // task's actual tool outputs. Instructions, rubrics and criterion names are
  // not evidence, so quoting them cannot satisfy the check.
+ //
+ // Locked sources (Shaz's locked answers, immutable questionnaire inputs, human
+ // creative directions, approved shot plan, and signed production bible) are
+ // also valid evidence. Unapproved drafts, pending reviews, or artifacts with
+ // valid:false never count.
  const haystacks=[];
  const strings=value=>{
   if(typeof value==='string'){haystacks.push(value);return;}
@@ -62,6 +72,10 @@ function collectQuoteHaystacks(task,outputs){
  };
  strings(task.artifact?.content);
  strings(task.dependencies);
+ if(isApprovedArtifact(task.lockedAnswers))strings(task.lockedAnswers.content??task.lockedAnswers);
+ if(task.inputs?.answers)strings(task.inputs.answers);
+ if(Array.isArray(task.creativeDirections))strings(task.creativeDirections);
+ if(isApprovedArtifact(task.shotIntentions))strings(task.shotIntentions.content??task.shotIntentions);
  // The signed production bible is a locked source: quoting it is valid evidence.
  // An unsigned draft is not in force and never counts.
  if(task.productionBible?.status==='signed')strings(task.productionBible.sections);
@@ -262,6 +276,18 @@ export async function runCrewTask(p,task,host){
    event.review.toolEvidence=receipts;
    verifyReviewQuotes({role:worker.role,task,review:event.review,outputs});
    verifyReviewRecommendation({task,review:event.review});
+  }
+  if(worker.role==='script-writer'&&event.action==='artifact'&&Array.isArray(event.content?.beats)){
+   for(const b of event.content.beats){
+    for(const field of ['narration','text']){
+     if(typeof b?.[field]==='string'){
+      const matches=findSlashAbbreviations(b[field]);
+      if(matches.length){
+       throw Object.assign(new Error(`SCRIPT_SLASH_ABBREVIATION: beat ${b.beat}: "${matches[0]}" — TTS reads slashes aloud; write "AC"/"air conditioning", "with", etc.`),{knownFinished:true});
+      }
+     }
+    }
+   }
   }
   return event;
  }catch(error){throw Object.assign(error,{knownFinished:true,finishedResult:event});}
