@@ -1,0 +1,163 @@
+import {readFile,mkdir,writeFile,rename} from 'node:fs/promises';
+import {join,extname} from 'node:path';
+import {randomUUID} from 'node:crypto';
+import {z} from 'zod';
+import {Event,digest} from './contracts.mjs';
+import {buildWorkerPacket,wigglyToolDefinition,crewRoles,taskAssets} from './crew.mjs';
+import {loadStudio} from './instructions.mjs';
+import {sanitize} from './tracing.mjs';
+
+export const OPENROUTER_URL='https://openrouter.ai/api/v1/chat/completions';
+export const DEFAULT_OPENROUTER_MODEL='deepseek/deepseek-v4.1-flash';
+export const OPENROUTER_PROVIDER_POLICY={require_parameters:true,max_price:{prompt:0.3,completion:1.2}};
+export const OPENROUTER_MAX_TOKENS=16000;
+export const OPENROUTER_MAX_TOOL_ROUNDS=40;
+
+async function readJson(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;}}
+async function saveJson(path,value){await writeFile(path+'.tmp',JSON.stringify(value)+'\n',{mode:0o600});await rename(path+'.tmp',path);}
+async function readOpenRouterKey(secretsPath){
+ if(!secretsPath)throw new Error('OPENROUTER_API_KEY missing: pass --secrets with OPENROUTER_API_KEY set.');
+ let source;try{source=await readFile(secretsPath,'utf8');}catch{throw new Error('OPENROUTER_API_KEY missing: pass --secrets with OPENROUTER_API_KEY set.');}
+ const match=source.match(/^\s*(?:export\s+)?OPENROUTER_API_KEY\s*=\s*(.+)\s*$/m);
+ if(!match)throw new Error('OPENROUTER_API_KEY missing: pass --secrets with OPENROUTER_API_KEY set.');
+ const value=match[1].trim().replace(/^(['"])(.*)\1$/,'$2');
+ if(!value)throw new Error('OPENROUTER_API_KEY missing: pass --secrets with OPENROUTER_API_KEY set.');
+ return value;
+}
+const developerInstructions=(worker)=>`You are ${worker.name}, the ${worker.role} for the Wiggly memoir format. Complete only your assigned task. Use wiggly_tool for granted assets. Return only the requested structured event; never approve for the user, submit provider calls, or claim unavailable perception.`;
+function readyText(message){
+ const text=typeof message?.content==='string'?message.content.trim():JSON.stringify(message?.content??'').trim();
+ try{const parsed=JSON.parse(text);if(typeof parsed?.eventJson==='string')return parsed.eventJson.trim();}catch{}
+ return text;
+}
+
+export class OpenRouterHost {
+ constructor({cwd, secretsPath, model=DEFAULT_OPENROUTER_MODEL, timeoutMs=180000, reasoningEffort='medium', maxTokens=OPENROUTER_MAX_TOKENS, maxToolRounds=OPENROUTER_MAX_TOOL_ROUNDS, fetcher=fetch, perceptionTools={}, perceptionProfile=null, tracer=null}={}){
+  if(['max','xhigh'].includes(reasoningEffort))throw new Error('OPENROUTER_REASONING_LIMIT: reasoning effort must be medium or high, never max/xhigh.');
+  if(!['low','medium','high'].includes(reasoningEffort))throw new Error('OPENROUTER_REASONING_LIMIT: reasoning effort must be medium or high.');
+  this.cwd=cwd??join(process.cwd(),'host-workspace');this.secretsPath=secretsPath;this.model=model;this.timeoutMs=timeoutMs;
+  this.reasoningEffort=reasoningEffort;this.maxTokens=maxTokens;this.maxToolRounds=maxToolRounds;
+  this.fetcher=fetcher;this.perceptionProfile=perceptionProfile;this.tracer=tracer;
+  this.tools={...perceptionTools,viewImage:async({file})=>({perception:'direct-image',imageUrl:`data:image/${extname(file.path).slice(1).replace('jpg','jpeg')};base64,${(await readFile(file.path)).toString('base64')}`})};
+ }
+ requestSettings(){
+  return {model:this.model,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.reasoningEffort},max_tokens:this.maxTokens};
+ }
+ async profile(){
+  const tool=wigglyToolDefinition();
+  return digest({model:this.model,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.reasoningEffort},maxTokens:this.maxTokens,maxToolRounds:this.maxToolRounds,tool:tool.inputSchema,perception:this.perceptionProfile,instruction:'openrouter-crew-v1'});
+ }
+ async preflight(worker){
+  if(worker.capabilityVersion!==await this.profile())throw new Error('OPENROUTER_PROFILE_CHANGED: host/tool version differs from the bound crew. Stop for explicit reconfiguration/qualification.');
+  await readOpenRouterKey(this.secretsPath);
+ }
+ toolDefinition(){
+  const tool=wigglyToolDefinition();
+  return [{type:'function',function:{name:tool.name,description:tool.description,parameters:tool.inputSchema}}];
+ }
+ async chat({model,messages,tools,toolChoice,usageSink}){
+  const key=await readOpenRouterKey(this.secretsPath);
+  const forcingSpecificTool=toolChoice&&typeof toolChoice==='object';
+  const body={model,messages,tools,tool_choice:toolChoice??(tools?.length?'auto':'none'),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:this.maxTokens,
+   response_format:{type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}},
+   ...(forcingSpecificTool?{}:{reasoning:{effort:this.reasoningEffort}})};
+  let response;
+  try{
+   response=await this.fetcher(OPENROUTER_URL,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','X-Title':'Wiggly memoir studio'},body:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(this.timeoutMs)});
+  }catch(error){throw new Error(`OPENROUTER_REQUEST_FAILED: ${error.message}. No model/provider fallback was submitted.`);}
+  if(!response.ok){
+   const text=await response.text().catch(()=>'');
+   if(response.status===402)throw new Error('OpenRouter credits exhausted. Add credits before dispatch; no model/provider fallback was submitted.');
+   if(response.status===429){
+    const error=new Error(`OpenRouter usage limit reached (HTTP 429). No model/provider fallback was submitted.`);
+    error.safeRetryWithoutOutput=true;error.savedTools=[];error.usageLimitExceeded=true;error.retryAfter=response.headers?.get?.('retry-after')??null;
+    throw error;
+   }
+   if(response.status>=500)throw new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status}. No model/provider fallback was submitted.`);
+   throw new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status} ${text.slice(0,200)}. No model/provider fallback was submitted.`);
+  }
+  const result=await response.json();
+  if(result?.usage&&usageSink)usageSink(result.usage);
+  if(result?.model&&result.model!==model)throw new Error('OPENROUTER_MODEL_CHANGED: requested model must be used exactly.');
+  const choice=result?.choices?.[0];
+  if(!choice)throw new Error('OPENROUTER_REQUEST_FAILED: empty choices. No model/provider fallback was submitted.');
+  return choice.message;
+ }
+ async runTask(task,{worker,callTool}){
+  await this.preflight(worker);
+  const packet=buildWorkerPacket(task,worker);
+  const media=[];
+  if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){const viewed=await callTool('viewImage',{sha256:file.sha256});media.push({type:'text',text:`Reference image sha256: ${file.sha256}`},{type:'image_url',image_url:{url:viewed.imageUrl}});}
+  const tools=this.toolDefinition();
+  const content=[{type:'text',text:packet},...media];
+  const messages=[{role:'system',content:developerInstructions(worker)},{role:'user',content}];
+  let turnTrace=null;try{turnTrace=this.tracer?.turn?.({role:worker.role,workerName:worker.name,model:worker.modelVersion,taskId:task.taskId,step:task.step,gate:task.gate,backend:'openrouter'});}catch{turnTrace=null;}
+  const turnStart=Date.now(),usage={};
+  const endTurn=(outcome)=>{try{turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart,...(Object.keys(usage).length?{usage}:{})});}catch{}};
+  let output=null,attempts=0;
+  try{
+   for(let round=0;round<this.maxToolRounds;round++){
+    const message=await this.chat({model:worker.modelVersion,messages,tools,usageSink:(u)=>{Object.assign(usage,sanitize(u));}});
+    const calls=message?.tool_calls??[];
+    if(!calls.length){output=typeof message?.content==='string'?message.content:JSON.stringify(message?.content??'');break;}
+    messages.push({role:'assistant',content:message.content??'',tool_calls:calls});
+    for(const call of calls){
+     let args={};try{args=JSON.parse(call.function?.arguments??'{}');}catch{args={};}
+     const parsed=z.object({name:z.string(),sha256:z.string(),referenceSha256:z.string().nullable(),edit:z.unknown().nullable().optional(),region:z.unknown().nullable().optional()}).strict().parse(args);
+     let toolTrace=null;try{toolTrace=this.tracer?.tool?.({toolName:parsed.name});}catch{toolTrace=null;}
+     const toolStart=Date.now(),endTool=(outcome)=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart});}catch{}};
+     try{
+      const value=await callTool(parsed.name,{sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})});
+      endTool('completed');
+      messages.push({role:'tool',tool_call_id:call.id,content:JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value)});
+     }catch(error){endTool('failed');messages.push({role:'tool',tool_call_id:call.id,content:error.message});if(error.stopDispatch)throw error;}
+    }
+   }
+   if(output==null)throw new Error(`OPENROUTER_TOOL_LIMIT: exceeded ${this.maxToolRounds} tool rounds without a final answer.`);
+   try{return Event.parse(JSON.parse(JSON.parse(output).eventJson));}
+   catch(error){
+    attempts++;
+    if(attempts>1)throw Object.assign(new Error(`INVALID_WORKER_EVENT: ${error.message}`),{knownFinished:true,finishedResult:output});
+    messages.push({role:'user',content:`Your last reply failed validation: ${error.message}. Return ONLY {"eventJson": "<serialized Event>"} with the corrected event.`});
+    const retry=await this.chat({model:worker.modelVersion,messages,tools:[],toolChoice:'none',usageSink:(u)=>{Object.assign(usage,sanitize(u));}});
+    const retryText=typeof retry?.content==='string'?retry.content:JSON.stringify(retry?.content??'');
+    try{const event=Event.parse(JSON.parse(JSON.parse(retryText).eventJson));output=retryText;endTurn('completed');return event;}
+    catch(error2){throw Object.assign(new Error(`INVALID_WORKER_EVENT: ${error2.message}`),{knownFinished:true,finishedResult:retryText});}
+   }
+  }finally{endTurn(output?'completed':'error');}
+ }
+ async startCrew(model,config=loadStudio().config){
+  const capabilityVersion=await this.profile(),path=join(this.cwd,'crew-startup-openrouter.json');
+  const openRoles=Object.entries(config.agents).filter(([,a])=>(a.backend??'codex')==='openrouter');
+  const models=Object.fromEntries(openRoles.map(([role,a])=>[role,model??a.model]));
+  const draft=await readJson(path)??{models,capabilityVersion,workers:[],pending:null};
+  if(digest(draft.models??{})!==digest(models)||draft.capabilityVersion!==capabilityVersion)throw new Error('OPENROUTER_STARTUP_PROFILE_CHANGED: reconcile the recorded partial crew before changing model/tools.');
+  if(draft.pending)throw new Error(`OPENROUTER_STARTUP_UNCERTAIN: inspect ${path} and saved worker ${draft.pending.workerId??draft.pending.role}; initialization will not be repeated automatically.`);
+  for(const [role,agent] of openRoles){
+   const roleModel=models[role];
+   if(draft.workers.some(w=>w.role===role))continue;
+   draft.pending={role};await saveJson(path,draft);
+   const workerId=`openrouter:${role}:${randomUUID().slice(0,8)}`;
+   const worker={workerId,name:agent.name,role,modelVersion:roleModel,capabilityVersion,execution:'host',backend:'openrouter'};
+   const ready=await this.chat({model:roleModel,messages:[{role:'system',content:developerInstructions(worker)},{role:'user',content:'Initialization only: acknowledge your assigned role by replying READY. Do not use tools, author a deliverable, or claim perception.'}],tools:[]});
+   if(readyText(ready)!=='READY')throw new Error(`OPENROUTER_CREW_NOT_READY: ${agent.name} initialization did not acknowledge the role.`);
+   draft.pending.workerId=workerId;await saveJson(path,draft);
+   draft.workers.push(worker);draft.pending=null;await saveJson(path,draft);
+  }
+  return {workers:draft.workers};
+ }
+ async refreshCrew(crew){
+  const capabilityVersion=await this.profile();
+  return {workers:crew.workers.map(w=>({...w,capabilityVersion}))};
+ }
+ // Single-role bind without touching the startup file (crew-refresh rebind).
+ async startRole(role,agent){
+  const capabilityVersion=await this.profile();
+  const workerId=`openrouter:${role}:${randomUUID().slice(0,8)}`;
+  const worker={workerId,name:agent.name,role,modelVersion:agent.model,capabilityVersion,execution:'host',backend:'openrouter'};
+  const ready=await this.chat({model:agent.model,messages:[{role:'system',content:developerInstructions(worker)},{role:'user',content:'Initialization only: acknowledge your assigned role by replying READY. Do not use tools, author a deliverable, or claim perception.'}],tools:[]});
+  if(readyText(ready)!=='READY')throw new Error(`OPENROUTER_CREW_NOT_READY: ${agent.name} initialization did not acknowledge the role.`);
+  return worker;
+ }
+ close(){}
+}
