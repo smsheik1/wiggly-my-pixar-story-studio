@@ -58,8 +58,9 @@ function turnFailureMessage(turn){
 }
 
 export class CodexHost {
- constructor({cwd,spawnProcess=spawn,timeoutMs=180000,onProgress=()=>{},perceptionTools={},perceptionProfile=null,tracer=null}={}){
+ constructor({cwd,spawnProcess=spawn,timeoutMs=180000,onProgress=()=>{},perceptionTools={},perceptionProfile=null,tracer=null,codexVersion=()=>execFileSync('codex',['--version'],{encoding:'utf8'}).trim(),profileOverride=null}={}){
   this.cwd=cwd;this.timeoutMs=timeoutMs;this.onProgress=onProgress;this.sequence=0;this.pending=new Map();this.active=null;this.perceptionProfile=perceptionProfile;this.tracer=tracer;
+  this.codexVersion=codexVersion;this.profileOverride=profileOverride;
   this.child=spawnProcess('codex',['app-server','--stdio',...enabled.flatMap(name=>['--enable',name]),...disabled.flatMap(name=>['--disable',name]),'-c','web_search="disabled"'],{stdio:['pipe','pipe','pipe']});
   this.lines=createInterface({input:this.child.stdout});
   this.lines.on('line',line=>{try{this.message(JSON.parse(line));}catch(error){this.fail(error);}});
@@ -120,7 +121,8 @@ export class CodexHost {
   }
  async initialize(){await mkdir(this.cwd,{recursive:true});await this.call('initialize',{clientInfo:{name:'wiggly_memoir',title:'Wiggly memoir studio',version:'2.0.0'},capabilities:{experimentalApi:true}});this.send({method:'initialized',params:{}});}
  async profile(){
-  const version=execFileSync('codex',['--version'],{encoding:'utf8'}).trim();
+  if(typeof this.profileOverride==='string')return this.profileOverride;
+  const version=(typeof this.codexVersion==='function'?this.codexVersion():this.codexVersion)??execFileSync('codex',['--version'],{encoding:'utf8'}).trim();
   return `${version}:${digest({sources:await Promise.all(['codex-host.mjs','crew.mjs','media.mjs','audio-edit.mjs','contracts.mjs','gemini-review.mjs','cartesia-stt.mjs','providers.mjs','evaluators.mjs','instructions.mjs'].map(name=>readFile(new URL(name,import.meta.url),'utf8'))),perception:this.perceptionProfile,enabled,disabled,tool})}`;
  }
  async startCrew(model,config=loadStudio().config){

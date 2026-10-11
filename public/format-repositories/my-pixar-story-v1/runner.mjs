@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 import {loadStudio,studioFor,limitsFor,communicationFor} from './runtime/instructions.mjs';
 import {assertDebugReady,debugSnapshot} from './runtime/debug.mjs';
-import { readFile, mkdir, writeFile, unlink } from 'node:fs/promises';
+import { readFile, mkdir, writeFile, unlink, cp, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { resolve, join, dirname, basename } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
+import fs from 'node:fs';
 import { z } from 'zod';
 import { VERSION, Content, Event, Review, Plans, Inputs, IntakeConfirmation, VoiceChoiceInput, digest } from './runtime/contracts.mjs';
 import { openWorkflow, revisionImpact } from './runtime/workflow.mjs';
@@ -24,7 +27,9 @@ import {createCartesiaTranscriptionTool,CARTESIA_STT_PROFILE} from './runtime/ca
 import {createAudioEditTools,AUDIO_EDIT_PROFILE} from './runtime/audio-edit.mjs';
 import {AudioCase,audioTask,qualifyAudio,requireAudioQualification} from './evaluation/audio-qualification.mjs';
 import { VisualCase, visualTask, qualifyVisual, requireVisualQualification } from './evaluation/visual-qualification.mjs';
+import { Cassette, recordingFetcher, replayFetcher, recordingSpawn, replaySpawn, normalizeForCassette } from './runtime/cassette.mjs';
 const root = dirname(fileURLToPath(import.meta.url));
+const rawProcessArgv = [...process.argv];
 const args = process.argv.slice(2); const command = args.shift();
 function option(name, fallback) { const i = args.indexOf(`--${name}`); if (i < 0) return fallback; const value = args[i + 1]; if (!value || value.startsWith('--')) throw new Error(`--${name} needs a value.`); args.splice(i, 2); return value; }
 const runDir = resolve(option('run', join(root, 'agent-runs', 'draft')));
@@ -80,9 +85,217 @@ async function main() {
       requiredKeys: ['CARTESIA_API_KEY', 'REPLICATE_API_TOKEN (video stage)'], imageKeys: ['no key for default agy provider; META_API_KEY only for meta-muse fallback'], conditionalKeys:['GEMINI_API_KEY (shipped Codex media review)'], optionalKeys:['ELEVENLABS_API_KEY (generated music/effects; imports need no key)'], credentialsRead: false, productionStageLimit: 'supervised v1 through private finalization; every media lock needs human review and every video request needs exact human authorization; qualified policy remains available; real production proof not performed' });
     if (Object.values(tools).some(v => !v)) process.exitCode = 1; return;
   }
-  if (command === 'schema') {
-    const name = args[0]; const schema = name === 'crew' ? Crew : name === 'event' ? Event : name === 'review' ? Review : name === 'plan' ? Plans : name === 'inputs' ? Inputs : name==='intake-confirmation'?IntakeConfirmation:Content[name];
-    if (!schema) throw new Error('schema needs event/review/plan/inputs or a supported artifact kind.'); print(z.toJSONSchema(schema)); return;
+  if (command === 'replay') {
+    const replayCassette = option('cassette');
+    const replayRun = option('run');
+    const expectSameOutput = args.includes('--expect-same-output');
+    if (expectSameOutput) args.splice(args.indexOf('--expect-same-output'), 1);
+
+    let cassetteDirs = [];
+    if (replayCassette) {
+      cassetteDirs.push(resolve(replayCassette));
+    } else if (replayRun) {
+      const cassBase = resolve(replayRun, 'cassettes');
+      const entries = await readdir(cassBase).catch(() => []);
+      for (const ent of entries.sort()) {
+        cassetteDirs.push(join(cassBase, ent));
+      }
+    } else {
+      throw new Error('replay needs --cassette <dir> or --run <run>');
+    }
+
+    let allOk = true;
+
+    async function getDirFiles(dir, base = dir) {
+      const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+      const files = [];
+      for (const ent of entries) {
+        const full = join(dir, ent.name);
+        if (ent.isDirectory()) {
+          files.push(...(await getDirFiles(full, base)));
+        } else if (ent.isFile()) {
+          files.push(full.slice(base.length + 1));
+        }
+      }
+      return files;
+    }
+
+    async function compareRunDirs(dirA, dirB) {
+      const filesA = (await getDirFiles(dirA)).sort();
+      const filesB = (await getDirFiles(dirB)).sort();
+      const filter = (f) =>
+        !f.startsWith('cassettes') &&
+        f !== 'writer.lock' &&
+        f !== 'secrets.env' &&
+        !f.endsWith('-shm') &&
+        !f.endsWith('-wal');
+      const aList = filesA.filter(filter);
+      const bList = filesB.filter(filter);
+
+      for (const f of aList) {
+        if (!bList.includes(f)) return { output: 'changed', firstOutputDifference: f };
+        if (f === 'checkpoints.sqlite') {
+          // Compare SQLite checkpoints semantically to ignore non-deterministic UUIDs and timestamps
+          try {
+            const { DatabaseSync } = await import('node:sqlite');
+            const d1 = new DatabaseSync(join(dirA, f));
+            const d2 = new DatabaseSync(join(dirB, f));
+            const row1 = d1.prepare("SELECT checkpoint FROM checkpoints ORDER BY checkpoint_id DESC LIMIT 1;").get();
+            const row2 = d2.prepare("SELECT checkpoint FROM checkpoints ORDER BY checkpoint_id DESC LIMIT 1;").get();
+            d1.close();
+            d2.close();
+            if (row1 && row2) {
+              const p1 = JSON.parse(Buffer.from(row1.checkpoint).toString('utf8'));
+              const p2 = JSON.parse(Buffer.from(row2.checkpoint).toString('utf8'));
+              const stripTimestamps = (obj) =>
+                JSON.parse(JSON.stringify(obj, (k, v) => {
+                  if (k === 'at' || k === 'ts' || k === 'checkpoint_id' || (k === 'id' && typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}/.test(v))) return undefined;
+                  return v;
+                }));
+              const s1 = JSON.stringify(stripTimestamps(p1.channel_values));
+              const s2 = JSON.stringify(stripTimestamps(p2.channel_values));
+              if (s1 === s2) {
+                continue;
+              }
+            } else if (!row1 && !row2) {
+              continue;
+            }
+          } catch {}
+        }
+        const contentA = await readFile(join(dirA, f));
+        const contentB = await readFile(join(dirB, f));
+        if (createHash('sha256').update(contentA).digest('hex') !== createHash('sha256').update(contentB).digest('hex')) {
+          return { output: 'changed', firstOutputDifference: f };
+        }
+      }
+      for (const f of bList) {
+        if (!aList.includes(f)) return { output: 'changed', firstOutputDifference: f };
+      }
+      return { output: 'identical', firstOutputDifference: null };
+    }
+
+    for (const cDir of cassetteDirs) {
+      const cassette = await Cassette.open(cDir);
+      const beforeDir = join(cDir, 'before');
+      const tmpDir = await mkdtemp(join(tmpdir(), 'memoir-replay-'));
+      try {
+        const beforeEntries = await readdir(beforeDir).catch(() => []);
+        for (const ent of beforeEntries) {
+          await cp(join(beforeDir, ent), join(tmpDir, ent), { recursive: true });
+        }
+
+        const dummySecrets = join(tmpDir, 'secrets.env');
+        await writeFile(
+          dummySecrets,
+          'OPENROUTER_API_KEY=replay-dummy\nGEMINI_API_KEY=replay-dummy\nCARTESIA_API_KEY=replay-dummy\n',
+          { mode: 0o600 }
+        );
+
+        // Prepare child args: process.execPath runner.mjs <recorded argv> --run <tmp> --secrets <dummy>
+        const recordedArgv = cassette.header?.argv ?? [];
+        const runnerPath = fileURLToPath(import.meta.url);
+        // recordedArgv starts with node / runner.mjs or command
+        let childArgs = [];
+        let startIndex = 0;
+        if (recordedArgv.length > 0 && (recordedArgv[0].endsWith('node') || recordedArgv[0] === 'node' || recordedArgv[0] === process.execPath)) {
+          startIndex++;
+        }
+        if (recordedArgv.length > startIndex && (recordedArgv[startIndex].endsWith('runner.mjs') || recordedArgv[startIndex] === 'runner.mjs')) {
+          startIndex++;
+        }
+        childArgs = recordedArgv.slice(startIndex);
+        // Filter out any --record if present
+        childArgs = childArgs.filter((a) => a !== '--record');
+        childArgs.push('--run', tmpDir, '--secrets', dummySecrets);
+
+        const childEnv = {
+          ...process.env,
+          WIGGLY_REPLAY_CASSETTE: cDir,
+          WIGGLY_TRACING: 'off'
+        };
+        delete childEnv.WIGGLY_RECORD;
+
+        const childResult = spawnSync(process.execPath, [runnerPath, ...childArgs], {
+          env: childEnv,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+
+        const childExitCode = childResult.status ?? (childResult.signal ? 1 : 0);
+        const childStderr = childResult.stderr || '';
+
+        // Extract mismatch if any from stderr or cassette
+        let mismatch = null;
+        const mismatchMatch = childStderr.match(/REPLAY_(?:MISMATCH|EXHAUSTED|INCOMPLETE):[^\n]+/);
+        if (mismatchMatch) {
+          mismatch = mismatchMatch[0].trim();
+        }
+
+        const recordedExitCode = cassette.result?.exitCode ?? 0;
+        try {
+          const { DatabaseSync } = await import('node:sqlite');
+          const tmpDbPath = join(tmpDir, 'checkpoints.sqlite');
+          const syncDb = new DatabaseSync(tmpDbPath);
+          syncDb.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+          syncDb.close();
+        } catch {}
+        const afterDir = join(cDir, 'after');
+        const compareTarget = (await readdir(afterDir).catch(() => null)) ? afterDir : beforeDir;
+        const comp = await compareRunDirs(compareTarget, tmpDir);
+
+        // Check profile overridden
+        let nowCodexProf = null, nowOrProf = null;
+        try {
+          const testCodexHost = new CodexHost({ cwd: tmpDir });
+          nowCodexProf = await testCodexHost.profile();
+          testCodexHost.close();
+        } catch {}
+        try {
+          const testOrHost = new OpenRouterHost({ cwd: tmpDir, secretsPath: dummySecrets });
+          nowOrProf = await testOrHost.profile();
+        } catch {}
+
+        const recordedCodexProf = cassette.header?.profiles?.codex ?? null;
+        const recordedOrProf = cassette.header?.profiles?.openrouter ?? null;
+
+        const profileOverridden = {
+          codex: !!(recordedCodexProf && nowCodexProf && recordedCodexProf !== nowCodexProf),
+          openrouter: !!(recordedOrProf && nowOrProf && recordedOrProf !== nowOrProf)
+        };
+
+        const calls = {
+          http: cassette.httpEntries.length,
+          codex: cassette.codexEntries.filter((e) => e.dir === 'out').length
+        };
+
+        let ok = childExitCode === 0 && !mismatch;
+        if (expectSameOutput && comp.output !== 'identical') {
+          ok = false;
+        }
+        if (!ok) {
+          allOk = false;
+        }
+
+        const doc = {
+          cassette: cDir,
+          ok,
+          calls,
+          mismatch,
+          exitCode: { recorded: recordedExitCode, now: childExitCode },
+          output: comp.output,
+          firstOutputDifference: comp.firstOutputDifference,
+          profileOverridden
+        };
+        print(doc);
+      } finally {
+        await rm(tmpDir, { recursive: true }).catch(() => {});
+      }
+    }
+
+    if (!allOk) {
+      process.exitCode = 1;
+    }
+    return;
   }
   const release = await lock(); const workflow = openWorkflow(join(runDir, 'checkpoints.sqlite'));
   try {
@@ -136,7 +349,86 @@ async function main() {
       try{const tracing=await import('./runtime/tracing.mjs');tracer=await tracing.createTracer({secretsPath,runId:basename(runDir)});}catch{tracer=fallbackTracer();}
       let budgetQueue=Promise.resolve();
       const beforeRequest=async({provider,requestDigest,task})=>{if(status.project.reviewMode!=='supervised')return;const amount=provider==='gemini'?reviewCost:(provider==='cartesia-stt'?transcriptionCost:NaN);if(!Number.isFinite(amount)||amount<=0)throw new Error('ACCOUNT_ESTIMATE_REQUIRED: set positive --review-cost-usd / --transcription-cost-usd before paid inference.');try{tracer.paidJob({provider,estimatedCostUsd:amount,actualCostUsd:null,requestDigest,taskId:task.taskId});}catch{}budgetQueue=budgetQueue.then(async()=>{const latest=await workflow.status('project');if(latest.pending.taskId!==task.taskId)throw new Error('STALE_TASK: inference reservation belongs to an older task.');await workflow.respond('project',{taskId:task.taskId,actor:'runtime',action:'reserve-compute',reservation:{id:provider+':'+requestDigest,provider,estimatedCostUsd:amount}});});return budgetQueue;};
-      const perceptionTools={...createGeminiReviewTools({secretsPath,receiptDirectory:join(runDir,'gemini-reviews'),maxCalls:reviewCalls,beforeRequest}),...createCartesiaTranscriptionTool({secretsPath,receiptDirectory:join(runDir,'cartesia-transcriptions'),maxCalls:transcriptionCalls,beforeRequest}),...createAudioEditTools({runDir})};
+      const recordIdx = args.indexOf('--record');
+      const hasRecordFlag = recordIdx >= 0;
+      if (hasRecordFlag) args.splice(recordIdx, 1);
+      const isRecord = hasRecordFlag || process.env.WIGGLY_RECORD === '1';
+      const replayCassetteDir = process.env.WIGGLY_REPLAY_CASSETTE || null;
+
+      let cassette = null;
+      let cassetteDir = null;
+
+      if (replayCassetteDir) {
+        globalThis.fetch = () => {
+          throw new Error('REPLAY_NETWORK_BLOCKED');
+        };
+        cassette = await Cassette.open(replayCassetteDir);
+      } else if (isRecord) {
+        const utcStamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '') + 'Z';
+        cassetteDir = join(runDir, 'cassettes', `${command}-${utcStamp}`);
+        const beforeDir = join(cassetteDir, 'before');
+        await mkdir(beforeDir, { recursive: true });
+        const runEntries = await readdir(runDir).catch(() => []);
+        for (const ent of runEntries) {
+          if (ent === 'cassettes' || ent === 'writer.lock') continue;
+          await cp(join(runDir, ent), join(beforeDir, ent), {
+            recursive: true,
+            mode: fs.constants.COPYFILE_FICLONE,
+            filter: (src) => !src.endsWith('writer.lock') && !src.includes('/cassettes')
+          });
+        }
+
+        const sanitizedArgv = [];
+        const runnerCliArgs = process.argv.slice(2);
+        for (let i = 0; i < runnerCliArgs.length; i++) {
+          if (runnerCliArgs[i] === '--secrets' || runnerCliArgs[i] === '--run') {
+            i++;
+            continue;
+          }
+          if (runnerCliArgs[i].startsWith('--secrets=') || runnerCliArgs[i].startsWith('--run=')) {
+            continue;
+          }
+          sanitizedArgv.push(runnerCliArgs[i]);
+        }
+
+        let codexVer = null;
+        try {
+          codexVer = spawnSync('codex', ['--version'], { encoding: 'utf8' }).stdout.trim();
+        } catch {}
+
+        let secretsList = [];
+        try {
+          const sText = await readFile(secretsPath, 'utf8');
+          for (const m of sText.matchAll(/^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=\s*(.+?)\s*$/gm)) {
+            const val = m[1].replace(/^(['"])(.*)\1$/, '$2').trim();
+            if (val) secretsList.push(val);
+          }
+        } catch {}
+
+        const header = {
+          type: 'header',
+          version: 1,
+          createdAt: new Date().toISOString(),
+          argv: sanitizedArgv,
+          codexVersion: codexVer || null,
+          profiles: { codex: null, openrouter: null }
+        };
+        cassette = await Cassette.create(cassetteDir, header, { secrets: secretsList });
+      }
+
+      let geminiFetcher = fetch, cartesiaFetcher = fetch;
+      let orFetcher = fetch;
+      if (replayCassetteDir) {
+        geminiFetcher = replayFetcher(cassette, 'gemini');
+        cartesiaFetcher = replayFetcher(cassette, 'cartesia-stt');
+        orFetcher = replayFetcher(cassette, 'openrouter');
+      } else if (isRecord) {
+        geminiFetcher = recordingFetcher(cassette, 'gemini', fetch);
+        cartesiaFetcher = recordingFetcher(cassette, 'cartesia-stt', fetch);
+        orFetcher = recordingFetcher(cassette, 'openrouter', fetch);
+      }
+
+      const perceptionTools={...createGeminiReviewTools({secretsPath,receiptDirectory:join(runDir,'gemini-reviews'),maxCalls:reviewCalls,beforeRequest,fetcher:geminiFetcher}),...createCartesiaTranscriptionTool({secretsPath,receiptDirectory:join(runDir,'cartesia-transcriptions'),maxCalls:transcriptionCalls,beforeRequest,fetcher:cartesiaFetcher}),...createAudioEditTools({runDir})};
       // A four-file review includes twelve tool calls and a structured report.
       // Keep a bounded ten-minute window; timeout still stops without a retry.
       // Sol agents run through CodexHost unchanged; DeepSeek agents run through
@@ -147,9 +439,36 @@ async function main() {
       const boundBackends=new Set((status.project.crew?.workers??[]).map(w=>w.backend??'codex'));
       const wantCodex=command==='crew-start'?configuredBackends.has('codex'):configuredBackends.has('codex')||boundBackends.has('codex')||!status.project.crew;
       const wantOpenRouter=command==='crew-start'?configuredBackends.has('openrouter'):configuredBackends.has('openrouter')||boundBackends.has('openrouter');
-      const codexHost=wantCodex?new CodexHost({cwd:join(runDir,'host-workspace'),timeoutMs:600000,perceptionTools,perceptionProfile:{media:GEMINI_REVIEW_PROFILE,transcription:CARTESIA_STT_PROFILE,audioEditing:AUDIO_EDIT_PROFILE},tracer,onProgress:({worker,item})=>process.stderr.write(`${worker}: ${item}\n`)}):null;
-      const openrouterHost=wantOpenRouter?new OpenRouterHost({cwd:join(runDir,'host-workspace'),secretsPath,timeoutMs:600000,perceptionTools,perceptionProfile:{media:GEMINI_REVIEW_PROFILE,transcription:CARTESIA_STT_PROFILE,audioEditing:AUDIO_EDIT_PROFILE},tracer}):null;
+
+      let codexSpawnProcess = spawn;
+      let codexVersionFn = undefined;
+      let codexProfileOverride = null;
+      let orProfileOverride = null;
+
+      if (replayCassetteDir) {
+        codexSpawnProcess = replaySpawn(cassette);
+        if (cassette.header?.codexVersion) {
+          codexVersionFn = () => cassette.header.codexVersion;
+        }
+        codexProfileOverride = cassette.header?.profiles?.codex ?? null;
+        orProfileOverride = cassette.header?.profiles?.openrouter ?? null;
+      } else if (isRecord) {
+        codexSpawnProcess = recordingSpawn(cassette, spawn);
+      }
+
+      const codexHost=wantCodex?new CodexHost({cwd:join(runDir,'host-workspace'),timeoutMs:600000,perceptionTools,perceptionProfile:{media:GEMINI_REVIEW_PROFILE,transcription:CARTESIA_STT_PROFILE,audioEditing:AUDIO_EDIT_PROFILE},tracer,spawnProcess:codexSpawnProcess,...(codexVersionFn?{codexVersion:codexVersionFn}:{}),profileOverride:codexProfileOverride,onProgress:({worker,item})=>process.stderr.write(`${worker}: ${item}\n`)}):null;
+      const openrouterHost=wantOpenRouter?new OpenRouterHost({cwd:join(runDir,'host-workspace'),secretsPath,timeoutMs:600000,perceptionTools,perceptionProfile:{media:GEMINI_REVIEW_PROFILE,transcription:CARTESIA_STT_PROFILE,audioEditing:AUDIO_EDIT_PROFILE},tracer,fetcher:orFetcher,profileOverride:orProfileOverride}):null;
+
+      if (isRecord) {
+        // Record host profiles in the header
+        let codexProf = null, orProf = null;
+        try { if (codexHost) codexProf = await codexHost.profile(); } catch {}
+        try { if (openrouterHost) orProf = await openrouterHost.profile(); } catch {}
+        cassette.header.profiles = { codex: codexProf, openrouter: orProf };
+      }
+
       const host=new CrewHost({codex:codexHost,openrouter:openrouterHost,config:studioConfig});
+      let commandExitCode = 0, commandStdout = null, commandError = null;
       try{
         if(command==='dispatch-reconcile'){
           const turnId=option('turn',null),notDispatched=option('not-dispatched',null),message=option('message');if(args.length)throw new Error('Unknown reconciliation arguments. Use --turn <id> --message "<direction>" or --not-dispatched true --message "<direction>".');
@@ -157,15 +476,18 @@ async function main() {
           if(workerBackend==='openrouter'){
             if(notDispatched!=='true'||turnId!=null)throw new Error('dispatch-reconcile for an openrouter worker needs --not-dispatched true --message "<direction>" (an OpenRouter worker has no server thread to inspect).');
             const {reconcileRouterNotDispatched}=await import('./runtime/crew-host.mjs');
-            print(await reconcileRouterNotDispatched(status.pending,{receiptDirectory:join(runDir,'host-dispatch'),message}));return;
+            const res = await reconcileRouterNotDispatched(status.pending,{receiptDirectory:join(runDir,'host-dispatch'),message});
+            commandStdout = res; print(res); return;
           }
           if(!codexHost)throw new Error('CODEX_HOST_MISSING: no codex-bound worker is needed for this run; nothing to reconcile.');
           await codexHost.initialize();
           if(notDispatched!=null){
            if(notDispatched!=='true'||turnId!=null)throw new Error('dispatch-reconcile --not-dispatched true needs --message and no --turn.');
-           print(await reconcileNotDispatched(status.pending,codexHost,{receiptDirectory:join(runDir,'host-dispatch'),message}));return;
+           const res = await reconcileNotDispatched(status.pending,codexHost,{receiptDirectory:join(runDir,'host-dispatch'),message});
+           commandStdout = res; print(res); return;
           }
-          print(await reconcileDispatch(status.pending,codexHost,{receiptDirectory:join(runDir,'host-dispatch'),turnId,message}));return;
+          const res = await reconcileDispatch(status.pending,codexHost,{receiptDirectory:join(runDir,'host-dispatch'),turnId,message});
+          commandStdout = res; print(res); return;
         }
         if(['crew-start','crew-refresh'].includes(command)){
           if(command==='crew-refresh'){
@@ -178,7 +500,8 @@ async function main() {
           if(codexHost)await codexHost.initialize();
           const crew=command==='crew-refresh'?await host.refreshCrew(status.project.crew,studioConfig):await host.startCrew(model,studioConfig);
           if(command==='crew-refresh'&&crew.changed?.length)process.stderr.write(`crew-refresh rebound roles: ${crew.changed.join(', ')}\n`);
-          print(presentation(await workflow.respond('project',{taskId:status.pending.taskId,actor:'human',action:'configure-crew',message,crew:{workers:crew.workers}})));return;
+          const res = presentation(await workflow.respond('project',{taskId:status.pending.taskId,actor:'human',action:'configure-crew',message,crew:{workers:crew.workers}}));
+          commandStdout = res; print(res); return;
         }
         if(!status.project.crew)throw new Error('CREW_NOT_CONFIGURED: use crew-start before local Codex dispatch.');
         const maxTasks=command==='work-codex'?1:Number(option('max-tasks',String(limitsFor(status.project).crewTasksPerDispatch))),repair=option('repair-invalid','false');
@@ -188,8 +511,54 @@ async function main() {
         if(!['true','false'].includes(repair))throw new Error('--repair-invalid needs true or false.');
         if(codexHost)await codexHost.initialize();
         const result=await driveCrew(workflow,'project',host,{maxTasks,repairInvalid:repair==='true',recoveryAttempt,receiptDirectory:join(runDir,'host-dispatch'),verifySubmission,tracer,onProgress:progress=>process.stderr.write(progress.type==='repair-notice'?`DEFECT FOUND: ${progress.notice.key??progress.notice.artifactId}. ${progress.notice.findings?.map(f=>f.evidence).join(' ')??'See the localized repair notice in status.'} Repair routed through the current task.\n`:`${progress.step}: ${progress.gate}\n`)});
-        print({completed:result.completed,stop:result.stop,...presentation(result.status)});return;
-      }finally{try{await tracer.flush(5000);}catch{}host.close();}
+        const res = {completed:result.completed,stop:result.stop,...presentation(result.status)};
+        commandStdout = res; print(res); return;
+      }catch(err){
+        commandExitCode = 1;
+        commandError = err.message;
+        throw err;
+      }finally{
+        try{await tracer.flush(5000);}catch{}
+        host.close();
+        if(isRecord&&cassette){
+          try{
+            try {
+              const { DatabaseSync } = await import('node:sqlite');
+              const dbPath = join(runDir, 'checkpoints.sqlite');
+              const syncDb = new DatabaseSync(dbPath);
+              syncDb.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+              syncDb.close();
+            } catch {}
+            const afterDir = join(cassetteDir, 'after');
+            await mkdir(afterDir, { recursive: true });
+            const runEntries = await readdir(runDir).catch(() => []);
+            for (const ent of runEntries) {
+              if (ent === 'cassettes' || ent === 'writer.lock') continue;
+              await cp(join(runDir, ent), join(afterDir, ent), {
+                recursive: true,
+                mode: fs.constants.COPYFILE_FICLONE,
+                filter: (src) => !src.endsWith('writer.lock') && !src.includes('/cassettes')
+              });
+            }
+            await cassette.writeLine({
+              type: 'result',
+              exitCode: commandExitCode,
+              stdout: commandStdout,
+              error: commandError
+            });
+            process.stderr.write(`recorded cassette: ${cassetteDir}\n`);
+          }catch(e){process.stderr.write(`${e.message}\n`);}
+        }
+        if(replayCassetteDir&&cassette){
+          try { cassette.assertFullyConsumed(); } catch (err) {
+            cassette.recordMismatch(err);
+          }
+          if (cassette.mismatchError) {
+            process.stderr.write(`${cassette.mismatchError.message}\n`);
+            process.exitCode = 1;
+          }
+        }
+      }
     }
     if(['qualify-audio','qualify-visual','generate','collect','render','preview','finalize'].includes(command)&&!status.project.crew)throw new Error('CREW_NOT_CONFIGURED: bind actual host workers using configure-crew; old approvals never supply capabilities.');
     if(command==='qualify-audio'){
@@ -346,7 +715,7 @@ async function main() {
         await runtimeEvent('provider-error',{message:diagnostic});throw new Error(`${diagnostic}\n${remediation(job.plan.provider,secretsPath)}`);
       }return;
     }
-    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, add-reference, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, refresh-text-instructions, refresh-crew-models, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
+    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, add-reference, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, refresh-text-instructions, refresh-crew-models, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render, finalize or replay. See SKILL.md.');
   } catch(error){
     const latest=await workflow.status('project').catch(()=>null);
     if(latest?.project.debug?.enabled&&!latest.project.debug.paused)await workflow.respond('project',{taskId:latest.pending.taskId,actor:'runtime',action:'debug-stop',message:'Command stopped: '+error.message});
