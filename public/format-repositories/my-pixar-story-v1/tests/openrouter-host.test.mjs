@@ -349,3 +349,119 @@ test('a task-turn HTTP 400/401 keeps the generic request error (bind-time names 
   }
  }finally{await rm(dir,{recursive:true});}
 });
+
+test('viewImage result on a new image sends compact tool text plus one image_url part',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-view-new-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const bodies=[];let n=0;
+  const sha='c'.repeat(64),imageUrl='data:image/png;base64,'+'A'.repeat(5000);
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async(url,init)=>{
+   const body=JSON.parse(init.body);bodies.push(body);n++;
+   if(n===1)return {ok:true,status:200,headers:{get:()=>null},json:async()=>({model:DEFAULT_OPENROUTER_MODEL,choices:[{finish_reason:'tool_calls',message:{role:'assistant',content:'',tool_calls:[{id:'v1',type:'function',function:{name:'wiggly_tool',arguments:JSON.stringify({name:'viewImage',sha256:sha})}}]}}]})};
+   return okResponse(DEFAULT_OPENROUTER_MODEL,scriptEvent);
+  }});
+  const worker=workerFor(await host.profile());
+  await host.runTask(scriptTask,{worker,callTool:async(name)=>{assert.equal(name,'viewImage');return {perception:'direct-image',imageUrl};}});
+  assert.equal(bodies.length,2);
+  const msgs=bodies[1].messages;
+  const toolIdx=msgs.findIndex(m=>m.role==='tool');
+  assert.ok(toolIdx>0);
+  assert.equal(msgs[toolIdx-1].role,'assistant');
+  const toolContent=msgs[toolIdx].content;
+  assert.ok(!toolContent.includes('base64')&&!toolContent.includes('data:'));
+  assert.ok(toolContent.length<1000);
+  const follow=msgs[toolIdx+1];
+  assert.equal(follow?.role,'user');
+  const parts=Array.isArray(follow.content)?follow.content:[];
+  const images=parts.filter(p=>p.type==='image_url');
+  assert.equal(images.length,1);
+  assert.equal(images[0].image_url.url,imageUrl);
+  assert.ok(parts[0].type==='text'&&parts[0].text.includes(sha));
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('viewImage result on an already-attached image resends no bytes and says alreadyAttached',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-view-dedupe-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const bodies=[];let n=0;
+  const sha='d'.repeat(64),imageUrl='data:image/png;base64,ISOLATED-REF';
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async(url,init)=>{
+   const body=JSON.parse(init.body);bodies.push(body);n++;
+   if(n===1)return {ok:true,status:200,headers:{get:()=>null},json:async()=>({model:DEFAULT_OPENROUTER_MODEL,choices:[{finish_reason:'tool_calls',message:{role:'assistant',content:'',tool_calls:[{id:'v2',type:'function',function:{name:'wiggly_tool',arguments:JSON.stringify({name:'viewImage',sha256:sha})}}]}}]})};
+   return okResponse(DEFAULT_OPENROUTER_MODEL,scriptEvent);
+  }});
+  const worker=workerFor(await host.profile());
+  const task={...scriptTask,artifact:{content:{files:[{path:'/tmp/ref.png',sha256:sha,bytes:100,width:100,height:100}]}}};
+  await host.runTask(task,{worker,callTool:async()=>({perception:'direct-image',imageUrl})});
+  assert.equal(bodies.length,2);
+  const countImages=(msgs)=>msgs.flatMap(m=>Array.isArray(m.content)?m.content:[]).filter(p=>p.type==='image_url').length;
+  assert.equal(countImages(bodies[0].messages),1);
+  assert.equal(countImages(bodies[1].messages),1);
+  const tool=msgs=>msgs.find(m=>m.role==='tool');
+  const content=tool(bodies[1].messages).content;
+  assert.match(content,/alreadyAttached/);
+  assert.ok(!content.includes('base64')&&!content.includes('data:'));
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('re-viewing a large attached image does not double the request body',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-view-size-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const bodies=[];let n=0;
+  const sha='e'.repeat(64),imageUrl='data:image/png;base64,'+'B'.repeat(2*1024*1024);
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async(url,init)=>{
+   bodies.push(JSON.parse(init.body));n++;
+   if(n===1)return {ok:true,status:200,headers:{get:()=>null},json:async()=>({model:DEFAULT_OPENROUTER_MODEL,choices:[{finish_reason:'tool_calls',message:{role:'assistant',content:'',tool_calls:[{id:'v3',type:'function',function:{name:'wiggly_tool',arguments:JSON.stringify({name:'viewImage',sha256:sha})}}]}}]})};
+   return okResponse(DEFAULT_OPENROUTER_MODEL,scriptEvent);
+  }});
+  const worker=workerFor(await host.profile());
+  const task={...scriptTask,artifact:{content:{files:[{path:'/tmp/big.png',sha256:sha,bytes:100,width:200,height:200}]}}};
+  await host.runTask(task,{worker,callTool:async()=>({perception:'direct-image',imageUrl})});
+  assert.equal(bodies.length,2);
+  const first=JSON.stringify(bodies[0]).length,second=JSON.stringify(bodies[1]).length;
+  assert.ok(second<first+10000,`second=${second} first=${first}`);
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('tool text containing a data: URL is sanitized before sending',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-view-sanitize-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const bodies=[];let n=0;
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async(url,init)=>{
+   const body=JSON.parse(init.body);bodies.push(body);n++;
+   if(n===1)return {ok:true,status:200,headers:{get:()=>null},json:async()=>({model:DEFAULT_OPENROUTER_MODEL,choices:[{finish_reason:'tool_calls',message:{role:'assistant',content:'',tool_calls:[{id:'r1',type:'function',function:{name:'wiggly_tool',arguments:JSON.stringify({name:'readAsset',sha256:'f'.repeat(64)})}}]}}]})};
+   return okResponse(DEFAULT_OPENROUTER_MODEL,scriptEvent);
+  }});
+  const worker=workerFor(await host.profile());
+  await host.runTask(scriptTask,{worker,callTool:async()=>({note:'prefix data:image/png;base64,QUJDRA== suffix'})});
+  const tool=bodies[1].messages.find(m=>m.role==='tool');
+  assert.ok(tool);
+  assert.ok(!tool.content.includes('data:image/png;base64'));
+  assert.match(tool.content,/\[binary data omitted: image\/png\]/);
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('a region close-up of an already-attached image is still delivered as a new image',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-view-region-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const bodies=[];let n=0;
+  const sha='e'.repeat(64),region={x:0.5,y:0.5,width:0.25,height:0.25};
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async(url,init)=>{
+   const body=JSON.parse(init.body);bodies.push(body);n++;
+   if(n===1)return {ok:true,status:200,headers:{get:()=>null},json:async()=>({model:DEFAULT_OPENROUTER_MODEL,choices:[{finish_reason:'tool_calls',message:{role:'assistant',content:'',tool_calls:[{id:'r1',type:'function',function:{name:'wiggly_tool',arguments:JSON.stringify({name:'viewImage',sha256:sha,region})}}]}}]})};
+   return okResponse(DEFAULT_OPENROUTER_MODEL,scriptEvent);
+  }});
+  const worker=workerFor(await host.profile());
+  const task={...scriptTask,artifact:{content:{files:[{path:'/tmp/ref.png',sha256:sha,bytes:100,width:100,height:100}]}}};
+  await host.runTask(task,{worker,callTool:async(name,params)=>({perception:'direct-image',imageUrl:params.region?'data:image/png;base64,CROP':'data:image/png;base64,FULL'})});
+  const images=msgs=>msgs.flatMap(m=>Array.isArray(m.content)?m.content:[]).filter(p=>p.type==='image_url').map(p=>p.image_url.url);
+  assert.deepEqual(images(bodies[1].messages),['data:image/png;base64,FULL','data:image/png;base64,CROP']);
+  const tool=bodies[1].messages.find(m=>m.role==='tool').content;
+  assert.match(tool,/"attached":true/);assert.ok(!/alreadyAttached/.test(tool));
+ }finally{await rm(dir,{recursive:true});}
+});
