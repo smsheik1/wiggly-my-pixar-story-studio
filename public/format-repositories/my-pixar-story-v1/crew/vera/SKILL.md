@@ -70,17 +70,12 @@ Default is a quick normal pass over each full image: call the full `viewImage` o
 - **Turnaround Layout**: Exactly 4 full-body neutral poses ([R-SHEET-NEUTRAL], [R-SHEET-VIEWS]): `front`, `three-quarter`, `profile`, `back`. Head, hands, and footwear must be completely uncropped.
 - **Expression Grid**: Exactly 8 distinct, clearly identifiable emotional portraits in fixed order ([R-SHEET-EIGHT]): neutral, happy, delighted, sad, surprised, confused, angry, talking.
 - **Consistency**: Outfit, hairstyle, age, skin tone, and proportions must remain identical between all 4 turnaround views and all 8 expressions.
-- **Background Hex**: Background must be uniform neutral grey #B5B5B5 ([R-SHEET-HEX]).
 - **Dan's Sheet Failure Table ([R-SHEET-FAILURES])**: Immediately fail the relevant check if any of these defects appear:
-  - Bodies different sizes across views (fail `consistency`)
-  - Face doesn't match reference (fail `likeness` under [C-IDENTITY])
-  - Neutral pose drifts to a smile (fail `turnaround` under [R-SHEET-NEUTRAL])
-  - Background not uniform #B5B5B5 (fail `style` under [R-SHEET-HEX])
-  - Tattoo or ink marks (fail `style` under [R-SHEET-FAILURES])
-  - Toddler paunch on older children or adults (fail `style` under [C-CHILD-RIDER])
-  - Two characters look related when they should not (fail `consistency`)
+  - The four turnaround views are not the same height and scale (fail `consistency`)
+  - Close-up face doesn't match the reference (fail `likeness` under [C-IDENTITY])
+  - Adult with an oversized child-like head (fail `style` under [C-CHILD-RIDER])
+  - Dark skin rendering grey (fail `style` under [C-SKIN-ZONING])
   - Held objects in sheet hands (fail `turnaround` / `anatomy`)
-  - Head in the headless panel (n/a for Format B)
 - **No rendered text ([R-SHEET-NO-TEXT])**: expression names are named in the authored prompt for the model but must never be rendered as text in the image; any baked-in text, labels, captions, expression names or watermarks FAILS (fail `style`).
 - **Left/right from the character's OWN side**: in a front view the character's right is on the viewer's left; in a back view it matches the viewer; in profile, use which side of the body faces the camera. Do not reject for an accessory "switching sides" unless it clearly does after applying this rule.
 
@@ -112,9 +107,8 @@ Vera checks deliverables against the following contracted craft rules by ID:
 - `[R-SHEET-NEUTRAL]`: Sheet turnaround poses must be strictly neutral in expression and stance.
 - `[R-SHEET-VIEWS]`: Sheet layout: front, 3/4, side, back turnaround views.
 - `[R-SHEET-EIGHT]`: Exactly eight expressions in fixed order: neutral, happy, delighted, sad, surprised, confused, angry, talking.
-- `[R-SHEET-HEX]`: Sheet specifies and renders exact background hex #B5B5B5.
 - `[R-SHEET-NO-TEXT]`: No text, labels, or captions rendered in character sheet images.
-- `[R-SHEET-FAILURES]`: Sheet defects: bodies different sizes; face doesn't match reference; neutral drifts to a smile; background not uniform #B5B5B5; tattoo/ink marks; toddler paunch on older children; two characters look related; held objects in hands; head in headless panel.
+- `[R-SHEET-FAILURES]`: Sheet defects: the four turnaround views not the same height and scale; close-up face doesn't match the reference; adult with an oversized child-like head; dark skin rendering grey; anything held in the hands.
 - `[L-DRESSED]`: Rooms are story-dressed, specific, and lived-in; not empty or catalog.
 - `[L-CAMERA-SIDE]`: Camera side and floor plan clear for staging.
 - `[L-PALETTE]`: Muted palette with one saturated accent.

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "craftSha256": "799b1806432a15b1da6e383e4e888702526df398e534d71d0a0adde2ddd338f1",
+  "craftSha256": "39b3d83da8abb26b2e20040c6b60db0df02adc9f3ea51dfbf0e1d8e385f724f9",
   "duplicationBaseline": 52,
   "files": [
     {
@@ -767,6 +767,55 @@
       "rule": "working-method",
       "decision": "kept",
       "reason": "Pre-send authoring verification checklist adapted into working-method rules."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§8.7 row: head appears in the headless left panel",
+      "rule": null,
+      "decision": "dropped",
+      "reason": "Shaz decision 2026-10-11 3:17 PM CT (Vera failure-table review): not applicable to Format B; cut."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§8.7 row: neutral drifts to a smile",
+      "rule": null,
+      "decision": "dropped",
+      "reason": "Shaz decision 2026-10-11 3:17 PM CT (Vera failure-table review): cut as a Vera check."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§8.7 row: background varies between panels",
+      "rule": null,
+      "decision": "dropped",
+      "reason": "Shaz decision 2026-10-11 3:17 PM CT (Vera failure-table review): cut; Vera no longer checks the sheet background colour."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§8.7 row: a character gets a tattoo",
+      "rule": null,
+      "decision": "dropped",
+      "reason": "Shaz decision 2026-10-11 3:17 PM CT (Vera failure-table review): cut as a Vera check (writers keep [P-NO-SKIN-MARKS])."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§8.7 row: two characters look related who shouldn't",
+      "rule": null,
+      "decision": "dropped",
+      "reason": "Shaz decision 2026-10-11 3:17 PM CT (Vera failure-table review): cut as a Vera check."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§8.7 row: a toddler comes back with a paunch",
+      "rule": "C-TODDLER-TORSO",
+      "decision": "changed",
+      "reason": "Shaz decision 2026-10-11 3:17 PM CT (Vera failure-table review): removed as a Vera check; kept only as a writing tip for prompt writers (check: none)."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§8.5 hex as a Vera check",
+      "rule": "R-SHEET-HEX",
+      "decision": "changed",
+      "reason": "Shaz decision 2026-10-11 3:17 PM CT (Vera failure-table review): Vera's #B5B5B5 background check removed; the hex stays a writer instruction (Pia) and Sage still checks it is written in the prompt."
     }
   ],
   "allowlist": [
