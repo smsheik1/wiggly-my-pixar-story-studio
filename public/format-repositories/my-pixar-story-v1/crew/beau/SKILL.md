@@ -118,7 +118,7 @@ Beau directs the world-building, environment staging, and spatial continuity for
   "action": "artifact",
   "workerId": "beau-host-01",
   "content": {
-    "direction": "A warm, lived-in 1990s suburban garage workshop bathed in late-afternoon golden-hour sunlight. Dusty sunbeams stream through a multi-pane side window, illuminating floating dust motes. The pine workbench carries Grandpa's labeled jam jars of sorted bolts, a chipped enamel rocket lamp, and a wall of bicycle race ribbons; the back wall holds his hand-painted route map and a shelf of oil-stained repair manuals. Bold saturated amber-teal Pixar color scripting with warm motivated light. The center floor keeps generous open clearance to stage a bicycle repair workspace. Atmospheric, tactile, nostalgic Pixar 3D aesthetic. Empty of people ONLY — never an empty set: strictly zero people, no humans, no silhouettes.",
+    "direction": "A warm, lived-in 1990s suburban garage workshop bathed in late-afternoon golden-hour sunlight. Dusty sunbeams stream through a multi-pane side window, illuminating floating dust motes. The pine workbench carries Grandpa's mismatched jam jars of sorted bolts, a chipped enamel rocket lamp, and a wall of bicycle race ribbons; the back wall holds his wall of pinned ride photos and a shelf of oil-stained repair manuals. Bold saturated amber-teal Pixar color scripting with warm motivated light. The center floor keeps generous open clearance to stage a bicycle repair workspace. Atmospheric, tactile, nostalgic Pixar 3D aesthetic. Empty of people ONLY — never an empty set: strictly zero people, no humans, no silhouettes.",
     "sceneIds": ["garage-intro", "garage-unveil"],
     "knownDetails": [
       "Cluttered wooden workbench with vintage hand tools",
@@ -146,7 +146,7 @@ Beau directs the world-building, environment staging, and spatial continuity for
   "action": "artifact",
   "workerId": "beau-host-01",
   "content": {
-    "direction": "Reverse camera angle of the garage workshop, looking toward the open wooden side door leading into the sunlit backyard garden. Preserves the exact pine workbench with its labeled jam jars, chipped rocket lamp and race ribbons from the master reference plate along the frame edge. The doorway is slightly ajar, showing warm late-afternoon suburban greenery outside. Foreground concrete floor is clear for low-angle action staging. Bold saturated amber-teal Pixar color scripting. Empty of people ONLY — never an empty set.",
+    "direction": "Reverse camera angle of the garage workshop, looking toward the open wooden side door leading into the sunlit backyard garden. Preserves the exact pine workbench with its mismatched jam jars, chipped rocket lamp and race ribbons from the master reference plate along the frame edge. The doorway is slightly ajar, showing warm late-afternoon suburban greenery outside. Foreground concrete floor is clear for low-angle action staging. Bold saturated amber-teal Pixar color scripting. Empty of people ONLY — never an empty set.",
     "sceneIds": ["garage-unveil"],
     "knownDetails": [
       "Same weathered pine workbench from master plate",
@@ -178,7 +178,7 @@ Beau directs the world-building, environment staging, and spatial continuity for
     "kind": "backgroundPrompt",
     "digest": "d_bg_prompt_garage_7701",
     "content": {
-      "prompt": "Cinematic wide interior of a dressed 1990s garage workshop — labeled jam jars of bolts, chipped rocket lamp, bicycle race ribbons, hand-painted route map — golden-hour window sunbeams, weathered pine workbench, pegboard tools, ample cleared floor space. Bold saturated amber-teal Pixar color scripting. Empty of people ONLY, never an empty set.",
+      "prompt": "Cinematic wide interior of a dressed 1990s garage workshop — mismatched jam jars of bolts, chipped rocket lamp, bicycle race ribbons, wall of pinned ride photos — golden-hour window sunbeams, weathered pine workbench, pegboard tools, ample cleared floor space. Bold saturated amber-teal Pixar color scripting. Empty of people ONLY, never an empty set.",
       "recipeSha256": "234cf91609fab0c5ad8949bc04e4ac12f7b7a6384e3d6443c4922f7cd7611b70",
       "briefDigest": "d_brief_garage_9901",
       "changeSummary": "Authored master plate prompt matching brief."

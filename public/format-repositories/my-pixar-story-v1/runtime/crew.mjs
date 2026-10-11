@@ -46,24 +46,25 @@ export function normalizeQuote(s){
  return String(s??'').replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/\s+/g,' ').trim();
 }
 function collectQuoteHaystacks(task,outputs){
+ // Evidence only: the artifact under review, its locked dependencies and this
+ // task's actual tool outputs. Instructions, rubrics and criterion names are
+ // not evidence, so quoting them cannot satisfy the check.
  const haystacks=[];
  const strings=value=>{
   if(typeof value==='string'){haystacks.push(value);return;}
+  if(Buffer.isBuffer(value)||value instanceof Uint8Array)return;
   if(Array.isArray(value)){for(const v of value)strings(v);return;}
   if(value&&typeof value==='object'){for(const v of Object.values(value))strings(v);}
  };
  strings(task.artifact?.content);
  strings(task.dependencies);
- strings(task.criteria);
- strings(task.instruction);
  for(const value of outputs.values()){
   if(typeof value==='string'){haystacks.push(value);continue;}
-  if(value&&typeof value==='object'){
-   if(typeof value.transcript==='string')haystacks.push(value.transcript);
-   if(typeof value.text==='string')haystacks.push(value.text);
-   if(value.report)strings(value.report);
-   strings(value);
-  }
+  if(!value||typeof value!=='object')continue;
+  // readAsset returns raw bytes; decode text assets so their words can be quoted.
+  if(Buffer.isBuffer(value.bytes)&&/\.(json|md|txt)$/i.test(value.file?.path??''))haystacks.push(value.bytes.toString('utf8'));
+  const {bytes:_bytes,file:_file,imageUrl:_imageUrl,...rest}=value;
+  strings(rest);
  }
  return haystacks.map(h=>normalizeQuote(h)).filter(h=>h.length>0);
 }

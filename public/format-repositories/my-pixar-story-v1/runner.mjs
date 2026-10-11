@@ -294,6 +294,13 @@ async function main() {
       if (!message || args.length) throw new Error('refresh-keyframe-instructions needs --message "<actual human instruction>" --run <run>.');
       print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'refresh-keyframe-instructions', message }))); return;
     }
+    if (command === 'refresh-crew-models') {
+      const message = option('message');
+      if (!message || args.length) throw new Error('refresh-crew-models needs --message "<actual human instruction>" --run <run>.');
+      const path=join(runDir,'host-dispatch',status.pending.taskId+'.json');
+      try{if((await json(path)).status==='started')throw new Error('CODEX_DISPATCH_UNCERTAIN: reconcile the saved native dispatch before changing crew models.');}catch(error){if(error.code!=='ENOENT')throw error;}
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'refresh-crew-models', message }))); return;
+    }
     if (command === 'refresh-text-instructions') {
       const message = option('message');
       if (!message || args.length) throw new Error('refresh-text-instructions needs --message "<actual human instruction>" --run <run>.');
@@ -339,7 +346,7 @@ async function main() {
         await runtimeEvent('provider-error',{message:diagnostic});throw new Error(`${diagnostic}\n${remediation(job.plan.provider,secretsPath)}`);
       }return;
     }
-    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, add-reference, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, refresh-text-instructions, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
+    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, add-reference, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, refresh-text-instructions, refresh-crew-models, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
   } catch(error){
     const latest=await workflow.status('project').catch(()=>null);
     if(latest?.project.debug?.enabled&&!latest.project.debug.paused)await workflow.respond('project',{taskId:latest.pending.taskId,actor:'runtime',action:'debug-stop',message:'Command stopped: '+error.message});

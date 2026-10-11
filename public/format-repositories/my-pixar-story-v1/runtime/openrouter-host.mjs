@@ -6,6 +6,7 @@ import {Event,digest} from './contracts.mjs';
 import {buildWorkerPacket,wigglyToolDefinition,crewRoles,taskAssets} from './crew.mjs';
 import {loadStudio} from './instructions.mjs';
 import {sanitize} from './tracing.mjs';
+import {AudioEditPlan} from './audio-edit.mjs';
 
 export const OPENROUTER_URL='https://openrouter.ai/api/v1/chat/completions';
 export const DEFAULT_OPENROUTER_MODEL='deepseek/deepseek-v4.1-flash';
@@ -24,6 +25,8 @@ async function readOpenRouterKey(secretsPath){
  if(!value)throw new Error('OPENROUTER_API_KEY missing: pass --secrets with OPENROUTER_API_KEY set.');
  return value;
 }
+// Same argument contract as CodexHost's wiggly_tool; referenceSha256 may be omitted.
+const ToolArguments=z.object({name:z.string(),sha256:z.string(),referenceSha256:z.string().nullable().optional(),edit:AudioEditPlan.nullable().optional(),region:z.object({x:z.number(),y:z.number(),width:z.number(),height:z.number()}).strict().nullable().optional()}).strict();
 const developerInstructions=(worker)=>`You are ${worker.name}, the ${worker.role} for the Wiggly memoir format. Complete only your assigned task. Use wiggly_tool for granted assets. Return only the requested structured event; never approve for the user, submit provider calls, or claim unavailable perception.`;
 function readyText(message){
  const text=typeof message?.content==='string'?message.content.trim():JSON.stringify(message?.content??'').trim();
@@ -58,9 +61,10 @@ export class OpenRouterHost {
  async chat({model,messages,tools,toolChoice,usageSink}){
   const key=await readOpenRouterKey(this.secretsPath);
   const forcingSpecificTool=toolChoice&&typeof toolChoice==='object';
-  const body={model,messages,tools,tool_choice:toolChoice??(tools?.length?'auto':'none'),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:this.maxTokens,
+  const body={model,messages,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:this.maxTokens,
    response_format:{type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}},
-   ...(forcingSpecificTool?{}:{reasoning:{effort:this.reasoningEffort}})};
+   // Thinking is switched off explicitly whenever a specific tool call is forced.
+   reasoning:forcingSpecificTool?{enabled:false}:{effort:this.reasoningEffort}};
   let response;
   try{
    response=await this.fetcher(OPENROUTER_URL,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','X-Title':'Wiggly memoir studio'},body:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(this.timeoutMs)});
@@ -92,18 +96,21 @@ export class OpenRouterHost {
   const content=[{type:'text',text:packet},...media];
   const messages=[{role:'system',content:developerInstructions(worker)},{role:'user',content}];
   let turnTrace=null;try{turnTrace=this.tracer?.turn?.({role:worker.role,workerName:worker.name,model:worker.modelVersion,taskId:task.taskId,step:task.step,gate:task.gate,backend:'openrouter'});}catch{turnTrace=null;}
-  const turnStart=Date.now(),usage={};
-  const endTurn=(outcome)=>{try{turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart,...(Object.keys(usage).length?{usage}:{})});}catch{}};
+  const turnStart=Date.now(),usage={requests:0,promptCount:0,completionCount:0,costUsd:0};let turnEnded=false,validationRetries=0;
+  const addUsage=u=>{usage.requests++;usage.promptCount+=Number(u?.prompt_tokens)||0;usage.completionCount+=Number(u?.completion_tokens)||0;usage.costUsd+=Number(u?.cost)||0;};
+  const endTurn=(outcome)=>{if(turnEnded)return;turnEnded=true;try{turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart,validationRetries,usage:sanitize(usage)});}catch{}};
   let output=null,attempts=0;
   try{
    for(let round=0;round<this.maxToolRounds;round++){
-    const message=await this.chat({model:worker.modelVersion,messages,tools,usageSink:(u)=>{Object.assign(usage,sanitize(u));}});
+    const message=await this.chat({model:worker.modelVersion,messages,tools,usageSink:addUsage});
     const calls=message?.tool_calls??[];
     if(!calls.length){output=typeof message?.content==='string'?message.content:JSON.stringify(message?.content??'');break;}
     messages.push({role:'assistant',content:message.content??'',tool_calls:calls});
     for(const call of calls){
-     let args={};try{args=JSON.parse(call.function?.arguments??'{}');}catch{args={};}
-     const parsed=z.object({name:z.string(),sha256:z.string(),referenceSha256:z.string().nullable(),edit:z.unknown().nullable().optional(),region:z.unknown().nullable().optional()}).strict().parse(args);
+     let args=null;try{args=JSON.parse(call.function?.arguments||'{}');}catch{args=null;}
+     const checked=call.function?.name==='wiggly_tool'?ToolArguments.safeParse(args):{success:false,error:{message:`unknown tool ${call.function?.name}`}};
+     if(!checked.success){messages.push({role:'tool',tool_call_id:call.id,content:`TOOL_ARGUMENTS_INVALID: ${checked.error.message}`});continue;}
+     const parsed=checked.data;
      let toolTrace=null;try{toolTrace=this.tracer?.tool?.({toolName:parsed.name});}catch{toolTrace=null;}
      const toolStart=Date.now(),endTool=(outcome)=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart});}catch{}};
      try{
@@ -116,10 +123,11 @@ export class OpenRouterHost {
    if(output==null)throw new Error(`OPENROUTER_TOOL_LIMIT: exceeded ${this.maxToolRounds} tool rounds without a final answer.`);
    try{return Event.parse(JSON.parse(JSON.parse(output).eventJson));}
    catch(error){
-    attempts++;
+    attempts++;validationRetries=attempts;
     if(attempts>1)throw Object.assign(new Error(`INVALID_WORKER_EVENT: ${error.message}`),{knownFinished:true,finishedResult:output});
+    messages.push({role:'assistant',content:output});
     messages.push({role:'user',content:`Your last reply failed validation: ${error.message}. Return ONLY {"eventJson": "<serialized Event>"} with the corrected event.`});
-    const retry=await this.chat({model:worker.modelVersion,messages,tools:[],toolChoice:'none',usageSink:(u)=>{Object.assign(usage,sanitize(u));}});
+    const retry=await this.chat({model:worker.modelVersion,messages,tools,toolChoice:'none',usageSink:addUsage});
     const retryText=typeof retry?.content==='string'?retry.content:JSON.stringify(retry?.content??'');
     try{const event=Event.parse(JSON.parse(JSON.parse(retryText).eventJson));output=retryText;endTurn('completed');return event;}
     catch(error2){throw Object.assign(new Error(`INVALID_WORKER_EVENT: ${error2.message}`),{knownFinished:true,finishedResult:retryText});}

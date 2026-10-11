@@ -471,7 +471,7 @@ export function applyEvent(project, raw) {
     if(!file||!file.path||!file.sha256||!file.width||!file.height||file.durationSeconds)throw new Error('add-reference needs a measured still image.');
     if(p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status)))throw new Error('Reconcile outstanding jobs before adding a reference.');
     const roster=current(p,'roster');
-    if(!roster)throw new Error('ADD_REFERENCE_NO_ROSTER: approve a roster before adding a reference photo.');
+    if(!roster||!roster.approvedBy)throw new Error('ADD_REFERENCE_NO_ROSTER: add-reference only extends an approved roster; revise an unapproved roster normally.');
     const entry=roster.content.characters.find(c=>c.id===characterId);
     if(!entry)throw new Error(`ADD_REFERENCE_UNKNOWN_CHARACTER: ${characterId} is not on the roster.`);
     if(entry.references.some(f=>f.sha256===file.sha256))throw new Error('ADD_REFERENCE_DUPLICATE: this photo is already bound to the character.');
@@ -479,13 +479,18 @@ export function applyEvent(project, raw) {
     // command. Only this character's downstream is invalidated; every other
     // character's approved sheets stay locked.
     const parsed=Content.roster.parse({characters:roster.content.characters.map(c=>c.id===characterId?{...c,references:[...c.references,file]}:c)});
-    for(const a of p.artifacts.filter(a=>a.key==='roster'&&a.valid))invalidate(p,a.id);
+    // Supersede the old roster WITHOUT cascading: invalidate() would follow the
+    // roster dependency into every character's prompt/candidates/sheet. Other
+    // characters' entries are byte-identical, so their locked work is re-pointed
+    // to the new roster version instead of being reopened.
+    for(const a of p.artifacts.filter(a=>a.key==='roster'&&a.valid))a.valid=false;
     const version=p.artifacts.filter(a=>a.key==='roster').length+1;
     const next={id:`roster@${version}`,key:'roster',kind:'roster',version,digest:digest(parsed),content:parsed,dependencies:roster.dependencies,valid:true,authoredBy:'human',approvedBy:{message:e.message,at:new Date().toISOString()}};
     if(roster.intakeConfirmation)next.intakeConfirmation={...roster.intakeConfirmation,characters:roster.intakeConfirmation.characters.map(c=>c.id===characterId?{...c,references:[...c.references,file],likeness:'reference'}:c)};
     p.artifacts.push(next);
+    for(const a of p.artifacts)if(a.id!==next.id&&a.dependencies.includes(roster.id))a.dependencies=a.dependencies.map(d=>d===roster.id?next.id:d);
     for(const a of p.artifacts.filter(a=>a.valid&&['characterPrompt','candidates','sheetPrompt','sheet'].some(k=>a.key===`${k}:${characterId}`)))invalidate(p,a.id);
-    p.characterId=characterId;p.step='characterPrompt';p.gate='author';
+    p.characterId=characterId;p.step=refinedWorkflow(p)?'characterPrompt':'candidates';p.gate=refinedWorkflow(p)?'author':'produce';
     p.feedback.push({key:`characterPrompt:${characterId}`,message:e.message});
   }else if(e.action==='refresh-writing-instructions'){
     requiredActor(e,'human');
@@ -544,6 +549,25 @@ export function applyEvent(project, raw) {
     const next=loadStudio(),config=p.studio.config,documents={...p.studio.documents};
     for(const path of ['crew/sage/SKILL.md','evaluation/rubrics/text.md']){if(!next.documents[path]||!p.studio.documents[path])throw new Error(`TEXT_REFRESH_SCOPE: ${path} is not bound in this studio.`);documents[path]=next.documents[path];}
     p.studio={config,documents,sha256:digest({config,documents})};
+  }else if(e.action==='refresh-crew-models'){
+    requiredActor(e,'human');
+    if(!e.message||!p.studio||p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status)))throw new Error('CREW_MODEL_REFRESH_LOCKED: refresh crew models explicitly with reconciled jobs.');
+    // Copy ONLY each agent's backend/model from the kit. Skills, tools,
+    // rubrics and every other pinned document stay byte-identical. A reviewer
+    // whose identity is locked by approved media keeps its pinned model
+    // (REVIEW_CREW_LOCKED would refuse replacing it anyway).
+    const kit=loadStudio().config.agents,lockedReviewer=role=>supervised(p)&&p.artifacts.some(a=>a.valid&&a.approvedBy&&a.content?.files&&(role==='audio-reviewer'&&['audition','narration','music','effect','film'].includes(a.kind)||role==='visual-reviewer'&&['candidates','sheet','backgroundCandidates','backgroundAngle'].includes(a.kind)||role==='scene-reviewer'&&['keyframe','video','film'].includes(a.kind)));
+    const agents={},changed=[],kept=[];
+    for(const [role,agent] of Object.entries(p.studio.config.agents)){
+      const from=kit[role];
+      if(!from||lockedReviewer(role)){agents[role]=agent;if(from&&((agent.backend??'codex')!==from.backend||agent.model!==from.model))kept.push(role);continue;}
+      agents[role]={...agent,backend:from.backend,model:from.model};
+      if((agent.backend??'codex')!==from.backend||agent.model!==from.model)changed.push(role);
+    }
+    if(!changed.length)throw new Error(`CREW_MODEL_REFRESH_NOOP: pinned crew models already match the kit${kept.length?` (locked reviewers kept: ${kept.join(', ')})`:''}.`);
+    const config={...p.studio.config,agents},documents=p.studio.documents;
+    p.studio={config,documents,sha256:digest({config,documents})};
+    p.history.push({sequence:p.sequence,action:e.action,actor:e.actor,message:`${e.message} | models changed: ${changed.join(', ')}${kept.length?` | locked reviewers kept: ${kept.join(', ')}`:''}`,at:new Date().toISOString()});
   }else if(e.action==='prefer-image-provider'){
     requiredActor(e,'human');
     if(!e.message||!['meta-muse','agy'].includes(e.provider))throw new Error('prefer-image-provider needs --provider meta-muse|agy and --message "<text>".');

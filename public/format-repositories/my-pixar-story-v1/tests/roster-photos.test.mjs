@@ -73,3 +73,29 @@ test('the producer asks the human directly with names and both choices',async()=
  assert.match(producer.message,/add a photo/);
  assert.match(producer.message,/design without a photo/);
 });
+
+test('add-reference keeps other characters locked even when their work depends on the roster',()=>{
+ const notes='ISOLATED human: design Bob without a photo';
+ let p=rosterProject();
+ p.artifacts.find(x=>x.id==='roster@1').content.characters.find(c=>c.id==='bob').notes=`ISOLATED bob; ${notes}`;
+ const b=current(p);
+ p=send(p,'approve',{artifactId:b.id,artifactDigest:b.digest,message:'ISOLATED approve roster',intakeConfirmation:intake({references:[],likeness:'interpreted',decisionNotes:notes})});
+ const rosterId=current(p,'roster').id,at=new Date().toISOString();
+ for(const id of ['alex','bob']){
+  p.artifacts.push({id:`characterPrompt:${id}@1`,key:`characterPrompt:${id}`,kind:'characterPrompt',version:1,digest:`cp-${id}`,content:{prompt:'p'},dependencies:[rosterId],valid:true,authoredBy:'t',approvedBy:{message:'m',at}});
+  p.artifacts.push({id:`candidates:${id}@1`,key:`candidates:${id}`,kind:'candidates',version:1,digest:`c-${id}`,content:{files:[]},dependencies:[rosterId,`characterPrompt:${id}@1`],valid:true,authoredBy:'t',approvedBy:{message:'m',at}});
+ }
+ p=send(p,'add-reference',{actor:'human',characterId:'bob',importFile:photo(9),message:'ISOLATED human adds Bob photo'});
+ const next=current(p,'roster');
+ assert.notEqual(next.id,rosterId);
+ assert.equal(current(p,'characterPrompt:alex')?.approvedBy?.message,'m');
+ assert.equal(current(p,'candidates:alex')?.approvedBy?.message,'m');
+ assert.deepEqual(current(p,'candidates:alex').dependencies,[next.id,'characterPrompt:alex@1']);
+ assert.equal(current(p,'characterPrompt:bob'),undefined);
+ assert.equal(current(p,'candidates:bob'),undefined);
+});
+
+test('add-reference refuses an unapproved roster',()=>{
+ const p=rosterProject();
+ assert.throws(()=>send(p,'add-reference',{actor:'human',characterId:'bob',importFile:photo(9),message:'ISOLATED add'}),/ADD_REFERENCE_NO_ROSTER/);
+});

@@ -75,3 +75,21 @@ test('Vera and June reviews are unaffected by the quote rule',async()=>{
  verifyReviewQuotes({role:'scene-reviewer',task,review:{decision:'rejected',checks:task.criteria.map(criterion=>({criterion,status:'fail'}))},outputs:new Map()});
  assert.ok(true);
 });
+
+test('quotes copied from instructions or rubric text are not evidence',async()=>{
+ const {verifyReviewQuotes}=await import('../runtime/crew.mjs');
+ const task={artifact:{content:{beats:[{narration:'ISOLATED artifact narration only'}]}},dependencies:[],criteria:['emotional-purpose'],instruction:'Inspect every required criterion and return evidence',reviewerRubric:'Every verdict uses the existing Review contract'};
+ const review=quote=>({decision:'approved',checks:[{criterion:'facts',status:'pass',evidence:'x',location:'y',quotes:[quote]}]});
+ assert.throws(()=>verifyReviewQuotes({role:'text-reviewer',task,review:review('Inspect every required criterion'),outputs:new Map()}),/REVIEW_QUOTE_NOT_FOUND/);
+ assert.throws(()=>verifyReviewQuotes({role:'text-reviewer',task,review:review('Every verdict uses the existing Review contract'),outputs:new Map()}),/REVIEW_QUOTE_NOT_FOUND/);
+ verifyReviewQuotes({role:'text-reviewer',task,review:review('ISOLATED artifact narration'),outputs:new Map()});
+});
+
+test('a quote from a readAsset text file output is accepted',async()=>{
+ const {verifyReviewQuotes}=await import('../runtime/crew.mjs');
+ const task={artifact:{content:{note:'ISOLATED'}},dependencies:[]};
+ const outputs=new Map([['readAsset:abc',{file:{path:'/isolated/brief.md',sha256:'abc',bytes:40},bytes:Buffer.from('The toy microscope sits on the dresser.')}]]);
+ const review={decision:'rejected',checks:[{criterion:'facts',status:'fail',evidence:'x',location:'y',quotes:['toy microscope sits on the dresser']}]};
+ verifyReviewQuotes({role:'audio-reviewer',task,review,outputs});
+ assert.throws(()=>verifyReviewQuotes({role:'audio-reviewer',task,review:{...review,checks:[{...review.checks[0],quotes:['toy telescope sits on the dresser']}]},outputs}),/REVIEW_QUOTE_NOT_FOUND/);
+});

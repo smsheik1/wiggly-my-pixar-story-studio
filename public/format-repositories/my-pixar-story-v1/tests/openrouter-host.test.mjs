@@ -189,3 +189,29 @@ test('router sends Sol workers to codex and DeepSeek workers to openrouter; refr
   assert.match(out.workers.find(w=>w.role==='text-reviewer').workerId,/rebound/);
  }finally{await rm(dir,{recursive:true});}
 });
+
+test('malformed tool arguments go back to the model; tool-less requests omit tools; forced tools switch thinking off; usage is traced without token-named keys',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-args-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const bodies=[],ends=[];let n=0;
+  const tracer={turn:()=>({end:o=>ends.push(o)}),tool:()=>({end(){}})};
+  const host=new OpenRouterHost({cwd:dir,secretsPath,tracer,fetcher:async(url,init)=>{
+   const body=JSON.parse(init.body);bodies.push(body);n++;
+   const usage={prompt_tokens:10,completion_tokens:5,cost:0.001};
+   if(n===1)return {ok:true,status:200,headers:{get:()=>null},json:async()=>({model:DEFAULT_OPENROUTER_MODEL,usage,choices:[{message:{role:'assistant',content:'',tool_calls:[{id:'bad',type:'function',function:{name:'wiggly_tool',arguments:'{"name":"readAsset"'}}]}}]})};
+   return {...okResponse(DEFAULT_OPENROUTER_MODEL,scriptEvent),json:async()=>({model:DEFAULT_OPENROUTER_MODEL,usage,choices:[{message:{role:'assistant',content:JSON.stringify({eventJson:JSON.stringify(scriptEvent)})}}]})};
+  }});
+  const worker=workerFor(await host.profile());
+  const calls=[];
+  const event=await host.runTask(scriptTask,{worker,callTool:async(name)=>{calls.push(name);throw new Error('should not run');}});
+  assert.equal(event.action,'artifact');assert.deepEqual(calls,[]);
+  assert.match(bodies[1].messages.find(m=>m.role==='tool').content,/TOOL_ARGUMENTS_INVALID/);
+  assert.equal(ends.length,1);assert.deepEqual(ends[0].usage,{requests:2,promptCount:20,completionCount:10,costUsd:0.002});
+  await host.chat({model:DEFAULT_OPENROUTER_MODEL,messages:[],tools:[]});
+  assert.equal('tools' in bodies.at(-1),false);assert.equal('tool_choice' in bodies.at(-1),false);
+  await host.chat({model:DEFAULT_OPENROUTER_MODEL,messages:[],tools:host.toolDefinition(),toolChoice:{type:'function',function:{name:'wiggly_tool'}}});
+  assert.deepEqual(bodies.at(-1).reasoning,{enabled:false});
+  assert.equal(JSON.stringify(bodies).includes('ISOLATED-OPENROUTER-KEY'),false);
+ }finally{await rm(dir,{recursive:true});}
+});
