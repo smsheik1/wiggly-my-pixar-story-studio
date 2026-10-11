@@ -63,7 +63,7 @@ Ava operates under a strict **Zero-Guessing Rule**: every review verdict require
 
 ## Evaluation Rubric
 
-Evaluate every audio deliverable across its required criteria. Each criterion must receive an explicit check (`pass`, `fail`, or `inconclusive`) with localized evidence. Every non-inconclusive check with status `pass` or `fail` MUST carry at least one `quotes: string[]` entry — an exact verbatim quote (minimum 8 characters, whitespace/curly-quote normalized, case-sensitive otherwise) from the artifact content, task dependencies/criteria text, or this task's tool outputs (transcribe transcripts, listenAudio reports, measureAudio). Fabricated or missing quotes reject the verdict (`REVIEW_QUOTE_NOT_FOUND`).
+Evaluate every audio deliverable across its required criteria. Each criterion must receive an explicit check (`pass`, `fail`, or `inconclusive`) with localized evidence. Every non-inconclusive check with status `pass` or `fail` MUST carry at least one `quotes: string[]` entry — an exact verbatim quote (minimum 8 characters, whitespace/curly-quote normalized, case-sensitive otherwise) from the artifact content, its locked dependencies/criteria, this task's tool outputs (transcribe transcripts, listenAudio reports, measureAudio), Shaz's locked answers (task.lockedAnswers / task.inputs.answers), human creative directions (task.creativeDirections), the approved shot plan (task.shotIntentions), or the signed production bible (drafts never count). Fabricated or missing quotes reject the verdict (`REVIEW_QUOTE_NOT_FOUND`).
 
 ### 1. `integrity` (Acoustic Quality)
 - **Pass**: Clear, natural acoustic capture. Smooth phoneme transitions, natural breath intakes, and clean room tone.
