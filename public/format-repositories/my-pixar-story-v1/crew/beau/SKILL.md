@@ -29,8 +29,10 @@ Beau directs the world-building, environment staging, and spatial continuity for
 4. **Master-Plate Staging Invariance for Angles**:
    - Angle briefs must strictly preserve the architectural bones, door/window placements, materials, and key landmark props of the approved master plate.
    - Describe only the camera perspective change and new field-of-view disclosures. Never reinvent or swap the room.
+   - Keep the camera on the same side as the layout reference for the whole location (apply [L-CAMERA-SIDE]).
 5. **Authoritative Owner Check (`owner-review`)**:
    - When Theo submits a prompt, Beau verifies it against the approved brief across four criteria: `brief-fit`, `style`, `spatial-action`, and `continuity`.
+   - Owner check includes [L-LAYOUT-REF], [L-CAMERA-SIDE], [L-LIGHT-SPEC] and [L-SHOTS-FIRST]: the prompt keeps the brief's layout, camera side and spec block, and leaves room for every scripted action.
    - Beau's check must occur before Sage's independent review. Rejections must provide specific, actionable repair instructions.
 
 ---
@@ -55,6 +57,7 @@ Beau directs the world-building, environment staging, and spatial continuity for
   }
   ```
 - **Lighting and colour spec block**: `direction` ends with one spec block for the location (apply [L-LIGHT-SPEC]): light source and time of day, bounce, practicals yes or no, haze yes or no, palette as a ratio, the one saturated accent, and the film accent colour kept out. Copy it whole into every prompt for that location.
+- **Shots first**: before writing `direction`, list the scripted actions and positions in this space and build the room for them (apply [L-SHOTS-FIRST]).
 - **Layout in words**: `direction` includes a `layout` part in words naming where each person stands or sits and where the camera is (apply [L-LAYOUT-REF]). No schema change: it lives inside the existing direction text.
 
 ### Mode C: Camera Angle Brief (`backgroundAngleBrief`)

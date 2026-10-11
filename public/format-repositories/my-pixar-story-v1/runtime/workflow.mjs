@@ -25,6 +25,14 @@ export function criteriaFor(p, step = p.step) {
   return criteria[step] ?? [];
 }
 export const FIXED_SHEET_EXPRESSIONS = ['neutral', 'happy', 'delighted', 'sad', 'surprised', 'confused', 'angry', 'talking'];
+export function fixedEightInOrder(prompt){
+  let at=-1;
+  for(const word of FIXED_SHEET_EXPRESSIONS){
+    const m=new RegExp(`\\b${word}\\b`,'ig');m.lastIndex=at+1;const hit=m.exec(prompt);
+    if(!hit)return false;at=hit.index;
+  }
+  return true;
+}
 const characterRecipe=readFileSync(new URL('../character-sheet-recipe.md',import.meta.url),'utf8');
 export const characterRecipeSha256=createHash('sha256').update(characterRecipe).digest('hex');
 export const backgroundRecipe = readFileSync(new URL('../background-prompter.md', import.meta.url), 'utf8');
@@ -159,10 +167,9 @@ export function validateArtifactContent(p, content, author, previous=current(p))
     const cast=current(p,'roster').content.characters.find(c=>c.id===p.characterId);
     const expectedRecipe = sheetWorkflow(p) ? recipeFor(p,'sheetPrompt',{sha256:characterRecipeSha256}).sha256 : recipeFor(p,'characterPrompt',{sha256:characterPromptRecipeSha256}).sha256;
     if(!locked(p,'roster')||parsed.characterDigest!==digest(cast)||digest(parsed.referenceHashes)!==digest(cast.references.map(f=>f.sha256))||parsed.recipeSha256!==expectedRecipe)throw new Error('CHARACTER_PROMPT_BINDING_REQUIRED: bind the exact approved cast, ordered photos and packaged recipe.');
-    if(sheetWorkflow(p)&&content?.expressions){
-      const exprs=content.expressions;
-      if(!Array.isArray(exprs)||exprs.length!==FIXED_SHEET_EXPRESSIONS.length||!exprs.every((e,i)=>e===FIXED_SHEET_EXPRESSIONS[i]))throw new Error('SHEET_EXPRESSIONS_ORDER_REQUIRED: sheet expressions must equal the fixed eight in order (neutral, happy, delighted, sad, surprised, confused, angry, talking).');
-    }
+    // Rev 5: this prompt IS the sheet prompt (no separate sheetPrompt step), so the fixed
+    // eight must appear in the prompt text, in order.
+    if(sheetWorkflow(p)&&!fixedEightInOrder(parsed.prompt))throw new Error('SHEET_EXPRESSIONS_ORDER_REQUIRED: the rev 5 sheet prompt must name the fixed eight expressions in order (neutral, happy, delighted, sad, surprised, confused, angry, talking).');
   }
   if(refinedWorkflow(p)&&p.step==='candidates'&&parsed.prompt!==current(p,`characterPrompt:${p.characterId}`).content.prompt)throw new Error('Candidates must use the human-approved character prompt exactly.');
   if (p.step === 'voiceSample' && (!parsed.files[0].durationSeconds || parsed.files[0].durationSeconds < 10)) throw new Error('Voice sample must contain at least 10 seconds of measured audio.');

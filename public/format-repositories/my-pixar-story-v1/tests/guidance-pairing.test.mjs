@@ -37,7 +37,17 @@ test('safety self-check: no forbidden process, network or host imports in source
 });
 
 test('check 5: writer->reviewer pairing: all checked rules appear in reviewer rubric or skill', { timeout: 20000 }, async () => {
-  const contract = JSON.parse(await readFile(resolve(repoRoot, 'docs/p14/craft-contract.json'), 'utf8'));
+  // Pair against the LIVE guide (not the frozen P14 contract), so a check tag added to
+  // craft-guide.md later is enforced too.
+  const guide = await readFile(resolve(kitDir, 'craft-guide.md'), 'utf8');
+  const contract = { sections: [] };
+  for (const line of guide.split('\n')) {
+    const h = line.match(/^##\s*\[([a-z0-9-]+)\]/);
+    if (h) { contract.sections.push({ id: h[1], rules: [] }); continue; }
+    const r = line.trim().match(/^-\s*\[([A-Z0-9_-]+)\]\s*\(check:\s*([^)]*)\)/);
+    if (r && contract.sections.length) contract.sections.at(-1).rules.push({ id: r[1], check: r[2].split(',').map(t => t.trim()) });
+  }
+  assert.ok(contract.sections.length >= 16 && contract.sections.flatMap(s => s.rules).length >= 83, 'craft guide parsed');
   const studio = loadStudio();
 
   const reviewerDocs = {

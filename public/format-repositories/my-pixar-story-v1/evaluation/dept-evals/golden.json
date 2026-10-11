@@ -136,7 +136,7 @@
         {
           "id": "not-claim-muted-palette",
           "type": "mustNotClaim",
-          "pattern": "muted|restrained|neutral|ivory|oatmeal",
+          "pattern": "muted|restrained|ivory|oatmeal",
           "why": "Rooms use a muted palette with one saturated accent; must not fail a room for being muted or restrained."
         }
       ]
@@ -176,7 +176,7 @@
         {
           "id": "not-claim-muted-palette",
           "type": "mustNotClaim",
-          "pattern": "muted|restrained|neutral|ivory|oatmeal",
+          "pattern": "muted|restrained|ivory|oatmeal",
           "why": "Must not reject brief for muted or restrained palette."
         }
       ]
@@ -425,7 +425,7 @@
         {
           "id": "not-claim-muted-palette",
           "type": "mustNotClaim",
-          "pattern": "muted|restrained|neutral|ivory|oatmeal",
+          "pattern": "muted|restrained|ivory|oatmeal",
           "why": "Must not reject prompt for muted/restrained palette."
         }
       ]

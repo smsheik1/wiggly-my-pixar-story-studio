@@ -127,21 +127,20 @@ test('rev 5 enforces fixed eight expressions in order while rev <= 4 is unchange
   p5.artifacts.push({ id: 'roster@1', key: 'roster', kind: 'roster', version: 1, digest: 'd', content: { characters: [cast] }, dependencies: [], valid: true, authoredBy: 'test', approvedBy: { message: 'ok', at: new Date().toISOString() }, review: { decision: 'approved', perception: 'direct-text', checks: [] } });
 
   const validPrompt = {
-    prompt: 'Sheet prompt with no text, labels, captions, expression names or watermarks.',
+    prompt: `Sheet prompt with no text, labels, captions, expression names or watermarks. A happy-go-lucky kid. Expressions in order: ${FIXED_SHEET_EXPRESSIONS.join(', ')}.`,
     recipeSha256: characterRecipeSha256,
     characterDigest: digest(cast),
     referenceHashes: [file().sha256],
-    expressions: FIXED_SHEET_EXPRESSIONS,
   };
-  const invalidPrompt = {
-    ...validPrompt,
-    expressions: ['happy', 'neutral', 'delighted', 'sad', 'surprised', 'confused', 'angry', 'talking'],
-  };
+  // rev 5 has no separate sheetPrompt step: the characterPrompt text itself must carry the eight in order
+  const invalidPrompt = { ...validPrompt, prompt: 'Sheet prompt. Expressions: happy, neutral, delighted, sad, surprised, confused, angry, talking.' };
+  const missingPrompt = { ...validPrompt, prompt: 'Sheet prompt. Expressions: neutral, happy, delighted, sad, surprised, confused, angry.' };
 
   assert.throws(
     () => validateArtifactContent(p5, invalidPrompt, 'pia'),
     /SHEET_EXPRESSIONS_ORDER_REQUIRED/
   );
+  assert.throws(() => validateArtifactContent(p5, missingPrompt, 'pia'), /SHEET_EXPRESSIONS_ORDER_REQUIRED/);
   assert.doesNotThrow(() => validateArtifactContent(p5, validPrompt, 'pia'));
 
   // rev 4 unchanged
