@@ -14,6 +14,9 @@ export const OPENROUTER_PROVIDER_POLICY={require_parameters:true,max_price:{prom
 export const OPENROUTER_MAX_TOKENS=16000;
 export const OPENROUTER_MAX_TOOL_ROUNDS=40;
 
+// Safety net: never send data: base64 bytes as tool text.
+const sanitizeDataUrls=(text)=>String(text).replace(/data:([^;,\s]+)[^,]*?;base64,[A-Za-z0-9+/=]+/g,'[binary data omitted: $1]');
+
 async function readJson(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;}}
 async function saveJson(path,value){await writeFile(path+'.tmp',JSON.stringify(value)+'\n',{mode:0o600});await rename(path+'.tmp',path);}
 async function readOpenRouterKey(secretsPath){
@@ -86,11 +89,11 @@ export class OpenRouterHost {
   if(!choice)throw new Error('OPENROUTER_REQUEST_FAILED: empty choices. No model/provider fallback was submitted.');
   return choice.message;
  }
- async runTask(task,{worker,callTool}){
-  await this.preflight(worker);
-  const packet=buildWorkerPacket(task,worker);
-  const media=[];
-  if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){const viewed=await callTool('viewImage',{sha256:file.sha256});media.push({type:'text',text:`Reference image sha256: ${file.sha256}`},{type:'image_url',image_url:{url:viewed.imageUrl}});}
+  async runTask(task,{worker,callTool}){
+   await this.preflight(worker);
+   const packet=buildWorkerPacket(task,worker);
+   const media=[],attached=new Set();
+   if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){const viewed=await callTool('viewImage',{sha256:file.sha256});media.push({type:'text',text:`Reference image sha256: ${file.sha256}`},{type:'image_url',image_url:{url:viewed.imageUrl}});attached.add(file.sha256);}
   const tools=this.toolDefinition();
   const content=[{type:'text',text:packet},...media];
   const messages=[{role:'system',content:developerInstructions(worker)},{role:'user',content}];
@@ -104,20 +107,35 @@ export class OpenRouterHost {
     const message=await this.chat({model:worker.modelVersion,messages,tools,usageSink:addUsage});
     const calls=message?.tool_calls??[];
     if(!calls.length){output=typeof message?.content==='string'?message.content:JSON.stringify(message?.content??'');break;}
-    messages.push({role:'assistant',content:message.content??'',tool_calls:calls});
-    for(const call of calls){
-     let args=null;try{args=JSON.parse(call.function?.arguments||'{}');}catch{args=null;}
-     const checked=call.function?.name==='wiggly_tool'?ToolArguments.safeParse(args):{success:false,error:{message:`unknown tool ${call.function?.name}`}};
-     if(!checked.success){messages.push({role:'tool',tool_call_id:call.id,content:`TOOL_ARGUMENTS_INVALID: ${checked.error.message}`});continue;}
-     const parsed=checked.data;
-     let toolTrace=null;try{toolTrace=this.tracer?.tool?.({toolName:parsed.name});}catch{toolTrace=null;}
-     const toolStart=Date.now(),endTool=(outcome)=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart});}catch{}};
-     try{
-      const value=await callTool(parsed.name,{sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})});
-      endTool('completed');
-      messages.push({role:'tool',tool_call_id:call.id,content:JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value)});
-     }catch(error){endTool('failed');messages.push({role:'tool',tool_call_id:call.id,content:error.message});if(error.stopDispatch)throw error;}
-    }
+     messages.push({role:'assistant',content:message.content??'',tool_calls:calls});
+     const pending=[];
+     for(const call of calls){
+      let args=null;try{args=JSON.parse(call.function?.arguments||'{}');}catch{args=null;}
+      const checked=call.function?.name==='wiggly_tool'?ToolArguments.safeParse(args):{success:false,error:{message:`unknown tool ${call.function?.name}`}};
+      if(!checked.success){messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(`TOOL_ARGUMENTS_INVALID: ${checked.error.message}`)});continue;}
+      const parsed=checked.data;
+      let toolTrace=null;try{toolTrace=this.tracer?.tool?.({toolName:parsed.name});}catch{toolTrace=null;}
+      const toolStart=Date.now(),endTool=(outcome)=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart});}catch{}};
+      try{
+       const value=await callTool(parsed.name,{sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})});
+       endTool('completed');
+       if(value&&typeof value==='object'&&typeof value.imageUrl==='string'){
+        const already=attached.has(parsed.sha256);
+        const compact=already
+         ?{perception:value.perception??'direct-image',sha256:parsed.sha256,alreadyAttached:true,note:`image sha256 ${parsed.sha256} already attached above; use the attached image`}
+         :{perception:value.perception??'direct-image',sha256:parsed.sha256,attached:true,note:`image attached as image_url below for sha256 ${parsed.sha256}`};
+        messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(compact))});
+        if(!already){attached.add(parsed.sha256);pending.push({sha256:parsed.sha256,url:value.imageUrl});}
+        continue;
+       }
+       messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value))});
+      }catch(error){endTool('failed');messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(error.message)});if(error.stopDispatch)throw error;}
+     }
+     if(pending.length){
+      const parts=[];
+      for(const p of pending)parts.push({type:'text',text:`viewImage result for sha256 ${p.sha256}`},{type:'image_url',image_url:{url:p.url}});
+      messages.push({role:'user',content:parts});
+     }
    }
    if(output==null)throw new Error(`OPENROUTER_TOOL_LIMIT: exceeded ${this.maxToolRounds} tool rounds without a final answer.`);
    try{return Event.parse(JSON.parse(JSON.parse(output).eventJson));}
