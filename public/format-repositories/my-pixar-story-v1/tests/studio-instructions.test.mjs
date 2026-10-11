@@ -26,7 +26,7 @@ test('answers author receives exact immutable source binding and cannot substitu
  const changed=send(stored,'changes',{actor:'human',artifactId:current(stored).id,artifactDigest:current(stored).digest,message:'ISOLATED actual human clarification: change a memory detail.'});
  assert.equal(taskFor(changed).sourceInputDigest,digest(inputs));assert.equal(taskFor(changed).originalInputsRequired,false);
 });
-async function editableStudio(){const dir=await mkdtemp(join(tmpdir(),'memoir-studio-template-'));const original=loadStudio();for(const [path,doc] of Object.entries(original.documents)){await mkdir(dirname(join(dir,path)),{recursive:true});await writeFile(join(dir,path),doc.content);}await writeFile(join(dir,'studio.json'),JSON.stringify(original.config));return {dir,url:pathToFileURL(dir+'/')};}
+async function editableStudio(){const dir=await mkdtemp(join(tmpdir(),'memoir-studio-template-'));const original=loadStudio();for(const [path,doc] of Object.entries(original.documents)){await mkdir(dirname(join(dir,path)),{recursive:true});await writeFile(join(dir,path),doc.content);}if(original.config.craft){await writeFile(join(dir,original.config.craft.path),await readFile(new URL('../'+original.config.craft.path,import.meta.url)));}await writeFile(join(dir,'studio.json'),JSON.stringify(original.config));return {dir,url:pathToFileURL(dir+'/')};}
 
 test('both intake roles receive the optional-prompt rule without removing required human confirmation',async()=>{
  for(const name of ['parent','grandparent']){

@@ -10,6 +10,7 @@
   "tests/codex-host-failed-turn.test.mjs": 0.5,
   "tests/codex-host.test.mjs": 1.3,
   "tests/codex-usage-limit.test.mjs": 0.8,
+  "tests/craft-loader.test.mjs": 0.5,
   "tests/crew-model-refresh.test.mjs": 0.5,
   "tests/crew.test.mjs": 7.5,
   "tests/debug-mode.test.mjs": 3.2,

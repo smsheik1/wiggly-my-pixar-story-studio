@@ -400,6 +400,9 @@ async function allOpenRouterStudio(dir) {
     await mkdir(dirname(join(studioDir, path)), { recursive: true });
     await writeFile(join(studioDir, path), current.documents[path].content);
   }
+  if (current.config.craft) {
+    await writeFile(join(studioDir, current.config.craft.path), await readFile(join(root, current.config.craft.path)));
+  }
   return loadStudio(pathToFileURL(studioDir + '/'));
 }
 
