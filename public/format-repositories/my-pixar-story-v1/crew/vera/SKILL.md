@@ -57,28 +57,69 @@ Default is a quick normal pass over each full image: call the full `viewImage` o
 - **Clearly visible defects FAIL**: extra or missing limbs, fused or extra fingers, broken joints, floating extremities. Eyes must align naturally; teeth and mouth interiors must render cleanly without extra dental rows or melting jawlines.
 - **Too small to count is a PASS**: if fingers are simply too small to count and nothing looks wrong, anatomy is a PASS, not inconclusive. Never mark inconclusive or fail merely because hands are small, and never require a crop when the full view looks normal.
 
-### 1b. Style (`style`)
-- **Required look**: stylized Pixar-like 3D feature animation. Simplified, appealing shapes; caricatured proportions (larger head and eyes, softened features); smooth stylized skin and hair; soft cinematic lighting.
+### 1b. Style & Likeness (`style`, `likeness`)
+- **Required look**: stylized Pixar-like 3D feature animation. Simplified, appealing shapes; caricatured proportions; smooth stylized skin and hair; soft cinematic lighting.
+- **Children vs. adults**: caricatured proportions such as larger head and eyes apply to **children only** ([C-CHILD-RIDER]). Child proportions on an adult FAILS `style`. Adult characters must have adult proportions (6-7 heads tall, [C-HEADS-TALL]).
+- **Skin tone & zoning**: grey or "dead" skin on dark skin FAILS `style` (natural skin zoning and warm subsurface scattering required, [C-SKIN-ZONING]).
 - **Photoreal FAILS**: fail `style` when the image reads as photoreal or as a photoreal/3D hybrid: photographic skin texture (pores, blemishes, fine wrinkles, realistic stubble), real-human facial structure and proportions with only a CG gloss, photographic lens/depth-of-field look, a real photo face on a 3D body, or uncanny-valley realism. "A real person rendered in 3D" is a fail, not a pass.
 - **Other wrong styles FAIL**: 2D, anime, claymation, sketch or painterly-flat looks.
-- **Likeness never excuses realism**: likeness is carried by stylized features (hair, face shape, skin tone, glasses, signature outfit). Never pass photoreal style to protect likeness; fail `style` and keep `likeness` as its own check.
+- **Likeness rule [C-IDENTITY]**: likeness is carried by stylized features (hair, face shape, skin tone, glasses, signature outfit). Fail `likeness` if skin tone, hair colour, or face differs from the person's photos. Never pass photoreal style to protect likeness; fail `style` and keep `likeness` as its own check.
 - Style is judged on the quick full-image view; it needs no crops.
 
 ### 2. Character Model Sheet (`sheet`)
-- **Turnaround Layout**: Exactly 4 full-body neutral poses: `front`, `three-quarter`, `profile`, `back`. Head, hands, and footwear must be completely uncropped.
-- **Expression Grid**: Exactly 8 distinct, clearly identifiable emotional portraits.
+- **Turnaround Layout**: Exactly 4 full-body neutral poses ([R-SHEET-NEUTRAL], [R-SHEET-VIEWS]): `front`, `three-quarter`, `profile`, `back`. Head, hands, and footwear must be completely uncropped.
+- **Expression Grid**: Exactly 8 distinct, clearly identifiable emotional portraits in fixed order ([R-SHEET-EIGHT]): neutral, happy, delighted, sad, surprised, confused, angry, talking.
 - **Consistency**: Outfit, hairstyle, age, skin tone, and proportions must remain identical between all 4 turnaround views and all 8 expressions.
-- **No rendered text**: expression names are named in the authored prompt for the model but must never be rendered as text in the image; any baked-in text, labels, captions, expression names or watermarks FAILS.
+- **Background Hex**: Background must be uniform neutral grey #B5B5B5 ([R-SHEET-HEX]).
+- **Dan's Sheet Failure Table ([R-SHEET-FAILURES])**: Immediately fail the relevant check if any of these defects appear:
+  - Bodies different sizes across views (fail `consistency`)
+  - Face doesn't match reference (fail `likeness` under [C-IDENTITY])
+  - Neutral pose drifts to a smile (fail `turnaround` under [R-SHEET-NEUTRAL])
+  - Background not uniform #B5B5B5 (fail `style` under [R-SHEET-HEX])
+  - Tattoo or ink marks (fail `style` under [R-SHEET-FAILURES])
+  - Toddler paunch on older children or adults (fail `style` under [C-CHILD-RIDER])
+  - Two characters look related when they should not (fail `consistency`)
+  - Held objects in sheet hands (fail `turnaround` / `anatomy`)
+  - Head in the headless panel (n/a for Format B)
+- **No rendered text ([R-SHEET-NO-TEXT])**: expression names are named in the authored prompt for the model but must never be rendered as text in the image; any baked-in text, labels, captions, expression names or watermarks FAILS (fail `style`).
 - **Left/right from the character's OWN side**: in a front view the character's right is on the viewer's left; in a back view it matches the viewer; in profile, use which side of the body faces the camera. Do not reject for an accessory "switching sides" unless it clearly does after applying this rule.
 
 ### 3. Background Plates (`backgroundCandidates`, `backgroundAngle`)
-- **Story-specific set (`story-specific-set`)**: a background passes only if it would pass as a frame from a Pixar film AND tells you whose room it is. Generic or empty sets FAIL. "Empty" means EMPTY OF PEOPLE ONLY — never an empty set: specific, lived-in props (era, age, hobbies, dreams), bold saturated Pixar color and shape language, clear floor space for characters. Forbid plain/unmarked objects, restrained/neutral/oatmeal/ivory palettes, blank/calm walls, generic catalog rooms.
+- **Story-specific set (`story-specific-set`)**: a background passes only if it would pass as a frame from a Pixar film AND tells you whose room it is ([L-DRESSED]). "Empty" means EMPTY OF PEOPLE ONLY — never an empty set: specific, lived-in props (era, age, hobbies, dreams), appealing chunky stylized shapes and warm motivated light, checking [L-PALETTE] (muted palette with one saturated accent) and [L-ACCENT-OUT] (film signature accent kept out of the room), with clear floor space reserved for characters. Generic or undressed sets FAIL `story-specific-set` (plain/unmarked objects, blank/calm walls, generic catalog rooms, no story). Never fail a room for having a muted, restrained, neutral, ivory or oatmeal palette.
 - **Strictly Empty of People**: Must contain **ZERO people**, zero silhouettes, and zero crowd figures. Any visible human or humanoid presence is an immediate `fail` under `empty-environment`.
-- **No baked-in text**: any baked-in text, labels, captions, watermarks or written expression names in a character sheet or background FAILS (fail `style`, quote the exact text in evidence, repair to regenerate without rendered text).
-- **Spatial Action & Staging**: Room layout must provide ample physical clearance for scripted actions and camera tracks.
+- **No baked-in text ([L-MIN-TEXT])**: any baked-in text, labels, captions, watermarks or written expression names in a character sheet or background FAILS (fail `style`, quote the exact text in evidence, repair to regenerate without rendered text).
+- **Spatial Action & Staging**: Room layout must provide ample physical clearance for scripted actions and camera tracks ([L-CAMERA-SIDE]).
 - **Angle Continuity**: Angle plates must retain identical architectural bones, window positions, trim materials, and key furniture from the approved master plate.
 - **Left/right from the character's OWN side**: in a front view the character's right is on the viewer's left; in a back view it matches the viewer; in profile, use which side of the body faces the camera. Do not reject for an accessory "switching sides" unless it clearly does after applying this rule.
 - **Recommend exactly one**: for every `candidates` / `backgroundCandidates` review with more than one file where at least one option passes, rank the passing options and recommend exactly one with a short reason via `recommendation: {selection, ranking, reason}`; `selection` must be a passing option index.
+
+---
+
+## Craft Rules Checked by Vera
+
+Vera checks deliverables against the following contracted craft rules by ID:
+
+- `[H-STYLE]`: Pixar CG feature aesthetic, chunky appealing forms, warm motivated light.
+- `[H-NO-BRANDS]`: No real-world trademarks or protected IP.
+- `[C-HEADS-TALL]`: Proportions: 6-7 heads tall for adults, 4-5 for young children.
+- `[C-CHILD-RIDER]`: Child characters have child-appropriate proportions (larger head, softer features); applies to children only. Child proportions on an adult FAILS style.
+- `[C-SIGNATURE]`: Signature costume piece, color, or prop unique to the character.
+- `[C-HANDS]`: Chunky 4-finger hands or stylized 5-finger hands without realistic joints/wrinkles.
+- `[C-FACIAL-HAIR]`: Stylized clumped facial hair, not individual photographic hairs.
+- `[C-SKIN-ZONING]`: Subsurface scattering and natural skin zoning; never grey or "dead" skin on dark skin.
+- `[C-HAIR]`: Stylized clumped hair with clear volume and directional flow.
+- `[C-IDENTITY]`: Likeness fidelity: fail likeness if skin tone, hair colour, or face differs from the person's photos.
+- `[R-SHEET-NEUTRAL]`: Sheet turnaround poses must be strictly neutral in expression and stance.
+- `[R-SHEET-VIEWS]`: Sheet layout: front, 3/4, side, back turnaround views.
+- `[R-SHEET-EIGHT]`: Exactly eight expressions in fixed order: neutral, happy, delighted, sad, surprised, confused, angry, talking.
+- `[R-SHEET-HEX]`: Sheet specifies and renders exact background hex #B5B5B5.
+- `[R-SHEET-NO-TEXT]`: No text, labels, or captions rendered in character sheet images.
+- `[R-SHEET-FAILURES]`: Sheet defects: bodies different sizes; face doesn't match reference; neutral drifts to a smile; background not uniform #B5B5B5; tattoo/ink marks; toddler paunch on older children; two characters look related; held objects in hands; head in headless panel.
+- `[L-DRESSED]`: Rooms are story-dressed, specific, and lived-in; not empty or catalog.
+- `[L-CAMERA-SIDE]`: Camera side and floor plan clear for staging.
+- `[L-PALETTE]`: Muted palette with one saturated accent.
+- `[L-ACCENT-OUT]`: The film's signature accent color is kept out of the room background.
+- `[L-MIN-TEXT]`: Minimize rendered environmental text in background scenes.
 
 ---
 

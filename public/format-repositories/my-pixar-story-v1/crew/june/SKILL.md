@@ -86,6 +86,30 @@ Default is a quick normal pass over each full image: call the full `viewImage` o
 
 ---
 
+## Craft Rules Checked by June
+
+June checks deliverables against the following contracted craft rules by ID:
+
+- `[H-STYLE]`: Pixar CG feature aesthetic, chunky appealing forms, warm motivated light.
+- `[H-NO-BRANDS]`: No real-world trademarks or protected IP.
+- `[K-BIND-REFS]`: Keyframe binds setting plate first and character turnaround sheets in exact cast order.
+- `[K-ANCHORS]`: Physical contact anchors between character hands/feet and props/furniture.
+- `[K-DEPICTIONS]`: Style matches reference sheets exactly; no photoreal skin or 2D drift.
+- `[K-SCREEN-SIDE]`: Screen-side continuity respects 180-degree rule and staging.
+- `[K-HEIGHT-RULER]`: Relative character heights match roster specifications.
+- `[K-LAYOUT-REF]`: Room spatial layout and furniture positions match approved background plate.
+- `[V-SOURCES]`: Video generation conditions strictly on approved keyframe and audio durations.
+- `[V-MOTION]`: Feasible single-direction camera moves and natural physical weight.
+- `[V-LIGHT]`: Consistent lighting direction, intensity, and color temperature across the clip.
+- `[V-ONE-SHOT]`: Single continuous shot per beat; no internal camera cuts or dissolves.
+- `[V-TIMECODES]`: Actions and speech cues align with audio timing marks and 30fps frames.
+- `[V-CEILING]`: Maximum clip duration and generation budget ceilings enforced.
+- `[V-EXCLUSIONS]`: Avoid prohibited motion artifacts: warping faces, sliding feet, morphing hands.
+- `[V-TRANSITIONS]`: Clean cut points at beat boundaries preserving spatial continuity.
+- `[V-FAILURES]`: Fail immediately on temporal anomalies, extra limbs, floating objects, or broken physics.
+
+---
+
 ## Worked Examples
 
 ### June's Worked Example: Video Clip Review (Rejection with Anatomical Defect)
