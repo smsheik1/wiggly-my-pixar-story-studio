@@ -72,7 +72,7 @@ test('2. Muse runTask with forced tool sends reasoning.effort and never enabled:
       toolChoice: { type: 'function', function: { name: 'wiggly_tool' } },
     });
     const museBody = bodies[0];
-    assert.equal(museBody.reasoning?.effort, 'medium');
+    assert.equal(museBody.reasoning?.effort, 'xhigh');
     assert.equal(museBody.reasoning?.enabled, undefined);
 
     // Forced tool call for DeepSeek
@@ -88,7 +88,7 @@ test('2. Muse runTask with forced tool sends reasoning.effort and never enabled:
   }
 });
 
-test('3. Muse runTask normal turn sends reasoning.effort medium, json_schema wrapper, and price policy Muse satisfies', { timeout: 10000 }, async () => {
+test('3. Muse runTask normal turn sends its production reasoning.effort xhigh, json_schema wrapper, and price policy Muse satisfies', { timeout: 10000 }, async () => {
   const dir = await mkdtemp(join(tmpdir(), 'muse-normal-turn-'));
   try {
     const secretsPath = await secrets(dir);
@@ -129,7 +129,8 @@ test('3. Muse runTask normal turn sends reasoning.effort medium, json_schema wra
     await host.runTask(task, { worker, callTool: async () => {} });
     assert.equal(bodies.length, 1);
     const body = bodies[0];
-    assert.equal(body.reasoning?.effort, 'medium');
+    assert.equal(body.reasoning?.effort, 'xhigh');
+    assert.equal(body.max_tokens, 32000);
     assert.equal(body.reasoning?.enabled, undefined);
     assert.equal(body.response_format?.type, 'json_schema');
     assert.equal(body.response_format?.json_schema?.name, 'event');

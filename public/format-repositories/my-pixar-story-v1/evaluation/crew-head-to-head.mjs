@@ -28,8 +28,9 @@ export const TASK_DEFS = {
 // Evaluation-only spend ceiling: --max-usd can lower it, never raise it.
 export const HARD_CAP_USD = 0.10;
 
-// Evaluation-only reasoning efforts. The production OpenRouterHost still refuses xhigh/max;
-// only this script may raise effort, per model, and only to a level the model offers.
+// Evaluation-only reasoning efforts. The production OpenRouterHost refuses a host-wide xhigh/max;
+// production runs Muse at its per-model xhigh override (OPENROUTER_MODEL_TRAITS). This script may
+// set any effort a model offers, per model, for one evaluation host only.
 export const EVAL_EFFORTS = {
   'meta/muse-spark-1.3-contributor': ['low', 'medium', 'high', 'xhigh', 'max'],
   'deepseek/deepseek-v4.1-flash': ['low', 'high', 'max'],
@@ -53,7 +54,7 @@ export function assertEvalEffort(model, effort) {
 // (medium/high only); the evaluation effort is applied to this one instance afterwards.
 export function evaluationHost(opts, effort = null) {
   const host = new OpenRouterHost({ ...opts, reasoningEffort: 'medium' });
-  if (effort && effort !== 'medium') host.reasoningEffort = assertEvalEffort(opts.model, effort);
+  if (effort) host.effortOverride = assertEvalEffort(opts.model, effort);
   return host;
 }
 

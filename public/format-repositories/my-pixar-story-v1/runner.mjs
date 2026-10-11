@@ -509,14 +509,11 @@ async function main() {
       const perceptionTools={...tracedTools(createGeminiReviewTools({secretsPath,receiptDirectory:join(runDir,'gemini-reviews'),maxCalls:reviewCalls,beforeRequest,afterResponse,fetcher:geminiFetcher})),...tracedTools(createCartesiaTranscriptionTool({secretsPath,receiptDirectory:join(runDir,'cartesia-transcriptions'),maxCalls:transcriptionCalls,beforeRequest,afterResponse,fetcher:cartesiaFetcher})),...createAudioEditTools({runDir})};
       // A four-file review includes twelve tool calls and a structured report.
       // Keep a bounded ten-minute window; timeout still stops without a retry.
-      // Sol agents run through CodexHost unchanged; DeepSeek agents run through
-      // OpenRouter. The Codex app-server is only spawned when a codex-bound
-      // worker is needed for the command.
+      // Codex-backend agents run through CodexHost; OpenRouter agents (the whole
+      // crew on Muse Spark today) run through OpenRouterHost. The Codex app-server
+      // is only spawned when a codex-backend worker is needed for the command.
       const studioConfig=studioFor(status.project)?.config??loadStudio().config;
-      const configuredBackends=new Set(Object.values(studioConfig.agents).map(a=>a.backend??'codex'));
-      const boundBackends=new Set((status.project.crew?.workers??[]).map(w=>w.backend??'codex'));
-      const wantCodex=command==='crew-start'?configuredBackends.has('codex'):configuredBackends.has('codex')||boundBackends.has('codex')||!status.project.crew;
-      const wantOpenRouter=command==='crew-start'?configuredBackends.has('openrouter'):configuredBackends.has('openrouter')||boundBackends.has('openrouter');
+      const {codex:wantCodex,openrouter:wantOpenRouter}=CrewHost.backendsNeeded(command,studioConfig,status.project.crew?.workers);
 
       let codexSpawnProcess = spawn;
       let codexVersionFn = undefined;

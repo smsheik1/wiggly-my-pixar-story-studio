@@ -9,7 +9,9 @@ import {applyEvent} from './workflow.mjs';
 import {crewRoles,runCrewTask,taskAssets,buildWorkerPacket} from './crew.mjs';
 import {AudioEditPlan} from './audio-edit.mjs';
 
-export const DEFAULT_WORKER_MODEL=loadStudio().config.agents['script-writer'].model;
+// Codex host default only. No crew agent is on Codex since the Muse swap; the host stays for
+// legacy pinned runs and any agent configured back to backend "codex".
+export const DEFAULT_WORKER_MODEL='gpt-6.1-sol';
 // Explicit host profile: no model fallback, native shell, apps or nested worker dispatch.
 const disabled=['shell_tool','unified_exec','apps','plugins','multi_agent','code_mode','browser_use','computer_use','view_image','image_generation','in_app_browser'];
 // The local Code Mode host executes the registered scoped function tools even

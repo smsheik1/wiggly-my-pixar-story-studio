@@ -31,6 +31,16 @@ export class CrewHost {
  async runTask(task,{worker,callTool}){
   return this.hostFor(worker).runTask(task,{worker,callTool});
  }
+ // Which backends a runner command must start. crew-start/crew-refresh bind to the
+ // configured backends only (a still-bound codex worker whose role now points at
+ // openrouter is rebound there, so it never needs Codex). Dispatch commands also
+ // honour workers still bound to codex.
+ static backendsNeeded(command,config,boundWorkers=[]){
+  const configured=new Set(Object.values(config?.agents??{}).map(a=>a.backend??'codex'));
+  const bound=new Set((boundWorkers??[]).map(w=>w.backend??'codex'));
+  const bindOnly=['crew-start','crew-refresh'].includes(command);
+  return {codex:configured.has('codex')||(!bindOnly&&bound.has('codex')),openrouter:configured.has('openrouter')||(!bindOnly&&bound.has('openrouter'))};
+ }
  needsCodex(roles){
   return roles.some(role=>((this.config?.agents?.[role]?.backend)??'codex')==='codex');
  }

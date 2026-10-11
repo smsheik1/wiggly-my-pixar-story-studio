@@ -18,17 +18,15 @@ const echoFetcher=(seen)=>async(url,init)=>{const body=JSON.parse(init.body);if(
 const scriptTask={step:'script',taskId:'isolated-task',actor:'agent',gate:'author',workflowRevision:2};
 const scriptEvent={taskId:'isolated-task',actor:'agent',workerId:'openrouter:text-reviewer:test',action:'artifact',content:{beats:[]}};
 
-test('studio pins Sol agents on codex and DeepSeek agents on openrouter',()=>{
+test('studio puts every crew agent on OpenRouter Muse Spark 1.3 Contributor; no agent is on codex',{timeout:10000},()=>{
  const agents=loadStudio().config.agents;
- for(const role of ['script-writer','visual-reviewer','scene-reviewer']){
-  assert.equal(agents[role].backend,'codex');assert.equal(agents[role].model,'gpt-6.1-sol');
- }
- for(const role of ['background-product-owner','pixar-prompter','text-reviewer','cast-designer','sheet-prompter','shot-planner','composition-writer','motion-director','video-prompt-engineer','sound-designer','film-editor','audio-reviewer','generation-planner','voice-director']){
-  assert.equal(agents[role].backend,'openrouter');assert.equal(agents[role].model,'deepseek/deepseek-v4.1-flash');
+ assert.equal(Object.keys(agents).length,17);
+ for(const [role,agent] of Object.entries(agents)){
+  assert.equal(agent.backend,'openrouter',role);assert.equal(agent.model,'meta/muse-spark-1.3-contributor',role);
  }
 });
 
-test('loadStudio rejects unknown backends and missing models; legacy snapshots default to codex',async()=>{
+test('loadStudio rejects unknown backends and missing models; legacy snapshots default to codex',{timeout:20000},async()=>{
  const dir=await mkdtemp(join(tmpdir(),'memoir-backend-'));
  try{
   const kit=new URL('../',import.meta.url),current=loadStudio();
@@ -41,7 +39,9 @@ test('loadStudio rejects unknown backends and missing models; legacy snapshots d
   // Legacy pinned studio without backend fields still loads; helpers treat it as codex.
   const legacy=structuredClone(current);for(const agent of Object.values(legacy.config.agents))delete agent.backend;
   assert.equal(backendForAgent(legacy.config.agents['script-writer']),'codex');
-  assert.equal(workerBackend({role:'script-writer'}),'codex');
+  assert.equal(workerBackend({role:'script-writer'},legacy.config),'codex');
+  // Without a pinned config the kit decides: the whole crew is on OpenRouter now.
+  assert.equal(workerBackend({role:'script-writer'}),'openrouter');
  }finally{await rm(dir,{recursive:true});}
 });
 
@@ -287,7 +287,7 @@ test('preflight refuses a stale capabilityVersion; profile digests model, settin
  }finally{await rm(dir,{recursive:true});}
 });
 
-test('router sends Sol workers to codex and DeepSeek workers to openrouter; refresh rebinds only changed roles',async()=>{
+test('router sends Sol workers to codex and DeepSeek workers to openrouter; refresh rebinds only changed roles',{timeout:10000},async()=>{
  const dir=await mkdtemp(join(tmpdir(),'memoir-router-'));
  try{
   const secretsPath=await secrets(dir);
@@ -296,7 +296,8 @@ test('router sends Sol workers to codex and DeepSeek workers to openrouter; refr
   const openrouter=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async()=>{throw new Error('unused');}});
   openrouter.refreshCrew=async(c)=>({workers:c.workers});
   openrouter.startRole=async(role,agent)=>({workerId:`openrouter:${role}:rebound`,name:agent.name,role,modelVersion:agent.model,capabilityVersion:'new-cap',execution:'host',backend:'openrouter'});
-  const config=loadStudio().config;
+  // Mixed test config: script-writer pinned back on codex so the codex route stays covered.
+  const config=structuredClone(loadStudio().config);config.agents['script-writer']={...config.agents['script-writer'],backend:'codex',model:'gpt-6.1-sol'};
   const host=new CrewHost({codex,openrouter,config});
   const codexWorker={workerId:'codex-x',name:'Leo',role:'script-writer',modelVersion:'gpt-6.1-sol',capabilityVersion:'c',execution:'host',backend:'codex'};
   const orWorker={workerId:'or-x',name:'Sage',role:'text-reviewer',modelVersion:DEFAULT_OPENROUTER_MODEL,capabilityVersion:'c',execution:'host',backend:'openrouter'};

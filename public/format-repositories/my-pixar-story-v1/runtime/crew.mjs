@@ -18,7 +18,9 @@ export const Crew=z.object({workers:z.array(z.object({workerId:text,name:text,ro
 export const workerBackend=(worker,config=null)=>{
  if(worker?.backend)return worker.backend;
  const role=worker?.role;
- if(config?.agents?.[role]?.backend)return config.agents[role].backend;
+ // A pinned config decides for its own roles; a legacy pinned agent without a
+ // backend field was a Codex agent, even though the kit now puts that role on OpenRouter.
+ if(config?.agents?.[role])return backendForAgent(config.agents[role]);
  if(crewRoles[role])return backendForAgent(crewRoles[role]);
  return 'codex';
 };
