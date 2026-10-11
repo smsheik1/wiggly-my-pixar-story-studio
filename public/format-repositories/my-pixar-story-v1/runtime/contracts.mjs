@@ -98,8 +98,8 @@ export const criteria = {
   backgroundAngleBrief: ['scene-fit', 'facts', 'spatial-action', 'continuity'],
   backgroundPrompt: ['brief-fit', 'style', 'spatial-action', 'continuity'],
   backgroundAnglePrompt: ['brief-fit', 'style', 'spatial-action', 'continuity'],
-  backgroundCandidates: ['scene-fit', 'style', 'empty-environment', 'spatial-action', 'continuity'],
-  backgroundAngle: ['scene-fit', 'style', 'empty-environment', 'spatial-action', 'continuity'],
+  backgroundCandidates: ['scene-fit', 'style', 'story-specific-set', 'empty-environment', 'spatial-action', 'continuity'],
+  backgroundAngle: ['scene-fit', 'style', 'story-specific-set', 'empty-environment', 'spatial-action', 'continuity'],
   answers: ['source-grounding','completeness','relationships','age-variants','locations','common-sense'],
   characterPrompt: ['cast-fit','reference-grounding','style','anatomy','composition'],
   script: ['facts', 'relationship', 'clarity', 'emotional-purpose', 'timing', 'common-sense'],
@@ -114,7 +114,8 @@ export const Review = z.object({
   decision: z.enum(['approved', 'provisional', 'rejected', 'inconclusive']), repairTarget: z.enum(['current', 'script']).default('current'), repairArtifactId:text.optional(),
   perception: z.enum(['direct-text', 'direct-image', 'direct-audio', 'direct-video', 'direct-audiovisual', 'unavailable', 'crew-review']),
   checks: z.array(z.object({ criterion: text, status: z.enum(['pass', 'fail', 'inconclusive']), evidence: text,
-    location: text, repair: z.string().default('') })).min(0),
+    location: text, repair: z.string().default(''), quotes: z.array(z.string()).optional() })).min(0),
+  recommendation: z.object({ selection: z.number().int().nonnegative(), ranking: z.array(z.number().int().nonnegative()).min(1), reason: text }).optional(),
   modelVersion:text.optional(), capabilityVersion:text.optional(),
   coverage:z.object({artifactSha256:text,videoSeconds:z.number().positive().optional(),audioSeconds:z.number().positive().optional(),audioFiles:z.array(z.object({sha256:text,seconds:z.number().positive()})).optional()}).optional(),
   toolEvidence:z.array(z.object({tool:text,sha256:text,referenceSha256:text.optional(),seconds:z.number().positive().optional(),region:z.object({x:z.number(),y:z.number(),width:z.number(),height:z.number()}).optional()})).optional(),
@@ -131,7 +132,7 @@ export const Plans = z.object({ provider: z.enum(['cartesia', 'meta-muse', 'agy'
 const CreativeDirection=z.object({scope:z.enum(['script','cast']),direction:text,sourceMessages:z.array(text).min(1)}).strict();
 export const AudioInvestigation=z.object({beat:z.number().int().min(1).max(4),sha256:text,inspection:z.object({durationSeconds:z.number().positive(),method:text,pauses:z.array(z.object({startSeconds:z.number().nonnegative(),endSeconds:z.number().nonnegative()}))}),transcription:z.object({transcript:text,method:text,words:z.array(z.object({word:text,start:z.number().nonnegative(),end:z.number().nonnegative()}))})}).strict();
 export const PlanningBlocker=z.object({kind:z.enum(['account-readiness','missing-input','editing-infeasible']),problem:text.max(180),solution:text.max(240),steps:z.array(text.max(240)).min(1).max(5),beats:z.array(z.number().int().min(1).max(4)).min(1).max(4).optional()}).strict();
-export const Event = z.object({ taskId: text, action: z.enum(['prefer-image-provider','refresh-visual-instructions','refresh-keyframe-instructions','refresh-text-instructions','recover-audio-edit','start-narration-regeneration','start-audio-edit','refresh-planning-instructions','planning-blocked','reuse-voice','refresh-audio-instructions','choose-voice','voice-verification-start','voice-verified','configure-debug','debug-next','debug-stop','upgrade-studio','upgrade-workflow','import-sheet','refresh-writing-instructions','configure-crew', 'configure-review','set-budget','reserve-compute', 'start-audio-review', 'audio-qualified', 'artifact', 'owner-review', 'start-backgrounds', 'start-shots', 'start-studio', 'qualified', 'rendered', 'review', 'approve', 'changes', 'redo', 'abandon', 'reject', 'note', 'resolve', 'plan', 'authorize', 'begin', 'job-id', 'receipt', 'provider-error', 'reconcile', 'allowance']),
+export const Event = z.object({ taskId: text, action: z.enum(['prefer-image-provider','refresh-visual-instructions','refresh-keyframe-instructions','refresh-text-instructions','add-reference','recover-audio-edit','start-narration-regeneration','start-audio-edit','refresh-planning-instructions','planning-blocked','reuse-voice','refresh-audio-instructions','choose-voice','voice-verification-start','voice-verified','configure-debug','debug-next','debug-stop','upgrade-studio','upgrade-workflow','import-sheet','refresh-writing-instructions','configure-crew', 'configure-review','set-budget','reserve-compute', 'start-audio-review', 'audio-qualified', 'artifact', 'owner-review', 'start-backgrounds', 'start-shots', 'start-studio', 'qualified', 'rendered', 'review', 'approve', 'changes', 'redo', 'abandon', 'reject', 'note', 'resolve', 'plan', 'authorize', 'begin', 'job-id', 'receipt', 'provider-error', 'reconcile', 'allowance']),
   provider: z.enum(['meta-muse','agy']).optional(),
   blocker:PlanningBlocker.optional(), audioInvestigation:z.array(AudioInvestigation).min(1).max(4).optional(),toolEvidence:Review.shape.toolEvidence, creativeDirection:CreativeDirection.optional(), debugEnabled:z.boolean().optional(),
   narrationRegeneration:NarrationRegeneration.optional(),

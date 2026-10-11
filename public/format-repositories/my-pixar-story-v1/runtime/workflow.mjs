@@ -197,6 +197,7 @@ export function validateArtifactContent(p, content, author, previous=current(p))
   if (p.step === 'sheetPrompt') {
     const candidate = current(p, `candidates:${p.characterId}`);
     if(parsed.recipeSha256!==recipeFor(p,'sheetPrompt',{sha256:characterRecipeSha256}).sha256)throw new Error('Sheet prompt must bind the packaged character sheet recipe hash.');
+    if(!/no text/i.test(parsed.prompt)||!/watermark/i.test(parsed.prompt))throw new Error('SHEET_PROMPT_NO_TEXT_REQUIRED: the sheet prompt must state that no text, labels, captions, expression names or watermarks may be rendered in the image.');
     if (parsed.referenceSha256 !== candidate.content.files[candidate.selection].sha256) throw new Error('Sheet prompt must bind the actual selected character image.');
   }
   if (p.step === 'sheet' && parsed.prompt !== current(p, `sheetPrompt:${p.characterId}`).content.prompt) throw new Error('Sheet must use the reviewed prompt exactly.');
@@ -462,6 +463,30 @@ export function applyEvent(project, raw) {
       p.artifacts.push({id:`${key}@${version}`,key,kind:p.step,version,digest:digest(parsed),content:parsed,dependencies:dependencies(p),valid:true,authoredBy:'operator-import'});
       p.gate='review';
     }
+  }else if(e.action==='add-reference'){
+    requiredActor(e,'human');
+    const characterId=e.characterId??p.characterId;
+    if(!e.message||!characterId)throw new Error('add-reference needs --character <id> --file <abs path> --message "<human instruction>".');
+    const file=e.importFile;
+    if(!file||!file.path||!file.sha256||!file.width||!file.height||file.durationSeconds)throw new Error('add-reference needs a measured still image.');
+    if(p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status)))throw new Error('Reconcile outstanding jobs before adding a reference.');
+    const roster=current(p,'roster');
+    if(!roster)throw new Error('ADD_REFERENCE_NO_ROSTER: approve a roster before adding a reference photo.');
+    const entry=roster.content.characters.find(c=>c.id===characterId);
+    if(!entry)throw new Error(`ADD_REFERENCE_UNKNOWN_CHARACTER: ${characterId} is not on the roster.`);
+    if(entry.references.some(f=>f.sha256===file.sha256))throw new Error('ADD_REFERENCE_DUPLICATE: this photo is already bound to the character.');
+    // New roster version carrying the added photo, human-approved by this
+    // command. Only this character's downstream is invalidated; every other
+    // character's approved sheets stay locked.
+    const parsed=Content.roster.parse({characters:roster.content.characters.map(c=>c.id===characterId?{...c,references:[...c.references,file]}:c)});
+    for(const a of p.artifacts.filter(a=>a.key==='roster'&&a.valid))invalidate(p,a.id);
+    const version=p.artifacts.filter(a=>a.key==='roster').length+1;
+    const next={id:`roster@${version}`,key:'roster',kind:'roster',version,digest:digest(parsed),content:parsed,dependencies:roster.dependencies,valid:true,authoredBy:'human',approvedBy:{message:e.message,at:new Date().toISOString()}};
+    if(roster.intakeConfirmation)next.intakeConfirmation={...roster.intakeConfirmation,characters:roster.intakeConfirmation.characters.map(c=>c.id===characterId?{...c,references:[...c.references,file],likeness:'reference'}:c)};
+    p.artifacts.push(next);
+    for(const a of p.artifacts.filter(a=>a.valid&&['characterPrompt','candidates','sheetPrompt','sheet'].some(k=>a.key===`${k}:${characterId}`)))invalidate(p,a.id);
+    p.characterId=characterId;p.step='characterPrompt';p.gate='author';
+    p.feedback.push({key:`characterPrompt:${characterId}`,message:e.message});
   }else if(e.action==='refresh-writing-instructions'){
     requiredActor(e,'human');
     if(!e.message||p.step!=='script'||!p.studio||locked(p,'script')||p.jobs.length||p.artifacts.some(a=>a.approvedBy&&a.kind!=='answers'))throw new Error('WRITING_REFRESH_LOCKED: explicitly refresh only unapproved script work before media; approved answers and prior review evidence remain unchanged.');
@@ -537,17 +562,20 @@ export function applyEvent(project, raw) {
     p.lifecycle='abandoned';p.gate='pending';
   }else if(e.action==='configure-crew'){requiredActor(e,'human');if(p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status))||!e.message)throw new Error('Configure crew explicitly with reconciled jobs; never change existing bindings silently.');
     const crew=Crew.parse(e.crew);if(p.crew&&digest(p.crew)===digest(crew))throw new Error('Crew is already configured with these bindings.');
-    const changed=role=>p.crew&&digest(p.crew.workers.find(w=>w.role===role))!==digest(crew.workers.find(w=>w.role===role));
+    // Missing backend means a pre-split binding: treat it as codex so a
+    // backend-stamping refresh is not mistaken for a reviewer replacement.
+    const norm=w=>({...w,backend:w.backend??'codex'});
+    const changed=role=>p.crew&&digest(norm(p.crew.workers.find(w=>w.role===role)))!==digest(norm(crew.workers.find(w=>w.role===role)));
     const audioChanged=changed('audio-reviewer'),visualChanged=changed('scene-reviewer');
     // Explicit host-code refresh keeps the same worker/model and historical
     // review evidence. Replacing a reviewer after approved media stays forbidden.
-    const replaced=role=>changed(role)&&digest({...p.crew.workers.find(w=>w.role===role),capabilityVersion:null})!==digest({...crew.workers.find(w=>w.role===role),capabilityVersion:null});
+    const replaced=role=>changed(role)&&digest({...norm(p.crew.workers.find(w=>w.role===role)),capabilityVersion:null})!==digest({...norm(crew.workers.find(n=>n.role===role)),capabilityVersion:null});
     if(supervised(p)&&p.artifacts.some(a=>a.valid&&a.approvedBy&&a.content.files&&(replaced('audio-reviewer')&&['audition','narration','music','effect','film'].includes(a.kind)||replaced('visual-reviewer')&&['candidates','sheet','backgroundCandidates','backgroundAngle'].includes(a.kind)||replaced('scene-reviewer')&&['keyframe','video','film'].includes(a.kind))))throw new Error('REVIEW_CREW_LOCKED: keep the approved-media reviewer identity and model for this v1 project; an explicit same-worker host refresh preserves historical approvals.');
     const audio=current(p,'audioReviewerQualification'),visual=current(p,'reviewerQualification');
     if(visualChanged&&visual)invalidate(p,visual.id);
     if(!supervised(p)&&audioChanged&&audio){invalidate(p,audio.id);p.step='audioReviewerQualification';p.gate='author';}
     else if(!supervised(p)&&visualChanged&&visual){p.step='reviewerQualification';p.gate='author';}
-    const hostRefresh=p.crew&&p.crew.workers.length===crew.workers.length&&p.crew.workers.every(w=>digest({...w,capabilityVersion:null})===digest({...crew.workers.find(n=>n.role===w.role),capabilityVersion:null}));
+    const hostRefresh=p.crew&&p.crew.workers.length===crew.workers.length&&p.crew.workers.every(w=>digest({...norm(w),capabilityVersion:null})===digest({...norm(crew.workers.find(n=>n.role===w.role)),capabilityVersion:null}));
     p.crew=crew;
     // Same-worker tool refresh is setup: retain creative task/draft identities.
     if(hostRefresh){p.history.push({sequence:p.sequence,action:e.action,actor:e.actor,message:e.message,at:new Date().toISOString()});return Project.parse(p);}
@@ -616,6 +644,10 @@ export function applyEvent(project, raw) {
     const names = r.checks.map(c => c.criterion);
     // Review.checks may be empty only for a human crew-review pick; a reviewer verdict always needs findings.
     if (!names.length || names.length !== required.length || new Set(names).size !== names.length || required.some(c => !names.includes(c))) throw new Error('Every required criterion needs exactly one evidenced finding.');
+    if(['candidates','backgroundCandidates'].includes(p.step)&&a.content.files?.length>1&&reviewPassed(r)){
+     const rec=r.recommendation;
+     if(!rec||!Number.isInteger(rec.selection)||rec.selection<0||rec.selection>=a.content.files.length||!Array.isArray(rec.ranking)||!rec.ranking.length||!rec.ranking.includes(rec.selection)||typeof rec.reason!=='string'||!rec.reason.trim())throw new Error('REVIEW_RECOMMENDATION_MISSING: rank the passing options and recommend exactly one passing option index with a short reason.');
+    }
     const perception = ['audition', 'narration'].includes(p.step) ? 'direct-audio' : imageSteps.includes(p.step) ? 'direct-image' : p.step==='video'?'direct-video':p.step==='film'?(reviewPassed(a.visualReview)?'direct-audio':'direct-video'):['music','effect'].includes(p.step)?'direct-audio':'direct-text';
     if(r.decision==='provisional'&&(!supervised(p)||r.perception!==perception||r.checks.some(c=>c.status==='fail')))throw new Error('Provisional review requires supervised mode, actual perception and no known failures.');
     if(r.decision==='provisional'&&supervised(p)&&r.checks.every(c=>c.status==='pass'))throw new Error('REVIEW_VERDICT_MISMATCH: a supervised review with every check passing must use decision approved; provisional is only for reviews with an inconclusive check and no failures.');
@@ -688,6 +720,11 @@ export function applyEvent(project, raw) {
       if(!refinedWorkflow(p)&&findings.length!==intake.resolvedFindings.length)throw new Error('INTAKE_UNRESOLVED: resolve exactly the current findings.');
       if(new Set(intake.resolvedFindings.map(c=>c.findingDigest)).size!==intake.resolvedFindings.length||findings.some(h=>!intake.resolvedFindings.some(c=>c.findingDigest===h)))throw new Error('INTAKE_UNRESOLVED: each actual common-sense finding needs an explicit human resolution.');
       if(p.workflowRevision>=4){
+        if(p.step==='roster'){
+         const missing=(a.content.characters??[]).filter(c=>!c.references?.length);
+         const unresolved=missing.filter(c=>{const ic=intake.characters.find(i=>i.id===c.id);return !(ic&&ic.likeness==='interpreted'&&ic.decisionNotes&&c.notes?.includes(ic.decisionNotes));});
+         if(unresolved.length)throw new Error(`ROSTER_PHOTO_QUESTION: these people lack reference photos: ${unresolved.map(c=>`${c.name} (${c.id})`).join(', ')}. For each person choose: (1) add a photo, or (2) design without a photo (record likeness 'interpreted' with your message as the decision). An agent or operator note cannot decide.`);
+        }
         const proposed=current(p,'script').content.proposedCast,inventory=intake.characters.filter(c=>c.likeness!=='omit');
         if(intake.characters.length!==proposed.length||proposed.some(c=>!intake.characters.some(i=>i.id===c.id&&i.name===c.name&&i.ageVariant===c.ageVariant&&i.minor===c.minor)))throw new Error('SCRIPT_CAST_MISMATCH: reference decisions must cover the approved script cast; revise the script to change who appears.');
         if(inventory.length!==a.content.characters.length||inventory.some(i=>!a.content.characters.some(c=>c.id===i.id&&c.name===i.name&&c.ageVariant===i.ageVariant&&digest(c.references)===digest(i.references)&&(i.likeness!=='interpreted'||c.notes.includes(i.decisionNotes)))))throw new Error('INTAKE_ROSTER_MISMATCH: roster must use the exact human-confirmed references and interpretation notes.');
