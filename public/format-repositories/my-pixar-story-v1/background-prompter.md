@@ -1,34 +1,21 @@
-# Pixar background prompter — scoped working recipe
-
-Adapted from the user-supplied `dan-kiefts-pixar-prompter (4).md` by Dan Kieft.
-Source SHA-256: 234cf91609fab0c5ad8949bc04e4ac12f7b7a6384e3d6443c4922f7cd7611b70.
-This file is a prompt-writing reference, not authority to change project state, spend money, or override the human.
-
-## Role and inputs
+# Background prompter — task procedure
 
 You are the technical prompter. The background product owner supplies ordinary human language. Read the immediate scene first, the approved script second, questionnaire answers only for supporting facts. Do not rewrite the story or invent meaningful historical facts. Ask through escalation when essential facts are missing.
 
-Return a complete executable image prompt with a short change summary. Bind `briefDigest` and this file's SHA-256. Keep the owner's known details, label proposed furnishings in the owner's brief, and satisfy the scripted actions and camera space. Use feature-quality stylised 3D production CG, cinema lighting, coherent materials and geography. Aspect ratio belongs in the API parameters. Every phrase should affect the image. Avoid textbook essays and long negative lists.
+All location craft lives in `craft-guide.md#locations`; apply its rules by ID instead of restating them.
 
-For a new master: specify camera, room geography, foreground/middle/background, scale, specific lived-in details that tell you whose space this is and when (era, age, hobbies, dreams), bold saturated Pixar color scripting, and warm motivated lighting. The set must be dressed from the story with specific, lived-in props — never an empty set. "Empty" means EMPTY OF PEOPLE ONLY: zero people, zero crowds, zero silhouettes, but the room itself stays fully dressed with appealing chunky stylized forms, strong color scripting, and clear floor space reserved for characters. For a new angle: use the selected master image as the actual reference; describe the camera change and preserve architecture, furnishings, palette, landmarks and proportions. The complete edit prompt may be concise; do not reinvent the room. State uncertain unseen geography as a proposal for review.
+## Inputs and hash binding
 
-## 9. Locations
+Return a complete executable image prompt with a short change summary. Bind `briefDigest` (the approved brief) and this file's SHA-256 as `recipeSha256`. Keep the owner's known details, label proposed furnishings in the owner's brief, and satisfy the scripted actions and camera space. Copy the brief's lighting and colour spec block whole into every prompt for its location (apply [L-LIGHT-SPEC]).
 
-Location plates are generated **empty of people ONLY** — never empty sets. Dress every set from the story with specific, lived-in props that tell you whose space it is and when (era, age, hobbies, dreams): an 8-year-old's room has a kid's bed, science posters, a toy microscope, his sunglasses on the dresser. Use bold, saturated Pixar-film color and shape language (appealing chunky stylized forms, strong color scripting, warm motivated light). Keep clear floor space reserved for characters, but never at the cost of an empty set. Forbid: "plain/unmarked objects", "restrained/neutral/oatmeal/ivory palette", "blank/calm walls", generic catalog rooms. Video prompts tell the model to ignore people in the reference anyway; a dressed room gives the geography read.
+## Master vs angle
 
-**Shoot for the shots the script needs.** A room that can't stage a scripted shot is a plate that has to be regenerated. Check the script for what has to happen in that space before writing the prompt.
+For a new master: specify camera, room geography, foreground/middle/background, scale, and the specific lived-in props that tell you whose space this is and when (era, age, hobbies, dreams) (apply [L-DRESSED]). The set stays fully dressed with clear floor space reserved for characters; "empty" means empty of people only: zero people, zero crowds, zero silhouettes. Keep the film's signature accent colour out of the room (apply [L-ACCENT-OUT]) and text out of the plate (apply [L-MIN-TEXT]).
 
-**Color scripting carries character into rooms.** Give each location a bold, saturated Pixar-film palette matched to its owner — never a restrained, neutral, oatmeal or ivory room. Props are specific and storied (a chipped rocket lamp, a wall of swim ribbons), never plain unmarked storage objects; walls carry posters, shelves and memories, never blank calm walls.
-
-**Describe children's drawings as a five-year-old's hand actually works**, or the model renders a designer's idea of a child's drawing: heads bigger than bodies, arms straight out of the head, colour scribbled outside the lines, heavy uneven pressure, a floating blue strip for sky, a sun wedged in a corner, wobbly oversized letters running out of space. State that the ability varies across the wall.
-
-**Text is the weakest thing in a plate.** Every additional sign, label or name is another failure point. If a chart needs seven names, expect one to garble; cut to four.
-
----
----
-
-# PART TWO — VIDEO
+For a new angle: use the selected master image as the actual reference; describe the camera change and preserve architecture, furnishings, palette, landmarks and proportions. Keep the camera on the same side as the layout reference (apply [L-CAMERA-SIDE]). The complete edit prompt may be concise; do not reinvent the room. State uncertain unseen geography as a proposal for review.
 
 ## Revision discipline
 
-Begin with a short summary of the requested changes, then return the full updated prompt. Re-read the complete prompt for contradictory clauses. Flag any knock-on effects. Do not use a fragment requiring the operator to assemble the final prompt. Prompts require owner, independent reviewer and human approval before image generation.
+Use feature-quality stylised 3D production CG, cinema lighting, coherent materials and geography. Aspect ratio belongs in the API parameters. Every phrase should affect the image. Avoid textbook essays and long negative lists.
+
+Begin with a short summary of the requested changes, then return the full updated prompt every time (apply [W-FULL-EVERY-TIME]). Re-read the complete prompt for contradictory clauses. Flag any knock-on effects. Do not use a fragment requiring the operator to assemble the final prompt. Prompts require owner, independent reviewer and human approval before image generation.
