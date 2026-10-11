@@ -170,30 +170,61 @@ export function actualUsd(usage, model) {
   const price = PRICES[model] ?? FALLBACK_PRICE;
   return ((Number(usage?.prompt_tokens) || 0) * price.in + (Number(usage?.completion_tokens) || 0) * price.out) / 1e6;
 }
-// Shared across concurrent cases: a request is sent only if spent + in-flight worst cases + its
-// own worst case stay under the cap. A request that fails mid-flight is charged its worst case.
+// Shared across concurrent cases: reserve the worst case before sending, settle with the
+// actual cost on completion, and wait for in-flight requests instead of skipping when the
+// cap would be crossed by conservative reservations. A request that fails mid-flight is
+// charged its worst case.
 export class Budget {
   constructor(capUsd) {
     const cap = Number(capUsd);
     this.cap = Math.min(Number.isFinite(cap) && cap > 0 ? cap : DEPT_EVAL_HARD_CAP_USD, DEPT_EVAL_HARD_CAP_USD);
     this.spent = 0; this.reserved = 0; this.refused = 0;
+    this.inFlight = 0; this.waiters = []; this.peak = 0;
+  }
+  _track() { const s = this.spent + this.reserved; if (s > this.peak) this.peak = s; }
+  _notify() { const w = this.waiters; this.waiters = []; for (const waiter of w) { try { clearInterval(waiter.timer); } catch {} try { waiter.resolve(); } catch {} } }
+  _waitForSettle(isAborted) {
+    return new Promise((resolve, reject) => {
+      const waiter = {};
+      waiter.resolve = () => { try { clearInterval(waiter.timer); } catch {} resolve(); };
+      waiter.timer = setInterval(() => {
+        if (isAborted()) {
+          const idx = this.waiters.indexOf(waiter);
+          if (idx >= 0) this.waiters.splice(idx, 1);
+          try { clearInterval(waiter.timer); } catch {}
+          reject(Object.assign(new Error('DEPT_EVAL_CASE_ABORTED: case timed out; no further requests.'), { stopDispatch: true }));
+        }
+      }, 20);
+      this.waiters.push(waiter);
+    });
   }
   wrap(fetcher, model, { isAborted = () => false } = {}) {
     return async (url, init) => {
       if (isAborted()) throw Object.assign(new Error('DEPT_EVAL_CASE_ABORTED: case timed out; no further requests.'), { stopDispatch: true });
       const worst = worstCaseUsd(init?.body, model);
-      if (this.spent + this.reserved + worst > this.cap) {
-        this.refused++;
-        throw Object.assign(new Error(`DEPT_EVAL_CAP_REACHED: next request could cost $${worst.toFixed(4)}; spent $${this.spent.toFixed(4)} + in flight $${this.reserved.toFixed(4)} of $${this.cap.toFixed(2)}.`), { stopDispatch: true, capReached: true });
+      for (;;) {
+        if (isAborted()) throw Object.assign(new Error('DEPT_EVAL_CASE_ABORTED: case timed out; no further requests.'), { stopDispatch: true });
+        // Atomic check-and-reserve: no await between the check and reserved += worst.
+        if (this.spent + this.reserved + worst <= this.cap) {
+          this.reserved += worst; this.inFlight++; this._track();
+          break;
+        }
+        if (this.inFlight === 0) {
+          this.refused++;
+          throw Object.assign(new Error(`DEPT_EVAL_CAP_REACHED: next request could cost $${worst.toFixed(4)}; spent $${this.spent.toFixed(4)} + in flight $${this.reserved.toFixed(4)} of $${this.cap.toFixed(2)}.`), { stopDispatch: true, capReached: true });
+        }
+        await this._waitForSettle(isAborted);
       }
-      this.reserved += worst;
       let charged = worst;
       try {
         const resp = await fetcher(url, init);
-        if (!resp.ok) charged = 0;
-        else { try { const data = await resp.clone().json(); if (data?.usage) charged = actualUsd(data.usage, model); } catch {} }
+        try {
+          const data = await resp.clone().json();
+          if (data?.usage) charged = actualUsd(data.usage, model);
+          else charged = resp.ok ? worst : 0;
+        } catch { charged = resp.ok ? worst : 0; }
         return resp;
-      } finally { this.reserved -= worst; this.spent += charged; }
+      } finally { this.reserved -= worst; this.inFlight--; this.spent += charged; this._track(); this._notify(); }
     };
   }
 }

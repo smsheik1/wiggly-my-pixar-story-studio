@@ -13,6 +13,19 @@ export const DEFAULT_OPENROUTER_MODEL='deepseek/deepseek-v4.1-flash';
 export const OPENROUTER_PROVIDER_POLICY={require_parameters:true,max_price:{prompt:0.3,completion:1.2}};
 export const OPENROUTER_MAX_TOKENS=16000;
 export const OPENROUTER_MAX_TOOL_ROUNDS=40;
+export const OPENROUTER_MAX_CONTINUATIONS=2;
+const CONTINUE_PROMPT='Your previous reply was cut off by the output limit. Continue EXACTLY where it stopped. Output only the remaining characters, no repetition, no preamble.';
+const CONTINUE_EMPTY_PROMPT='Your previous reply was empty because the output limit was reached before any output was produced. Answer now, concisely, with only the requested output.';
+// Truncation: finish_reason 'length' or a native max-tokens reason (case-insensitive).
+// A missing/empty content with finish 'length' counts the same way (reasoning ate the budget).
+function isTruncatedChoice(choice){
+ if(!choice)return false;
+ const fr=choice.finish_reason;
+ if(typeof fr==='string'&&fr.toLowerCase()==='length')return true;
+ const nfr=choice.native_finish_reason;
+ if(typeof nfr==='string'&&['length','max_tokens'].includes(nfr.toLowerCase()))return true;
+ return false;
+}
 
 // productionEffort / maxTokens are per-model production overrides. The host-wide
 // reasoningEffort constructor argument stays medium/high (never max/xhigh); only a
@@ -100,35 +113,67 @@ export class OpenRouterHost {
     resolvedReasoning=forcingSpecificTool?{enabled:false}:{effort:this.effortFor(model)};
    }
   }
-  const body={model,messages,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokensFor(model)};
-  if(!verify){
-   body.response_format={type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}};
-  }
-  body.reasoning=resolvedReasoning;
-  let response;
-  try{
-   response=await this.fetcher(OPENROUTER_URL,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','X-Title':'Wiggly memoir studio'},body:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(this.timeoutMs)});
-  }catch(error){throw new Error(`OPENROUTER_REQUEST_FAILED: ${error.message}. No model/provider fallback was submitted.`);}
-  if(!response.ok){
-   const text=await response.text().catch(()=>'');
-   // Bind-time verification only: a task turn's 400/401 keeps the generic error below.
-   if(verify&&(response.status===401||response.status===403))throw new Error(`OPENROUTER_AUTH_FAILED: OpenRouter rejected the API key (HTTP ${response.status}). No worker was bound.`);
-   if(verify&&(response.status===400||response.status===404))throw new Error(`OPENROUTER_MODEL_UNAVAILABLE: ${model} was rejected by OpenRouter (HTTP ${response.status}). No worker was bound.${text?` ${text.slice(0,200).split(key).join('[REDACTED]')}`:''}`);
-   if(response.status===402)throw new Error('OpenRouter credits exhausted. Add credits before dispatch; no model/provider fallback was submitted.');
-   if(response.status===429){
-    const error=new Error(`OpenRouter usage limit reached (HTTP 429). No model/provider fallback was submitted.`);
-    error.safeRetryWithoutOutput=true;error.savedTools=[];error.usageLimitExceeded=true;error.retryAfter=response.headers?.get?.('retry-after')??null;
+  const effectiveMaxTokens=maxTokens??this.maxTokensFor(model);
+  // continuation=true: a strict json_schema response_format would force the model to start a
+  // brand-new JSON object, so the remaining characters could never be stitched onto the partial.
+  // Continuation requests therefore drop response_format; the first request is unchanged.
+  const sendOnce=async(msgs,continuation=false)=>{
+   const body={model,messages:msgs,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokensFor(model)};
+   if(!verify&&!continuation){
+    body.response_format={type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}};
+   }
+   body.reasoning=resolvedReasoning;
+   let response;
+   try{
+    response=await this.fetcher(OPENROUTER_URL,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','X-Title':'Wiggly memoir studio'},body:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(this.timeoutMs)});
+   }catch(error){throw new Error(`OPENROUTER_REQUEST_FAILED: ${error.message}. No model/provider fallback was submitted.`);}
+   if(!response.ok){
+    const text=await response.text().catch(()=>'');
+    // Bind-time verification only: a task turn's 400/401 keeps the generic error below.
+    if(verify&&(response.status===401||response.status===403))throw new Error(`OPENROUTER_AUTH_FAILED: OpenRouter rejected the API key (HTTP ${response.status}). No worker was bound.`);
+    if(verify&&(response.status===400||response.status===404))throw new Error(`OPENROUTER_MODEL_UNAVAILABLE: ${model} was rejected by OpenRouter (HTTP ${response.status}). No worker was bound.${text?` ${text.slice(0,200).split(key).join('[REDACTED]')}`:''}`);
+    if(response.status===402)throw new Error('OpenRouter credits exhausted. Add credits before dispatch; no model/provider fallback was submitted.');
+    if(response.status===429){
+     const error=new Error(`OpenRouter usage limit reached (HTTP 429). No model/provider fallback was submitted.`);
+     error.safeRetryWithoutOutput=true;error.savedTools=[];error.usageLimitExceeded=true;error.retryAfter=response.headers?.get?.('retry-after')??null;
+     throw error;
+    }
+    if(response.status>=500)throw new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status}. No model/provider fallback was submitted.`);
+    throw new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status} ${text.slice(0,200)}. No model/provider fallback was submitted.`);
+   }
+   const result=await response.json();
+   if(result?.usage&&usageSink)usageSink(result.usage);
+   if(result?.model&&result.model!==model)throw new Error('OPENROUTER_MODEL_CHANGED: requested model must be used exactly.');
+   const choice=result?.choices?.[0];
+   if(!choice)throw new Error('OPENROUTER_REQUEST_FAILED: empty choices. No model/provider fallback was submitted.');
+   return choice;
+  };
+  const cur=[...(messages??[])];
+  const parts=[];
+  let choice=await sendOnce(cur);
+  let continuations=0;
+  // verify (bind ping) never continues: a truncated ping keeps the current behaviour.
+  while(!verify&&isTruncatedChoice(choice)){
+   const msg=choice.message??{};
+   // Truncated tool_calls are never executed: partial tool arguments would be
+   // invalid JSON. Drop them and continue as a text turn; the stitched content
+   // below carries the full answer. If the model keeps truncating, OUTPUT_TRUNCATED.
+   const partial=typeof msg.content==='string'?msg.content:(msg.content==null?'':JSON.stringify(msg.content));
+   parts.push(partial);
+   if(continuations>=OPENROUTER_MAX_CONTINUATIONS){
+    const error=new Error(`OUTPUT_TRUNCATED: ${model} hit the ${effectiveMaxTokens}-token output limit ${continuations+1} times; answer still incomplete. Increase max_tokens or shorten the task.`);
+    error.outputTruncated=true;
     throw error;
    }
-   if(response.status>=500)throw new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status}. No model/provider fallback was submitted.`);
-   throw new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status} ${text.slice(0,200)}. No model/provider fallback was submitted.`);
+   continuations++;
+   cur.push({role:'assistant',content:partial});
+   cur.push({role:'user',content:parts.join('')?CONTINUE_PROMPT:CONTINUE_EMPTY_PROMPT});
+   choice=await sendOnce(cur,true);
   }
-  const result=await response.json();
-  if(result?.usage&&usageSink)usageSink(result.usage);
-  if(result?.model&&result.model!==model)throw new Error('OPENROUTER_MODEL_CHANGED: requested model must be used exactly.');
-  const choice=result?.choices?.[0];
-  if(!choice)throw new Error('OPENROUTER_REQUEST_FAILED: empty choices. No model/provider fallback was submitted.');
-  return choice.message;
+  if(!parts.length)return choice.message;
+  const finalMsg=choice.message??{};
+  const finalContent=typeof finalMsg.content==='string'?finalMsg.content:(finalMsg.content==null?'':JSON.stringify(finalMsg.content));
+  return {...finalMsg,content:parts.join('')+finalContent};
  }
   async runTask(task,{worker,callTool}){
    await this.preflight(worker);
