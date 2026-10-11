@@ -299,3 +299,87 @@ test('6. spend guard holds per request: worst case uses max_tokens and images, m
   assert.match(src, /HEAD_TO_HEAD_CAP_REACHED[\s\S]*?const resp = await fetcher/);
   assert.match(src, /states\[0\]\?\.artifacts\?\.find/);
 });
+
+// Shared synthetic text-review state + fake OpenRouter fetcher (no network, no codex).
+const textReviewFixture = () => {
+  const baseStudio = loadStudio();
+  const bgBrief = { id: 'backgroundBrief:childhood-room@1', key: 'backgroundBrief:childhood-room', kind: 'backgroundBrief', version: 1, digest: 'b'.repeat(64), content: { direction: 'room', sceneIds: ['s1'], knownDetails: [], proposedDetails: [], continuityNotes: '', references: [] }, valid: true, authoredBy: 'author-brief', approvedBy: { message: 'approved' } };
+  const bgPrompt = { id: 'backgroundPrompt:childhood-room@1', key: 'backgroundPrompt:childhood-room', kind: 'backgroundPrompt', version: 1, digest: 'p'.repeat(64), content: { prompt: '1980s childhood room', recipeSha256: 'r'.repeat(64), briefDigest: 'b'.repeat(64), changeSummary: 'initial' }, valid: true, authoredBy: 'author-prompt' };
+  const state = { id: 'proj-h2h-effort', step: 'backgroundPrompt', gate: 'review', locationId: 'childhood-room', sequence: 1, reviewMode: 'supervised', studio: baseStudio, artifacts: [bgBrief, bgPrompt], jobs: [], history: [], feedback: [], reviewDisagreements: 0 };
+  const bodies = [];
+  const fetcher = async (url, init) => {
+    const body = JSON.parse(init.body);
+    bodies.push(body);
+    const event = { taskId: taskFor(state).taskId, actor: 'reviewer', action: 'review', artifactId: bgPrompt.id, artifactDigest: bgPrompt.digest, review: { decision: 'approved', perception: 'direct-text', modelVersion: body.model, checks: ['brief-fit', 'style', 'spatial-action', 'continuity'].map(criterion => ({ criterion, status: 'pass', evidence: 'ok', location: 'text', quotes: ['1980s childhood room'] })) } };
+    return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ model: body.model, usage: { prompt_tokens: 120, completion_tokens: 60, completion_tokens_details: { reasoning_tokens: 40 }, cost: 0.0002 }, choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: JSON.stringify({ eventJson: JSON.stringify(event) }) } }] }) };
+  };
+  return { state, fetcher, bodies };
+};
+
+test('7. production OpenRouterHost still refuses xhigh/max; only the evaluation host raises effort, per model and only to levels it offers', { timeout: 10000 }, async () => {
+  const { OpenRouterHost } = await import('../runtime/openrouter-host.mjs');
+  const { evaluationHost, assertEvalEffort } = await import('../evaluation/crew-head-to-head.mjs');
+  for (const reasoningEffort of ['xhigh', 'max']) {
+    assert.throws(() => new OpenRouterHost({ cwd: '/tmp', model: 'meta/muse-spark-1.3-contributor', reasoningEffort, fetcher: async () => { throw new Error('no network'); } }), /OPENROUTER_REASONING_LIMIT/);
+  }
+  const muse = evaluationHost({ cwd: '/tmp', model: 'meta/muse-spark-1.3-contributor', fetcher: async () => { throw new Error('no network'); } }, 'xhigh');
+  assert.equal(muse.requestSettings().reasoning.effort, 'xhigh');
+  const ds = evaluationHost({ cwd: '/tmp', model: 'deepseek/deepseek-v4.1-flash', fetcher: async () => { throw new Error('no network'); } }, 'max');
+  assert.equal(ds.requestSettings().reasoning.effort, 'max');
+  // DeepSeek has no xhigh; unknown levels are refused.
+  assert.throws(() => assertEvalEffort('deepseek/deepseek-v4.1-flash', 'xhigh'), /HEAD_TO_HEAD_EFFORT_INVALID/);
+  assert.throws(() => assertEvalEffort('meta/muse-spark-1.3-contributor', 'ultra'), /HEAD_TO_HEAD_EFFORT_INVALID/);
+  // A fresh production host after an evaluation host is still medium, and real runs never import the evaluation host.
+  assert.equal(new OpenRouterHost({ cwd: '/tmp', model: 'meta/muse-spark-1.3-contributor' }).requestSettings().reasoning.effort, 'medium');
+  const runnerSrc = await readFile(new URL('../runner.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(runnerSrc, /crew-head-to-head|evaluationHost/);
+  const hostSrc = await readFile(new URL('../runtime/openrouter-host.mjs', import.meta.url), 'utf8');
+  assert.match(hostSrc, /never max\/xhigh/);
+});
+
+test('8. --effort reaches the request body, per-turn timing/tokens and repairs are recorded, and the $0.10 cap cannot be raised', { timeout: 10000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'h2h-effort-'));
+  try {
+    const secretsPath = await secrets(dir);
+    const { state, fetcher, bodies } = textReviewFixture();
+    const res = await runHeadToHead({
+      runDir: dir, secretsPath, outDir: join(dir, 'out'), confirmSpend: true, fetcher, stateList: [state],
+      models: ['meta/muse-spark-1.3-contributor', 'deepseek/deepseek-v4.1-flash'],
+      tasks: ['sage-prompt-review'],
+      efforts: { 'meta/muse-spark-1.3-contributor': 'xhigh', 'deepseek/deepseek-v4.1-flash': 'max' },
+      maxUsd: 5,
+    });
+    assert.equal(res.capUsd, 0.10);
+    assert.deepEqual(bodies.map(b => [b.model, b.reasoning?.effort]), [['meta/muse-spark-1.3-contributor', 'xhigh'], ['deepseek/deepseek-v4.1-flash', 'max']]);
+    for (const r of res.results) {
+      assert.equal(r.valid, true, r.gateError);
+      assert.equal(r.turns.length, 1);
+      assert.ok(Number.isFinite(r.turns[0].ms));
+      assert.equal(r.reasoningTokens, 40);
+      assert.equal(r.validationRetries, 0);
+      assert.equal(r.invalidToolCalls, 0);
+    }
+    assert.deepEqual(res.results.map(r => r.effort), ['xhigh', 'max']);
+    const md = await readFile(join(dir, 'out', 'report.md'), 'utf8');
+    assert.match(md, /\| xhigh \|/);
+    // An effort the model does not offer stops before any request.
+    bodies.length = 0;
+    await assert.rejects(runHeadToHead({ runDir: dir, secretsPath, confirmSpend: true, fetcher, stateList: [state], models: ['deepseek/deepseek-v4.1-flash'], tasks: ['sage-prompt-review'], efforts: { 'deepseek/deepseek-v4.1-flash': 'xhigh' } }), /HEAD_TO_HEAD_EFFORT_INVALID/);
+    assert.equal(bodies.length, 0);
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
+test('9. adult-sheet task targets r4 adult Shaz sheets v1, stays out of the default run, and --version selects one version', { timeout: 10000 }, async () => {
+  const { TASK_DEFS, selectVersions } = await import('../evaluation/crew-head-to-head.mjs');
+  const def = TASK_DEFS['vera-adult-sheet-review'];
+  assert.deepEqual({ role: def.role, key: def.key, gate: def.gate, versions: def.versions }, { role: 'visual-reviewer', key: 'candidates:shaz-adult', gate: 'review', versions: [1] });
+  assert.deepEqual(selectVersions(def, 1), [1]);
+  assert.deepEqual(selectVersions(TASK_DEFS['vera-sheet-review'], 2), [2]);
+  assert.deepEqual(selectVersions(TASK_DEFS['vera-sheet-review'], null), [1, 2]);
+  assert.deepEqual(selectVersions(TASK_DEFS['vera-sheet-review'], 3), []);
+  // Default (no --tasks) never picks it up, so default estimates are unchanged.
+  const src = await readFile(new URL('../evaluation/crew-head-to-head.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(src.match(/const RUN_ORDER = \[[^\]]*\]/)[0], /vera-adult-sheet-review/);
+});
