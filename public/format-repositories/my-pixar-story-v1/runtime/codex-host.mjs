@@ -6,6 +6,7 @@ import {join,extname} from 'node:path';
 import {z} from 'zod';
 import {Content,Event,digest} from './contracts.mjs';
 import {applyEvent} from './workflow.mjs';
+import {bibleWaiting} from './bible.mjs';
 import {crewRoles,runCrewTask,taskAssets,buildWorkerPacket} from './crew.mjs';
 import {AudioEditPlan} from './audio-edit.mjs';
 
@@ -331,6 +332,8 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
  while(completed<maxTasks){
   const status=await workflow.status(thread),task=status.pending;
   if(status.project.debug?.enabled&&status.project.debug.paused)return {completed,stop:'debug-pause',status};
+  // A run that requires a signed production bible waits here (no worker call, no spend).
+  if(bibleWaiting(status.project))return {completed,stop:'bible-unsigned',status};
   // Provider execution stays in the authorized runner; this loop never generates media.
   if(!['author','owner-review','review','produce'].includes(task.gate)||task.gate==='produce'&&task.step==='film'||['audioReviewerQualification','reviewerQualification'].includes(task.step))return {completed,stop:'graph-gate',status};
   onProgress({step:task.step,gate:task.gate});

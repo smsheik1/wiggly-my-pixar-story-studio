@@ -1,6 +1,7 @@
 import {loadStudio,studioFor,limitsFor,recipeFor,workerInstructions,communicationFor,legacyGeneration} from './instructions.mjs';
 import {legacyInstruction} from './legacy-instructions.mjs';
 import {assertDebugReady} from './debug.mjs';
+import {applyBibleEvent,assertBibleReady,biblePacket,bibleStamp,ProjectBible} from './bible.mjs';
 import {spendSummary,requireBudget,planTotalCost} from './budget.mjs';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -15,7 +16,7 @@ import { shotFor, shotReferences, referenceBindings, planningReferences, validat
 import { requestDescriptor,planningAccountGuide,generationEstimate,narrationGenerationTexts } from './providers.mjs';
 import {scriptQuoteChecks,transcriptDiff} from './evaluators.mjs';
 import {AudioEditReceipt,AUDIO_EDIT_PROFILE,validateAudioEdit,validateEditingInvestigation} from './audio-edit.mjs';
-import { VERSION, Inputs, Project, Content, Review, Event, Plans, IntakeConfirmation, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
+import { VERSION, Inputs, Project, Content, Review, Event, BibleEvent, Plans, IntakeConfirmation, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
 
 import { keyFor, current, locked, audioLocked, assertAllowed, backgroundSteps, imageSteps, authorSteps, supervised, reviewPassed, refinedWorkflow, miniProduction, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact, sheetWorkflow } from './gates.mjs';
 export { keyFor, current, locked, audioLocked, assertAllowed, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact } from './gates.mjs';
@@ -52,6 +53,7 @@ export function initialProject(id, inputs, options = {}) {
   const base={ formatVersion: VERSION, schemaVersion: 2, studio, workflowRevision, productionProfile:options.productionProfile??studio.config.generation.video.profile, id, reviewMode:options.reviewMode ?? 'supervised', budget:{maxCostUsd:studio.config.limits.initialSpendCeilingUsd,reservations:[]}, inputs: Inputs.parse(inputs), step: workflowRevision>=3?'answers':'script', gate: 'author', characterId: null,
     sequence: 0, artifacts: [], jobs: [], history: [], allowances: [], feedback: [], reviewDisagreements: 0 };
   if(options.gatePolicy!==undefined)base.gatePolicy=options.gatePolicy;
+  if(['required','advisory'].includes(options.biblePolicy))base.bible={policy:options.biblePolicy,versions:[]};
   return Project.parse(base);
 }
 function invalidate(p, id) {
@@ -246,6 +248,7 @@ function addArtifact(p, content, author) {
   const parsed = validateArtifactContent(p, content, author, previous);
   const a = { id: `${key}@${version}`, key, kind: p.step, version, digest: digest(parsed), content: parsed,
     dependencies: dependencies(p), valid: true, authoredBy: author };
+  const bibleRef=bibleStamp(p);if(bibleRef)a.bible=bibleRef; // which signed bible this work was made against
   p.artifacts.push(a);
   if (p.step === 'voiceSample' || p.step === 'clone') next(p);
   else p.gate = isPrompt(p) ? 'owner-review' : 'review';
@@ -367,6 +370,7 @@ export function taskFor(p) {
     proposedCast:current(p,'script')?.content.proposedCast??null, intakeConfirmation:current(p,'roster')?.intakeConfirmation??current(p,'script')?.intakeConfirmation??current(p,'answers')?.intakeConfirmation??null, artifact: a ?? null, prescreen: current(p)?.prescreen ?? null, ...previousVersionFor(p, a), job: job ?? null, inputs: effectiveInputs(p),
     dependencies: dependencies(p).map(id => p.artifacts.find(a => a.id === id)),
     creativeDirections:p.creativeDirections??[],
+    ...((bible=>bible?{productionBible:bible}:{})(biblePacket(p,roleFor(p),p.gate,a))),
     feedback: p.feedback.filter(f => f.key === keyFor(p)), criteria: p.step==='film'&&p.gate==='review'?filmCriteria(p):criteriaFor(p),
     instruction: p.gate==='produce'&&p.step!=='film' ? `Prepare the assigned generation plan from the canonical task inputs. For audition, generationTexts contains the FIRST locked story beat; no separate audition text or approval is needed. For narration it contains all four locked beats unless generationTexts.regeneration is present: then plan ONLY its human-selected beat and spelling/punctuation pronunciation clarification. The three other files and the locked script/clone/audition are retained. Never widen a scoped repair into a batch. Use generationEstimate when supplied: it is a sourced conservative reservation, not verified account billing. Unknown credit balance, untested generation access, or a zero project budget do not block PLANNING. Return a plan; the runtime owns authorization, budget enforcement and submission. Do not demand a dashboard screenshot or admin key merely to plan. If a rate truly is unavailable and no generationEstimate is supplied, return planning-blocked using the canonical planningGuide. If essential inputs are missing, return missing-input with specific evidence and baby steps. Actual provider errors stop submission through the runtime, with automatic Muse fallback only for agy quota failures carrying a bound fallback; no other fallback or automatic retry. Never invent prices, provider receipts, approvals or a new recording requirement for an existing clone. Follow the attached skill for the remaining procedure.` : loaded && ['author','owner-review','review','produce'].includes(p.gate) ? `Follow the attached ${loaded.skill.path} for this ${p.step}/${p.gate} task and return only the assigned Event.` : legacyInstruction(p),
   };
@@ -390,7 +394,8 @@ const filmCriteria=p=>reviewPassed(current(p)?.visualReview)?filmAudioCriteria:f
 const requiredActor = (e, actor) => { if (e.actor !== actor) throw new Error(`${e.action} requires ${actor} authority.`); };
 export function applyEvent(project, raw) {
   const p = structuredClone(Project.parse(project));
-  const e = Event.parse(raw);
+  if(p.bible)ProjectBible.parse(p.bible);
+  const e = ['bible-draft','bible-sign'].includes(raw?.action) ? BibleEvent.parse(raw) : Event.parse(raw);
   let autoLockEntry = null;
   if (e.taskId !== taskFor(p).taskId) throw new Error('STALE_TASK: read current status before responding.');
   if(p.lifecycle==='abandoned'){
@@ -422,6 +427,8 @@ export function applyEvent(project, raw) {
     return Project.parse(p);
   }
   if(['artifact','owner-review','review','plan','planning-blocked','begin','rendered','qualified','audio-qualified'].includes(e.action)&&!(e.action==='artifact'&&e.actor==='human'&&p.step==='voiceSample'&&p.gate==='human'))assertDebugReady(p);
+  // Departments after the script/cast stage wait for a signed bible when the run requires one.
+  if(['artifact','owner-review','review','plan','planning-blocked'].includes(e.action)&&['agent','reviewer'].includes(e.actor))assertBibleReady(p);
   if(['reuse-voice','choose-voice','voice-verification-start','voice-verified'].includes(e.action)){
     if(!locked(p,'script')||!['voiceSample','clone'].includes(p.step)||!(p.step==='voiceSample'&&p.gate==='human'||p.step==='clone'&&['produce','escalate'].includes(p.gate))||p.jobs.length||current(p,'clone'))throw new Error('EXISTING_VOICE_LOCKED: select an existing voice only after script approval and before any provider jobs or clone binding.');
     if(e.action==='reuse-voice'){
@@ -598,6 +605,8 @@ export function applyEvent(project, raw) {
     const config={...p.studio.config,agents},documents=p.studio.documents;
     p.studio={config,documents,sha256:digest({config,documents})};
     p.history.push({sequence:p.sequence,action:e.action,actor:e.actor,message:`${e.message} | models changed: ${changed.join(', ')}${kept.length?` | locked reviewers kept: ${kept.join(', ')}`:''}`,at:new Date().toISOString()});
+  }else if(['bible-draft','bible-sign'].includes(e.action)){
+    applyBibleEvent(p,e);
   }else if(e.action==='prefer-image-provider'){
     requiredActor(e,'human');
     if(!e.message||!['meta-muse','agy'].includes(e.provider))throw new Error('prefer-image-provider needs --provider meta-muse|agy and --message "<text>".');
@@ -941,7 +950,7 @@ export function applyEvent(project, raw) {
     if (e.action === 'receipt') { if ([...imageSteps,'video','music','effect'].includes(p.step) && e.result?.prompt !== j.request.prompt) throw new Error('Receipt prompt differs from authorized request.'); if (['audition', 'narration'].includes(p.step) && e.result?.voiceId !== j.request.voice) throw new Error('Receipt voice differs from authorized request.'); if (!['submitting', 'submitted', 'uncertain'].includes(j.status)) throw new Error('No submitted job to collect.'); addArtifact(p, e.result, 'provider-runtime'); j.status = 'ready'; j.result = e.result;if(p.step==='narration')delete p.narrationRegeneration; }
     if (e.action === 'provider-error') { if (!e.message) throw new Error('Provider error needs diagnostics.'); j.status = 'uncertain'; p.gate = 'escalate'; }
   } else throw new Error('Unsupported action.');
-  if(p.debug?.enabled&&e.action!=='begin')p.debug.paused=true;
+  if(p.debug?.enabled&&!['begin','bible-draft','bible-sign'].includes(e.action))p.debug.paused=true;
   p.sequence++;
   if(['artifact','receipt','rendered'].includes(e.action)){const a=current(p,submittedKey);activity.artifactId=a.id;activity.artifactDigest=a.digest;}
   if(e.action==='plan')activity.jobId=p.jobs.at(-1).id;
