@@ -1,7 +1,7 @@
 {
   "version": 1,
   "sourceRun": "phase-d-rehearsal-20261008-r4",
-  "notes": "Golden cases mined from the r4 rehearsal (read-only copy of checkpoints.sqlite). Each case rebuilds the real task packet at that gate, swaps in the CURRENT kit's studio snapshot (skills, rubrics, models) and runs the assigned crew role on it. History references (#N) are indexes into the r4 project history. Assertions are machine-checked; soft assertions are reported but never fail a case. June (scene-reviewer) has no cases: r4 stopped before keyframes, so there is no ground truth for her yet.",
+  "notes": "Golden cases mined from the r4 rehearsal (read-only copy of checkpoints.sqlite). Each case rebuilds the real task packet at that gate, swaps in the CURRENT kit's studio snapshot (skills, rubrics, models) and runs the assigned crew role on it. History references (#N) are indexes into the r4 project history. Assertions are machine-checked; soft assertions are reported but never fail a case. June, scene reviewer, has no cases: r4 stopped before keyframes, so there is no ground truth for her yet.",
   "cases": [
     {
       "id": "vera-adult-sheets-wrist",
@@ -130,14 +130,15 @@
             "story-specific-set",
             "scene-fit"
           ],
-          "pattern": "generic|plain|unmarked|blank|calm|story|specific|lived",
-          "why": "The failure is style / not dressed from the story."
+          "pattern": "generic|plain|unmarked|blank|calm|story|specific|lived|undressed|catalog|empty",
+          "why": "The failure is the empty, generic, undressed room (style / not dressed from the story), not its palette."
         },
         {
-          "id": "not-claim-muted-palette",
+          "id": "not-palette-as-reason",
           "type": "mustNotClaim",
-          "pattern": "muted|restrained|ivory|oatmeal",
-          "why": "Rooms use a muted palette with one saturated accent; must not fail a room for being muted or restrained."
+          "soft": true,
+          "pattern": "(too|overly) (muted|restrained|neutral|desaturated|beige)|(muted|restrained|desaturated|neutral|ivory|oatmeal|beige) (palette|colou?rs?|tones?) (is|are|reads?|makes?|feels?)|palette (is|reads as|feels) (too )?(muted|dull|bland|neutral)",
+          "why": "A muted palette alone is never a failure; the defect is the generic, undressed room, not its colours."
         }
       ]
     },
@@ -170,14 +171,15 @@
         {
           "id": "names-generic-dressing",
           "type": "mustMention",
-          "pattern": "generic|plain|unmarked|blank|calm|story|specific|lived|scientist|sunglass",
+          "pattern": "generic|plain|unmarked|blank|calm|story|specific|lived|undressed|catalog|empty|scientist|sunglass",
           "why": "The defect is generic, undressed set design."
         },
         {
-          "id": "not-claim-muted-palette",
+          "id": "not-palette-as-reason",
           "type": "mustNotClaim",
-          "pattern": "muted|restrained|ivory|oatmeal",
-          "why": "Must not reject brief for muted or restrained palette."
+          "soft": true,
+          "pattern": "(too|overly) (muted|restrained|neutral|desaturated|beige)|(muted|restrained|desaturated|neutral|ivory|oatmeal|beige) (palette|colou?rs?|tones?) (is|are|reads?|makes?|feels?)|palette (is|reads as|feels) (too )?(muted|dull|bland|neutral)",
+          "why": "A muted palette alone is never a failure; the defect is the generic, undressed room, not its colours."
         }
       ]
     },
@@ -284,7 +286,7 @@
           "field": "beats",
           "pattern": "heart full|forever in my heart|time of our lives|memories to last a lifetime|always remember",
           "soft": true,
-          "why": "Rule [S-STOCK-PHRASES]: avoid greeting card clich\u00e9s and stock emotional phrases."
+          "why": "Rule [S-STOCK-PHRASES]: avoid greeting card clichés and stock emotional phrases."
         }
       ]
     },
@@ -423,10 +425,18 @@
           "why": "Shaz rejected this prompt (#211)."
         },
         {
-          "id": "not-claim-muted-palette",
+          "id": "names-generic-dressing",
+          "type": "mustMention",
+          "status": "fail",
+          "pattern": "generic|plain|unmarked|blank|calm|story|specific|lived|undressed|catalog|empty",
+          "why": "The defect is generic, undressed set design (calm blank walls, plain unmarked objects)."
+        },
+        {
+          "id": "not-palette-as-reason",
           "type": "mustNotClaim",
-          "pattern": "muted|restrained|ivory|oatmeal",
-          "why": "Must not reject prompt for muted/restrained palette."
+          "soft": true,
+          "pattern": "(too|overly) (muted|restrained|neutral|desaturated|beige)|(muted|restrained|desaturated|neutral|ivory|oatmeal|beige) (palette|colou?rs?|tones?) (is|are|reads?|makes?|feels?)|palette (is|reads as|feels) (too )?(muted|dull|bland|neutral)",
+          "why": "A muted palette alone is never a failure; the defect is the generic, undressed room, not its colours."
         }
       ]
     },

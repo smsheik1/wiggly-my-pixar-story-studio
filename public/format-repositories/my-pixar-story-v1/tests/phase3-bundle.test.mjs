@@ -213,7 +213,8 @@ test('Vera skill and visual rubric fail photoreal or 3D-hybrid style and keep th
   const kit = loadStudio();
   const vera = kit.documents['crew/vera/SKILL.md'].content, visual = kit.documents['evaluation/rubrics/visual.md'].content;
   for (const doc of [vera, visual]) {
-    assert.match(doc, /Pixar-like 3D/);
+    assert.match(doc, /feature-quality 3D animated film/);
+    assert.doesNotMatch(doc, /Pixar/);
     assert.match(doc, /photoreal\/3D hybrid/);
     assert.match(doc, /fails? `style`/i);
     assert.match(doc, /quick normal pass/);

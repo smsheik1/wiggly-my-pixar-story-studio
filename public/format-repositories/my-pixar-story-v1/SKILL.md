@@ -262,7 +262,7 @@ For a saved pre-provider voice run, explicit human `refresh-planning-instruction
 
 ## Local narration repair
 
-When connected editing tools are available, a rejected unapproved narration loops to Eli (Audio Editor), then Ava (Audio Reviewer), then the human. Eli's film-editor role has inspectAudio, renderAudioEdit, listenAudio and transcribe for this task. The broker restricts editing to current narration hashes and requires full source listening and inspection first. Reviewers cannot render. No shell or arbitrary FFmpeg filter is granted.
+When connected editing tools are available, a rejected unapproved narration loops to Eli, film editor, then Ava, audio reviewer, then the human. Eli's film-editor role has inspectAudio, renderAudioEdit, listenAudio and transcribe for this task. The broker restricts editing to current narration hashes and requires full source listening and inspection first. Reviewers cannot render. No shell or arbitrary FFmpeg filter is granted.
 
 inspectAudio returns measured candidate pause intervals. renderAudioEdit accepts {kind: "pause-shortening" | "pronunciation-repair", keepRanges:[{startSeconds,endSeconds}], reason} with fractional times. It saves the plan, original source, measured edited source, 15-second output window and hashes in audio-edits/<taskId>/<editDigest>. The runtime compiles the cuts into FFmpeg; tiny fades smooth joins without changing speed. Pause-only cuts must fall within detected low-energy intervals. This condition alone does not prove a natural edit. Pronunciation repair needs an evidenced delivery/transcript failure; ASR word timestamps alone cannot reliably isolate an inserted syllable.
 
