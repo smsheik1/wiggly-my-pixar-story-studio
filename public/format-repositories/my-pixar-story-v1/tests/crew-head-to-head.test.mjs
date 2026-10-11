@@ -383,3 +383,38 @@ test('9. adult-sheet task targets r4 adult Shaz sheets v1, stays out of the defa
   const src = await readFile(new URL('../evaluation/crew-head-to-head.mjs', import.meta.url), 'utf8');
   assert.doesNotMatch(src.match(/const RUN_ORDER = \[[^\]]*\]/)[0], /vera-adult-sheet-review/);
 });
+
+test('10. per-turn ms runs until the full response body is read, not until the headers arrive (delayed body, no network)', { timeout: 10000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'h2h-timing-'));
+  const BODY_DELAY_MS = 400;
+  try {
+    const secretsPath = await secrets(dir);
+    const { state, fetcher: inner } = textReviewFixture();
+    // A real Response whose headers resolve at once but whose JSON body only finishes streaming after BODY_DELAY_MS.
+    const fetcher = async (url, init) => {
+      const text = JSON.stringify(await (await inner(url, init)).json());
+      const enc = new TextEncoder();
+      const body = new ReadableStream({
+        start(controller) {
+          controller.enqueue(enc.encode(text.slice(0, 10)));
+          setTimeout(() => { controller.enqueue(enc.encode(text.slice(10))); controller.close(); }, BODY_DELAY_MS);
+        },
+      });
+      return new Response(body, { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    const res = await runHeadToHead({
+      runDir: dir, secretsPath, outDir: join(dir, 'out'), confirmSpend: true, fetcher, stateList: [state],
+      models: ['meta/muse-spark-1.3-contributor'], tasks: ['sage-prompt-review'],
+    });
+    const [r] = res.results;
+    assert.equal(r.valid, true, r.gateError);
+    assert.equal(r.turns.length, 1);
+    const [turn] = r.turns;
+    assert.ok(turn.ms >= BODY_DELAY_MS - 20, `ms ${turn.ms} should include the ${BODY_DELAY_MS}ms body`);
+    assert.ok(turn.ttfbMs < BODY_DELAY_MS - 20, `ttfbMs ${turn.ttfbMs} should stop at the headers`);
+    assert.ok(turn.ms >= turn.ttfbMs);
+    assert.equal(r.reasoningTokens, 40);
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
