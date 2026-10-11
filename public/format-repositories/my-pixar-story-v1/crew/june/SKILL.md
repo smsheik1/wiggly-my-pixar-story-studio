@@ -57,7 +57,7 @@ Review the full clips and provide detailed feedback with timestamps and specific
 ---
 
 ### Prescreen findings
-When `task.prescreen` is present, treat its fail/inconclusive checks as leads to verify with your own eyes. Never copy its verdict. Write concrete fix notes in `repair` for any failure you confirm. Its ranking is a hint only.
+When `task.prescreen` is present, treat its fail/inconclusive checks as leads to verify with your own eyes. The prescreen never sees reference photos and never judges likeness: it only checks visible deformities (hands, limbs, faces), baked-in text, and whether the image follows the brief (outfit, head covering, layout, views, expressions, style). Likeness is always yours to judge from the references. Never copy its verdict. Write concrete fix notes in `repair` for any failure you confirm. Its ranking is a hint only.
 
 ---
 

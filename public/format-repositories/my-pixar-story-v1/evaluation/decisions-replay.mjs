@@ -3,12 +3,12 @@ import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { openRunCopy, veraJudgments } from './r4-replay.mjs';
-import { runPrescreen, estimatePrescreenCost } from '../runtime/decisions-prescreen.mjs';
+import { runPrescreen, estimatePrescreenCost, prescreenBrief } from '../runtime/decisions-prescreen.mjs';
 import { criteriaFor } from '../runtime/workflow.mjs';
 
 export function computePrescreenMetrics(evaluations) {
   // evaluations: array of { judgment, prescreen, latencyMs }
-  let tp = 0, fp = 0, tn = 0, fn = 0, uncertain = 0;
+  let tp = 0, fp = 0, tn = 0, fn = 0, uncertain = 0, refused = 0;
   const perCriterion = {}; // { crit: { match: 0, total: 0 } }
   let rankMatchVera = 0;
   let rankMatchShaz = 0;
@@ -19,6 +19,7 @@ export function computePrescreenMetrics(evaluations) {
   for (const item of evaluations) {
     const { judgment, prescreen, latencyMs } = item;
     latencies.push(latencyMs);
+    if (prescreen.error) refused++;
 
     const veraDecision = judgment.decision; // 'approved' | 'provisional' | 'rejected'
     const veraPass = veraDecision === 'approved' || veraDecision === 'provisional';
@@ -71,6 +72,8 @@ export function computePrescreenMetrics(evaluations) {
 
   return {
     total: evaluations.length,
+    answered: evaluations.length - refused,
+    refused,
     confusion: { tp, fp, tn, fn, uncertain },
     falsePassCount: fp,
     falsePasses,
@@ -88,29 +91,21 @@ export function computePrescreenMetrics(evaluations) {
 
 export const replayDecisions = runDecisionsReplay;
 
-// Replay inputs from the real r4 project: sheets get the character's reference photos
-// and cast entry; rooms get the background brief text (and any brief references).
+// Replay inputs from the real r4 project: the criteria for the step and the brief (the
+// artifact's own generation prompt, likeness-scrubbed). Never reference photos.
 export function replayInputs(project, j) {
-  const [kind, id] = String(j.key ?? '').split(':');
+  const [kind] = String(j.key ?? '').split(':');
   const criteria = criteriaFor(project, kind === 'sheet' ? 'sheet' : j.step);
-  if (kind === 'candidates' || kind === 'sheet') {
-    const roster = project.artifacts.findLast(a => a.key === 'roster' && a.valid);
-    const c = roster?.content?.characters?.find(ch => ch.id === id);
-    return { criteria, references: c?.references ?? [], contextText: c ? `Character: ${c.name} (${c.ageVariant}). ${c.notes ?? ''}`.trim() : '' };
-  }
-  if (kind === 'backgroundCandidates' || kind === 'backgroundAngle') {
-    const brief = project.artifacts.findLast(a => a.key === `backgroundBrief:${id}` && a.valid) ?? project.artifacts.findLast(a => a.key === `backgroundBrief:${id}`);
-    const b = brief?.content ?? {};
-    const known = Array.isArray(b.knownDetails) ? b.knownDetails.map(d => typeof d === 'string' ? d : JSON.stringify(d)).join('; ') : '';
-    return { criteria, references: b.references ?? [], contextText: [b.direction ?? '', known ? `Known details: ${known}` : ''].filter(Boolean).join('\n').slice(0, 6000) };
-  }
-  return { criteria, references: [], contextText: j.artifact?.content?.prompt ?? '' };
+  return { criteria, contextText: prescreenBrief(project, { key: j.key, ...(j.artifact ?? {}) }) };
 }
+
+// Luna only by default (Shaz dropped clef-flash, Oct 11 2026); clef stays selectable with --models.
+export const DEFAULT_REPLAY_MODELS = ['openai/gpt-6-luna-decisions'];
 
 export async function runDecisionsReplay({
   runDir,
   secretsPath,
-  models = ['openai/gpt-6-luna-decisions', 'cloudflare/clef-flash'],
+  models = DEFAULT_REPLAY_MODELS,
   configOverrides = {},
   limit = null,
   maxUsd = 0.05,
@@ -154,7 +149,6 @@ export async function runDecisionsReplay({
       const est = estimatePrescreenCost({
         model,
         files: j.files,
-        references: j.inputs?.references ?? j.artifact.content?.references ?? [],
         contextText: j.inputs?.contextText ?? j.artifact.content?.prompt ?? '',
       });
       modelEst += est;
@@ -225,7 +219,6 @@ export async function runDecisionsReplay({
         fetcher,
         step: item.judgment.step,
         files: item.judgment.files,
-        references: item.judgment.inputs?.references ?? item.judgment.artifact.content?.references ?? [],
         contextText: item.judgment.inputs?.contextText ?? item.judgment.artifact.content?.prompt ?? '',
         criteria: item.criteria,
       });
@@ -276,6 +269,7 @@ export async function runDecisionsReplay({
   md += `| Metric | ${models.join(' | ')} |\n`;
   md += `|---|${models.map(() => '---').join('|')}|\n`;
   md += `| Total Evaluated | ${models.map(m => metricsByModel[m]?.total ?? 0).join(' | ')} |\n`;
+  md += `| Answered / Refused or failed | ${models.map(m => `${metricsByModel[m]?.answered ?? 0} / ${metricsByModel[m]?.refused ?? 0}`).join(' | ')} |\n`;
   md += `| False Passes (Safety Critical) | ${models.map(m => metricsByModel[m]?.falsePassCount ?? 0).join(' | ')} |\n`;
   md += `| Agreement (TP + TN) | ${models.map(m => `${(metricsByModel[m]?.confusion.tp ?? 0) + (metricsByModel[m]?.confusion.tn ?? 0)}`).join(' | ')} |\n`;
   md += `| Top-1 Agreement vs Vera | ${models.map(m => `${((metricsByModel[m]?.rankingAgreement.rateVera ?? 0) * 100).toFixed(1)}%`).join(' | ')} |\n`;
