@@ -444,3 +444,24 @@ test('tool text containing a data: URL is sanitized before sending',async()=>{
   assert.match(tool.content,/\[binary data omitted: image\/png\]/);
  }finally{await rm(dir,{recursive:true});}
 });
+
+test('a region close-up of an already-attached image is still delivered as a new image',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-view-region-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const bodies=[];let n=0;
+  const sha='e'.repeat(64),region={x:0.5,y:0.5,width:0.25,height:0.25};
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async(url,init)=>{
+   const body=JSON.parse(init.body);bodies.push(body);n++;
+   if(n===1)return {ok:true,status:200,headers:{get:()=>null},json:async()=>({model:DEFAULT_OPENROUTER_MODEL,choices:[{finish_reason:'tool_calls',message:{role:'assistant',content:'',tool_calls:[{id:'r1',type:'function',function:{name:'wiggly_tool',arguments:JSON.stringify({name:'viewImage',sha256:sha,region})}}]}}]})};
+   return okResponse(DEFAULT_OPENROUTER_MODEL,scriptEvent);
+  }});
+  const worker=workerFor(await host.profile());
+  const task={...scriptTask,artifact:{content:{files:[{path:'/tmp/ref.png',sha256:sha,bytes:100,width:100,height:100}]}}};
+  await host.runTask(task,{worker,callTool:async(name,params)=>({perception:'direct-image',imageUrl:params.region?'data:image/png;base64,CROP':'data:image/png;base64,FULL'})});
+  const images=msgs=>msgs.flatMap(m=>Array.isArray(m.content)?m.content:[]).filter(p=>p.type==='image_url').map(p=>p.image_url.url);
+  assert.deepEqual(images(bodies[1].messages),['data:image/png;base64,FULL','data:image/png;base64,CROP']);
+  const tool=bodies[1].messages.find(m=>m.role==='tool').content;
+  assert.match(tool,/"attached":true/);assert.ok(!/alreadyAttached/.test(tool));
+ }finally{await rm(dir,{recursive:true});}
+});

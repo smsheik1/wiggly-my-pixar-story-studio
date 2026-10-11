@@ -15,6 +15,7 @@ export const OPENROUTER_MAX_TOKENS=16000;
 export const OPENROUTER_MAX_TOOL_ROUNDS=40;
 
 // Safety net: never send data: base64 bytes as tool text.
+const viewKey=(sha256,region)=>`${sha256}:${region?JSON.stringify([region.x,region.y,region.width,region.height]):'full'}`;
 const sanitizeDataUrls=(text)=>String(text).replace(/data:([^;,\s]+)[^,]*?;base64,[A-Za-z0-9+/=]+/g,'[binary data omitted: $1]');
 
 async function readJson(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;}}
@@ -93,7 +94,7 @@ export class OpenRouterHost {
    await this.preflight(worker);
    const packet=buildWorkerPacket(task,worker);
    const media=[],attached=new Set();
-   if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){const viewed=await callTool('viewImage',{sha256:file.sha256});media.push({type:'text',text:`Reference image sha256: ${file.sha256}`},{type:'image_url',image_url:{url:viewed.imageUrl}});attached.add(file.sha256);}
+   if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){const viewed=await callTool('viewImage',{sha256:file.sha256});media.push({type:'text',text:`Reference image sha256: ${file.sha256}`},{type:'image_url',image_url:{url:viewed.imageUrl}});attached.add(viewKey(file.sha256));}
   const tools=this.toolDefinition();
   const content=[{type:'text',text:packet},...media];
   const messages=[{role:'system',content:developerInstructions(worker)},{role:'user',content}];
@@ -120,12 +121,13 @@ export class OpenRouterHost {
        const value=await callTool(parsed.name,{sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})});
        endTool('completed');
        if(value&&typeof value==='object'&&typeof value.imageUrl==='string'){
-        const already=attached.has(parsed.sha256);
+        // A region close-up is a different image of the same hash: key on sha256 + region.
+        const key=viewKey(parsed.sha256,parsed.region),already=attached.has(key);
         const compact=already
          ?{perception:value.perception??'direct-image',sha256:parsed.sha256,alreadyAttached:true,note:`image sha256 ${parsed.sha256} already attached above; use the attached image`}
          :{perception:value.perception??'direct-image',sha256:parsed.sha256,attached:true,note:`image attached as image_url below for sha256 ${parsed.sha256}`};
         messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(compact))});
-        if(!already){attached.add(parsed.sha256);pending.push({sha256:parsed.sha256,url:value.imageUrl});}
+        if(!already){attached.add(key);pending.push({sha256:parsed.sha256,region:parsed.region??null,url:value.imageUrl});}
         continue;
        }
        messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value))});
@@ -133,7 +135,7 @@ export class OpenRouterHost {
      }
      if(pending.length){
       const parts=[];
-      for(const p of pending)parts.push({type:'text',text:`viewImage result for sha256 ${p.sha256}`},{type:'image_url',image_url:{url:p.url}});
+      for(const p of pending)parts.push({type:'text',text:`viewImage result for sha256 ${p.sha256}${p.region?` region ${JSON.stringify(p.region)}`:''}`},{type:'image_url',image_url:{url:p.url}});
       messages.push({role:'user',content:parts});
      }
    }
