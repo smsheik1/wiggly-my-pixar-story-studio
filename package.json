@@ -8,6 +8,8 @@
     "test": "npm run test:studio && npm run check && npm run test:kit",
     "test:studio": "npm --prefix scripts/studio-spike test",
     "check": "npm --prefix scripts/studio-spike run check",
-    "test:kit": "npm --prefix public/format-repositories/my-pixar-story-v1 test"
+    "test:kit": "npm --prefix public/format-repositories/my-pixar-story-v1 test",
+    "test:kit:fast": "npm --prefix public/format-repositories/my-pixar-story-v1 run test:fast",
+    "test:kit:slow": "npm --prefix public/format-repositories/my-pixar-story-v1 run test:slow"
   }
 }

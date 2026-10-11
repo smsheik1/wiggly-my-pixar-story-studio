@@ -9,6 +9,10 @@
   "scripts": {
     "check": "node runner.mjs check",
     "test": "node --test --test-concurrency=2 tests/*.test.mjs",
+    "test:fast": "node --test --test-concurrency=2 $(node tests/list-tests.mjs fast)",
+    "test:slow": "node --test --test-concurrency=2 $(node tests/list-tests.mjs slow)",
+    "test:partition": "node tests/check-partition.mjs",
+    "measure-timings": "node tests/measure-timings.mjs",
     "smoke": "node kit-smoke.mjs",
     "pack:kit": "node pack.mjs",
     "eval": "node runner.mjs eval",
