@@ -12,7 +12,7 @@
   "filmReady": false,
   "legacyRunMigration": false,
   "defaultReviewPolicy": "supervised",
-  "supportedHost": "macOS local Codex",
+  "supportedHost": "macOS local; crew on OpenRouter",
   "defaultVideoProvider": "Replicate Seedance 2.0 Mini",
   "defaultVideoResolution": "480p",
   "nativeHdDetail": false

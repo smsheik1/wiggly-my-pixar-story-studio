@@ -11,6 +11,7 @@
 import { z } from 'zod';
 import { text, digest } from './contracts.mjs';
 import { current, locked, sheetKeyFor } from './gates.mjs';
+import { studioFor } from './instructions.mjs';
 
 export const BIBLE_SCHEMA = 'wiggly-production-bible/v1';
 export const UNRESOLVED = 'UNRESOLVED';
@@ -140,11 +141,38 @@ export function biblePacket(p, role, gate, artifact) {
 
 // A draft compiled from the project's locked material. Creative summaries that cannot be
 // derived mechanically are marked UNRESOLVED; signing refuses until they are written.
-export const DEFAULT_STYLE = {
+export const LEGACY_DEFAULT_STYLE = {
   look: 'Pixar-style 3D animated feature film: appealing sculpted forms, expressive faces, warm cinematic lighting; never photoreal.',
   sets: 'Real Pixar feature-film sets: lived-in and story-dressed so each place is obviously this character\'s world. Never empty, generic, muted rooms.',
   rules: ['No text, letters, numbers, logos or signage anywhere in images.', 'Characters are composited later: background plates contain zero people.', 'Every character keeps the exact locked sheet design, wardrobe and props in every shot.'],
 };
+// Pipeline invariants, not craft: they hold for every craft-era bible regardless of guide wording.
+export const PIPELINE_STYLE_RULES = ['No text, letters, numbers, logos or signage anywhere in character sheets and keyframes.', 'Characters are composited later: background plates contain zero people.', 'Every character keeps the exact locked sheet design, wardrobe and props in every shot.'];
+const RULE_LINE = /^-\s*\[([A-Z0-9_-]+)\](?:\s*\([^)]*\))?\s*(.*)$/;
+const ruleLines = content => content.split('\n').map(l => l.trim().match(RULE_LINE)).filter(Boolean).map(m => ({ id: m[1], text: m[2].trim() }));
+
+// Craft-era snapshots read the style from the pinned craft sections; snapshots without
+// craft keep LEGACY_DEFAULT_STYLE. Chosen by snapshot shape, never as a fallback: a craft
+// snapshot missing H-STYLE or L-SETS-DEFAULT is an error.
+export function defaultStyle(studio) {
+  if (!studio?.config?.craft) return LEGACY_DEFAULT_STYLE;
+  const craftPath = studio.config.craft.path;
+  const doc = id => {
+    const d = studio.documents[`${craftPath}#${id}`];
+    if (!d) throw new Error(`BIBLE_STYLE_MISSING: craft section ${id} is not pinned in this studio snapshot.`);
+    return ruleLines(d.content);
+  };
+  const house = doc('house-style'), locations = doc('locations');
+  const look = house.find(r => r.id === 'H-STYLE')?.text;
+  const sets = locations.find(r => r.id === 'L-SETS-DEFAULT')?.text;
+  if (!look) throw new Error('BIBLE_STYLE_MISSING: [H-STYLE] not found in craft section house-style.');
+  if (!sets) throw new Error('BIBLE_STYLE_MISSING: [L-SETS-DEFAULT] not found in craft section locations.');
+  const minText = locations.find(r => r.id === 'L-MIN-TEXT')?.text;
+  if (!minText) throw new Error('BIBLE_STYLE_MISSING: [L-MIN-TEXT] not found in craft section locations.');
+  // Location plates follow the guide's minimal-text rule; sheets and keyframes never carry text.
+  return { look, sets, rules: [...house.filter(r => r.id !== 'H-STYLE').map(r => r.text), ...PIPELINE_STYLE_RULES, `Location plates: ${minText}`] };
+}
+
 export function compileBible(p) {
   const script = current(p, 'script'), roster = current(p, 'roster');
   const plan = current(p, 'shotIntentions') ?? current(p, 'backgrounds');
@@ -163,7 +191,7 @@ export function compileBible(p) {
     script: { source: script ? { artifactId: script.id, digest: script.digest } : null, lockedPointer: script ? `${script.id} (locked script in this run)` : UNRESOLVED,
       beats: (script?.content.beats ?? [{ beat: 1, narration: UNRESOLVED }]).map(b => ({ beat: b.beat, narration: b.narration, ...(b.emotionalPurpose ? { purpose: b.emotionalPurpose } : {}) })), notes: [] },
     cast: cast.length ? cast : [{ id: UNRESOLVED, name: UNRESOLVED, ageVariant: UNRESOLVED, minor: false, storyPurpose: UNRESOLVED, sheet: null, lockedDescription: UNRESOLVED, continuity: [UNRESOLVED], referencePhoto: { status: 'missing', note: UNRESOLVED } }],
-    style: DEFAULT_STYLE,
+    style: defaultStyle(studioFor(p)),
     scenes: scenes.length ? scenes : [{ id: UNRESOLVED, beat: 1, location: UNRESOLVED, characterIds: [], timeOfDay: UNRESOLVED, mood: UNRESOLVED, keyProps: [], setDressing: [], notes: [] }],
     openQuestions: [],
   };

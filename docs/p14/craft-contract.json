@@ -1,0 +1,790 @@
+{
+ "version": 1,
+ "frozenAt": "2026-10-11",
+ "guide": "public/format-repositories/my-pixar-story-v1/craft-guide.md",
+ "format": {
+  "section": "## [section-id] Title",
+  "rule": "- [RULE-ID] (check: tag[, tag]) text",
+  "checkTags": [
+   "vera",
+   "sage",
+   "june",
+   "ava",
+   "beau",
+   "none"
+  ],
+  "reviewerForTag": {
+   "vera": "visual-reviewer",
+   "sage": "text-reviewer",
+   "june": "scene-reviewer",
+   "ava": "audio-reviewer",
+   "beau": "background-product-owner"
+  },
+  "ruleLevelMappingEntry": "<section-id>#<RULE-ID> pins only that rule line (used for shot-planner)"
+ },
+ "sections": [
+  {
+   "id": "house-style",
+   "title": "House style",
+   "phase": "now",
+   "rules": [
+    {
+     "id": "H-STYLE",
+     "check": [
+      "sage",
+      "vera",
+      "june"
+     ]
+    },
+    {
+     "id": "H-OVERSHOOT",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "H-NO-BRANDS",
+     "check": [
+      "sage",
+      "vera",
+      "june"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "script-craft",
+   "title": "Script craft",
+   "phase": "now",
+   "rules": [
+    {
+     "id": "S-NO-INVENTED-FACTS",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "S-DIRECT",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "S-ORDINARY-WORLD",
+     "check": [
+      "none"
+     ]
+    },
+    {
+     "id": "S-THREES",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "S-PLANT-PAYOFF",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "S-BUSINESS",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "S-REACTION",
+     "check": [
+      "none"
+     ]
+    },
+    {
+     "id": "S-STOCK-PHRASES",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "S-LAST-IMAGE",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "S-CLEAR-SUBJECT",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "S-AGES-FORWARD",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "S-QUOTES-VERBATIM",
+     "check": [
+      "sage"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "character-design",
+   "title": "Character design",
+   "phase": "now",
+   "rules": [
+    {
+     "id": "C-FIXED-SWAP",
+     "check": [
+      "none"
+     ]
+    },
+    {
+     "id": "C-SHAPE",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "C-EXAGGERATION",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "C-HEADS-TALL",
+     "check": [
+      "vera"
+     ]
+    },
+    {
+     "id": "C-CHILD-RIDER",
+     "check": [
+      "sage",
+      "vera"
+     ]
+    },
+    {
+     "id": "C-SIGNATURE",
+     "check": [
+      "sage",
+      "vera"
+     ]
+    },
+    {
+     "id": "C-WEAR",
+     "check": [
+      "none"
+     ]
+    },
+    {
+     "id": "C-HANDS",
+     "check": [
+      "vera"
+     ]
+    },
+    {
+     "id": "C-FACIAL-HAIR",
+     "check": [
+      "vera"
+     ]
+    },
+    {
+     "id": "C-CAST-CONTRAST",
+     "check": [
+      "none"
+     ]
+    },
+    {
+     "id": "C-TEMPLATE",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "C-EYEBROWS",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "C-SKIN-ZONING",
+     "check": [
+      "sage",
+      "vera"
+     ]
+    },
+    {
+     "id": "C-HAIR",
+     "check": [
+      "sage",
+      "vera"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "prompt-rules",
+   "title": "Prompt rules",
+   "phase": "now",
+   "rules": [
+    {
+     "id": "P-EMPTY-HANDS",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "P-NO-SKIN-MARKS",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "P-CHILD-ANATOMY",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "P-FULL-PROMPT",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "P-SHORT",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "P-NO-AVOID-LIST",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "P-NO-ASPECT-TEXT",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "P-REF-RENDERS",
+     "check": [
+      "none"
+     ]
+    },
+    {
+     "id": "P-GREY-NO-LIGHTING",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "P-MISREADS",
+     "check": [
+      "none"
+     ]
+    },
+    {
+     "id": "P-BRANDING-TRAPS",
+     "check": [
+      "sage"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "identity",
+   "title": "Identity",
+   "phase": "now",
+   "rules": [
+    {
+     "id": "C-IDENTITY",
+     "check": [
+      "vera",
+      "sage"
+     ]
+    },
+    {
+     "id": "C-IDENTITY-OPTIONS",
+     "check": [
+      "sage"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "character-sheet",
+   "title": "Character sheet",
+   "phase": "now",
+   "rules": [
+    {
+     "id": "R-SHEET-NEUTRAL",
+     "check": [
+      "vera"
+     ]
+    },
+    {
+     "id": "R-SHEET-VIEWS",
+     "check": [
+      "vera",
+      "sage"
+     ]
+    },
+    {
+     "id": "R-SHEET-EIGHT",
+     "check": [
+      "vera",
+      "sage"
+     ]
+    },
+    {
+     "id": "R-SHEET-HEX",
+     "check": [
+      "vera",
+      "sage"
+     ]
+    },
+    {
+     "id": "R-SHEET-NO-TEXT",
+     "check": [
+      "vera",
+      "sage"
+     ]
+    },
+    {
+     "id": "R-SHEET-PROPS",
+     "check": [
+      "none"
+     ]
+    },
+    {
+     "id": "R-SHEET-FAILURES",
+     "check": [
+      "vera"
+     ]
+    },
+    {
+     "id": "R-SHEET-PHOTO-REF",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "R-SHEET-NO-PHOTO",
+     "check": [
+      "none"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "edit-prompts",
+   "title": "Edit prompts",
+   "phase": "now",
+   "rules": [
+    {
+     "id": "E-ONLY-CHANGES",
+     "check": [
+      "sage"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "locations",
+   "title": "Locations",
+   "phase": "now",
+   "rules": [
+    {
+     "id": "L-DRESSED",
+     "check": [
+      "vera",
+      "sage"
+     ]
+    },
+    {
+     "id": "L-SET-PLATE",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "L-LAYOUT-REF",
+     "check": [
+      "sage",
+      "beau"
+     ]
+    },
+    {
+     "id": "L-CAMERA-SIDE",
+     "check": [
+      "vera",
+      "beau"
+     ]
+    },
+    {
+     "id": "L-LIGHT-SPEC",
+     "check": [
+      "sage",
+      "beau"
+     ]
+    },
+    {
+     "id": "L-PALETTE",
+     "check": [
+      "vera",
+      "sage"
+     ]
+    },
+    {
+     "id": "L-ACCENT-OUT",
+     "check": [
+      "vera",
+      "sage"
+     ]
+    },
+    {
+     "id": "L-SHOTS-FIRST",
+     "check": [
+      "beau"
+     ]
+    },
+    {
+     "id": "L-MIN-TEXT",
+     "check": [
+      "vera",
+      "sage"
+     ]
+    },
+    {
+     "id": "L-CHILD-DRAWINGS",
+     "check": [
+      "none"
+     ]
+    },
+    {
+     "id": "L-SETS-DEFAULT",
+     "check": [
+      "none"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "composition",
+   "title": "Composition",
+   "phase": "now",
+   "rules": [
+    {
+     "id": "K-BIND-REFS",
+     "check": [
+      "june"
+     ]
+    },
+    {
+     "id": "K-ANCHORS",
+     "check": [
+      "june"
+     ]
+    },
+    {
+     "id": "K-DEPICTIONS",
+     "check": [
+      "june"
+     ]
+    },
+    {
+     "id": "K-SCREEN-SIDE",
+     "check": [
+      "june"
+     ]
+    },
+    {
+     "id": "K-HEIGHT-RULER",
+     "check": [
+      "june"
+     ]
+    },
+    {
+     "id": "K-LAYOUT-REF",
+     "check": [
+      "june"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "video-sources",
+   "title": "Video: sources",
+   "phase": "later",
+   "rules": [
+    {
+     "id": "V-SOURCES",
+     "check": [
+      "june"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "video-animation",
+   "title": "Video: animation",
+   "phase": "later",
+   "rules": [
+    {
+     "id": "V-MOTION",
+     "check": [
+      "june"
+     ]
+    },
+    {
+     "id": "V-LIGHT",
+     "check": [
+      "june"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "video-architecture",
+   "title": "Video: architecture",
+   "phase": "later",
+   "rules": [
+    {
+     "id": "V-ONE-SHOT",
+     "check": [
+      "june"
+     ]
+    },
+    {
+     "id": "V-TIMECODES",
+     "check": [
+      "june"
+     ]
+    },
+    {
+     "id": "V-CEILING",
+     "check": [
+      "june"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "video-blocks",
+   "title": "Video: blocks",
+   "phase": "later",
+   "rules": [
+    {
+     "id": "V-EXCLUSIONS",
+     "check": [
+      "june"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "video-transitions",
+   "title": "Video: transitions",
+   "phase": "later",
+   "rules": [
+    {
+     "id": "V-TRANSITIONS",
+     "check": [
+      "june"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "video-failures",
+   "title": "Video: failures",
+   "phase": "later",
+   "rules": [
+    {
+     "id": "V-FAILURES",
+     "check": [
+      "june"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "working-method",
+   "title": "Working method",
+   "phase": "now",
+   "rules": [
+    {
+     "id": "W-WHAT-CHANGED",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "W-FULL-EVERY-TIME",
+     "check": [
+      "sage"
+     ]
+    },
+    {
+     "id": "W-REREAD",
+     "check": [
+      "none"
+     ]
+    },
+    {
+     "id": "W-KNOCK-ONS",
+     "check": [
+      "none"
+     ]
+    },
+    {
+     "id": "W-NO-OVERSPEC",
+     "check": [
+      "none"
+     ]
+    }
+   ]
+  }
+ ],
+ "studioCraft": {
+  "path": "craft-guide.md",
+  "sections": {
+   "script-writer": [
+    "script-craft",
+    "working-method"
+   ],
+   "text-reviewer": [
+    "house-style",
+    "script-craft",
+    "character-design",
+    "prompt-rules",
+    "identity",
+    "character-sheet",
+    "edit-prompts",
+    "locations",
+    "working-method"
+   ],
+   "cast-designer": [
+    "house-style",
+    "character-design",
+    "prompt-rules",
+    "identity",
+    "working-method"
+   ],
+   "sheet-prompter": [
+    "house-style",
+    "character-design",
+    "prompt-rules",
+    "identity",
+    "character-sheet",
+    "edit-prompts",
+    "working-method"
+   ],
+   "background-product-owner": [
+    "house-style",
+    "locations",
+    "working-method"
+   ],
+   "pixar-prompter": [
+    "house-style",
+    "prompt-rules",
+    "edit-prompts",
+    "locations",
+    "working-method"
+   ],
+   "shot-planner": [
+    "script-craft#S-REACTION"
+   ],
+   "composition-writer": [
+    "house-style",
+    "prompt-rules",
+    "edit-prompts",
+    "composition",
+    "working-method"
+   ],
+   "motion-director": [
+    "video-sources",
+    "video-animation",
+    "video-architecture",
+    "video-blocks",
+    "video-transitions",
+    "video-failures",
+    "working-method"
+   ],
+   "video-prompt-engineer": [
+    "house-style",
+    "video-sources",
+    "video-animation",
+    "video-architecture",
+    "video-blocks",
+    "video-transitions",
+    "video-failures",
+    "working-method"
+   ],
+   "sound-designer": [],
+   "film-editor": [],
+   "audio-reviewer": [],
+   "visual-reviewer": [
+    "house-style",
+    "character-design",
+    "identity",
+    "character-sheet",
+    "locations"
+   ],
+   "scene-reviewer": [
+    "house-style",
+    "composition",
+    "video-sources",
+    "video-animation",
+    "video-architecture",
+    "video-blocks",
+    "video-transitions",
+    "video-failures"
+   ],
+   "generation-planner": [],
+   "voice-director": []
+  }
+ },
+ "manifestSchema": {
+  "file": "public/format-repositories/my-pixar-story-v1/guidance-manifest.json",
+  "shape": {
+   "version": 1,
+   "files": [
+    {
+     "path": "string (kit-relative)",
+     "kind": "craft|skill|rubric|recipe|doc|legacy|source",
+     "roles": [
+      "role ids that load it"
+     ],
+     "status": "active|legacy",
+     "removeBy": "YYYY-MM-DD (legacy only)"
+    }
+   ],
+   "provenance": [
+    {
+     "source": "craft-sources/dan-kieft-pixar-prompter.md",
+     "sourceSection": "e.g. \u00a79",
+     "rule": "RULE-ID or null",
+     "decision": "kept|changed|dropped",
+     "reason": "string"
+    }
+   ],
+   "duplicationBaseline": 73,
+   "allowlist": [
+    {
+     "path": "string",
+     "term": "string",
+     "reason": "string"
+    }
+   ]
+  }
+ }
+}

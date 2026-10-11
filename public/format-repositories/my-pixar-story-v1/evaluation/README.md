@@ -12,7 +12,7 @@ Label fields record criterion, status, authority, confirmation, localized eviden
 
 The package carries text/measurement snapshots and provenance, not personal media. Optional actual-file verification uses the caller's local `--media-root` directory. Missing or changed files stop that verification; snapshot mode is always identified and never impersonates fresh media inspection. Future examples from ordinary storytellers and known-bad/known-good audio/video should be added with genuine review labels, keeping related cases in one split.
 
-This folder is an offline test collection. Its labels, recorded predictions and reports cannot approve a production artifact or mutate the LangGraph project. The master design remains `docs/memoir-system-living-spec.md`.
+This folder is an offline test collection. Its labels, recorded predictions and reports cannot approve a production artifact or mutate the LangGraph project. The master design remains `docs/virtual-studio-architecture-rfc.md`.
 
 ## Run and inspect locally
 

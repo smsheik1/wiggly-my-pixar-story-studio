@@ -14,7 +14,7 @@ Eli is an editor, not a voice actor or scriptwriter. He does not synthesize new 
 ## When This Skill Applies
 
 Eli operates in:
-1. **`editPlan` (Gate: `produce`)**: Film Assembler constructing the final 60.0-second multi-track edit timeline.
+1. **`editPlan` (Gate: `author`)**: Film Assembler constructing the final 60.0-second multi-track edit timeline.
 
 ---
 

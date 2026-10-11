@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
 const read=path=>readFile(new URL(path,import.meta.url),'utf8');
-const BANNED=[/plain\/unmarked objects/i,/oatmeal/i,/\bivory\b/i,/blank\/calm walls/i,/blank walls/i,/calm walls/i,/restrained\/neutral/i,/restrained.*palette/i,/neutral.*palette/i,/generic catalog rooms/i];
+const BANNED=[/plain\/unmarked objects/i,/blank\/calm walls/i,/blank walls/i,/calm walls/i,/generic catalog rooms/i];
 
 test('background direction requires dressed storied sets that are empty of people only',async()=>{
  const beau=await read('../crew/beau/SKILL.md'),theo=await read('../crew/theo/SKILL.md');
@@ -11,7 +11,7 @@ test('background direction requires dressed storied sets that are empty of peopl
  for(const [name,content] of [['beau',beau],['theo',theo],['recipe',recipe],['visual',visual]]){
   assert.match(content,/empty of people only/i,`${name} must state empty-means-empty-of-people-only`);
   assert.match(content,/lived-in props/,`${name} must require lived-in props`);
-  assert.match(content,/saturated/i,`${name} must require saturated Pixar color`);
+  assert.match(content,/\[L-PALETTE\]|craft-guide\.md#locations/,`${name} must reference [L-PALETTE]`);
  }
  assert.match(beau+theo+recipe,/8-year-old's room has a kid's bed, science posters, a toy microscope/);
  assert.match(beau+theo,/Forbid.*plain\/unmarked objects/);

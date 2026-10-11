@@ -1,5 +1,7 @@
 # Character design prompt recipe
 
+LEGACY: rev ≤4 projects only; rev 5 uses character-sheet-recipe.md; remove by 2026-12-31.
+
 Cleo is responsible for the first character design prompt. Use the locked script, approved character/age entry and actual supplied photos as primary evidence. Questionnaire answers are supporting context. Study the actual photos; never invent distinguishing traits or assume a known name supplies geometry. Retain explicit unverified interpretation when no age reference exists.
 
 Write a short concrete full-body stylized 3D character prompt. Name the production CG medium, then labeled descriptions of subject/age/build/personality, face, eyes/eyebrows, hair, skin, silhouette, wardrobe, relevant distinguishing features, pose, camera and background. Keep age and likeness recognizable. Use empty hands, a relaxed front-facing reference stance, a light closed-lip expression, full body including feet, straight-on chest-height camera and neutral gray studio background. No text, labels, captions or watermarks anywhere in the image. Reserve turnaround and eight expressions for the next approved sheet deliverable. Favor concrete proportions, material and shape observations over vague adjectives and long theoretical instructions. Do not put aspect ratio in prose; the provider request owns output dimensions.

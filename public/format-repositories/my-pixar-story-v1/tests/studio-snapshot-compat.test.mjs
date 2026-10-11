@@ -17,6 +17,7 @@ test('legacy Muse-only studio snapshots still load after the agy image config ch
   config.generation.image={provider:'meta-muse',model:'muse-image-1.0',estimatedUnitCostUsd:.01};
   await writeFile(join(dir,'studio.json'),JSON.stringify(config));
   for(const path of Object.keys(current.documents)){await mkdir(dirname(join(dir,path)),{recursive:true});await writeFile(join(dir,path),current.documents[path].content);}
+  if(current.config.craft)await writeFile(join(dir,current.config.craft.path),await readFile(new URL(current.config.craft.path,kit)));
   const legacy=loadStudio(pathToFileURL(dir+'/'));
   const p={studio:JSON.parse(JSON.stringify(legacy))};
   assert.deepEqual(studioFor(p).config.generation.image,{provider:'meta-muse',model:'muse-image-1.0',estimatedUnitCostUsd:.01});

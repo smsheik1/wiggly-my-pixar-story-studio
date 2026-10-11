@@ -97,7 +97,8 @@ test("Sage's skill + text rubric contain the lived-in/generic-room rule and the 
     assert.match(doc, /story-dressed/);
     assert.match(doc, /catalog/);
     assert.match(doc, /plain\/unmarked/);
-    assert.match(doc, /ivory\/oatmeal\/neutral\/restrained/);
+    assert.match(doc, /\[L-PALETTE\]/); // P14: muted + one accent is the rule; never fail a room for being muted
+    assert.doesNotMatch(doc, /ivory\/oatmeal\/neutral\/restrained/);
     assert.match(doc, /blank\/calm walls/);
     assert.match(doc, /empty of people/i);
     assert.match(doc, /material defect/i);
