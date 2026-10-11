@@ -46,7 +46,7 @@ test('1. golden set: valid, real departments, hard assertions, reviewers + a wri
   }
   // The headline r4 lessons are encoded as assertions, not prose.
   const ids = g.cases.flatMap(c => c.asserts.map(a => `${c.id}/${a.id}`));
-  for (const want of ['vera-adult-sheets-wrist/no-wrist-false-reject', 'vera-adult-sheets-wrist/top-pick-option-2', 'vera-late-teen-text-labels/flags-baked-in-text', 'vera-room-generic-unpixar/rejects-generic-room', 'sage-room-brief-generic/rejects-generic-brief', 'sage-script-slash-abbrev/rejects-slash-abbrev', 'sage-script-slash-abbrev/names-slash-abbrev', 'sage-script-slash-abbrev/no-other-defects']) assert.ok(ids.includes(want), want);
+  for (const want of ['vera-adult-sheets-wrist/no-wrist-false-reject', 'vera-adult-sheets-wrist/top-pick-option-2', 'vera-late-teen-text-labels/flags-baked-in-text', 'vera-room-generic/rejects-generic-room', 'sage-room-brief-generic/rejects-generic-brief', 'sage-script-slash-abbrev/rejects-slash-abbrev', 'sage-script-slash-abbrev/names-slash-abbrev', 'sage-script-slash-abbrev/no-other-defects']) assert.ok(ids.includes(want), want);
   // The 'A/C' script case: a failing check about the slash is the expected finding; any other failing check is an invented defect.
   const noOther = g.cases.find(c => c.id === 'sage-script-slash-abbrev').asserts.find(a => a.id === 'no-other-defects');
   assert.equal(scoreAssertion(noOther, review('rejected', [chk('clarity', 'fail', 'Beat 2 says no A/C; TTS reads A slash C.'), chk('timing', 'pass', 'fits')])).pass, true);

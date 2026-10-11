@@ -97,7 +97,7 @@
       ]
     },
     {
-      "id": "vera-room-generic-unpixar",
+      "id": "vera-room-generic",
       "dept": "vera",
       "priority": 3,
       "source": {
@@ -107,7 +107,7 @@
       },
       "truth": {
         "authority": "shaz",
-        "summary": "Vera r4 approved all three childhood-room plates. Shaz rejected them: \"these backgrounds are all bullshit. this don't look like a pixar film\" - empty, generic, muted ivory/oatmeal rooms (#225).",
+        "summary": "Vera r4 approved all three childhood-room plates. Shaz rejected them: \"these backgrounds are all bullshit. this don't look like a pixar film\" - empty, generic, undressed rooms (#225).",
         "history": [
           220,
           225
@@ -130,8 +130,14 @@
             "story-specific-set",
             "scene-fit"
           ],
-          "pattern": ".",
+          "pattern": "generic|plain|unmarked|blank|calm|story|specific|lived",
           "why": "The failure is style / not dressed from the story."
+        },
+        {
+          "id": "not-claim-muted-palette",
+          "type": "mustNotClaim",
+          "pattern": "muted|restrained|neutral|ivory|oatmeal",
+          "why": "Rooms use a muted palette with one saturated accent; must not fail a room for being muted or restrained."
         }
       ]
     },
@@ -146,7 +152,7 @@
       },
       "truth": {
         "authority": "shaz",
-        "summary": "Sage r4 approved brief v1. Shaz later rejected it as the empty, generic, muted 'leave space for compositing' approach: ivory palette, calm blank walls, 'a few plain unmarked storage objects', nothing that says it is 8-year-old Shaz's room (#225).",
+        "summary": "Sage r4 approved brief v1. Shaz later rejected it as the empty, generic, muted 'leave space for compositing' approach: calm blank walls, 'a few plain unmarked storage objects', nothing that says it is 8-year-old Shaz's room (#225).",
         "history": [
           194,
           225
@@ -164,8 +170,14 @@
         {
           "id": "names-generic-dressing",
           "type": "mustMention",
-          "pattern": "generic|plain|unmarked|ivory|blank|calm|story|specific|lived|scientist|sunglass",
+          "pattern": "generic|plain|unmarked|blank|calm|story|specific|lived|scientist|sunglass",
           "why": "The defect is generic, undressed set design."
+        },
+        {
+          "id": "not-claim-muted-palette",
+          "type": "mustNotClaim",
+          "pattern": "muted|restrained|neutral|ivory|oatmeal",
+          "why": "Must not reject brief for muted or restrained palette."
         }
       ]
     },
@@ -180,7 +192,7 @@
       },
       "truth": {
         "authority": "shaz",
-        "summary": "Beau authoring the childhood-room brief from scratch (no feedback in the packet). Shaz rejected the r4 v1 brief for its ivory walls, calm blank walls and 'few plain unmarked storage objects' and asked for a lived-in room dressed from the story (#225); he approved v2 (#231).",
+        "summary": "Beau authoring the childhood-room brief from scratch (no feedback in the packet). Shaz rejected the r4 v1 brief for calm blank walls and 'few plain unmarked storage objects' and asked for a lived-in room dressed from the story (#225); he approved v2 (#231).",
         "history": [
           193,
           225,
@@ -189,10 +201,22 @@
       },
       "asserts": [
         {
-          "id": "no-ivory-walls",
+          "id": "has-lighting-colour-spec",
+          "type": "contentMatches",
+          "pattern": "light[\\s\\S]*accent[\\s\\S]*kept out",
+          "why": "Rule [L-LIGHT-SPEC]: lighting and colour spec block with light, accent, and film accent kept out."
+        },
+        {
+          "id": "has-layout-in-words",
+          "type": "contentMatches",
+          "pattern": "layout",
+          "why": "Rule [L-LAYOUT-REF]: direction includes a layout part in words."
+        },
+        {
+          "id": "no-pixar-word",
           "type": "contentNotMatches",
-          "pattern": "ivory walls|ivory plaster|oatmeal",
-          "why": "Shaz rejected the restrained ivory/oatmeal palette (#225)."
+          "pattern": "\\bpixar\\b",
+          "why": "Rule [H-STYLE]: writer packets must not contain vendor or brand names."
         },
         {
           "id": "no-plain-unmarked",
@@ -253,6 +277,14 @@
           "field": "beats",
           "pattern": "scien",
           "why": "Locked childhood fact Shaz approved."
+        },
+        {
+          "id": "no-stock-phrases",
+          "type": "contentNotMatches",
+          "field": "beats",
+          "pattern": "heart full|forever in my heart|time of our lives|memories to last a lifetime|always remember",
+          "soft": true,
+          "why": "Rule [S-STOCK-PHRASES]: avoid greeting card clichés and stock emotional phrases."
         }
       ]
     },
@@ -364,7 +396,7 @@
       ]
     },
     {
-      "id": "sage-room-prompt-unpixar",
+      "id": "sage-room-prompt-generic",
       "dept": "sage",
       "priority": 10,
       "source": {
@@ -374,7 +406,7 @@
       },
       "truth": {
         "authority": "shaz",
-        "summary": "Sage r4 approved prompt v2; Shaz rejected it: \"These backgrounds aren't pixar enough\" (#211). The prompt keeps the ivory/oatmeal palette, calm blank walls and plain unmarked objects Shaz later named (#225).",
+        "summary": "Sage r4 approved prompt v2; Shaz rejected it: \"These backgrounds aren't pixar enough\" (#211). The prompt keeps calm blank walls and plain unmarked objects Shaz later named (#225).",
         "history": [
           210,
           211,
@@ -383,12 +415,18 @@
       },
       "asserts": [
         {
-          "id": "rejects-unpixar-prompt",
+          "id": "rejects-generic-prompt",
           "type": "verdict",
           "oneOf": [
             "rejected"
           ],
           "why": "Shaz rejected this prompt (#211)."
+        },
+        {
+          "id": "not-claim-muted-palette",
+          "type": "mustNotClaim",
+          "pattern": "muted|restrained|neutral|ivory|oatmeal",
+          "why": "Must not reject prompt for muted/restrained palette."
         }
       ]
     },
@@ -424,6 +462,43 @@
           "type": "mustNotClaim",
           "pattern": "angle",
           "why": "Rejecting for empty/missing angles invents a defect: the r4 shot plan needs no secondary angles."
+        }
+      ]
+    },
+    {
+      "id": "sage-sheet-prompt-r4-old-rules",
+      "dept": "sage",
+      "priority": 12,
+      "source": {
+        "key": "sheetPrompt:shaz-child",
+        "gate": "review",
+        "version": 1
+      },
+      "truth": {
+        "authority": "objective",
+        "summary": "The r4 sheet prompt used old non-fixed expressions and lacked the #B5B5B5 hex requirement; Sage reviewing under current rules must reject on layout or reference-grounding.",
+        "history": [
+          55
+        ]
+      },
+      "asserts": [
+        {
+          "id": "rejects-old-sheet-prompt",
+          "type": "verdict",
+          "oneOf": [
+            "rejected"
+          ],
+          "why": "The prompt uses old expression set and lacks #B5B5B5 hex background."
+        },
+        {
+          "id": "flags-layout-or-expressions",
+          "type": "mustMention",
+          "criteria": [
+            "layout",
+            "reference-grounding"
+          ],
+          "pattern": "expression|layout|hex|#B5B5B5|fixed",
+          "why": "Sage must identify the layout/expression defect."
         }
       ]
     }

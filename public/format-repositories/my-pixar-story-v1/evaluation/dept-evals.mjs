@@ -543,7 +543,7 @@ export async function cli(argv, { out = (s) => process.stdout.write(s), err = (s
     await writeFile(join(dir, 'scorecard.md'), md);
   }
   out(values.json ? JSON.stringify(s, null, 2) + '\n' : md);
-  for (const r of s.cases.filter(r => r.status === 'stale')) err(`::warning::dept-eval ${r.id} is stale: ${r.detail}\n`);
+  for (const r of s.cases.filter(r => ['stale', 'missing'].includes(r.status))) err(`::warning::dept-eval ${r.id} is ${r.status}: ${r.detail}\n`);
   if (s.regressions.length) err(`dept-eval: ${s.regressions.length} regression(s) vs baseline\n`);
   return s.exitCode;
 }
