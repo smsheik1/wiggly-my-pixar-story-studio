@@ -75,3 +75,24 @@ node evaluation/decisions-replay.mjs --run /absolute/path/to/r4 --secrets secret
 - **Top-1 ranking agreement ≥ 2/3** for the chosen model compared with Vera's recommendation and Shaz's selection.
 - Until then, `enabled` stays false. Switching models is the one-line `prescreen.model` setting in `studio.json`.
 
+
+## Department evals (automated dailies)
+
+Golden cases per crew department, built from what Shaz actually approved, rejected or said in the r4 rehearsal, so an agent getting worse shows up before a live run. Files: `evaluation/dept-evals.mjs` (runner), `evaluation/dept-evals/golden.json` (cases), `evaluation/dept-evals/recordings/` (one compact recording per case), `evaluation/dept-evals/baseline.json` (which assertions passed last time).
+
+Each case rebuilds the real task packet at that r4 gate, swaps in the **current** kit studio snapshot (role skill, rubric, recipes, model), and runs the assigned role through the production OpenRouter host (Muse at its production xhigh/32K settings). Expected outcomes are machine-checked assertions: `verdict`, `mustMention` (a failing check names the defect), `mustNotClaim` (an invented defect), `topPick` / `mustNotPick` (recommendation), `contentMatches` / `contentNotMatches` (author output). `soft` assertions are reported but never fail a case.
+
+```sh
+node runner.mjs dept-eval --list                       # the golden cases
+node runner.mjs dept-eval --all                        # replay: free, offline, what CI runs
+node runner.mjs dept-eval --dept vera,sage --out /tmp/de   # subset; writes scorecard.md + scorecard.json
+node runner.mjs dept-eval --all --run agent-runs/phase-d-rehearsal-20261008-r4   # full local replay through the real host loop (needs local cassettes)
+node runner.mjs dept-eval --dept vera --live --confirm-spend --run agent-runs/phase-d-rehearsal-20261008-r4 --secrets secrets.env [--max-usd 0.05] [--update-baseline]
+```
+
+- **Replay** never touches the network. Offline replay re-scores each recorded outcome against the current assertions. If a role's skill, rubric, recipes, model or packet instruction changed since its recording, that case is **stale** (a warning, with what changed): re-record it live. With `--run` and local cassettes (`evaluation/local/dept-evals/cassettes/`, gitignored) replay drives the real host loop and flags any changed request as stale.
+- **Live** is the only paid mode. It needs `--confirm-spend` and is hard-capped at $0.10 in code (`--max-usd` can only lower it). Every request reserves its worst case (full output cap) before it is sent; a request that could cross the cap is never sent and its case is reported as skipped. Cases run in priority order so the cap falls on the least important ones. Infra failures (HTTP 5xx/429, timeouts) are reported as errors and never recorded as the agent's answer.
+- **Exit codes:** 0 ok, 1 regression versus baseline (an assertion that passed at baseline now fails; `--strict` also fails on stale/missing), 2 usage/refused.
+- **Recordings** hold request digests and response messages (reasoning stripped), the final event and cost. They are refused if they contain media bytes (`data:...;base64`), API keys or long base64 runs; paths are aliased to `<RUN>`, `<KIT>`, `<HOME>`.
+- **When to run live:** after changing a role's skill, rubric, recipe or model (CI shows those cases as stale), and before a live studio run. Re-record only the affected department: `--dept <name> --live --confirm-spend ... --update-baseline` once you accept the new result.
+- **Coverage gaps:** June (scene-reviewer) has no cases because r4 stopped before keyframes; Ava stays on Gemini audio and needs audio perception adapters, so she is not in this suite yet.
