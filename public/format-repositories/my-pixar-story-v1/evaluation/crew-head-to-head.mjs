@@ -13,13 +13,49 @@ const PRICE_TABLE = {
   'deepseek/deepseek-v4.1-flash': { inputUsdPerM: 0.30, outputUsdPerM: 1.20 },
 };
 
-const TASK_DEFS = {
+export const TASK_DEFS = {
   'theo-room-prompt': { role: 'pixar-prompter', name: 'Theo', key: 'backgroundPrompt:childhood-room', gate: 'author' },
   'sage-prompt-review': { role: 'text-reviewer', name: 'Sage', key: 'backgroundPrompt:childhood-room', gate: 'review' },
   'vera-sheet-review': { role: 'visual-reviewer', name: 'Vera', key: 'candidates:shaz-late-teen', gate: 'review', versions: [1, 2] },
   'vera-room-review': { role: 'visual-reviewer', name: 'Vera', key: 'backgroundCandidates:childhood-room', gate: 'review', versions: [1, 2] },
   'leo-script': { role: 'script-writer', name: 'Leo', key: 'script', gate: 'author' },
+  // r4 adult Shaz sheets v1: three sheets Vera falsely rejected for the watch "switching wrists".
+  // Ground truth: Shaz approved v1 option 2 (index 1, sha ac1a7538…) after the redo. Not in RUN_ORDER;
+  // run it by name with --tasks vera-adult-sheet-review.
+  'vera-adult-sheet-review': { role: 'visual-reviewer', name: 'Vera', key: 'candidates:shaz-adult', gate: 'review', versions: [1] },
 };
+
+// Evaluation-only spend ceiling: --max-usd can lower it, never raise it.
+export const HARD_CAP_USD = 0.10;
+
+// Evaluation-only reasoning efforts. The production OpenRouterHost still refuses xhigh/max;
+// only this script may raise effort, per model, and only to a level the model offers.
+export const EVAL_EFFORTS = {
+  'meta/muse-spark-1.3-contributor': ['low', 'medium', 'high', 'xhigh', 'max'],
+  'deepseek/deepseek-v4.1-flash': ['low', 'high', 'max'],
+};
+export const EFFORT_FLAG_MODELS = { muse: 'meta/muse-spark-1.3-contributor', deepseek: 'deepseek/deepseek-v4.1-flash' };
+
+// --version N keeps only that version of a multi-version task; null keeps them all.
+export function selectVersions(def, version = null) {
+  const versions = def?.versions ?? [null];
+  if (version == null) return versions;
+  return versions.filter(v => v === Number(version));
+}
+
+export function assertEvalEffort(model, effort) {
+  const allowed = EVAL_EFFORTS[model] ?? ['low', 'medium', 'high'];
+  if (!allowed.includes(effort)) throw new Error(`HEAD_TO_HEAD_EFFORT_INVALID: ${model} does not take effort "${effort}" (allowed: ${allowed.join(', ')}).`);
+  return effort;
+}
+
+// Build a host for one evaluation call. The constructor enforces the production rule
+// (medium/high only); the evaluation effort is applied to this one instance afterwards.
+export function evaluationHost(opts, effort = null) {
+  const host = new OpenRouterHost({ ...opts, reasoningEffort: 'medium' });
+  if (effort && effort !== 'medium') host.reasoningEffort = assertEvalEffort(opts.model, effort);
+  return host;
+}
 
 const RUN_ORDER = ['sage-prompt-review', 'theo-room-prompt', 'vera-room-review', 'vera-sheet-review'];
 
@@ -62,13 +98,17 @@ export async function runHeadToHead({
   models = ['meta/muse-spark-1.3-contributor', 'deepseek/deepseek-v4.1-flash'],
   tasks = RUN_ORDER,
   repeat = 1,
-  maxUsd = 0.10,
+  maxUsd = HARD_CAP_USD,
+  version = null,
+  efforts = {},
   confirmSpend = false,
   dryRun = false,
   outDir = null,
   fetcher = fetch,
   stateList = null,
 } = {}) {
+  maxUsd = Math.min(Number(maxUsd) || HARD_CAP_USD, HARD_CAP_USD);
+  for (const [m, e] of Object.entries(efforts ?? {})) if (e) assertEvalEffort(m, e);
   // If stateList is provided directly (e.g. testing), use it, otherwise open runDir copy
   let saver = null, tempDir = null;
   let states = stateList;
@@ -88,7 +128,8 @@ export async function runHeadToHead({
   for (const taskId of tasks) {
     const def = TASK_DEFS[taskId];
     if (!def) continue;
-    const versions = def.versions ?? [null];
+    const versions = selectVersions(def, version);
+    if (!versions.length) { process.stderr.write(`Warning: task ${taskId} has no version ${version}\n`); continue; }
     for (const ver of versions) {
       const sourceState = await findState(states, { key: def.key, gate: def.gate, version: ver });
       if (!sourceState) {
@@ -103,6 +144,7 @@ export async function runHeadToHead({
             version: ver,
             sourceState,
             model,
+            effort: efforts?.[model] ?? 'medium',
             repeatIndex: r,
             estimatedCostUsd: estimateTaskCost(taskFor(sourceState), model),
           });
@@ -116,20 +158,20 @@ export async function runHeadToHead({
   // Print estimated cost table
   process.stdout.write(`=== Crew Head-to-Head Estimated Cost ===\n`);
   for (const item of invocationPlan) {
-    process.stdout.write(`- ${item.taskId}${item.version ? `@v${item.version}` : ''} × ${item.model}: ~$${item.estimatedCostUsd.toFixed(5)}\n`);
+    process.stdout.write(`- ${item.taskId}${item.version ? `@v${item.version}` : ''} × ${item.model} (effort ${item.effort}): ~$${item.estimatedCostUsd.toFixed(5)}\n`);
   }
   process.stdout.write(`Total Estimated Cost: ~$${totalEstimatedCostUsd.toFixed(5)} (Max allowed: $${maxUsd.toFixed(2)})\n`);
 
   if (!confirmSpend && !dryRun) {
     process.stdout.write(`Spend not confirmed. Pass --confirm-spend to execute paid calls or --dry-run to test locally.\n`);
     if (saver) saver.db.close();
-    return { status: 'unconfirmed', estimatedCostUsd: totalEstimatedCostUsd };
+    return { status: 'unconfirmed', estimatedCostUsd: totalEstimatedCostUsd, capUsd: maxUsd };
   }
 
   if (totalEstimatedCostUsd > maxUsd && !dryRun) {
     process.stderr.write(`Estimated cost ($${totalEstimatedCostUsd.toFixed(4)}) exceeds --max-usd ($${maxUsd.toFixed(2)}). Use --tasks to narrow scope.\n`);
     if (saver) saver.db.close();
-    return { status: 'cap_exceeded', estimatedCostUsd: totalEstimatedCostUsd };
+    return { status: 'cap_exceeded', estimatedCostUsd: totalEstimatedCostUsd, capUsd: maxUsd };
   }
 
   const results = [];
@@ -144,6 +186,7 @@ export async function runHeadToHead({
         taskId: item.taskId,
         version: item.version,
         model: item.model,
+        effort: item.effort,
         repeatIndex: item.repeatIndex,
         wallMs: 0,
         requests: 0,
@@ -163,6 +206,7 @@ export async function runHeadToHead({
         taskId: item.taskId,
         version: item.version,
         model: item.model,
+        effort: item.effort,
         repeatIndex: item.repeatIndex,
         status: 'skipped (cap)',
         costUsd: 0,
@@ -176,6 +220,10 @@ export async function runHeadToHead({
     let requests = 0;
     let promptTokens = 0;
     let completionTokens = 0;
+    let reasoningTokens = 0;
+    const turns = [];
+    let validationRetries = 0;
+    let invalidToolCalls = 0;
 
     // Hard cap: refuse any request whose worst case could push actual spend past --max-usd.
     let capStopped = false;
@@ -185,28 +233,42 @@ export async function runHeadToHead({
         capStopped = true;
         throw Object.assign(new Error(`HEAD_TO_HEAD_CAP_REACHED: next request could cost up to $${worst.toFixed(4)}; spent $${(cumulativeActualCostUsd + callCostUsd).toFixed(4)} of $${maxUsd.toFixed(2)}.`), { stopDispatch: true });
       }
+      let sent = {};
+      try { sent = JSON.parse(init?.body ?? '{}'); } catch {}
+      // The host's one validation repair turn is the only request sent with tool_choice "none".
+      if (sent.tool_choice === 'none') validationRetries++;
+      invalidToolCalls = (sent.messages ?? []).filter(m => m.role === 'tool' && String(m.content).startsWith('TOOL_ARGUMENTS_INVALID')).length;
+      const t0 = Date.now();
       const resp = await fetcher(url, init);
+      const turn = { ms: Date.now() - t0, status: resp.status ?? null, promptTokens: 0, completionTokens: 0, reasoningTokens: 0, costUsd: 0, toolCalls: 0, repair: sent.tool_choice === 'none' };
       requests++;
       try {
-        const cloned = resp.clone();
+        const cloned = typeof resp.clone === 'function' ? resp.clone() : resp;
         const data = await cloned.json();
+        turn.toolCalls = data?.choices?.[0]?.message?.tool_calls?.length ?? 0;
         if (data?.usage) {
-          promptTokens += Number(data.usage.prompt_tokens) || 0;
-          completionTokens += Number(data.usage.completion_tokens) || 0;
-          callCostUsd += responseCostUsd(data.usage, item.model);
+          turn.promptTokens = Number(data.usage.prompt_tokens) || 0;
+          turn.completionTokens = Number(data.usage.completion_tokens) || 0;
+          turn.reasoningTokens = Number(data.usage.completion_tokens_details?.reasoning_tokens) || 0;
+          turn.costUsd = responseCostUsd(data.usage, item.model);
         } else {
-          callCostUsd += worst;
+          turn.costUsd = worst;
         }
-      } catch { callCostUsd += worst; }
+      } catch { turn.costUsd = worst; }
+      promptTokens += turn.promptTokens;
+      completionTokens += turn.completionTokens;
+      reasoningTokens += turn.reasoningTokens;
+      callCostUsd += turn.costUsd;
+      turns.push(turn);
       return resp;
     };
 
-    const host = new OpenRouterHost({
+    const host = evaluationHost({
       cwd: tempDir ?? outDir ?? '/tmp',
       secretsPath,
       model: item.model,
       fetcher: wrappedFetcher,
-    });
+    }, item.effort);
 
     const capabilityVersion = await host.profile();
     const role = item.taskDef.role;
@@ -294,11 +356,16 @@ export async function runHeadToHead({
       taskId: item.taskId,
       version: item.version,
       model: item.model,
+      effort: item.effort,
       repeatIndex: item.repeatIndex,
       wallMs,
       requests,
+      turns,
+      validationRetries,
+      invalidToolCalls,
       promptTokens,
       completionTokens,
+      reasoningTokens,
       costUsd: callCostUsd,
       estimatedCostUsd: item.estimatedCostUsd,
       valid: eventValid,
@@ -322,16 +389,16 @@ export async function runHeadToHead({
 
   // Generate markdown report without data: URLs or secrets
   let md = `# Crew Head-to-Head: Muse Contributor vs DeepSeek V4.1 Flash\n\n`;
-  md += `| Task | Model | Wall (ms) | Cost ($) | Est ($) | Valid? | Gate OK? | Sol Match? |\n`;
-  md += `|---|---|---|---|---|---|---|---|\n`;
+  md += `| Task | Model | Effort | Wall (ms) | Requests | Repairs | Tokens in/out | Cost ($) | Est ($) | Valid? | Gate OK? | Sol Match? |\n`;
+  md += `|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
 
   for (const r of results) {
     if (r.status === 'skipped (cap)') {
-      md += `| ${r.taskId} | ${r.model} | - | skipped (cap) | $${r.estimatedCostUsd.toFixed(4)} | - | - | - |\n`;
+      md += `| ${r.taskId} | ${r.model} | ${r.effort ?? '-'} | - | - | - | - | skipped (cap) | $${r.estimatedCostUsd.toFixed(4)} | - | - | - |\n`;
       continue;
     }
     const solStr = r.agreementWithSol ? `dec:${r.agreementWithSol.decisionMatch ? '✓' : '✗'}, rec:${r.agreementWithSol.recMatch ? '✓' : '✗'}` : '-';
-    md += `| ${r.taskId}${r.version ? `@v${r.version}` : ''} | ${r.model} | ${r.wallMs} | $${r.costUsd.toFixed(4)} | $${r.estimatedCostUsd.toFixed(4)} | ${r.valid ? '✓' : '✗'} | ${r.gateAccepted ? '✓' : '✗'} | ${solStr} |\n`;
+    md += `| ${r.taskId}${r.version ? `@v${r.version}` : ''} | ${r.model} | ${r.effort ?? 'medium'} | ${r.wallMs} | ${r.requests ?? 0} | ${(r.validationRetries ?? 0) + (r.invalidToolCalls ?? 0)} | ${r.promptTokens ?? 0}/${r.completionTokens ?? 0} | $${r.costUsd.toFixed(4)} | $${r.estimatedCostUsd.toFixed(4)} | ${r.valid ? '✓' : '✗'} | ${r.gateAccepted ? '✓' : '✗'} | ${solStr} |\n`;
   }
 
   md += `\n## Details\n\n`;
@@ -346,7 +413,7 @@ export async function runHeadToHead({
   const cleanMd = md.replace(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/g, '[IMAGE_DATA_REDACTED]');
   await writeFile(join(targetDir, 'report.md'), cleanMd);
 
-  return { status: 'completed', results, targetDir, totalActualCostUsd: cumulativeActualCostUsd, totalEstimatedCostUsd };
+  return { status: 'completed', capUsd: maxUsd, results, targetDir, totalActualCostUsd: cumulativeActualCostUsd, totalEstimatedCostUsd };
 }
 
 // CLI entry point
@@ -361,6 +428,9 @@ if (process.argv[1]?.endsWith('crew-head-to-head.mjs')) {
       'max-usd': { type: 'string' },
       'confirm-spend': { type: 'boolean' },
       'dry-run': { type: 'boolean' },
+      version: { type: 'string' },
+      'effort-muse': { type: 'string' },
+      'effort-deepseek': { type: 'string' },
       out: { type: 'string' },
     },
     allowPositionals: true,
@@ -374,7 +444,9 @@ if (process.argv[1]?.endsWith('crew-head-to-head.mjs')) {
   const models = values.models ? values.models.split(',') : undefined;
   const tasks = values.tasks ? values.tasks.split(',') : undefined;
   const repeat = values.repeat ? Number(values.repeat) : undefined;
-  const maxUsd = values['max-usd'] ? Number(values['max-usd']) : 0.10;
+  const maxUsd = values['max-usd'] ? Number(values['max-usd']) : HARD_CAP_USD;
+  const efforts = {};
+  for (const [flag, model] of Object.entries(EFFORT_FLAG_MODELS)) if (values[`effort-${flag}`]) efforts[model] = values[`effort-${flag}`];
 
   runHeadToHead({
     runDir: values.run,
@@ -383,6 +455,8 @@ if (process.argv[1]?.endsWith('crew-head-to-head.mjs')) {
     tasks,
     repeat,
     maxUsd,
+    version: values.version ? Number(values.version) : null,
+    efforts,
     confirmSpend: values['confirm-spend'],
     dryRun: values['dry-run'],
     outDir: values.out,
