@@ -393,7 +393,7 @@
       ]
     },
     {
-      "id": "sage-backgrounds-empty-angles",
+      "id": "sage-backgrounds-master-plate-ok",
       "dept": "sage",
       "priority": 11,
       "source": {
@@ -402,8 +402,8 @@
         "version": 1
       },
       "truth": {
-        "authority": "objective",
-        "summary": "Every location in backgrounds v1 has an empty angles array (Sage r4 correctly rejected, #187); v2 fixed it and Shaz approved (#192).",
+        "authority": "shaz",
+        "summary": "Every location in backgrounds v1 has an empty angles array, and every approved shot in the r4 plan binds angleId null (uses the main background plate). Under the master-plate rule adopted after r4, that configuration is correct, so Sage must APPROVE and must not invent an angles defect. The original r4 expectation (#187) that empty angles should be rejected predates the master-plate rule; Shaz flipped this case on Oct 11.",
         "history": [
           187,
           192
@@ -411,21 +411,19 @@
       },
       "asserts": [
         {
-          "id": "rejects-empty-angles",
+          "id": "passes-master-plate",
           "type": "verdict",
           "oneOf": [
-            "rejected"
+            "approved",
+            "provisional"
           ],
-          "why": "Objective: no angles at all."
+          "why": "Every approved shot uses the main plate; empty secondary-angles is correct under the master-plate rule."
         },
         {
-          "id": "names-angles",
-          "type": "mustMention",
-          "criteria": [
-            "angles"
-          ],
-          "pattern": ".",
-          "why": "The defect is the empty angles."
+          "id": "no-angles-defect",
+          "type": "mustNotClaim",
+          "pattern": "angle",
+          "why": "Rejecting for empty/missing angles invents a defect: the r4 shot plan needs no secondary angles."
         }
       ]
     }

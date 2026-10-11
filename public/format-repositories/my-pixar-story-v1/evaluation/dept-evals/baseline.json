@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-11T14:56:21.464Z",
+  "updatedAt": "2026-10-11T15:06:40.278Z",
   "note": "Assertion ids that passed at this baseline. A later run losing any of them is a regression (exit 1).",
   "cases": {
     "vera-adult-sheets-wrist": {
@@ -104,15 +104,14 @@
       "failing": [],
       "model": "meta/muse-spark-1.3-contributor"
     },
-    "sage-backgrounds-empty-angles": {
-      "status": "fail",
+    "sage-backgrounds-master-plate-ok": {
+      "status": "pass",
       "passing": [
-        "completes"
+        "completes",
+        "passes-master-plate",
+        "no-angles-defect"
       ],
-      "failing": [
-        "rejects-empty-angles",
-        "names-angles"
-      ],
+      "failing": [],
       "model": "meta/muse-spark-1.3-contributor"
     }
   }
