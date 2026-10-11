@@ -202,7 +202,10 @@ export async function runHeadToHead({
       continue;
     }
 
-    if (cumulativeActualCostUsd + item.estimatedCostUsd > maxUsd) {
+    // Sequential: an item starts whenever actual remaining budget fits (remaining =
+    // cap - actual spent). The conservative estimate never skips an item on its own;
+    // the per-request worst-case guard below still enforces the hard cap mid-item.
+    if (cumulativeActualCostUsd >= maxUsd) {
       results.push({
         taskId: item.taskId,
         version: item.version,
@@ -227,6 +230,7 @@ export async function runHeadToHead({
     let invalidToolCalls = 0;
 
     // Hard cap: refuse any request whose worst case could push actual spend past --max-usd.
+    // Settles every completed request on its actual usage.cost (token-price fallback).
     let capStopped = false;
     const wrappedFetcher = async (url, init) => {
       const worst = worstCaseRequestUsd(init?.body, item.model);
@@ -240,7 +244,14 @@ export async function runHeadToHead({
       if (sent.tool_choice === 'none') validationRetries++;
       invalidToolCalls = (sent.messages ?? []).filter(m => m.role === 'tool' && String(m.content).startsWith('TOOL_ARGUMENTS_INVALID')).length;
       const t0 = Date.now();
-      const resp = await fetcher(url, init);
+      const resp = await fetcher(url, init).catch((error) => {
+        // Fetch threw mid-flight: charge the worst case, as the dept-eval Budget does.
+        const turn = { ms: Date.now() - t0, ttfbMs: Date.now() - t0, status: null, promptTokens: 0, completionTokens: 0, reasoningTokens: 0, costUsd: worst, toolCalls: 0, repair: sent.tool_choice === 'none' };
+        requests++;
+        callCostUsd += turn.costUsd;
+        turns.push(turn);
+        throw error;
+      });
       // ms covers the whole turn: it is set only after the full response body has been read below.
       // ttfbMs is when the response headers arrived (what ms wrongly measured before).
       const turn = { ms: 0, ttfbMs: Date.now() - t0, status: resp.status ?? null, promptTokens: 0, completionTokens: 0, reasoningTokens: 0, costUsd: 0, toolCalls: 0, repair: sent.tool_choice === 'none' };
@@ -255,9 +266,9 @@ export async function runHeadToHead({
           turn.reasoningTokens = Number(data.usage.completion_tokens_details?.reasoning_tokens) || 0;
           turn.costUsd = responseCostUsd(data.usage, item.model);
         } else {
-          turn.costUsd = worst;
+          turn.costUsd = resp.ok ? worst : 0;
         }
-      } catch { turn.costUsd = worst; }
+      } catch { turn.costUsd = resp.ok ? worst : 0; }
       turn.ms = Date.now() - t0;
       promptTokens += turn.promptTokens;
       completionTokens += turn.completionTokens;
