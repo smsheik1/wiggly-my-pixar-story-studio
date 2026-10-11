@@ -356,10 +356,13 @@ export function recordingFetcher(cassette, provider, realFetch = globalThis.fetc
     const contentType = cloned.headers.get('content-type') || '';
     let resBody = null;
     if (contentType.includes('application/json')) {
+      // Read the body ONCE. json()-then-text() on the same clone turned any body-read failure
+      // (e.g. the request timeout firing mid-body) into a misleading "Body has already been read".
+      const raw = await cloned.text();
       try {
-        resBody = await cloned.json();
+        resBody = JSON.parse(raw);
       } catch {
-        resBody = await cloned.text();
+        resBody = raw;
       }
     } else {
       const text = await cloned.text().catch(() => null);

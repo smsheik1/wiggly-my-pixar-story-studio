@@ -26,6 +26,9 @@ export const BASELINE_PATH = join(DEPT_EVAL_DIR, 'baseline.json');
 export const CASSETTES_DIR = join(here, 'local', 'dept-evals', 'cassettes');
 export const DEPT_EVAL_HARD_CAP_USD = 0.10;
 export const CASE_TIMEOUT_MS = 15 * 60 * 1000;
+// Same per-request timeout the studio runner gives the OpenRouter crew (runner.mjs, 600000 ms).
+// The host default (180 s) is shorter than some Muse xhigh turns, so evals timed out where a run would not.
+export const DEPT_EVAL_HOST_TIMEOUT_MS = 600000;
 
 // Every crew department, so the scorecard shows gaps (zero cases) instead of hiding them.
 export const DEPARTMENTS = {
@@ -300,7 +303,7 @@ export async function executeCase(caseDef, { states, studio, secretsPath, fetche
   p.studio = studio;
   if (roleFor(p) !== role) return { event: null, valid: false, gateAccepted: false, error: `ROLE_MISMATCH: gate belongs to ${roleFor(p)}, case says ${role}` };
   const agent = studio.config.agents[role];
-  const host = new OpenRouterHost({ cwd, secretsPath, model: agent.model, fetcher });
+  const host = new OpenRouterHost({ cwd, secretsPath, model: agent.model, fetcher, timeoutMs: DEPT_EVAL_HOST_TIMEOUT_MS });
   const capabilityVersion = await host.profile();
   p.crew = { workers: Object.entries(studio.config.agents).map(([r, a]) => r === role
     ? { workerId: `dept-eval:${role}`, name: a.name, role, modelVersion: a.model, capabilityVersion, execution: 'host', backend: 'openrouter' }
