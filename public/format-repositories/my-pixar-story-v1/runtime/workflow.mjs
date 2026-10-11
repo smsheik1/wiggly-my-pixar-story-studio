@@ -524,6 +524,11 @@ export function applyEvent(project, raw) {
     if(!e.message||!['meta-muse','agy'].includes(e.provider))throw new Error('prefer-image-provider needs --provider meta-muse|agy and --message "<text>".');
     if(p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status)))throw new Error('IMAGE_PREFERENCE_LOCKED: reconcile outstanding jobs before setting the image provider preference.');
     p.imageProviderPreference={provider:e.provider,message:e.message,at:new Date().toISOString(),sequence:p.sequence};
+    const currentJob=p.jobs.findLast(j=>j.key===keyFor(p));
+    if(imageSteps.includes(p.step)&&p.gate==='authorize'&&currentJob?.status==='planned'&&currentJob.plan.provider!==e.provider){
+      p.jobs=p.jobs.filter(j=>j.id!==currentJob.id);
+      p.gate='produce';
+    }
   }else if(e.action==='set-budget'){
     requiredActor(e,'human');if(e.budgetLimitUsd===undefined||!e.message||e.budgetLimitUsd+1e-9<spendSummary(p).totalReservedUsd)throw new Error('Budget needs explicit human limit covering existing reservations.');
     p.budget??={maxCostUsd:0,reservations:[]};p.budget.maxCostUsd=e.budgetLimitUsd;

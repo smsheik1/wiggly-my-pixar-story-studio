@@ -5,7 +5,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { initialProject, taskFor, current, characterPromptRecipeSha256 } from '../runtime/workflow.mjs';
+import { initialProject, taskFor, current, keyFor, characterPromptRecipeSha256 } from '../runtime/workflow.mjs';
 import { requestDescriptor } from '../runtime/providers.mjs';
 import { importMedia } from '../runtime/media.mjs';
 import { loadStudio } from '../runtime/instructions.mjs';
@@ -87,6 +87,18 @@ test('mismatched image plan is rejected; matching plan is accepted and consumes 
   assert.equal(p.jobs.at(-1).plan.provider, 'meta-muse');
   assert.equal(p.imageProviderPreference, undefined);
   assert.equal(taskFor(p).imageProviderPreference, undefined);
+});
+
+test('prefer-image-provider resets an unauthorized planned job of a different provider back to produce', () => {
+  let p = candidatesProduce();
+  p = send(p, 'plan', { plan: { provider: 'agy', operation: 'candidates', estimatedCostUsd: 0, parameters: { prompt: 'ISOLATED' } } });
+  assert.equal(p.gate, 'authorize');
+  assert.equal(p.jobs.at(-1).plan.provider, 'agy');
+  p = send(p, 'prefer-image-provider', { actor: 'human', provider: 'meta-muse', message: 'ISOLATED prefer muse' });
+  assert.equal(p.gate, 'produce');
+  assert.equal(p.jobs.some(j => j.key === keyFor(p) && j.status === 'planned'), false);
+  assert.equal(taskFor(p).imageProviderPreference.provider, 'meta-muse');
+  assert.match(taskFor(p).imageProviderDirective, /meta-muse/);
 });
 
 test('prefer-image-provider is refused while a job is uncertain', () => {

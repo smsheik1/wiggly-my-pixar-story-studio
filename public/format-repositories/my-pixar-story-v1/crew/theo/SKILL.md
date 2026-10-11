@@ -15,6 +15,8 @@ You author prompts that produce cinematic, stylized 3D backgrounds without any c
 1. Read Beau's brief (`backgroundBrief` for master plates, `backgroundAngleBrief` for reverse/alternate angles) and immediate scene requirements.
 2. For angle plates: Call `viewImage` with the approved master plate's `sha256` to inspect architectural landmarks, window placements, light sources, and furniture positions.
 3. Author the prompt according to `background-prompter.md`:
+   - Enforce **Pixar Feature Animation Visual Aesthetic**: Anchor the environment to the warm, appealing stylized production design of Pixar animated feature films (such as *Inside Out*, *Ratatouille*, and *Toy Story*). Use sculpted geometric forms, softened corners, slightly exaggerated/chunky proportions, broad designed wood-grain/wear, and clean stylized animation shaders.
+   - Strict **Anti-Photorealism Guardrail**: Forbid architectural interior catalog photography, real-world interior-design rendering, fine micro-scratches, photographic fabric weaves, and photographic camera lens focus falloff.
    - State camera framing and shot angle clearly.
    - Describe room architecture, materials, lived-in clutter, lighting atmosphere, and color temperature.
    - Enforce **empty environment** (explicitly no people, no crowds, no silhouettes).
