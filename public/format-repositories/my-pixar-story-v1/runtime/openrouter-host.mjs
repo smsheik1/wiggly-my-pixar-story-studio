@@ -14,9 +14,15 @@ export const OPENROUTER_PROVIDER_POLICY={require_parameters:true,max_price:{prom
 export const OPENROUTER_MAX_TOKENS=16000;
 export const OPENROUTER_MAX_TOOL_ROUNDS=40;
 
+// productionEffort / maxTokens are per-model production overrides. The host-wide
+// reasoningEffort constructor argument stays medium/high (never max/xhigh); only a
+// model listed here may run higher in production. Muse Spark runs at xhigh because
+// that is the setting that passed the r4 adult-sheet head-to-head (PR #31), and its
+// output cap is 32K because one xhigh Muse request used ~9.7K of the old 16K cap.
+export const MUSE_MAX_TOKENS=32000;
 export const OPENROUTER_MODEL_TRAITS={
  'deepseek/deepseek-v4.1-flash': { reasoning:'optional', inputs:['text','image'] },
- 'meta/muse-spark-1.3-contributor': { reasoning:'always-on', inputs:['text','image','video'] },
+ 'meta/muse-spark-1.3-contributor': { reasoning:'always-on', inputs:['text','image','video'], productionEffort:'xhigh', maxTokens:MUSE_MAX_TOKENS },
 };
 
 export function modelTraits(model){
@@ -43,26 +49,32 @@ const ToolArguments=z.object({name:z.string(),sha256:z.string(),referenceSha256:
 const developerInstructions=(worker)=>`You are ${worker.name}, the ${worker.role} for the Wiggly memoir format. Complete only your assigned task. Use wiggly_tool for granted assets. Return only the requested structured event; never approve for the user, submit provider calls, or claim unavailable perception.`;
 
 export class OpenRouterHost {
- constructor({cwd, secretsPath, model=DEFAULT_OPENROUTER_MODEL, timeoutMs=180000, reasoningEffort='medium', maxTokens=OPENROUTER_MAX_TOKENS, maxToolRounds=OPENROUTER_MAX_TOOL_ROUNDS, fetcher=fetch, perceptionTools={}, perceptionProfile=null, tracer=null, profileOverride=null}={}){
+ constructor({cwd, secretsPath, model=DEFAULT_OPENROUTER_MODEL, timeoutMs=180000, reasoningEffort='medium', maxTokens=null, maxToolRounds=OPENROUTER_MAX_TOOL_ROUNDS, fetcher=fetch, perceptionTools={}, perceptionProfile=null, tracer=null, profileOverride=null}={}){
   if(['max','xhigh'].includes(reasoningEffort))throw new Error('OPENROUTER_REASONING_LIMIT: reasoning effort must be medium or high, never max/xhigh.');
   if(!['low','medium','high'].includes(reasoningEffort))throw new Error('OPENROUTER_REASONING_LIMIT: reasoning effort must be medium or high.');
   this.cwd=cwd??join(process.cwd(),'host-workspace');this.secretsPath=secretsPath;this.model=model;this.timeoutMs=timeoutMs;
-  this.reasoningEffort=reasoningEffort;this.maxTokens=maxTokens;this.maxToolRounds=maxToolRounds;
+  this.reasoningEffort=reasoningEffort;this.maxTokens=maxTokens??OPENROUTER_MAX_TOKENS;this.maxTokensExplicit=maxTokens!=null;this.effortOverride=null;this.maxToolRounds=maxToolRounds;
   this.fetcher=fetcher;this.perceptionProfile=perceptionProfile;this.tracer=tracer;
   this.profileOverride=profileOverride;
   this.verifiedModels=new Set();
   this.tools={...perceptionTools,viewImage:async({file})=>({perception:'direct-image',imageUrl:`data:image/${extname(file.path).slice(1).replace('jpg','jpeg')};base64,${(await readFile(file.path)).toString('base64')}`})};
  }
- requestSettings(){
-  const traits=modelTraits(this.model);
-  const reasoning=traits.reasoning==='always-on'?{effort:this.reasoningEffort}:{effort:this.reasoningEffort};
-  return {model:this.model,provider:OPENROUTER_PROVIDER_POLICY,reasoning,max_tokens:this.maxTokens};
+ // Effort for one model: an evaluation override, else the model's production
+ // override, else the host-wide medium/high setting.
+ effortFor(model){
+  return this.effortOverride??modelTraits(model).productionEffort??this.reasoningEffort;
+ }
+ maxTokensFor(model){
+  return this.maxTokensExplicit?this.maxTokens:(modelTraits(model).maxTokens??this.maxTokens);
+ }
+ requestSettings(model=this.model){
+  return {model,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.effortFor(model)},max_tokens:this.maxTokensFor(model)};
  }
  async profile(){
   if(typeof this.profileOverride==='string')return this.profileOverride;
   const tool=wigglyToolDefinition();
   const traits=modelTraits(this.model);
-  return digest({model:this.model,traits,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.reasoningEffort},maxTokens:this.maxTokens,maxToolRounds:this.maxToolRounds,tool:tool.inputSchema,perception:this.perceptionProfile,instruction:'openrouter-crew-v1'});
+  return digest({model:this.model,traits,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.reasoningEffort},maxTokens:this.maxTokens,modelOverrides:OPENROUTER_MODEL_TRAITS,maxToolRounds:this.maxToolRounds,tool:tool.inputSchema,perception:this.perceptionProfile,instruction:'openrouter-crew-v1'});
  }
  async preflight(worker){
   if(worker.capabilityVersion!==await this.profile())throw new Error('OPENROUTER_PROFILE_CHANGED: host/tool version differs from the bound crew. Stop for explicit reconfiguration/qualification.');
@@ -79,16 +91,16 @@ export class OpenRouterHost {
   let resolvedReasoning=reasoning;
   if(traits.reasoning==='always-on'){
    if(resolvedReasoning&&typeof resolvedReasoning==='object'&&resolvedReasoning.enabled===false){
-    resolvedReasoning={effort:this.reasoningEffort};
+    resolvedReasoning={effort:this.effortFor(model)};
    }else if(!resolvedReasoning){
-    resolvedReasoning={effort:this.reasoningEffort};
+    resolvedReasoning={effort:this.effortFor(model)};
    }
   }else{
    if(!resolvedReasoning){
-    resolvedReasoning=forcingSpecificTool?{enabled:false}:{effort:this.reasoningEffort};
+    resolvedReasoning=forcingSpecificTool?{enabled:false}:{effort:this.effortFor(model)};
    }
   }
-  const body={model,messages,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokens};
+  const body={model,messages,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokensFor(model)};
   if(!verify){
    body.response_format={type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}};
   }

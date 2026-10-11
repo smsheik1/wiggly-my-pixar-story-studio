@@ -18,7 +18,7 @@ const kit=loadStudio().config.agents;
 const deepseekRoles=Object.keys(kit).filter(r=>kit[r].backend==='openrouter');
 const legacyCrew={workers:Object.keys(crewRoles).map(role=>({workerId:`thread-${role}`,name:crewRoles[role].name,role,modelVersion:'gpt-6.1-sol',capabilityVersion:'old-cap',execution:'host'}))};
 
-test('refresh-crew-models copies only per-agent backend/model into a legacy pinned studio',()=>{
+test('refresh-crew-models copies only per-agent backend/model into a legacy pinned studio',{timeout:10000},()=>{
  let p=legacy(initialProject('crew-models',inputs,{workflowRevision:2}));
  const before=structuredClone(p.studio);
  p=send(p,'refresh-crew-models',{actor:'human',message:'ISOLATED move crew to per-agent models'});
@@ -32,7 +32,7 @@ test('refresh-crew-models copies only per-agent backend/model into a legacy pinn
  assert.throws(()=>send(p,'refresh-crew-models',{actor:'human',message:'ISOLATED again'}),/CREW_MODEL_REFRESH_NOOP/);
 });
 
-test('refresh-crew-models keeps a supervised reviewer locked by approved media on its pinned model',()=>{
+test('refresh-crew-models keeps a supervised reviewer locked by approved media on its pinned model',{timeout:10000},()=>{
  let p=legacy(audioProject());p.reviewMode='supervised';
  assert.ok(p.artifacts.some(a=>a.valid&&a.approvedBy&&a.content?.files&&['audition','narration'].includes(a.kind)));
  p=send(p,'refresh-crew-models',{actor:'human',message:'ISOLATED move crew'});
@@ -42,16 +42,17 @@ test('refresh-crew-models keeps a supervised reviewer locked by approved media o
  assert.match(p.history.filter(h=>h.action==='refresh-crew-models').map(h=>h.message).join(' '),/locked reviewers kept: audio-reviewer/);
 });
 
-test('crew-refresh after refresh-crew-models rebinds exactly the moved roles and keeps Sol worker IDs',async()=>{
+test('crew-refresh after refresh-crew-models rebinds every role (Sol and DeepSeek) onto Muse without any codex host',{timeout:10000},async()=>{
  let p=legacy(initialProject('crew-models-rebind',inputs,{workflowRevision:2}));
  p=send(p,'refresh-crew-models',{actor:'human',message:'ISOLATED move crew'});
- const codex={tools:{},refreshCrew:async c=>({workers:c.workers.map(w=>({...w,capabilityVersion:'codex-cap'}))}),startRole:async()=>{throw new Error('no codex role should move');}};
  const openrouter={tools:{},refreshCrew:async c=>({workers:c.workers}),startRole:async(role,agent)=>({workerId:`openrouter:${role}:new`,name:agent.name,role,modelVersion:agent.model,capabilityVersion:'or-cap',execution:'host',backend:'openrouter'})};
- const out=await new CrewHost({codex,openrouter,config:p.studio.config}).refreshCrew(legacyCrew,p.studio.config);
- assert.deepEqual([...out.changed].sort(),[...deepseekRoles].sort());
- for(const role of ['script-writer','visual-reviewer','scene-reviewer']){const w=out.workers.find(w=>w.role===role);assert.equal(w.workerId,`thread-${role}`);assert.equal(w.backend,'codex');assert.equal(w.modelVersion,'gpt-6.1-sol');}
- for(const role of deepseekRoles)assert.equal(out.workers.find(w=>w.role===role).modelVersion,'deepseek/deepseek-v4.1-flash');
- // Without refresh-crew-models the legacy pinned config changes nothing.
+ // codex:null: rebinding the old Sol threads must not need Codex at all.
+ const out=await new CrewHost({codex:null,openrouter,config:p.studio.config}).refreshCrew(legacyCrew,p.studio.config);
+ assert.deepEqual([...out.changed].sort(),Object.keys(crewRoles).sort());
+ for(const w of out.workers){assert.equal(w.backend,'openrouter',w.role);assert.equal(w.modelVersion,'meta/muse-spark-1.3-contributor',w.role);assert.equal(w.workerId,`openrouter:${w.role}:new`);}
+ assert.equal(CrewHost.backendsNeeded('crew-refresh',p.studio.config,legacyCrew.workers).codex,false);
+ // Without refresh-crew-models the legacy pinned config changes nothing (and still routes to codex).
+ const codex={tools:{},refreshCrew:async c=>({workers:c.workers.map(w=>({...w,capabilityVersion:'codex-cap'}))}),startRole:async()=>{throw new Error('no codex role should move');}};
  const untouched=legacy(initialProject('crew-models-none',inputs,{workflowRevision:2}));
  const none=await new CrewHost({codex,openrouter,config:untouched.studio.config}).refreshCrew(legacyCrew,untouched.studio.config);
  assert.deepEqual(none.changed,[]);
