@@ -42,6 +42,9 @@ test('1. truncated once continues, stitches, runTask parses Event, usage counts 
     const msgs = second.messages;
     assert.ok(msgs.some(m => m.role === 'assistant' && m.content === half), '2nd body keeps the partial assistant content');
     assert.ok(msgs.some(m => m.role === 'user' && /cut off by the output limit|Continue EXACTLY/.test(String(m.content))), '2nd body has the continue instruction');
+    assert.ok(bodies[0].response_format, '1st request keeps the strict event schema');
+    assert.equal(second.response_format, undefined, 'continuation drops response_format so the remainder can be stitched');
+    assert.equal(second.max_tokens, bodies[0].max_tokens, 'continuation keeps the per-model output limit');
     assert.equal(ends.length, 1);
     assert.equal(ends[0].usage.requests, 2, 'usage counted for both requests');
   } finally { await rm(dir, { recursive: true, force: true }); }

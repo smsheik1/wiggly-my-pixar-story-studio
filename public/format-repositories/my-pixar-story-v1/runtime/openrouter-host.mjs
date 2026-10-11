@@ -114,9 +114,12 @@ export class OpenRouterHost {
    }
   }
   const effectiveMaxTokens=maxTokens??this.maxTokensFor(model);
-  const sendOnce=async(msgs)=>{
+  // continuation=true: a strict json_schema response_format would force the model to start a
+  // brand-new JSON object, so the remaining characters could never be stitched onto the partial.
+  // Continuation requests therefore drop response_format; the first request is unchanged.
+  const sendOnce=async(msgs,continuation=false)=>{
    const body={model,messages:msgs,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokensFor(model)};
-   if(!verify){
+   if(!verify&&!continuation){
     body.response_format={type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}};
    }
    body.reasoning=resolvedReasoning;
@@ -164,8 +167,8 @@ export class OpenRouterHost {
    }
    continuations++;
    cur.push({role:'assistant',content:partial});
-   cur.push({role:'user',content:partial?CONTINUE_PROMPT:CONTINUE_EMPTY_PROMPT});
-   choice=await sendOnce(cur);
+   cur.push({role:'user',content:parts.join('')?CONTINUE_PROMPT:CONTINUE_EMPTY_PROMPT});
+   choice=await sendOnce(cur,true);
   }
   if(!parts.length)return choice.message;
   const finalMsg=choice.message??{};
