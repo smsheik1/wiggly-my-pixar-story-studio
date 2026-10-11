@@ -60,3 +60,18 @@ node runner.mjs eval --dataset evaluation/text-personas.json --predictions /abso
 ```
 
 Semantic tasks carry the actual packaged independent text rubric, bound into their input digest. Exported tasks use neutral IDs, omit expected labels/group/split, and reject extra fields outside the scoped semantic input contract, including nested expected-label fields. Semantic truth authority must be human or an unconfirmed agent proposal; objective/frame/capability labels cannot score factual meaning. Supplied semantic verdicts must declare direct-text review. A changed rubric invalidates earlier predictions. A genuine reviewer may supply predictions for discussion, but unconfirmed labels produce no accuracy score and neither predictions nor scores authorize production. Human-confirmed independent labels and additional separated holdout examples are needed before claiming semantic qualification.
+
+## Validating the prescreen
+
+The Decisions prescreen client (`runtime/decisions-prescreen.mjs`) calls OpenRouter's Decisions endpoint (`POST /api/alpha/decisions`) using the existing `OPENROUTER_API_KEY`. It is off by default (`prescreen.enabled: false`).
+
+Before turning it on, run the offline replay against Vera's real r4 judgments:
+```sh
+node evaluation/decisions-replay.mjs --run /absolute/path/to/r4 --secrets secrets.env [--models openai/gpt-6-luna-decisions,cloudflare/clef-flash] [--confirm-spend]
+```
+
+**Suggested go-live bar for Shaz:**
+- **Zero false passes** across the 13 r4 judgments (Vera rejected, but prescreen passed).
+- **Top-1 ranking agreement ≥ 2/3** for the chosen model compared with Vera's recommendation and Shaz's selection.
+- Until then, `enabled` stays false. Switching models is the one-line `prescreen.model` setting in `studio.json`.
+

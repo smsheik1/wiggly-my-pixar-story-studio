@@ -79,7 +79,42 @@ function warnOnce(message){
 // Pass {client} to inject a fake backend (tests, no network). All methods are
 // sync fire-and-forget; only flush() is awaited with a bounded timeout and it
 // never throws into the runtime.
-export async function createTracer({secretsPath,runId='local',projectName=TRACING_PROJECT,client=null,fetcher=fetch}={}){
+export function paidJobTimer(tracer, base = {}) {
+  const startAt = Date.now();
+  return {
+    ok(extra = {}) {
+      try {
+        const durationMs = Date.now() - startAt;
+        const outcome = 'ok';
+        tracer?.paidJob?.({
+          ...base,
+          ...extra,
+          outcome,
+          durationMs,
+        });
+      } catch {}
+    },
+    fail(error, extra = {}) {
+      try {
+        const durationMs = Date.now() - startAt;
+        const errorMsg = String(error?.message ?? error ?? '').slice(0, 300);
+        const isQuota = /resource_exhausted|exhausted your capacity|quota will reset/i.test(errorMsg)
+          || /402|429|_CREDITS_EXHAUSTED|_RATE_LIMITED/i.test(errorMsg)
+          || error?.status === 402 || error?.status === 429;
+        const outcome = isQuota ? 'quota' : 'provider-error';
+        tracer?.paidJob?.({
+          ...base,
+          ...extra,
+          outcome,
+          error: errorMsg,
+          durationMs,
+        });
+      } catch {}
+    },
+  };
+}
+
+export async function createTracer({secretsPath,runId='local',projectName=TRACING_PROJECT,client=null,fetcher=fetch,tags:extraTags=[],metadata:extraMetadata={}}={}){
  if(process.env.WIGGLY_TRACING==='off')return disabledTracer();
  if(!secretsPath)return disabledTracer();
  let source;
@@ -92,17 +127,18 @@ export async function createTracer({secretsPath,runId='local',projectName=TRACIN
   const value=match[1].replace(/^(['"])(.*)\1$/,'$2');
   if(value&&value.length>=8)secrets.push(value);
  }
- const tags=[`run:${runId}`];
+ const tags=[`run:${runId}`,...(Array.isArray(extraTags)?extraTags:[])];
+ const baseMetadata={runId,...(extraMetadata&&typeof extraMetadata==='object'?extraMetadata:{})};
  const safe=(value)=>{try{return sanitize(value,secrets);}catch{return {sanitize_failed:true};}};
  if(client){
   // Injected fake backend for tests: capture sanitized runs, never network.
   const captured=client.captured??(client.captured=[]);
   const post=run=>{try{captured.push(run);}catch(error){warnOnce(error.message);}};
-  const root={name:'drive-codex',run_type:'chain',project_name:projectName,tags,inputs:safe({runId}),metadata:safe({runId})};
+  const root={name:'drive-codex',run_type:'chain',project_name:projectName,tags,inputs:safe(baseMetadata),metadata:safe(baseMetadata)};
   post({phase:'root',...root});
   const open=new Set();
   const child=(kind,fields)=>{
-   const run={phase:kind,project_name:projectName,tags,...safe(fields)};
+   const run={phase:kind,project_name:projectName,tags,metadata:safe({...baseMetadata,...fields}),...safe(fields)};
    post(run);
    const handle={...run,ended:false,end:(outputs={})=>{if(handle.ended)return;handle.ended=true;open.delete(handle);try{post({phase:`${kind}-end`,tags,...safe(outputs)});}catch(error){warnOnce(error.message);}}};
    open.add(handle);
@@ -113,7 +149,11 @@ export async function createTracer({secretsPath,runId='local',projectName=TRACIN
    turn:(fields={})=>child('crew-turn',{name:`crew-turn:${fields.role??'unknown'}`,run_type:'chain',...fields}),
    tool:(fields={})=>child('tool',{name:`tool:${fields.toolName??'unknown'}`,run_type:'tool',...fields}),
    review:(fields={})=>{child('review',{name:'review-verdict',run_type:'chain',...fields}).end({});},
-   paidJob:(fields={})=>{child('paid-job',{name:`paid-job:${fields.provider??'unknown'}`,run_type:'tool',...fields}).end({});},
+   paidJob:(fields={})=>{
+    const {outcome='ok',durationMs=0,jobId,provider,estimatedCostUsd,actualCostUsd,error,...rest}=fields;
+    child('paid-job',{name:`paid-job:${fields.provider??'unknown'}`,run_type:'tool',...fields})
+      .end({outcome,durationMs,jobId,provider,estimatedCostUsd,actualCostUsd,...rest,...(error?{error}:{})});
+   },
    flush:async()=>{for(const handle of [...open])try{handle.end({outcome:'error',error:'unfinished at flush'});}catch(error){warnOnce(error.message);}},
   };
  }
@@ -122,12 +162,12 @@ export async function createTracer({secretsPath,runId='local',projectName=TRACIN
   const {Client}=await import('langsmith');
   const {RunTree}=await import('langsmith/run_trees');
   const ls=new Client({apiKey,callerOptions:{maxRetries:0},timeout_ms:10000,hideInputs:value=>safe(value),hideOutputs:value=>safe(value),hideMetadata:value=>safe(value),fetchImplementation:fetcher});
-  const root=new RunTree({name:'drive-codex',run_type:'chain',inputs:safe({runId}),project_name:projectName,tags,metadata:safe({runId}),client:ls});
+  const root=new RunTree({name:'drive-codex',run_type:'chain',inputs:safe(baseMetadata),project_name:projectName,tags,metadata:safe(baseMetadata),client:ls});
   root.postRun().catch(error=>warnOnce(error.message));
   const open=new Set();
   const child=(name,run_type,fields)=>{
    try{
-    const tree=new RunTree({name,run_type,parent_run:root,inputs:safe(fields),project_name:projectName,tags,metadata:safe(fields),client:ls});
+    const tree=new RunTree({name,run_type,parent_run:root,inputs:safe(fields),project_name:projectName,tags,metadata:safe({...baseMetadata,...fields}),client:ls});
     tree.postRun().catch(error=>warnOnce(error.message));
     // RunTree.end() only records locally; patchRun() sends the end time/outputs.
     const handle={ended:false,end:(outputs={},errorText)=>{if(handle.ended)return;handle.ended=true;open.delete(handle);try{Promise.resolve(tree.end(safe(outputs),errorText)).then(()=>tree.patchRun()).catch(error=>warnOnce(error.message));}catch(error){warnOnce(error.message);}}};
@@ -141,7 +181,12 @@ export async function createTracer({secretsPath,runId='local',projectName=TRACIN
    turn:(fields={})=>child(`crew-turn:${fields.role??'unknown'}`,'chain',fields),
    tool:(fields={})=>child(`tool:${fields.toolName??'unknown'}`,'tool',fields),
    review:(fields={})=>{child('review-verdict','chain',fields).end({decision:fields.decision,artifactId:fields.artifactId});},
-   paidJob:(fields={})=>{child(`paid-job:${fields.provider??'unknown'}`,'tool',fields).end({provider:fields.provider,estimatedCostUsd:fields.estimatedCostUsd,actualCostUsd:fields.actualCostUsd});},
+   paidJob:(fields={})=>{
+    const {outcome='ok',durationMs=0,jobId,provider,estimatedCostUsd,actualCostUsd,error,...rest}=fields;
+    const errorText = outcome !== 'ok' ? (error || 'paid-job error') : undefined;
+    child(`paid-job:${fields.provider??'unknown'}`,'tool',fields)
+      .end({outcome,durationMs,jobId,provider,estimatedCostUsd,actualCostUsd,...rest,...(error?{error}:{})}, errorText);
+   },
    flush:async(timeoutMs=5000)=>{
     if(flushed)return;flushed=true;
     for(const handle of [...open])try{handle.end({outcome:'error',error:'unfinished at flush'},'unfinished at flush');}catch(error){warnOnce(error.message);}

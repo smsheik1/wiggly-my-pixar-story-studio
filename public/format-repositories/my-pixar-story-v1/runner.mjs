@@ -351,11 +351,8 @@ async function main() {
       const reviewCost=Number(option('review-cost-usd','0')),transcriptionCost=Number(option('transcription-cost-usd','0'));
       // Optional live LangSmith tracing: enabled only with LANGSMITH_API_KEY in
       // the --secrets file; off when WIGGLY_TRACING=off or no key. Never breaks a run.
-      const fallbackTracer=()=>({enabled:false,turn:()=>({end(){}}),tool:()=>({end(){}}),review(){},paidJob(){},flush:async()=>{}});
-      let tracer=fallbackTracer();
-      try{const tracing=await import('./runtime/tracing.mjs');tracer=await tracing.createTracer({secretsPath,runId:basename(runDir)});}catch{tracer=fallbackTracer();}
       let budgetQueue=Promise.resolve();
-      const beforeRequest=async({provider,requestDigest,task})=>{if(status.project.reviewMode!=='supervised')return;const amount=provider==='gemini'?reviewCost:(provider==='cartesia-stt'?transcriptionCost:NaN);if(!Number.isFinite(amount)||amount<=0)throw new Error('ACCOUNT_ESTIMATE_REQUIRED: set positive --review-cost-usd / --transcription-cost-usd before paid inference.');try{tracer.paidJob({provider,estimatedCostUsd:amount,actualCostUsd:null,requestDigest,taskId:task.taskId});}catch{}budgetQueue=budgetQueue.then(async()=>{const latest=await workflow.status('project');if(latest.pending.taskId!==task.taskId)throw new Error('STALE_TASK: inference reservation belongs to an older task.');await workflow.respond('project',{taskId:task.taskId,actor:'runtime',action:'reserve-compute',reservation:{id:provider+':'+requestDigest,provider,estimatedCostUsd:amount}});});return budgetQueue;};
+      const inFlightTimers = new Map();
       const recordIdx = args.indexOf('--record');
       const hasRecordFlag = recordIdx >= 0;
       if (hasRecordFlag) args.splice(recordIdx, 1);
@@ -364,6 +361,7 @@ async function main() {
 
       let cassette = null;
       let cassetteDir = null;
+      let cassetteId = null;
 
       if (replayCassetteDir) {
         globalThis.fetch = () => {
@@ -373,7 +371,8 @@ async function main() {
         cassette.aliases = runDirAliases(runDir);
       } else if (isRecord) {
         const utcStamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '') + 'Z';
-        cassetteDir = join(runDir, 'cassettes', `${command}-${utcStamp}`);
+        cassetteId = `${command}-${utcStamp}`;
+        cassetteDir = join(runDir, 'cassettes', cassetteId);
         const beforeDir = join(cassetteDir, 'before');
         await mkdir(beforeDir, { recursive: true });
         const runEntries = await readdir(runDir).catch(() => []);
@@ -425,6 +424,45 @@ async function main() {
         cassette.aliases = runDirAliases(runDir);
       }
 
+      // Optional live LangSmith tracing: enabled only with LANGSMITH_API_KEY in
+      // the --secrets file; off when WIGGLY_TRACING=off or no key. Never breaks a run.
+      const fallbackTracer=()=>({enabled:false,turn:()=>({end(){}}),tool:()=>({end(){}}),review(){},paidJob(){},flush:async()=>{}});
+      let tracer=fallbackTracer();
+      try{
+        const tracing=await import('./runtime/tracing.mjs');
+        const tracerOpts={
+          secretsPath,
+          runId:basename(runDir),
+          ...(isRecord && cassetteId ? { tags: [`cassette:${cassetteId}`], metadata: { cassetteId } } : {}),
+        };
+        tracer=await tracing.createTracer(tracerOpts);
+      }catch{tracer=fallbackTracer();}
+
+      const beforeRequest=async({provider,requestDigest,task})=>{
+        if(status.project.reviewMode!=='supervised')return;
+        const amount=provider==='gemini'?reviewCost:(provider==='cartesia-stt'?transcriptionCost:NaN);
+        if(!Number.isFinite(amount)||amount<=0)throw new Error('ACCOUNT_ESTIMATE_REQUIRED: set positive --review-cost-usd / --transcription-cost-usd before paid inference.');
+        const tracing = await import('./runtime/tracing.mjs').catch(() => null);
+        if (tracing?.paidJobTimer) {
+          inFlightTimers.set(requestDigest, tracing.paidJobTimer(tracer, {
+            provider,
+            jobId: task.taskId,
+            estimatedCostUsd: amount,
+            actualCostUsd: amount,
+            actualCostSource: 'estimate',
+          }));
+        }
+        budgetQueue=budgetQueue.then(async()=>{const latest=await workflow.status('project');if(latest.pending.taskId!==task.taskId)throw new Error('STALE_TASK: inference reservation belongs to an older task.');await workflow.respond('project',{taskId:task.taskId,actor:'runtime',action:'reserve-compute',reservation:{id:provider+':'+requestDigest,provider,estimatedCostUsd:amount}});});
+        return budgetQueue;
+      };
+      const afterResponse=async({requestDigest})=>{
+        const timer = inFlightTimers.get(requestDigest);
+        if (timer) {
+          inFlightTimers.delete(requestDigest);
+          timer.ok();
+        }
+      };
+
       let geminiFetcher = fetch, cartesiaFetcher = fetch;
       let orFetcher = fetch;
       if (replayCassetteDir) {
@@ -436,8 +474,31 @@ async function main() {
         cartesiaFetcher = recordingFetcher(cassette, 'cartesia-stt', fetch);
         orFetcher = recordingFetcher(cassette, 'openrouter', fetch);
       }
+      const wrappingFetcher = (baseFetcher, provider) => async (url, options) => {
+        try {
+          const res = await baseFetcher(url, options);
+          if (!res.ok) {
+            // Find timer and fail
+            for (const [digest, timer] of inFlightTimers.entries()) {
+              if (timer) {
+                inFlightTimers.delete(digest);
+                timer.fail(new Error(`HTTP ${res.status}`));
+              }
+            }
+          }
+          return res;
+        } catch (err) {
+          for (const [digest, timer] of inFlightTimers.entries()) {
+            if (timer) {
+              inFlightTimers.delete(digest);
+              timer.fail(err);
+            }
+          }
+          throw err;
+        }
+      };
 
-      const perceptionTools={...createGeminiReviewTools({secretsPath,receiptDirectory:join(runDir,'gemini-reviews'),maxCalls:reviewCalls,beforeRequest,fetcher:geminiFetcher}),...createCartesiaTranscriptionTool({secretsPath,receiptDirectory:join(runDir,'cartesia-transcriptions'),maxCalls:transcriptionCalls,beforeRequest,fetcher:cartesiaFetcher}),...createAudioEditTools({runDir})};
+      const perceptionTools={...createGeminiReviewTools({secretsPath,receiptDirectory:join(runDir,'gemini-reviews'),maxCalls:reviewCalls,beforeRequest,afterResponse,fetcher:wrappingFetcher(geminiFetcher, 'gemini')}),...createCartesiaTranscriptionTool({secretsPath,receiptDirectory:join(runDir,'cartesia-transcriptions'),maxCalls:transcriptionCalls,beforeRequest,afterResponse,fetcher:wrappingFetcher(cartesiaFetcher, 'cartesia-stt')}),...createAudioEditTools({runDir})};
       // A four-file review includes twelve tool calls and a structured report.
       // Keep a bounded ten-minute window; timeout still stops without a retry.
       // Sol agents run through CodexHost unchanged; DeepSeek agents run through
@@ -713,18 +774,153 @@ async function main() {
         try{key=await loadKey(job.plan.provider,secretsPath);}catch(e){throw new Error(`${e.message}\n${remediation(job.plan.provider,secretsPath)}`);}
       }
       if(command==='generate')await runtimeEvent('begin');
+      const fallbackTracer=()=>({enabled:false,paidJob(){},flush:async()=>{}});
+      let tracer=fallbackTracer();
       try{
-        const latest=(await workflow.status('project')).project;
-        const needsStub=command==='collect'&&job.plan.provider!=='replicate'&&!(job.plan.provider==='agy'&&job.request.fallback);
-        const result=await executeJob(latest,latest.jobs.find(j=>j.id===job.id),runDir,key,needsStub?()=>{throw new Error('Collection cannot resubmit synchronous providers.');}:fetch,command==='collect',onJobId);
-        if(result.pending){print({...presentation(await workflow.status('project')),collection:result});return;}
-        await verifyFiles(result);print(presentation(await runtimeEvent('receipt',{result})));
-      }catch(e){
-        const diagnostic=key?e.message.replaceAll(key,'[redacted]'):e.message;
-        await runtimeEvent('provider-error',{message:diagnostic});throw new Error(`${diagnostic}\n${remediation(job.plan.provider,secretsPath)}`);
+        const tracing=await import('./runtime/tracing.mjs');
+        tracer=await tracing.createTracer({secretsPath,runId:basename(runDir)});
+      }catch{tracer=fallbackTracer();}
+      try{
+        try{
+          const latest=(await workflow.status('project')).project;
+          const needsStub=command==='collect'&&job.plan.provider!=='replicate'&&!(job.plan.provider==='agy'&&job.request.fallback);
+          const result=await executeJob(latest,latest.jobs.find(j=>j.id===job.id),runDir,key,needsStub?()=>{throw new Error('Collection cannot resubmit synchronous providers.');}:fetch,command==='collect',onJobId,{tracer});
+          if(result.pending){print({...presentation(await workflow.status('project')),collection:result});return;}
+          await verifyFiles(result);
+          const receiptStatus = await runtimeEvent('receipt',{result});
+          // Opt-in prescreen auto call: at the end of collect, if new status is gate 'review'
+          if (command === 'collect' && receiptStatus.pending?.gate === 'review') {
+            const pNow = receiptStatus.project;
+            const pConf = studioFor(pNow)?.config.prescreen ?? { enabled: false };
+            const steps = pConf.steps ?? ['candidates', 'backgroundCandidates', 'backgroundAngle', 'keyframe'];
+            if (pConf.enabled && steps.includes(pNow.step)) {
+              try {
+                const art = current(pNow);
+                if (art && art.content?.files?.length) {
+                  await verifyFiles(art.content.files);
+                  const { runPrescreen } = await import('./runtime/decisions-prescreen.mjs');
+                  const { criteriaFor } = await import('./runtime/workflow.mjs');
+                  const criteria = criteriaFor(pNow);
+                  let refs = [];
+                  let contextText = '';
+                  if (pNow.step === 'candidates') {
+                    const c = pNow.roster?.characters?.find(ch => ch.id === pNow.characterId);
+                    refs = c?.references ?? [];
+                    contextText = c?.notes ?? '';
+                  } else if (['backgroundCandidates', 'backgroundAngle'].includes(pNow.step)) {
+                    const brief = current(pNow, `backgroundBrief:${pNow.locationId}`);
+                    refs = brief?.content?.references ?? [];
+                    contextText = brief?.content?.direction ?? '';
+                  } else if (pNow.step === 'keyframe') {
+                    refs = [];
+                    contextText = '';
+                  }
+                  const prescreenResult = await runPrescreen({
+                    config: pConf,
+                    secretsPath,
+                    step: pNow.step,
+                    files: art.content.files,
+                    references: refs,
+                    contextText,
+                    criteria,
+                    tracer,
+                  });
+                  await workflow.respond('project', {
+                    taskId: receiptStatus.pending.taskId,
+                    actor: 'runtime',
+                    action: 'prescreen',
+                    artifactId: art.id,
+                    artifactDigest: art.digest,
+                    message: 'Decisions prescreen',
+                    prescreen: prescreenResult,
+                  });
+                }
+              } catch (err) {
+                process.stderr.write(`Prescreen auto-run failed: ${err.message}\n`);
+              }
+            }
+          }
+          print(presentation(await workflow.status('project')));
+        }catch(e){
+          const diagnostic=key?e.message.replaceAll(key,'[redacted]'):e.message;
+          await runtimeEvent('provider-error',{message:diagnostic});throw new Error(`${diagnostic}\n${remediation(job.plan.provider,secretsPath)}`);
+        }
+      }finally{
+        try{await tracer.flush(5000);}catch{}
       }return;
     }
-    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, add-reference, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, refresh-text-instructions, refresh-crew-models, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render, finalize or replay. See SKILL.md.');
+    if (command === 'prescreen') {
+      const { project, pending } = status;
+      if (pending.gate !== 'review') {
+        print({ message: 'prescreen skipped: pending gate is not review.' });
+        return;
+      }
+      const pConf = studioFor(project)?.config.prescreen ?? { enabled: false };
+      const steps = pConf.steps ?? ['candidates', 'backgroundCandidates', 'backgroundAngle', 'keyframe'];
+      if (!pConf.enabled || !steps.includes(project.step)) {
+        print({ message: `prescreen skipped: prescreen not enabled or step ${project.step} not in configured steps.` });
+        return;
+      }
+      const art = current(project);
+      if (!art || !art.content?.files?.length) {
+        print({ message: 'prescreen skipped: no files to prescreen.' });
+        return;
+      }
+      await verifyFiles(art.content.files);
+      const isDryRun = args.includes('--dry-run');
+      let refs = [];
+      let contextText = '';
+      if (project.step === 'candidates') {
+        const c = project.roster?.characters?.find(ch => ch.id === project.characterId);
+        refs = c?.references ?? [];
+        contextText = c?.notes ?? '';
+      } else if (['backgroundCandidates', 'backgroundAngle'].includes(project.step)) {
+        const brief = current(project, `backgroundBrief:${project.locationId}`);
+        refs = brief?.content?.references ?? [];
+        contextText = brief?.content?.direction ?? '';
+      }
+      const { estimatePrescreenCost, buildRequests, runPrescreen } = await import('./runtime/decisions-prescreen.mjs');
+      const { criteriaFor } = await import('./runtime/workflow.mjs');
+      const criteria = criteriaFor(project);
+      const estCost = estimatePrescreenCost({ model: pConf.model, files: art.content.files, references: refs, contextText });
+      process.stdout.write(`Estimated prescreen cost: $${estCost.toFixed(5)}\n`);
+      if (isDryRun) {
+        const planned = await buildRequests({ model: pConf.model, step: project.step, files: art.content.files, references: refs, contextText, criteria });
+        print({ plannedRequests: planned.length, imageCount: art.content.files.length, estimatedCostUsd: estCost });
+        return;
+      }
+      const fallbackTracer=()=>({enabled:false,paidJob(){},flush:async()=>{}});
+      let tracer=fallbackTracer();
+      try{
+        const tracing=await import('./runtime/tracing.mjs');
+        tracer=await tracing.createTracer({secretsPath,runId:basename(runDir)});
+      }catch{tracer=fallbackTracer();}
+      try {
+        const prescreenResult = await runPrescreen({
+          config: pConf,
+          secretsPath,
+          step: project.step,
+          files: art.content.files,
+          references: refs,
+          contextText,
+          criteria,
+          tracer,
+        });
+        print(presentation(await workflow.respond('project', {
+          taskId: pending.taskId,
+          actor: 'runtime',
+          action: 'prescreen',
+          artifactId: art.id,
+          artifactDigest: art.digest,
+          message: 'Decisions prescreen',
+          prescreen: prescreenResult,
+        })));
+      } finally {
+        try { await tracer.flush(5000); } catch {}
+      }
+      return;
+    }
+    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, add-reference, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, refresh-text-instructions, refresh-crew-models, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render, finalize, prescreen or replay. See SKILL.md.');
   } catch(error){
     const latest=await workflow.status('project').catch(()=>null);
     if(latest?.project.debug?.enabled&&!latest.project.debug.paused)await workflow.respond('project',{taskId:latest.pending.taskId,actor:'runtime',action:'debug-stop',message:'Command stopped: '+error.message});

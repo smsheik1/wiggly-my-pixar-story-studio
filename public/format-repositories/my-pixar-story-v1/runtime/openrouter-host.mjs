@@ -14,13 +14,22 @@ export const OPENROUTER_PROVIDER_POLICY={require_parameters:true,max_price:{prom
 export const OPENROUTER_MAX_TOKENS=16000;
 export const OPENROUTER_MAX_TOOL_ROUNDS=40;
 
+export const OPENROUTER_MODEL_TRAITS={
+ 'deepseek/deepseek-v4.1-flash': { reasoning:'optional', inputs:['text','image'] },
+ 'meta/muse-spark-1.3-contributor': { reasoning:'always-on', inputs:['text','image','video'] },
+};
+
+export function modelTraits(model){
+ return OPENROUTER_MODEL_TRAITS[model] ?? { reasoning:'optional', inputs:['text'] };
+}
+
 // Safety net: never send data: base64 bytes as tool text.
 const viewKey=(sha256,region)=>`${sha256}:${region?JSON.stringify([region.x,region.y,region.width,region.height]):'full'}`;
 const sanitizeDataUrls=(text)=>String(text).replace(/data:([^;,\s]+)[^,]*?;base64,[A-Za-z0-9+/=]+/g,'[binary data omitted: $1]');
 
 async function readJson(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;}}
 async function saveJson(path,value){await writeFile(path+'.tmp',JSON.stringify(value)+'\n',{mode:0o600});await rename(path+'.tmp',path);}
-async function readOpenRouterKey(secretsPath){
+export async function readOpenRouterKey(secretsPath){
  if(!secretsPath)throw new Error('OPENROUTER_API_KEY missing: pass --secrets with OPENROUTER_API_KEY set.');
  let source;try{source=await readFile(secretsPath,'utf8');}catch{throw new Error('OPENROUTER_API_KEY missing: pass --secrets with OPENROUTER_API_KEY set.');}
  const match=source.match(/^\s*(?:export\s+)?OPENROUTER_API_KEY\s*=\s*(.+)\s*$/m);
@@ -45,12 +54,15 @@ export class OpenRouterHost {
   this.tools={...perceptionTools,viewImage:async({file})=>({perception:'direct-image',imageUrl:`data:image/${extname(file.path).slice(1).replace('jpg','jpeg')};base64,${(await readFile(file.path)).toString('base64')}`})};
  }
  requestSettings(){
-  return {model:this.model,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.reasoningEffort},max_tokens:this.maxTokens};
+  const traits=modelTraits(this.model);
+  const reasoning=traits.reasoning==='always-on'?{effort:this.reasoningEffort}:{effort:this.reasoningEffort};
+  return {model:this.model,provider:OPENROUTER_PROVIDER_POLICY,reasoning,max_tokens:this.maxTokens};
  }
  async profile(){
   if(typeof this.profileOverride==='string')return this.profileOverride;
   const tool=wigglyToolDefinition();
-  return digest({model:this.model,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.reasoningEffort},maxTokens:this.maxTokens,maxToolRounds:this.maxToolRounds,tool:tool.inputSchema,perception:this.perceptionProfile,instruction:'openrouter-crew-v1'});
+  const traits=modelTraits(this.model);
+  return digest({model:this.model,traits,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.reasoningEffort},maxTokens:this.maxTokens,maxToolRounds:this.maxToolRounds,tool:tool.inputSchema,perception:this.perceptionProfile,instruction:'openrouter-crew-v1'});
  }
  async preflight(worker){
   if(worker.capabilityVersion!==await this.profile())throw new Error('OPENROUTER_PROFILE_CHANGED: host/tool version differs from the bound crew. Stop for explicit reconfiguration/qualification.');
@@ -62,11 +74,25 @@ export class OpenRouterHost {
  }
  async chat({model,messages,tools,toolChoice,usageSink,reasoning,maxTokens,verify=false}){
   const key=await readOpenRouterKey(this.secretsPath);
+  const traits=modelTraits(model);
   const forcingSpecificTool=toolChoice&&typeof toolChoice==='object';
-  const body={model,messages,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokens,
-   response_format:{type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}},
-   // Thinking is switched off explicitly whenever a specific tool call is forced.
-   reasoning:reasoning??(forcingSpecificTool?{enabled:false}:{effort:this.reasoningEffort})};
+  let resolvedReasoning=reasoning;
+  if(traits.reasoning==='always-on'){
+   if(resolvedReasoning&&typeof resolvedReasoning==='object'&&resolvedReasoning.enabled===false){
+    resolvedReasoning={effort:this.reasoningEffort};
+   }else if(!resolvedReasoning){
+    resolvedReasoning={effort:this.reasoningEffort};
+   }
+  }else{
+   if(!resolvedReasoning){
+    resolvedReasoning=forcingSpecificTool?{enabled:false}:{effort:this.reasoningEffort};
+   }
+  }
+  const body={model,messages,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokens};
+  if(!verify){
+   body.response_format={type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}};
+  }
+  body.reasoning=resolvedReasoning;
   let response;
   try{
    response=await this.fetcher(OPENROUTER_URL,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','X-Title':'Wiggly memoir studio'},body:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(this.timeoutMs)});
@@ -96,7 +122,14 @@ export class OpenRouterHost {
    await this.preflight(worker);
    const packet=buildWorkerPacket(task,worker);
    const media=[],attached=new Set();
-   if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){const viewed=await callTool('viewImage',{sha256:file.sha256});media.push({type:'text',text:`Reference image sha256: ${file.sha256}`},{type:'image_url',image_url:{url:viewed.imageUrl}});attached.add(viewKey(file.sha256));}
+   if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){
+    if(!modelTraits(worker.modelVersion).inputs.includes('image')){
+     const error=new Error(`OPENROUTER_VISION_UNSUPPORTED: ${worker.modelVersion} cannot take images; bind a vision model for ${worker.role}.`);
+     error.stopDispatch=true;
+     throw error;
+    }
+    const viewed=await callTool('viewImage',{sha256:file.sha256});media.push({type:'text',text:`Reference image sha256: ${file.sha256}`},{type:'image_url',image_url:{url:viewed.imageUrl}});attached.add(viewKey(file.sha256));
+   }
   const tools=this.toolDefinition();
   const content=[{type:'text',text:packet},...media];
   const messages=[{role:'system',content:developerInstructions(worker)},{role:'user',content}];
@@ -123,6 +156,11 @@ export class OpenRouterHost {
        const value=await callTool(parsed.name,{sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})});
        endTool('completed');
        if(value&&typeof value==='object'&&typeof value.imageUrl==='string'){
+        if(!modelTraits(worker.modelVersion).inputs.includes('image')){
+         const error=new Error(`OPENROUTER_VISION_UNSUPPORTED: ${worker.modelVersion} cannot take images; bind a vision model for ${worker.role}.`);
+         error.stopDispatch=true;
+         throw error;
+        }
         // A region close-up is a different image of the same hash: key on sha256 + region.
         const key=viewKey(parsed.sha256,parsed.region),already=attached.has(key);
         const compact=already
@@ -159,13 +197,25 @@ export class OpenRouterHost {
  // model per host instance. Only success binds; content is never inspected.
  async verifyModel(model){
   if(this.verifiedModels.has(model))return;
-  await this.chat({model,messages:[{role:'user',content:'ping'}],reasoning:{enabled:false},maxTokens:16,verify:true});
+  const traits=modelTraits(model);
+  const reasoning=traits.reasoning==='always-on'?{effort:'low'}:{enabled:false};
+  const maxTokens=traits.reasoning==='always-on'?512:16;
+  await this.chat({model,messages:[{role:'user',content:'ping'}],reasoning,maxTokens,verify:true});
   this.verifiedModels.add(model);
  }
  async startCrew(model,config=loadStudio().config){
   const capabilityVersion=await this.profile(),path=join(this.cwd,'crew-startup-openrouter.json');
   const openRoles=Object.entries(config.agents).filter(([,a])=>(a.backend??'codex')==='openrouter');
   const models=Object.fromEntries(openRoles.map(([role,a])=>[role,model??a.model]));
+  for(const [role,agent] of openRoles){
+   const m=models[role];
+   const tools=agent.tools??crewRoles[role]?.tools??[];
+   if(tools.some(t=>['viewImage','watchVideo'].includes(t))&&!modelTraits(m).inputs.includes('image')){
+    const error=new Error(`OPENROUTER_VISION_UNSUPPORTED: ${m} cannot take images; bind a vision model for ${role}.`);
+    error.stopDispatch=true;
+    throw error;
+   }
+  }
   // Resumable cache only: keep saved workers still matching role, model and
   // capability; drop the rest and ignore any stale pending marker.
   const saved=await readJson(path);
@@ -181,6 +231,13 @@ export class OpenRouterHost {
  }
  // Single-role bind without touching the startup file (crew-refresh rebind).
  async startRole(role,agent){
+  const m=agent.model;
+  const tools=agent.tools??crewRoles[role]?.tools??[];
+  if(tools.some(t=>['viewImage','watchVideo'].includes(t))&&!modelTraits(m).inputs.includes('image')){
+   const error=new Error(`OPENROUTER_VISION_UNSUPPORTED: ${m} cannot take images; bind a vision model for ${role}.`);
+   error.stopDispatch=true;
+   throw error;
+  }
   const capabilityVersion=await this.profile();
   await this.verifyModel(agent.model);
   const workerId=`openrouter:${role}:${randomUUID().slice(0,8)}`;

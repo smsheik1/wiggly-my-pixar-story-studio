@@ -193,7 +193,7 @@ test('verifyModel caches per model on the host instance',async()=>{
   await host.startRole('text-reviewer',{name:'Sage',model:DEFAULT_OPENROUTER_MODEL});
   await host.startRole('cast-designer',{name:'Cee',model:DEFAULT_OPENROUTER_MODEL});
   assert.equal(n,1);
-  await host.startRole('sheet-prompter',{name:'Ess',model:'other/model'});
+  await host.startRole('sound-designer',{name:'Finn',model:'other/model'});
   assert.equal(n,2);
  }finally{await rm(dir,{recursive:true});}
 });
@@ -210,6 +210,7 @@ test('verify uses a minimal body; runTask bodies are unchanged',async()=>{
   const [verify,task]=bodies;
   assert.deepEqual(verify.reasoning,{enabled:false});assert.ok(verify.max_tokens<=16);
   assert.ok(!('tools' in verify)&&!('tool_choice' in verify));
+  assert.ok(!('response_format' in verify));
   assert.equal(verify.provider.require_parameters,true);
   assert.equal(task.reasoning.effort,'medium');assert.equal(task.max_tokens,OPENROUTER_MAX_TOKENS);
  }finally{await rm(dir,{recursive:true});}
