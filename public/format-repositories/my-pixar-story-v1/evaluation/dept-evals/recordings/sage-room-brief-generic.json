@@ -1,9 +1,9 @@
 {
  "caseId": "sage-room-brief-generic",
- "recordedAt": "2026-10-11T07:54:07.072Z",
+ "recordedAt": "2026-10-11T14:40:13.865Z",
  "model": "meta/muse-spark-1.3-contributor",
  "mode": "live",
- "fingerprint": "2a2f7dfdeab36dedb9ed6a5f42194bcde6d509e1f8d571ee1d6efbd438fdf600",
+ "fingerprint": "8a0855d9c83ee546dae52ec0924ce3dbfadca4e740643fe97d4cd9f25903ab11",
  "fingerprintParts": {
   "model": "meta/muse-spark-1.3-contributor",
   "backend": "openrouter",
@@ -13,11 +13,11 @@
   ],
   "skill": {
    "path": "crew/sage/SKILL.md",
-   "sha256": "caf59dc9167b0da55cc58c436e19c0351095815a3393861b1ee978c64414e1c0"
+   "sha256": "c9542bf7fd6a32a216e0e897be3583f3063876e60243ce17cc8dbdde1448675e"
   },
   "rubric": {
    "path": "evaluation/rubrics/text.md",
-   "sha256": "c9fd0d08cf39be370a329408fb84bbc975c611b6df9f531b93a782c816c6182f"
+   "sha256": "9f63661a714e8844e6585580c26261ff19d5d3f2eac84a18828375b2ff6ffaf5"
   },
   "recipes": {
    "character-prompter.md": "af2ade078cd958898cfa96c70b7dce4b74ff16f54adaefc8423f0bc513b854e8",
@@ -37,22 +37,22 @@
   "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
   "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
  },
- "wallMs": 48280,
- "costUsd": 0.0052,
+ "wallMs": 69597,
+ "costUsd": 0.0063023,
  "requests": [
   {
    "seq": 1,
-   "requestSha256": "a1b202905aea233c5c845f776f22d0b9d549dc19c12c041233e24fcb4635554f",
+   "requestSha256": "effcbd0e45c878466ec5845d68aa1a95bf6a6c7981dd5192fc4db6867734aef6",
    "status": 200,
-   "ms": 48138,
+   "ms": 69380,
    "message": {
-    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"232533dbcb9f113aaf6ebcebf01263eefe300721f81d160511002619b388cca3\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"backgroundBrief:childhood-room@1\\\",\\\"artifactDigest\\\":\\\"62c1de5b0798d15a0ec8abefcd6b46e7107de70aced7b368c0749d14697a01d9\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-text\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-fit\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Brief directs a quiet welcoming domestic room for childhood-encouragement, matching the approved simple domestic interior where quiet 8-year-old Shaz shares scientist ambition and mother shows excitement/apparent pride. No new remembered event is staged; furnishings are explicitly production design supporting script Beat 1 emotional purpose.\\\",\\\"location\\\":\\\"sceneIds ['childhood-encouragement']; direction sentences 1-2\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Create a quiet, welcoming domestic room for the childhood encouragement scene\\\",\\\"Eight-year-old Shaz shares his scientist ambition with his mother in a simple domestic interior.\\\"]},{\\\"criterion\\\":\\\"facts\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"KnownDetails preserve age eight, scientist ambition without knowing why, quiet/sunglasses signature, and mother excited/seemed proud, matching lockedAnswers scene1Childhood and script Beat 1. All architecture/furnishings/lighting are explicitly labeled proposed production design, not reconstruction, and continuity forbids scientist equipment, additional relatives or new events.\\\",\\\"location\\\":\\\"knownDetails[0-3]; proposedDetails; continuityNotes no-new-event sentence\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Shaz was eight when he wanted to become a scientist, without knowing why.\\\",\\\"All room architecture, furnishings and lighting are proposed production design, not a reconstruction of a documented childhood home.\\\"]},{\\\"criterion\\\":\\\"spatial-action\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Brief provides child standing screen-left and mother seated screen-right on inward-angled chair with clear space, calm background, floor space for feet/chair, unobstructed straight camera approach at child eye-level medium-wide to medium two-shot, and diffuse daylight readable on both future faces without sunglasses glare, directly enabling the approved two-shot push and inward-facing connection.\\\",\\\"location\\\":\\\"direction chair/window/lighting/framing sentences; continuityNotes floor-space and camera-approach sentences\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Place one modest wooden chair with a plain upholstered seat screen-right, angled inward toward an open standing position screen-left.\\\",\\\"Shaz stands screen-left and his mother sits screen-right on a simple chair, bringing their faces closer in height.\\\"]},{\\\"criterion\\\":\\\"continuity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Brief preserves screen-left/right positions, close-in-height single focal plane and inward orientation, retains window, doorway, cabinet, chair orientation, materials and lighting across the push, supports burgundy-striped child and teal-hijab mother designs with quiet neutral palette without rendering characters, prohibits new events, and declares master-only service with no secondary angle, matching backgrounds@2 angles [] and shot angleId null. Text review does not certify future rendered likeness.\\\",\\\"location\\\":\\\"continuityNotes full; backgrounds@2 childhood-room angles []\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Preserve the approved staging: child standing screen-left, mother seated screen-right\\\",\\\"This master serves the registered scene; no secondary angle is required by the current registry.\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\"}}\"}"
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"232533dbcb9f113aaf6ebcebf01263eefe300721f81d160511002619b388cca3\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"backgroundBrief:childhood-room@1\\\",\\\"artifactDigest\\\":\\\"62c1de5b0798d15a0ec8abefcd6b46e7107de70aced7b368c0749d14697a01d9\\\",\\\"review\\\":{\\\"decision\\\":\\\"rejected\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-text\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-fit\\\",\\\"status\\\":\\\"fail\\\",\\\"evidence\\\":\\\"Brief describes an empty generic catalog muted room, not a lived-in Pixar set: neutral walls, plain unmarked props and calm blank staging with no story-dressing telling whose space/when (no science/Yugioh/sunglasses/era cues, no saturated color/chunky shapes). Empty-of-people is met but empty set is a material defect.\\\",\\\"location\\\":\\\"direction sentences 3,5-7; proposedDetails[1], proposedDetails[2]; continuityNotes sentence 5\\\",\\\"repair\\\":\\\"Retain staging/camera but redress as proposed production design with lived-in Pixar dressing: replace neutral palette with bold saturated color scripting (e.g., warm teal or sunny ochre walls, patterned rug); add chunky rounded wooden furniture plus 8-year-old story props such as science poster, toy microscope, Yugioh cards and his sunglasses on dresser; keep warm motivated window light and empty-of-people rule.\\\",\\\"quotes\\\":[\\\"warm ivory walls\\\",\\\"plain upholstered seat\\\",\\\"plain unmarked storage objects\\\",\\\"quiet neutral palette\\\"]},{\\\"criterion\\\":\\\"facts\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"KnownDetails preserve locked ages/traits (8, quiet, sunglasses, scientist without known why, mother excited/seemed proud) and correctly mark all architecture/furnishings/lighting as proposed production design, not remembered home. No invented event, motive, employer, dialogue or scientist equipment is asserted as fact.\\\",\\\"location\\\":\\\"knownDetails[0-3]; direction sentence 2; continuityNotes no-new-event sentence\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"All room architecture, furnishings and lighting are proposed production design, not a reconstruction of a documented childhood home.\\\",\\\"when i was 8 years old, i wanted to be a scientist\\\"]},{\\\"criterion\\\":\\\"spatial-action\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Brief reserves clear floor and focal-plane space for standing child screen-left and seated mother screen-right facing inward, with child-eye-level medium-wide framing and straight push to medium two-shot, diffuse daylight keeping both future faces and sunglasses readable, plus unobstructed camera path.\\\",\\\"location\\\":\\\"direction chair/space sentences; continuityNotes staging sentences; scene childhood-encouragement\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Place one modest wooden chair with a plain upholstered seat screen-right, angled inward toward an open standing position screen-left.\\\",\\\"Shaz stands screen-left and his mother sits screen-right on a simple chair, bringing their faces closer in height.\\\"]},{\\\"criterion\\\":\\\"continuity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Continuity preserves approved staging, camera side/orientation, burgundy-striped child and teal-hijab mother support without rendering characters, no scientist costume/experiment/additional relatives/dialogue/new event, suitable hold composition, and master-only binding for registered scene with no secondary angle required.\\\",\\\"location\\\":\\\"continuityNotes; sceneIds[0] childhood-encouragement; shot-childhood-encouragement\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Preserve the approved staging: child standing screen-left, mother seated screen-right, their future faces close in height and in one focal plane, facing inward across clear space.\\\",\\\"Use the selected childhood and mother designs throughout, including burgundy stripes, translucent sunglasses and fully covering teal hijab.\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\"}}\"}"
    },
    "usage": {
-    "prompt_tokens": 35478,
-    "completion_tokens": 8261,
-    "reasoning_tokens": 7222,
-    "cost": 0.0052
+    "prompt_tokens": 37103,
+    "completion_tokens": 12960,
+    "reasoning_tokens": 11843,
+    "cost": 0.0063023
    }
   }
  ],
@@ -65,37 +65,39 @@
    "artifactId": "backgroundBrief:childhood-room@1",
    "artifactDigest": "62c1de5b0798d15a0ec8abefcd6b46e7107de70aced7b368c0749d14697a01d9",
    "review": {
-    "decision": "approved",
+    "decision": "rejected",
     "repairTarget": "current",
     "perception": "direct-text",
     "checks": [
      {
       "criterion": "scene-fit",
-      "status": "pass",
-      "evidence": "Brief directs a quiet welcoming domestic room for childhood-encouragement, matching the approved simple domestic interior where quiet 8-year-old Shaz shares scientist ambition and mother shows excitement/apparent pride. No new remembered event is staged; furnishings are explicitly production design supporting script Beat 1 emotional purpose.",
-      "location": "sceneIds ['childhood-encouragement']; direction sentences 1-2",
-      "repair": "",
+      "status": "fail",
+      "evidence": "Brief describes an empty generic catalog muted room, not a lived-in Pixar set: neutral walls, plain unmarked props and calm blank staging with no story-dressing telling whose space/when (no science/Yugioh/sunglasses/era cues, no saturated color/chunky shapes). Empty-of-people is met but empty set is a material defect.",
+      "location": "direction sentences 3,5-7; proposedDetails[1], proposedDetails[2]; continuityNotes sentence 5",
+      "repair": "Retain staging/camera but redress as proposed production design with lived-in Pixar dressing: replace neutral palette with bold saturated color scripting (e.g., warm teal or sunny ochre walls, patterned rug); add chunky rounded wooden furniture plus 8-year-old story props such as science poster, toy microscope, Yugioh cards and his sunglasses on dresser; keep warm motivated window light and empty-of-people rule.",
       "quotes": [
-       "Create a quiet, welcoming domestic room for the childhood encouragement scene",
-       "Eight-year-old Shaz shares his scientist ambition with his mother in a simple domestic interior."
+       "warm ivory walls",
+       "plain upholstered seat",
+       "plain unmarked storage objects",
+       "quiet neutral palette"
       ]
      },
      {
       "criterion": "facts",
       "status": "pass",
-      "evidence": "KnownDetails preserve age eight, scientist ambition without knowing why, quiet/sunglasses signature, and mother excited/seemed proud, matching lockedAnswers scene1Childhood and script Beat 1. All architecture/furnishings/lighting are explicitly labeled proposed production design, not reconstruction, and continuity forbids scientist equipment, additional relatives or new events.",
-      "location": "knownDetails[0-3]; proposedDetails; continuityNotes no-new-event sentence",
+      "evidence": "KnownDetails preserve locked ages/traits (8, quiet, sunglasses, scientist without known why, mother excited/seemed proud) and correctly mark all architecture/furnishings/lighting as proposed production design, not remembered home. No invented event, motive, employer, dialogue or scientist equipment is asserted as fact.",
+      "location": "knownDetails[0-3]; direction sentence 2; continuityNotes no-new-event sentence",
       "repair": "",
       "quotes": [
-       "Shaz was eight when he wanted to become a scientist, without knowing why.",
-       "All room architecture, furnishings and lighting are proposed production design, not a reconstruction of a documented childhood home."
+       "All room architecture, furnishings and lighting are proposed production design, not a reconstruction of a documented childhood home.",
+       "when i was 8 years old, i wanted to be a scientist"
       ]
      },
      {
       "criterion": "spatial-action",
       "status": "pass",
-      "evidence": "Brief provides child standing screen-left and mother seated screen-right on inward-angled chair with clear space, calm background, floor space for feet/chair, unobstructed straight camera approach at child eye-level medium-wide to medium two-shot, and diffuse daylight readable on both future faces without sunglasses glare, directly enabling the approved two-shot push and inward-facing connection.",
-      "location": "direction chair/window/lighting/framing sentences; continuityNotes floor-space and camera-approach sentences",
+      "evidence": "Brief reserves clear floor and focal-plane space for standing child screen-left and seated mother screen-right facing inward, with child-eye-level medium-wide framing and straight push to medium two-shot, diffuse daylight keeping both future faces and sunglasses readable, plus unobstructed camera path.",
+      "location": "direction chair/space sentences; continuityNotes staging sentences; scene childhood-encouragement",
       "repair": "",
       "quotes": [
        "Place one modest wooden chair with a plain upholstered seat screen-right, angled inward toward an open standing position screen-left.",
@@ -105,12 +107,12 @@
      {
       "criterion": "continuity",
       "status": "pass",
-      "evidence": "Brief preserves screen-left/right positions, close-in-height single focal plane and inward orientation, retains window, doorway, cabinet, chair orientation, materials and lighting across the push, supports burgundy-striped child and teal-hijab mother designs with quiet neutral palette without rendering characters, prohibits new events, and declares master-only service with no secondary angle, matching backgrounds@2 angles [] and shot angleId null. Text review does not certify future rendered likeness.",
-      "location": "continuityNotes full; backgrounds@2 childhood-room angles []",
+      "evidence": "Continuity preserves approved staging, camera side/orientation, burgundy-striped child and teal-hijab mother support without rendering characters, no scientist costume/experiment/additional relatives/dialogue/new event, suitable hold composition, and master-only binding for registered scene with no secondary angle required.",
+      "location": "continuityNotes; sceneIds[0] childhood-encouragement; shot-childhood-encouragement",
       "repair": "",
       "quotes": [
-       "Preserve the approved staging: child standing screen-left, mother seated screen-right",
-       "This master serves the registered scene; no secondary angle is required by the current registry."
+       "Preserve the approved staging: child standing screen-left, mother seated screen-right, their future faces close in height and in one focal plane, facing inward across clear space.",
+       "Use the selected childhood and mother designs throughout, including burgundy stripes, translucent sunglasses and fully covering teal hijab."
       ]
      }
     ],
@@ -140,8 +142,8 @@
     ]
    }
   },
-  "valid": false,
-  "gateAccepted": false,
-  "error": "REVIEW_QUOTE_NOT_FOUND: spatial-action: \"Shaz stands screen-left and his mother sits screen-right on a simple chair, bringing their faces closer in height.\""
+  "valid": true,
+  "gateAccepted": true,
+  "error": null
  }
 }

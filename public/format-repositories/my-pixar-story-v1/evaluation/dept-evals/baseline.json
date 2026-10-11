@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-11T08:00:02.031Z",
+  "updatedAt": "2026-10-11T14:42:22.931Z",
   "note": "Assertion ids that passed at this baseline. A later run losing any of them is a regression (exit 1).",
   "cases": {
     "vera-adult-sheets-wrist": {
@@ -34,13 +34,13 @@
       "model": "meta/muse-spark-1.3-contributor"
     },
     "sage-room-brief-generic": {
-      "status": "fail",
-      "passing": [],
-      "failing": [
+      "status": "pass",
+      "passing": [
         "completes",
         "rejects-generic-brief",
         "names-generic-dressing"
       ],
+      "failing": [],
       "model": "meta/muse-spark-1.3-contributor"
     },
     "beau-room-brief-fresh": {
@@ -56,33 +56,33 @@
       "model": "meta/muse-spark-1.3-contributor"
     },
     "leo-script-r4-answers": {
-      "status": "fail",
+      "status": "pass",
       "passing": [
         "completes",
+        "no-slash-abbreviations",
         "keeps-sunglasses-fact",
         "keeps-scientist-fact"
       ],
-      "failing": [
-        "no-slash-abbreviations"
-      ],
+      "failing": [],
       "model": "meta/muse-spark-1.3-contributor"
     },
     "sage-script-approved": {
       "status": "fail",
-      "passing": [],
+      "passing": [
+        "completes"
+      ],
       "failing": [
-        "completes",
         "passes-approved-script"
       ],
       "model": "meta/muse-spark-1.3-contributor"
     },
     "sage-room-brief-approved": {
-      "status": "fail",
-      "passing": [],
-      "failing": [
+      "status": "pass",
+      "passing": [
         "completes",
         "passes-approved-brief"
       ],
+      "failing": [],
       "model": "meta/muse-spark-1.3-contributor"
     },
     "vera-mother-clean": {
@@ -95,13 +95,12 @@
       "model": "meta/muse-spark-1.3-contributor"
     },
     "sage-room-prompt-unpixar": {
-      "status": "fail",
+      "status": "pass",
       "passing": [
-        "completes"
-      ],
-      "failing": [
+        "completes",
         "rejects-unpixar-prompt"
       ],
+      "failing": [],
       "model": "meta/muse-spark-1.3-contributor"
     }
   }
