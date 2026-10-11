@@ -35,7 +35,7 @@ export class CrewHost {
   return roles.some(role=>((this.config?.agents?.[role]?.backend)??'codex')==='codex');
  }
  // Mixed-backend start: codex roles via CodexHost thread/start, openrouter
- // roles via a cheap READY init turn. Each backend keeps its own partial-
+ // roles via a per-model connectivity check. Each backend keeps its own partial-
  // start file (crew-startup.json / crew-startup-openrouter.json), so a
  // partial start recovers per backend without repeating certain workers.
  async startCrew(model,config){
