@@ -86,7 +86,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: /tmp/kit-taps
-      - name: Assert kit totals (404 tests across 4 shards, 0 failures)
+      - name: Assert kit totals (407 tests across 4 shards, 0 failures)
         run: |
           shards=$(( $(ls /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l) ))
           pass=$(( $(grep -h "^ok " /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l) ))
@@ -95,5 +95,5 @@ jobs:
           echo "kit shards=$shards pass=$pass summary_pass=$summary fail=$fail"
           test "$shards" = "4"
           test "$fail" = "0"
-          test "$pass" = "404"
-          test "$summary" = "404"
+          test "$pass" = "407"
+          test "$summary" = "407"
