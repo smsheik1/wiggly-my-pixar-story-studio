@@ -284,7 +284,7 @@
           "field": "beats",
           "pattern": "heart full|forever in my heart|time of our lives|memories to last a lifetime|always remember",
           "soft": true,
-          "why": "Rule [S-STOCK-PHRASES]: avoid greeting card clichés and stock emotional phrases."
+          "why": "Rule [S-STOCK-PHRASES]: avoid greeting card clich\u00e9s and stock emotional phrases."
         }
       ]
     },
@@ -499,6 +499,145 @@
           ],
           "pattern": "expression|layout|hex|#B5B5B5|fixed",
           "why": "Sage must identify the layout/expression defect."
+        }
+      ]
+    },
+    {
+      "id": "pia-sheet-prompt-r4-adult",
+      "dept": "pia",
+      "priority": 13,
+      "source": {
+        "key": "characterPrompt:shaz-adult",
+        "gate": "author",
+        "version": null,
+        "workflowRevision": 5
+      },
+      "truth": {
+        "authority": "objective",
+        "summary": "Pia writes the rev 5 photo-to-sheet prompt for adult Shaz from the real r4 cast state and photo (r4 itself ran rev 4 with Cleo). Checks the P14 sheet rules: hex, fixed eight in order, four views, no vendor words, no child rider on an adult.",
+        "history": [
+          143,
+          146,
+          155,
+          160
+        ]
+      },
+      "asserts": [
+        {
+          "id": "hex-background",
+          "type": "contentMatches",
+          "field": "prompt",
+          "pattern": "#B5B5B5",
+          "why": "[R-SHEET-HEX]: flat #B5B5B5 written as the hex."
+        },
+        {
+          "id": "fixed-eight-in-order",
+          "type": "contentMatches",
+          "field": "prompt",
+          "pattern": "neutral[\\s\\S]*happy[\\s\\S]*delighted[\\s\\S]*sad[\\s\\S]*surprised[\\s\\S]*confused[\\s\\S]*angry[\\s\\S]*talking",
+          "why": "[R-SHEET-EIGHT] / Decision 1: the fixed eight in order."
+        },
+        {
+          "id": "four-views",
+          "type": "contentMatches",
+          "field": "prompt",
+          "pattern": "front[\\s\\S]*three-quarter[\\s\\S]*profile[\\s\\S]*back",
+          "why": "[R-SHEET-VIEWS]: front, three-quarter, profile, back."
+        },
+        {
+          "id": "no-vendor-words",
+          "type": "contentNotMatches",
+          "field": "prompt",
+          "pattern": "pixar|renderman|octane|t-pose|three-point light",
+          "why": "Decision 4 and spec 1e: no studio, renderer, T-pose or three-point lighting words."
+        },
+        {
+          "id": "names-skin-zoning",
+          "type": "contentMatches",
+          "field": "prompt",
+          "pattern": "(light|deep)[^.]{0,40}(skin|zon)|skin[^.]{0,40}(light|deep)",
+          "soft": true,
+          "why": "[C-SKIN-ZONING]: a light or deep zoning choice is written (which one is right is a human call)."
+        },
+        {
+          "id": "no-child-rider-on-adult",
+          "type": "contentNotMatches",
+          "field": "prompt",
+          "pattern": "child(like)? proportion|toddler|short legs|long torso|oversized head|enlarged head|larger head",
+          "why": "[C-CHILD-RIDER]: children only, never on adults."
+        }
+      ]
+    },
+    {
+      "id": "pia-sheet-prompt-r4-child",
+      "dept": "pia",
+      "priority": 14,
+      "source": {
+        "key": "characterPrompt:shaz-child",
+        "gate": "author",
+        "version": null,
+        "workflowRevision": 5
+      },
+      "truth": {
+        "authority": "objective",
+        "summary": "Pia writes the rev 5 photo-to-sheet prompt for Shaz at 8 from the real r4 cast state and photo. Same P14 sheet rules, plus the child rider and child heads-tall.",
+        "history": [
+          63,
+          68,
+          71
+        ]
+      },
+      "asserts": [
+        {
+          "id": "hex-background",
+          "type": "contentMatches",
+          "field": "prompt",
+          "pattern": "#B5B5B5",
+          "why": "[R-SHEET-HEX]: flat #B5B5B5 written as the hex."
+        },
+        {
+          "id": "fixed-eight-in-order",
+          "type": "contentMatches",
+          "field": "prompt",
+          "pattern": "neutral[\\s\\S]*happy[\\s\\S]*delighted[\\s\\S]*sad[\\s\\S]*surprised[\\s\\S]*confused[\\s\\S]*angry[\\s\\S]*talking",
+          "why": "[R-SHEET-EIGHT] / Decision 1: the fixed eight in order."
+        },
+        {
+          "id": "four-views",
+          "type": "contentMatches",
+          "field": "prompt",
+          "pattern": "front[\\s\\S]*three-quarter[\\s\\S]*profile[\\s\\S]*back",
+          "why": "[R-SHEET-VIEWS]: front, three-quarter, profile, back."
+        },
+        {
+          "id": "no-vendor-words",
+          "type": "contentNotMatches",
+          "field": "prompt",
+          "pattern": "pixar|renderman|octane|t-pose|three-point light",
+          "why": "Decision 4 and spec 1e: no studio, renderer, T-pose or three-point lighting words."
+        },
+        {
+          "id": "names-skin-zoning",
+          "type": "contentMatches",
+          "field": "prompt",
+          "pattern": "(light|deep)[^.]{0,40}(skin|zon)|skin[^.]{0,40}(light|deep)",
+          "soft": true,
+          "why": "[C-SKIN-ZONING]: a light or deep zoning choice is written (which one is right is a human call)."
+        },
+        {
+          "id": "child-rider",
+          "type": "contentMatches",
+          "field": "prompt",
+          "pattern": "short legs|long torso|low cent(er|re) of gravity|child proportion",
+          "why": "[C-CHILD-RIDER]: child proportion rider for a child."
+        },
+        {
+          "id": "child-heads-tall",
+          "type": "contentMatches",
+          "field": "prompt",
+          "pattern": "\\b(5|five)[- ]heads?",
+          "soft": true,
+          "why": "[C-HEADS-TALL]: a child is about 5 heads tall."
         }
       ]
     }
