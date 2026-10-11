@@ -337,3 +337,15 @@ test('malformed tool arguments go back to the model; tool-less requests omit too
   assert.equal(JSON.stringify(bodies).includes('ISOLATED-OPENROUTER-KEY'),false);
  }finally{await rm(dir,{recursive:true});}
 });
+
+test('a task-turn HTTP 400/401 keeps the generic request error (bind-time names are verify-only)',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-task400-'));
+ try{
+  const secretsPath=await secrets(dir);
+  for(const status of [400,401]){
+   const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async()=>httpFail(status,'bad request')});
+   const worker=workerFor(await host.profile());
+   await assert.rejects(host.runTask(scriptTask,{worker,callTool:async()=>{}}),e=>new RegExp(`OPENROUTER_REQUEST_FAILED: HTTP ${status}`).test(e.message)&&!/MODEL_UNAVAILABLE|AUTH_FAILED/.test(e.message));
+  }
+ }finally{await rm(dir,{recursive:true});}
+});

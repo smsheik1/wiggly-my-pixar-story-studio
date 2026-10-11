@@ -54,7 +54,7 @@ export class OpenRouterHost {
   const tool=wigglyToolDefinition();
   return [{type:'function',function:{name:tool.name,description:tool.description,parameters:tool.inputSchema}}];
  }
- async chat({model,messages,tools,toolChoice,usageSink,reasoning,maxTokens}){
+ async chat({model,messages,tools,toolChoice,usageSink,reasoning,maxTokens,verify=false}){
   const key=await readOpenRouterKey(this.secretsPath);
   const forcingSpecificTool=toolChoice&&typeof toolChoice==='object';
   const body={model,messages,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokens,
@@ -67,8 +67,9 @@ export class OpenRouterHost {
   }catch(error){throw new Error(`OPENROUTER_REQUEST_FAILED: ${error.message}. No model/provider fallback was submitted.`);}
   if(!response.ok){
    const text=await response.text().catch(()=>'');
-   if(response.status===401||response.status===403)throw new Error(`OPENROUTER_AUTH_FAILED: OpenRouter rejected the API key (HTTP ${response.status}). No worker was bound.`);
-   if(response.status===400||response.status===404)throw new Error(`OPENROUTER_MODEL_UNAVAILABLE: ${model} was rejected by OpenRouter (HTTP ${response.status}). No worker was bound.${text?` ${text.slice(0,200).split(key).join('[REDACTED]')}`:''}`);
+   // Bind-time verification only: a task turn's 400/401 keeps the generic error below.
+   if(verify&&(response.status===401||response.status===403))throw new Error(`OPENROUTER_AUTH_FAILED: OpenRouter rejected the API key (HTTP ${response.status}). No worker was bound.`);
+   if(verify&&(response.status===400||response.status===404))throw new Error(`OPENROUTER_MODEL_UNAVAILABLE: ${model} was rejected by OpenRouter (HTTP ${response.status}). No worker was bound.${text?` ${text.slice(0,200).split(key).join('[REDACTED]')}`:''}`);
    if(response.status===402)throw new Error('OpenRouter credits exhausted. Add credits before dispatch; no model/provider fallback was submitted.');
    if(response.status===429){
     const error=new Error(`OpenRouter usage limit reached (HTTP 429). No model/provider fallback was submitted.`);
@@ -136,7 +137,7 @@ export class OpenRouterHost {
  // model per host instance. Only success binds; content is never inspected.
  async verifyModel(model){
   if(this.verifiedModels.has(model))return;
-  await this.chat({model,messages:[{role:'user',content:'ping'}],reasoning:{enabled:false},maxTokens:16});
+  await this.chat({model,messages:[{role:'user',content:'ping'}],reasoning:{enabled:false},maxTokens:16,verify:true});
   this.verifiedModels.add(model);
  }
  async startCrew(model,config=loadStudio().config){

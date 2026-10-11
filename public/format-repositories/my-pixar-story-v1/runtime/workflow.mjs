@@ -298,6 +298,17 @@ export function crewReviewEligible(p, a = current(p)) {
   }
   return false;
 }
+// Stateless workers (OpenRouter) keep no session memory, and a human
+// changes/redo or a visual repair invalidates the author's last version, so
+// task.artifact is null. Carry that superseded version explicitly so every
+// backend revises from the same context a resumed Codex thread remembers.
+function previousVersionFor(p, a) {
+  if (p.gate !== 'author') return {};
+  const last = p.artifacts.findLast(x => x.key === keyFor(p));
+  if (!last || last === a || last.valid) return {};
+  return { previousVersion: { id: last.id, version: last.version, digest: last.digest, authoredBy: last.authoredBy ?? null, content: last.content, review: last.review ?? null,
+    instruction: 'Your superseded previous version of this deliverable. Revise it according to feedback (latest entry last); if the latest feedback intent is redo, start fresh but avoid what the feedback rejected. Never resubmit it unchanged.' } };
+}
 export function taskFor(p) {
   const a = current(p), loaded=workerInstructions(p,roleFor(p));
   const shot = ['keyframePrompt', 'keyframe'].includes(p.step) ? shotFor(p) : ['videoPrompt','video'].includes(p.step)?videoBinding(p).shot:null;
@@ -335,7 +346,7 @@ export function taskFor(p) {
     ...(p.step==='videoPrompt'||p.step==='video'?{videoBinding:videoBinding(p)}:{}),
     ...(p.step==='music'?{soundDirection:current(p,'soundPlan').content.music}:p.step==='effect'?{soundDirection:effectFor(p)}:{}),
     actor: p.gate === 'review' ? 'reviewer' : ['human', 'authorize', 'escalate'].includes(p.gate) ? 'human' : 'agent',
-    proposedCast:current(p,'script')?.content.proposedCast??null, intakeConfirmation:current(p,'roster')?.intakeConfirmation??current(p,'script')?.intakeConfirmation??current(p,'answers')?.intakeConfirmation??null, artifact: a ?? null, job: job ?? null, inputs: effectiveInputs(p),
+    proposedCast:current(p,'script')?.content.proposedCast??null, intakeConfirmation:current(p,'roster')?.intakeConfirmation??current(p,'script')?.intakeConfirmation??current(p,'answers')?.intakeConfirmation??null, artifact: a ?? null, ...previousVersionFor(p, a), job: job ?? null, inputs: effectiveInputs(p),
     dependencies: dependencies(p).map(id => p.artifacts.find(a => a.id === id)),
     creativeDirections:p.creativeDirections??[],
     feedback: p.feedback.filter(f => f.key === keyFor(p)), criteria: p.step==='film'&&p.gate==='review'?filmCriteria(p):criteriaFor(p),
