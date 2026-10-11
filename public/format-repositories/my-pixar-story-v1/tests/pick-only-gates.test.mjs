@@ -15,6 +15,7 @@ import { inputs, questionnaire, send, reviewed, approved, file } from './helpers
 import { backgroundProject, registry, author, brief, prompt, image } from './background-helpers.mjs';
 import { supervisedAudio, supervisedCharacters, supervisedBackgrounds, confirmed } from './supervised-helpers.mjs';
 import { shotPlan } from './shot-helpers.mjs';
+import { producerUpdate } from '../runtime/presentation.mjs';
 
 function legacyBackgroundsLocked() {
   let p = supervisedCharacters();
@@ -58,6 +59,10 @@ test('2. pick-only backgroundBrief auto-locks after Sage approval', { timeout: 1
   const b = p.artifacts.findLast((x) => x.key.startsWith('backgroundBrief'));
   assert.match(b.approvedBy.message, /^AUTO-LOCK/);
   assert.ok(p.history.some((h) => h.action === 'auto-lock' && h.actor === 'runtime' && h.artifactId === b.id));
+  // The auto-lock is the latest recorded result (after the review), with a unique sequence, so the operator sees it.
+  const last = p.history.at(-1), prev = p.history.at(-2);
+  assert.equal(last.action, 'auto-lock'); assert.equal(prev.action, 'review'); assert.ok(last.sequence > prev.sequence);
+  assert.match(producerUpdate({ project: p, pending: taskFor(p) }).completion.message, /locked after .*review; no approval needed from you/);
   assert.equal(p.step, 'backgroundPrompt');
   assert.notEqual(p.gate, 'human');
 });

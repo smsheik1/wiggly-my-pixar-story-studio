@@ -391,6 +391,7 @@ const requiredActor = (e, actor) => { if (e.actor !== actor) throw new Error(`${
 export function applyEvent(project, raw) {
   const p = structuredClone(Project.parse(project));
   const e = Event.parse(raw);
+  let autoLockEntry = null;
   if (e.taskId !== taskFor(p).taskId) throw new Error('STALE_TASK: read current status before responding.');
   if(p.lifecycle==='abandoned'){
     if(!['note','reconcile'].includes(e.action))throw new Error('PROJECT_ABANDONED: no new production or approvals; reconcile saved provider outcomes only.');
@@ -739,7 +740,8 @@ export function applyEvent(project, raw) {
       if (autoLock) {
         const at = new Date().toISOString();
         a.approvedBy = { message: 'AUTO-LOCK (pick-only policy): independent agent review passed; no human approval requested.', at };
-        p.history.push({ sequence: p.sequence, action: 'auto-lock', actor: 'runtime', step: p.step, artifactId: a.id, artifactDigest: a.digest, message: 'AUTO-LOCK (pick-only policy): independent agent review passed; no human approval requested.', at, ...(activity.worker ? { worker: activity.worker } : {}) });
+        // Recorded after the review entry (see end of applyEvent) so the operator's latest result is the auto-lock.
+        autoLockEntry = { action: 'auto-lock', actor: 'runtime', step: p.step, artifactId: a.id, artifactDigest: a.digest, message: 'AUTO-LOCK (pick-only policy): independent agent review passed; no human approval requested.', at, ...(activity.worker ? { worker: activity.worker } : {}) };
         next(p);
       } else { p.gate = 'human'; if (p.step === 'sheetPrompt'&&!supervised(p)) next(p); }
     }
@@ -944,6 +946,7 @@ export function applyEvent(project, raw) {
   if(['artifact','receipt','rendered'].includes(e.action)){const a=current(p,submittedKey);activity.artifactId=a.id;activity.artifactDigest=a.digest;}
   if(e.action==='plan')activity.jobId=p.jobs.at(-1).id;
   p.history.push({ sequence: p.sequence, action: e.action, actor: e.actor, ...activity, message: e.message ?? '', at: new Date().toISOString() });
+  if (autoLockEntry) { p.sequence++; p.history.push({ sequence: p.sequence, ...autoLockEntry }); }
   return Project.parse(p);
 }
 
