@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { initialProject, characterRecipeSha256, current, applyEvent, taskFor, revisionImpact, assertAllowed, openWorkflow, audioLocked } from '../runtime/workflow.mjs';
+import { initialProject, characterRecipeSha256, current, applyEvent, taskFor, revisionImpact, assertAllowed, openWorkflow, audioLocked, FIXED_SHEET_EXPRESSIONS, validateArtifactContent } from '../runtime/workflow.mjs';
 import { digest } from '../runtime/contracts.mjs';
 import { inputs, script, file, event, send, authored, reviewed, approved, produce, audioProject } from './helpers.mjs';
 
@@ -118,3 +118,54 @@ test('audio timing rejection tries a local repair before script changes or regen
   p = reviewed(p, 'rejected', { repairTarget: 'script' }); assert.equal(p.gate, 'author');assert.equal(taskFor(p).formatRole,'voice-director');assert.equal(current(p,'script').id,scriptId);
   assert.throws(() => send(p, 'plan', { plan: { provider: 'cartesia', operation: 'narration', estimatedCostUsd: 0.1, parameters: {} } }), /not allowed/);
 });
+
+test('rev 5 enforces fixed eight expressions in order while rev <= 4 is unchanged', () => {
+  const p5 = initialProject('p5', inputs, { workflowRevision: 5 });
+  p5.step = 'characterPrompt';
+  p5.characterId = 'alex';
+  const cast = { id: 'alex', name: 'Alex', ageVariant: 'child', important: true, references: [file()], notes: '' };
+  p5.artifacts.push({ id: 'roster@1', key: 'roster', kind: 'roster', version: 1, digest: 'd', content: { characters: [cast] }, dependencies: [], valid: true, authoredBy: 'test', approvedBy: { message: 'ok', at: new Date().toISOString() }, review: { decision: 'approved', perception: 'direct-text', checks: [] } });
+
+  const validPrompt = {
+    prompt: 'Sheet prompt with no text, labels, captions, expression names or watermarks.',
+    recipeSha256: characterRecipeSha256,
+    characterDigest: digest(cast),
+    referenceHashes: [file().sha256],
+    expressions: FIXED_SHEET_EXPRESSIONS,
+  };
+  const invalidPrompt = {
+    ...validPrompt,
+    expressions: ['happy', 'neutral', 'delighted', 'sad', 'surprised', 'confused', 'angry', 'talking'],
+  };
+
+  assert.throws(
+    () => validateArtifactContent(p5, invalidPrompt, 'pia'),
+    /SHEET_EXPRESSIONS_ORDER_REQUIRED/
+  );
+  assert.doesNotThrow(() => validateArtifactContent(p5, validPrompt, 'pia'));
+
+  // rev 4 unchanged
+  const p4 = initialProject('p4', inputs, { workflowRevision: 4 });
+  p4.step = 'sheetPrompt';
+  p4.characterId = 'alex';
+  p4.artifacts.push({
+    id: 'candidates:alex@1',
+    key: 'candidates:alex',
+    kind: 'candidates',
+    version: 1,
+    selection: 0,
+    digest: 'cand',
+    content: { files: [{ path: '/test.png', sha256: file().sha256, bytes: 100, width: 400, height: 300 }, { path: '/test2.png', sha256: file(2).sha256, bytes: 100, width: 400, height: 300 }, { path: '/test3.png', sha256: file(3).sha256, bytes: 100, width: 400, height: 300 }], prompt: 'cand' },
+    dependencies: [],
+    valid: true,
+  });
+  const rev4SheetPrompt = {
+    prompt: 'Sheet prompt with no text or watermark.',
+    recipeSha256: characterRecipeSha256,
+    referenceSha256: file().sha256,
+    turnaround: ['front', 'three-quarter', 'profile', 'back'],
+    expressions: Array(8).fill('neutral'),
+  };
+  assert.doesNotThrow(() => validateArtifactContent(p4, rev4SheetPrompt, 'sheet-writer'));
+});
+
