@@ -1,148 +1,168 @@
-# Craft guide (STUB — frozen IDs for P14 step A)
+# Craft guide
 
-<!-- STUB written by Grok Bot. Section IDs and rule IDs below are the FROZEN P14 contract.
-     Muse rewrites the wording in step B but must keep every ID, its section and its check tag.
-     Format: '## [section-id] Title' and '- [RULE-ID] (check: a, b) text'. Check tags: vera|sage|june|ava|beau|none. -->
+House craft for every writer. Each section opens with `## [section-id] Title` and each rule is one line starting with its rule ID and check tag. Your skill says how to apply your sections to your task; the no-invented-facts rule wins any conflict.
 
 ## [house-style] House style
 
-- [H-STYLE] (check: sage, vera, june) One house style line: feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon.
-- [H-OVERSHOOT] (check: sage) Push values further than you want ("deeply worn", not "slightly worn"); generators drift back to defaults.
-- [H-NO-BRANDS] (check: sage, vera, june) No brand, vendor, renderer or film names in any prompt or brief, and never the word for the studio we are emulating.
+One look everywhere. Push values further than you want, because generators drift back to defaults.
+
+- [H-STYLE] (check: sage, vera, june) House look: feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon.
+- [H-OVERSHOOT] (check: sage) Overshoot values: write "deeply worn", not "slightly worn"; generators drift back to defaults, so push further than you want.
+- [H-NO-BRANDS] (check: sage, vera, june) No brand, vendor, model, renderer, tool, or film names in any prompt or brief.
 
 ## [script-craft] Script craft
 
-- [S-NO-INVENTED-FACTS] (check: sage) No invented facts. This rule outranks every other craft rule.
-- [S-DIRECT] (check: sage) Direct, don't transcribe: choose, order and emphasise only facts that exist in the answers.
-- [S-ORDINARY-WORLD] (check: none) Open in the ordinary world before anything changes.
-- [S-THREES] (check: sage) Rule of three and an escalating repeat, built only from facts in the answers.
-- [S-PLANT-PAYOFF] (check: sage) Plant in beats 1-2, pay off in beat 4.
+Directing notes for narration. Our films are narrated memories, so these are polish inside the no-invented-facts rule, never a reason to invent. The no-invented-facts rule outranks every craft rule in this guide.
+
+- [S-NO-INVENTED-FACTS] (check: sage) Use only facts from the answers; never invent names, dates, ages, places, objects, motives, or outside facts, and this rule outranks every other craft rule.
+- [S-DIRECT] (check: sage) Direct, don't transcribe: choose, order, and emphasise only facts that exist in the answers, and cut the rest.
+- [S-ORDINARY-WORLD] (check: none) Open in an ordinary world before anything changes, so the contrast lands.
+- [S-THREES] (check: sage) Build the rule of three and any escalating repeat only from facts in the answers.
+- [S-PLANT-PAYOFF] (check: sage) Plant in beats 1-2 what pays off in beat 4.
 - [S-BUSINESS] (check: sage) Business over statement: show a person doing something, not a claim about them.
-- [S-REACTION] (check: none) Decide whose face we cut to for each beat (shot planner note).
-- [S-STOCK-PHRASES] (check: sage) Stock-phrase ban list (e.g. "my whole world", "meant everything", "Long before..." openers).
+- [S-REACTION] (check: none) Decide whose face we cut to for each beat; the reaction is usually worth more than the action.
+- [S-STOCK-PHRASES] (check: sage) Never use stock phrases: "proud doesn't begin to cover it", "my whole world", "meant everything", "my greatest masterpiece", or any "Long before..." opener.
 - [S-LAST-IMAGE] (check: sage) The last line is one specific image, not a statement of feeling.
-- [S-CLEAR-SUBJECT] (check: sage) Every sentence has a clear subject; no dangling modifiers; no two locations in one sentence.
-- [S-AGES-FORWARD] (check: sage) Ages and life stages only move forward.
-- [S-QUOTES-VERBATIM] (check: sage) Real spoken lines are kept word for word.
+- [S-CLEAR-SUBJECT] (check: sage) Every sentence has a clear subject: no dangling modifiers and no two locations in one sentence.
+- [S-AGES-FORWARD] (check: sage) Ages and life stages only move forward, never backward.
+- [S-QUOTES-VERBATIM] (check: sage) Real spoken lines from the answers are kept word for word.
 
 ## [character-design] Character design
 
-- [C-FIXED-SWAP] (check: none) Separate fixed template lines from swap slots.
-- [C-SHAPE] (check: sage) Name the dominant shape and silhouette in three words.
-- [C-EXAGGERATION] (check: sage) One exaggeration, with its counterpart.
-- [C-HEADS-TALL] (check: vera) Heads tall: toddler 4, child 5, teen 6-6.5, adult 7.
-- [C-CHILD-RIDER] (check: sage, vera) Child proportion rider for children only, never on adults.
-- [C-SIGNATURE] (check: sage, vera) One signature element, worn not held, carrying the only saturated colour.
-- [C-WEAR] (check: none) Wear tells a story.
-- [C-HANDS] (check: vera) Hands are designed and read clearly.
-- [C-FACIAL-HAIR] (check: vera) Facial hair reads as a matte shell.
-- [C-CAST-CONTRAST] (check: none) Design characters against each other.
-- [C-TEMPLATE] (check: sage) Use the full character template.
-- [C-EYEBROWS] (check: sage) Eyebrow setting chosen: groomed, graphic or sparse.
-- [C-SKIN-ZONING] (check: sage, vera) Skin zoning light or deep; always switch to deep for dark skin.
-- [C-HAIR] (check: sage, vera) Hair variant chosen (thin volume; tight coils named at three scales).
+Prompts are built from fixed lines (same for every character, encoding how the house builds a face and body) plus swap lines (the per-character slots). Never redesign the fixed block: fill the swap slots, pick a named setting where one is offered, and state the design calls you made.
+
+- [C-FIXED-SWAP] (check: none) Separate fixed template lines from swap slots; fill the slots from evidence and state the design calls you made, asking at most one clarifying question.
+- [C-SHAPE] (check: sage) Give every character one dominant shape with strong contrast between body regions, describable in three words and readable in pure black silhouette.
+- [C-EXAGGERATION] (check: sage) Push one feature well past life size and push its neighbours the opposite way; an exaggeration stated alone gets averaged back.
+- [C-HEADS-TALL] (check: vera) Height in heads: toddler 4, child 5, teen 6-6.5, adult 7.
+- [C-CHILD-RIDER] (check: sage, vera) Child proportions are for children only: long torso, short legs, low centre of gravity, enlarged head, narrow shoulders; never carry this rider onto adults.
+- [C-SIGNATURE] (check: sage, vera) Give each character one signature element that is worn or attached, never held, and carries the only saturated colour in an otherwise muted palette.
+- [C-WEAR] (check: none) Wear tells a story: grime where hands touch, pale worn edges, one thing undone or broken.
+- [C-HANDS] (check: vera) Design hands from a few large rounded forms with thick blunt fingertips and minimal knuckle detail; vary only what the character justifies.
+- [C-FACIAL-HAIR] (check: vera) Render facial hair as a soft matte shell over the skin colour, never as individual drawn hairs.
+- [C-CAST-CONTRAST] (check: none) Design each new character against the existing cast so no two read as the same person.
+- [C-TEMPLATE] (check: sage) Fill the full character template: labelled lines for eyes, eyebrows, face, subject, skin, silhouette, hair, wardrobe, pose, camera, and background, opening with the house look.
+- [C-EYEBROWS] (check: sage) Pick one eyebrow setting: groomed (soft, hair-coloured, individual hairs), graphic (thick, dark, soft-edged), or sparse (fine, pale, barely visible).
+- [C-SKIN-ZONING] (check: sage, vera) Pick one skin zoning: light (pink nose tip, translucent ear tips, flushed cheeks, cool under-eyes) or deep (deep red-orange nose tip and ear rims, plum-red cheek flush, grey-violet under-eyes); always use deep for dark skin, since light on dark skin renders grey and dead.
+- [C-HAIR] (check: sage, vera) Build hair as volume at three scales at once with a dark occluded core and a matte finish; write thin hair as thin volume, and name the three scales explicitly for tight coils.
 
 ## [prompt-rules] Prompt rules
 
-- [P-EMPTY-HANDS] (check: sage) Nothing in hands.
-- [P-NO-SKIN-MARKS] (check: sage) No ink, pen or drawn marks on skin.
-- [P-CHILD-ANATOMY] (check: sage) Avoid child anatomy words that misfire ("round belly", "full cheeks").
-- [P-FULL-PROMPT] (check: sage) Always write the full prompt.
-- [P-SHORT] (check: sage) Short; no commentary inside the prompt.
-- [P-NO-AVOID-LIST] (check: sage) No avoid list.
-- [P-NO-ASPECT-TEXT] (check: sage) No aspect ratio in the prompt text.
-- [P-REF-RENDERS] (check: none) Don't act on reference renders.
-- [P-GREY-NO-LIGHTING] (check: sage) No lighting lines on a grey backdrop.
-- [P-MISREADS] (check: none) Avoid wording a generator can misread.
+Short concrete prompts beat long ones: everything above earns its place, and long prompts get averaged.
+
+- [P-EMPTY-HANDS] (check: sage) Nothing in the character's hands; props get their own prompt.
+- [P-NO-SKIN-MARKS] (check: sage) Never put ink, pen, or drawn marks on skin; a pen a character needs goes in a pocket, since marks render as tattoos.
+- [P-CHILD-ANATOMY] (check: sage) Avoid anatomy words that misfire on children: describe a child's torso as slim, straight, and flat, never "round belly" or "full cheeks".
+- [P-FULL-PROMPT] (check: sage) Always output the prompt in full, every variation and every edit; never truncate or write "same as above except".
+- [P-SHORT] (check: sage) Keep prompts short: specify, don't philosophise.
+- [P-NO-AVOID-LIST] (check: sage) No avoid list: keep at most the one or two essential negations (no text; empty of people) and drop the rest.
+- [P-NO-ASPECT-TEXT] (check: sage) No aspect ratio in the prompt text; set it in the tool call.
+- [P-REF-RENDERS] (check: none) Never ask the prompt to act on a reference render; describe the person, not the picture.
+- [P-GREY-NO-LIGHTING] (check: sage) No lighting or grade lines on a grey studio backdrop; drive lighting with a reference image later.
+- [P-MISREADS] (check: none) Avoid wording the image model can misread; write "the face is built from distinct planes", never "face planes".
 - [P-BRANDING-TRAPS] (check: sage) Design around branding traps: change the silhouette instead of writing "no logos".
 
 ## [identity] Identity
 
-- [C-IDENTITY] (check: vera, sage) Skin tone, hair colour and face always match the person and their photos.
-- [C-IDENTITY-OPTIONS] (check: sage) The 3 options vary only style strength, outfit, and pose or hair styling within what is true to the person.
+For real people, the photos win over any design instinct. This replaces the old variation advice: likeness never varies.
+
+- [C-IDENTITY] (check: vera, sage) Skin tone, hair colour, and face always match the person and their photos, and never vary.
+- [C-IDENTITY-OPTIONS] (check: sage) The 3 options per person vary only style strength, outfit, and pose or hair styling within what is true to the person.
 
 ## [character-sheet] Character sheet
 
-- [R-SHEET-NEUTRAL] (check: vera) Neutral everything: pose, light, expression on the views.
-- [R-SHEET-VIEWS] (check: vera, sage) Four full-body views (front, three-quarter, profile, back) on one baseline.
-- [R-SHEET-EIGHT] (check: vera, sage) Fixed eight expressions in this order: neutral, happy, delighted, sad, surprised, confused, angry, talking.
+Format B (turnaround plus expressions) is the only sheet format. For people with photos, the photos are the reference; the no-photo path below is pending and not wired anywhere.
+
+- [R-SHEET-NEUTRAL] (check: vera) Keep everything neutral: closed-lip expression, head level, eyes to camera, arms relaxed, hands open and empty, feet flat and parallel; no smile, no acting, no signature pose.
+- [R-SHEET-VIEWS] (check: vera, sage) Top row is four full-body views of the same character in one identical neutral pose (front, three-quarter, profile, back), exactly the same height and scale on one shared baseline, evenly spaced and clear of the frame edges.
+- [R-SHEET-EIGHT] (check: vera, sage) Below are eight head-and-shoulders close-ups in two even rows of four, all facing camera, in this fixed order: neutral, happy, delighted, sad, surprised, confused, angry, talking; a character detail may sit inside a slot.
 - [R-SHEET-HEX] (check: vera, sage) Background is flat #B5B5B5 across the whole canvas, written as the hex in every prompt.
 - [R-SHEET-NO-TEXT] (check: vera, sage) No text or labels on the sheet.
-- [R-SHEET-PROPS] (check: none) Props and non-humanoid subjects follow the props variant.
-- [R-SHEET-FAILURES] (check: vera) Known sheet failure modes (failure table).
-- [R-SHEET-PHOTO-REF] (check: sage) For people with photos, the photos are the reference; there is no master render.
-- [R-SHEET-NO-PHOTO] (check: none) PENDING (later PR, not wired in P14): a person with no photo gets one approved full-body render first.
+- [R-SHEET-PROPS] (check: none) Props and non-humanoid subjects use the props variant: front, back, and a detail close-up on the identifying feature, with neutral framing.
+- [R-SHEET-FAILURES] (check: vera) Check the sheet against the failure table: bodies different sizes; face not matching the reference; neutral drifting to a smile; background not uniform; ink or tattoo marks; toddler paunch; two characters looking related; held objects in sheet hands (headless-panel failures are not applicable to Format B).
+- [R-SHEET-PHOTO-REF] (check: sage) For people with photos, the photos are the reference and there is no master render; where a kept render and the prompt disagree, describe the render.
+- [R-SHEET-NO-PHOTO] (check: none) PENDING (later PR, not wired anywhere): a person with no photo gets one approved full-body render first, then the sheet is built from it.
 
 ## [edit-prompts] Edit prompts
 
-- [E-ONLY-CHANGES] (check: sage) When working from an existing image, state only what changes.
+Short but always complete: an edit prompt is a whole prompt, not a fragment.
+
+- [E-ONLY-CHANGES] (check: sage) When working from an existing image, reference it and state only what changes.
 
 ## [locations] Locations
 
-- [L-DRESSED] (check: vera, sage) Empty of people only, never an empty set: dressed from the story, lived-in, shows whose space and when.
-- [L-SET-PLATE] (check: sage) The set plate is used only for space, materials, colours and light.
-- [L-LAYOUT-REF] (check: sage, beau) A separate layout reference (in words in P14) sets positions and camera; ignore faces in it.
+Rooms are dressed from the story and empty of people only. A bland or empty-feeling room still fails: muted is not generic. Example spec block for a brief:
+
+Light: morning daylight through side windows, warm and soft, filling the room evenly. Bounce: cool bounce off pale walls. Practicals: no. Haze: no. Palette: muted warm woods and off-whites at roughly five to one. Accent: one saturated colour on story props. Film accent kept out: deep red.
+
+- [L-DRESSED] (check: vera, sage) Empty of people only, never an empty set: dress every set from the story with specific lived-in props showing whose space it is and when (era, age, hobbies, dreams); forbid generic catalog rooms, plain unmarked objects, and blank walls.
+- [L-SET-PLATE] (check: sage) Use the set plate only for space, materials, colours, and light.
+- [L-LAYOUT-REF] (check: sage, beau) Set positions and camera from a separate layout reference written in words in the brief; ignore the faces in it.
 - [L-CAMERA-SIDE] (check: vera, beau) The camera stays on the same side as the layout reference for the whole location.
-- [L-LIGHT-SPEC] (check: sage, beau) Per-location lighting and colour spec block, written once and copied whole into every prompt for that location.
-- [L-PALETTE] (check: vera, sage) Muted palette with one saturated accent. Muted is not generic.
-- [L-ACCENT-OUT] (check: vera, sage) The film's signature accent colour never appears in the room.
-- [L-SHOTS-FIRST] (check: beau) Build the room for the shots the script needs; list scripted actions and positions first.
-- [L-MIN-TEXT] (check: vera, sage) Minimal text: prefer none; at most 4 names if text must appear.
-- [L-CHILD-DRAWINGS] (check: none) Children's drawings follow the children's-drawings rule.
-- [L-SETS-DEFAULT] (check: none) Default sets style line used by the bible when a location has no override.
+- [L-LIGHT-SPEC] (check: sage, beau) Write one lighting and colour spec block per location in the brief and copy it whole into every prompt for that location: light source and time of day, bounce, practicals yes or no, haze yes or no, palette as a ratio, the one saturated accent, and the film accent colour kept out.
+- [L-PALETTE] (check: vera, sage) Muted palette with one saturated accent; muted is not generic and a bland or empty-feeling room still fails.
+- [L-ACCENT-OUT] (check: vera, sage) Keep the film's signature accent colour out of the room entirely.
+- [L-SHOTS-FIRST] (check: beau) Build the room for the shots the script needs: list the scripted actions and positions in that space before writing.
+- [L-MIN-TEXT] (check: vera, sage) Keep text out of plates: prefer no signs or labels at all, and cut to at most 4 names if text must appear.
+- [L-CHILD-DRAWINGS] (check: none) Draw children's drawings as a five-year-old hand works: heads bigger than bodies, arms straight out of the head, colour scribbled outside the lines, heavy uneven pressure, a floating blue strip for sky, a sun wedged in a corner, wobbly oversized letters running out of space, with ability varying across the wall.
+- [L-SETS-DEFAULT] (check: none) Default sets line: lived-in, story-dressed interiors in a muted palette with one saturated accent, empty of people only and never empty.
 
 ## [composition] Composition
 
-- [K-BIND-REFS] (check: june) Bind every reference individually: what to use and what not to use.
-- [K-ANCHORS] (check: june) Restate only the 1-2 design-critical anchors, never the whole design.
-- [K-DEPICTIONS] (check: june) Depictions (a photo or drawing of a character) bind the reference inline.
-- [K-SCREEN-SIDE] (check: june) Measurable screen-side language: character's left/right plus screen left/right.
-- [K-HEIGHT-RULER] (check: june) A height ruler when two characters share a frame.
-- [K-LAYOUT-REF] (check: june) Layout reference rules: faces ignored, camera stays on the layout's side.
+Place approved characters into locked plates without overwriting either reference with prose.
+
+- [K-BIND-REFS] (check: june) Bind every reference individually with what to use from it and what not to use.
+- [K-ANCHORS] (check: june) Restate only the 1-2 design-critical anchors per character, never the whole design; prose overwrites the reference.
+- [K-DEPICTIONS] (check: june) When a character appears as a depiction (a photo or drawing inside the scene) rather than in person, bind that reference inline at the depiction.
+- [K-SCREEN-SIDE] (check: june) Give positions in measurable screen-side language: the character's left and right plus screen left and right.
+- [K-HEIGHT-RULER] (check: june) State a height ruler whenever two characters share a frame, so heights do not average out.
+- [K-LAYOUT-REF] (check: june) Follow the layout reference with faces ignored and the camera kept on the layout's side.
 
 ## [video-sources] Video: sources
 
 Later phase: video is not in production yet; follow your skill where it differs.
 
-- [V-SOURCES] (check: june) Which image sources feed a video block and how each is bound.
+- [V-SOURCES] (check: june) Tag only references actually uploaded, with stable element names; describe states, not transitions; describe what you want instead of banning what you don't.
 
 ## [video-animation] Video: animation
 
 Later phase: video is not in production yet; follow your skill where it differs.
 
-- [V-MOTION] (check: june) Motion is designed: anticipation, arcs, snap and settle, overlap, moving holds.
-- [V-LIGHT] (check: june) Lighting is designed, not left to the generator.
+- [V-MOTION] (check: june) Design motion as observable results: anticipation winding the opposite way first, snap and settle with a small overshoot, moving holds that breathe, follow-through where hair and cloth arrive late, arcs for hands and heads, and weight read from timing.
+- [V-LIGHT] (check: june) Design lighting per segment: key direction and colour, rim for separation, bounce colour, practicals, atmosphere, and palette as a ratio with one accent; never stock, grain, or photoreal skin language.
 
 ## [video-architecture] Video: architecture
 
 Later phase: video is not in production yet; follow your skill where it differs.
 
-- [V-ONE-SHOT] (check: june) One block is one shot.
-- [V-TIMECODES] (check: june) Whole-second timecodes.
-- [V-CEILING] (check: june) 30 s ceiling per generation.
+- [V-ONE-SHOT] (check: june) One block equals one shot: never split a continuous camera move across blocks, and start a new block at every hard cut; state the shot and cut counts twice.
+- [V-TIMECODES] (check: june) Use whole-second timecodes that are consecutive and non-overlapping; they are a budget, not frame-accurate edit points.
+- [V-CEILING] (check: june) Never generate more than 30 seconds per segment; when a revision adds a beat, something else comes out.
 
 ## [video-blocks] Video: blocks
 
 Later phase: video is not in production yet; follow your skill where it differs.
 
-- [V-EXCLUSIONS] (check: june) Exclusions sized to this segment's real risks.
+- [V-EXCLUSIONS] (check: june) Size exclusions to the segment's real risks in about three lines: the lines in braces are the only spoken words, no extra cuts, plus whatever this segment could actually get wrong; cut generic bans.
 
 ## [video-transitions] Video: transitions
 
 Later phase: video is not in production yet; follow your skill where it differs.
 
-- [V-TRANSITIONS] (check: june) Transitions are named.
+- [V-TRANSITIONS] (check: june) Keep hard cuts as the default, name any other transition and justify it, and ban everything else.
 
 ## [video-failures] Video: failures
 
 Later phase: video is not in production yet; follow your skill where it differs.
 
-- [V-FAILURES] (check: june) Known video failure modes (failure table).
+- [V-FAILURES] (check: june) Check the segment against the video failure table: floaty even motion, chopped continuous moves, extra cuts, photoreal drift, generic characters, stray spoken prose, dead holds, unison ensembles, mugging faces, dead eyes, uninvited fades, left-right flips, and averaged heights.
 
 ## [working-method] Working method
 
-- [W-WHAT-CHANGED] (check: sage) Every revision opens with what changed.
-- [W-FULL-EVERY-TIME] (check: sage) Full prompt every time; no fragments.
-- [W-REREAD] (check: none) Reread the whole prompt before returning it.
-- [W-KNOCK-ONS] (check: none) Flag knock-on effects of a change.
-- [W-NO-OVERSPEC] (check: none) Don't over-specify small staging business.
+Prompts get pasted whole into a generator, so a fragment forces a hand-merge where errors get in.
+
+- [W-WHAT-CHANGED] (check: sage) Open every revision with what changed: what was understood from the note and what was altered.
+- [W-FULL-EVERY-TIME] (check: sage) Output the full prompt every revision and every variation, no exceptions; never fragments, loose shots, or "everything else unchanged".
+- [W-REREAD] (check: none) Reread the whole prompt on every pass before returning it.
+- [W-KNOCK-ONS] (check: none) Flag knock-on effects of a change in one line instead of silently patching or ignoring them.
+- [W-NO-OVERSPEC] (check: none) Don't over-specify small staging business: state the action and leave the choreography.
