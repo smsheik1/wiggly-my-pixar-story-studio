@@ -30,6 +30,9 @@ import { VisualCase, visualTask, qualifyVisual, requireVisualQualification } fro
 import { Cassette, recordingFetcher, replayFetcher, recordingSpawn, replaySpawn, normalizeForCassette } from './runtime/cassette.mjs';
 const root = dirname(fileURLToPath(import.meta.url));
 const rawProcessArgv = [...process.argv];
+// Run-dir paths differ between a recording and its replay sandbox; both sides
+// normalize them to <RUN> so only real request differences mismatch.
+const runDirAliases = dir => { const out = { [dir]: '<RUN>' }; try { out[fs.realpathSync(dir)] = '<RUN>'; } catch {} return out; };
 const args = process.argv.slice(2); const command = args.shift();
 function option(name, fallback) { const i = args.indexOf(`--${name}`); if (i < 0) return fallback; const value = args[i + 1]; if (!value || value.startsWith('--')) throw new Error(`--${name} needs a value.`); args.splice(i, 2); return value; }
 const runDir = resolve(option('run', join(root, 'agent-runs', 'draft')));
@@ -84,6 +87,10 @@ async function main() {
     print({studioVersion:studio.config.version,studioSha256:studio.sha256,instructionFiles:Object.keys(studio.documents),formatVersion: VERSION, node: process.version, tools, renderer:renderer.manifest.renderer, dependencies: 'LangGraph + SQLite loaded',
       requiredKeys: ['CARTESIA_API_KEY', 'REPLICATE_API_TOKEN (video stage)'], imageKeys: ['no key for default agy provider; META_API_KEY only for meta-muse fallback'], conditionalKeys:['GEMINI_API_KEY (shipped Codex media review)'], optionalKeys:['ELEVENLABS_API_KEY (generated music/effects; imports need no key)'], credentialsRead: false, productionStageLimit: 'supervised v1 through private finalization; every media lock needs human review and every video request needs exact human authorization; qualified policy remains available; real production proof not performed' });
     if (Object.values(tools).some(v => !v)) process.exitCode = 1; return;
+  }
+  if (command === 'schema') {
+    const name = args[0]; const schema = name === 'crew' ? Crew : name === 'event' ? Event : name === 'review' ? Review : name === 'plan' ? Plans : name === 'inputs' ? Inputs : name==='intake-confirmation'?IntakeConfirmation:Content[name];
+    if (!schema) throw new Error('schema needs event/review/plan/inputs or a supported artifact kind.'); print(z.toJSONSchema(schema)); return;
   }
   if (command === 'replay') {
     const replayCassette = option('cassette');
@@ -246,7 +253,7 @@ async function main() {
         // Check profile overridden
         let nowCodexProf = null, nowOrProf = null;
         try {
-          const testCodexHost = new CodexHost({ cwd: tmpDir });
+          const testCodexHost = new CodexHost({ cwd: tmpDir, spawnProcess: replaySpawn({ codexEntries: [], nextCodexIndex: 0, secrets: [], recordMismatch() {} }), codexVersion: () => cassette.header?.codexVersion ?? 'unknown' });
           nowCodexProf = await testCodexHost.profile();
           testCodexHost.close();
         } catch {}
@@ -363,6 +370,7 @@ async function main() {
           throw new Error('REPLAY_NETWORK_BLOCKED');
         };
         cassette = await Cassette.open(replayCassetteDir);
+        cassette.aliases = runDirAliases(runDir);
       } else if (isRecord) {
         const utcStamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '') + 'Z';
         cassetteDir = join(runDir, 'cassettes', `${command}-${utcStamp}`);
@@ -414,6 +422,7 @@ async function main() {
           profiles: { codex: null, openrouter: null }
         };
         cassette = await Cassette.create(cassetteDir, header, { secrets: secretsList });
+        cassette.aliases = runDirAliases(runDir);
       }
 
       let geminiFetcher = fetch, cartesiaFetcher = fetch;

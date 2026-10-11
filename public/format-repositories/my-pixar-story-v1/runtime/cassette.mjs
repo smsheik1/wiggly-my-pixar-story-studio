@@ -8,7 +8,8 @@ function sha256Hex(buf) {
   return createHash('sha256').update(buf).digest('hex');
 }
 
-export function normalizeForCassette(value, { secrets = [] } = {}) {
+export function normalizeForCassette(value, { secrets = [], aliases = {} } = {}) {
+  const aliasPairs = Object.entries(aliases ?? {}).filter(([p]) => p && p.length > 1).sort((a, b) => b[0].length - a[0].length);
   // Extract non-empty secret strings
   const secretStrings = [];
   if (Array.isArray(secrets)) {
@@ -48,7 +49,9 @@ export function normalizeForCassette(value, { secrets = [] } = {}) {
   };
 
   const processString = (str) => {
-    const withHashedDataUrls = redactDataUrls(str);
+    let aliased = str;
+    if (typeof aliased === 'string') for (const [p, token] of aliasPairs) if (aliased.includes(p)) aliased = aliased.split(p).join(token);
+    const withHashedDataUrls = redactDataUrls(aliased);
     return redactString(withHashedDataUrls);
   };
 
@@ -240,6 +243,7 @@ export class Cassette {
     this.nextHttpIndex = 0;
     this.nextCodexIndex = 0;
     this.secrets = [];
+    this.aliases = {};
     this.mismatchError = null;
     this.filePath = dir.endsWith('.jsonl') ? dir : join(dir, 'cassette.jsonl');
     this.httpSeq = 0;
@@ -281,7 +285,7 @@ export class Cassette {
     const serialized = JSON.stringify(obj);
     for (const s of this.secrets) {
       if (s && s.length > 0 && serialized.includes(s)) {
-        throw new Error(`CASSETTE_SECRET_LEAK: secret leaked in cassette line: ${s}`);
+        throw new Error(`CASSETTE_SECRET_LEAK: a secret value would be written to ${this.filePath}; nothing was written.`);
       }
     }
     await writeFile(this.filePath, serialized + '\n', { mode: 0o600, flag: 'a' });
@@ -334,14 +338,14 @@ export function recordingFetcher(cassette, provider, realFetch = globalThis.fetc
       } else {
         cleanBody = init.body;
       }
-      cleanBody = await normalizeForCassette(cleanBody, { secrets: cassette.secrets });
+      cleanBody = await normalizeForCassette(cleanBody, { secrets: cassette.secrets, aliases: cassette.aliases });
     }
 
-    const cleanUrl = await normalizeForCassette(url.toString(), { secrets: cassette.secrets });
+    const cleanUrl = await normalizeForCassette(url.toString(), { secrets: cassette.secrets, aliases: cassette.aliases });
     const normalizedRequest = {
       method: method.toUpperCase(),
       url: cleanUrl,
-      headers: await normalizeForCassette(cleanHeaders, { secrets: cassette.secrets }),
+      headers: await normalizeForCassette(cleanHeaders, { secrets: cassette.secrets, aliases: cassette.aliases }),
       body: cleanBody
     };
 
@@ -370,9 +374,9 @@ export function recordingFetcher(cassette, provider, realFetch = globalThis.fetc
       }
     }
 
-    const normResBody = await normalizeForCassette(resBody, { secrets: cassette.secrets });
+    const normResBody = await normalizeForCassette(resBody, { secrets: cassette.secrets, aliases: cassette.aliases });
     const cleanResHeaders = filterHeaders(cloned.headers, true);
-    const normResHeaders = await normalizeForCassette(cleanResHeaders, { secrets: cassette.secrets });
+    const normResHeaders = await normalizeForCassette(cleanResHeaders, { secrets: cassette.secrets, aliases: cassette.aliases });
 
     const seq = ++cassette.httpSeq;
     const entry = {
@@ -418,14 +422,14 @@ export function replayFetcher(cassette, provider) {
       } else {
         cleanBody = init.body;
       }
-      cleanBody = await normalizeForCassette(cleanBody, { secrets: cassette.secrets });
+      cleanBody = await normalizeForCassette(cleanBody, { secrets: cassette.secrets, aliases: cassette.aliases });
     }
 
-    const cleanUrl = await normalizeForCassette(url.toString(), { secrets: cassette.secrets });
+    const cleanUrl = await normalizeForCassette(url.toString(), { secrets: cassette.secrets, aliases: cassette.aliases });
     const normalizedRequest = {
       method,
       url: cleanUrl,
-      headers: await normalizeForCassette(cleanHeaders, { secrets: cassette.secrets }),
+      headers: await normalizeForCassette(cleanHeaders, { secrets: cassette.secrets, aliases: cassette.aliases }),
       body: cleanBody
     };
 
@@ -484,7 +488,7 @@ export function recordingSpawn(cassette, realSpawn) {
         if (!line.trim()) continue;
         try {
           const rawMsg = JSON.parse(line);
-          const normMsg = normalizeForCassette(rawMsg, { secrets: cassette.secrets });
+          const normMsg = normalizeForCassette(rawMsg, { secrets: cassette.secrets, aliases: cassette.aliases });
           const seq = ++cassette.codexSeq;
           cassette.writeLine({
             type: 'codex',
@@ -515,7 +519,7 @@ export function recordingSpawn(cassette, realSpawn) {
         if (!line.trim()) continue;
         try {
           const rawMsg = JSON.parse(line);
-          const normMsg = normalizeForCassette(rawMsg, { secrets: cassette.secrets });
+          const normMsg = normalizeForCassette(rawMsg, { secrets: cassette.secrets, aliases: cassette.aliases });
           const seq = ++cassette.codexSeq;
           cassette.writeLine({
             type: 'codex',
@@ -572,7 +576,7 @@ export function replaySpawn(cassette) {
             continue;
           }
 
-          const normMsg = normalizeForCassette(rawMsg, { secrets: cassette.secrets });
+          const normMsg = normalizeForCassette(rawMsg, { secrets: cassette.secrets, aliases: cassette.aliases });
           const seq = ++cassette.codexSeq;
 
           // Expect next recorded 'out' entry

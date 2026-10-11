@@ -570,3 +570,43 @@ test('8. Guard: profileOverride appears only in replay path; replay mode blocks 
   // Check replay mode blocks globalThis.fetch
   assert.match(runnerSource, /globalThis\.fetch\s*=\s*(?:\(\)\s*=>|\(\)\s*=>\s*\{)[\s\S]*?REPLAY_NETWORK_BLOCKED/);
 });
+
+test('9. run-dir paths are aliased to <RUN> so a Codex replay in a different sandbox still matches', async () => {
+  const recordDir = await mkdtemp(join(tmpdir(), 'memoir-alias-rec-'));
+  const replayDir = await mkdtemp(join(tmpdir(), 'memoir-alias-play-'));
+  try {
+    const msg = { id: 5, method: 'thread/resume', params: { threadId: 'thread-synthetic', cwd: join(recordDir, 'host-workspace') } };
+    const recorded = normalizeForCassette(msg, { aliases: { [recordDir]: '<RUN>' } });
+    assert.equal(recorded.params.cwd, '<RUN>/host-workspace');
+    const cassette = await Cassette.create(join(recordDir, 'c'), { type: 'header', version: 1, argv: [], codexVersion: 'synthetic', profiles: { codex: null, openrouter: null } });
+    await cassette.writeLine({ type: 'codex', seq: 1, dir: 'out', message: recorded });
+    await cassette.writeLine({ type: 'codex', seq: 2, dir: 'in', message: { id: 5, result: { ok: true } } });
+    const play = await Cassette.open(join(recordDir, 'c'));
+    play.aliases = { [replayDir]: '<RUN>' };
+    const child = replaySpawn(play)('codex', [], {});
+    const got = new Promise((resolve) => child.stdout.once('data', (d) => resolve(JSON.parse(String(d)))));
+    child.stdin.write(JSON.stringify({ ...msg, params: { ...msg.params, cwd: join(replayDir, 'host-workspace') } }) + '\n');
+    assert.deepEqual(await got, { id: 5, result: { ok: true } });
+    assert.equal(play.mismatchError, null);
+    play.assertFullyConsumed();
+  } finally {
+    await rm(recordDir, { recursive: true });
+    await rm(replayDir, { recursive: true });
+  }
+});
+
+test('10. CASSETTE_SECRET_LEAK never echoes the secret; runner schema command still works', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'memoir-leak-msg-'));
+  try {
+    const cassette = await Cassette.create(join(dir, 'c'), { type: 'header', version: 1 }, { secrets: ['LEAKY-SECRET-777'] });
+    await assert.rejects(cassette.writeLine({ type: 'http', body: 'x LEAKY-SECRET-777' }), (error) => {
+      assert.match(error.message, /CASSETTE_SECRET_LEAK/);
+      assert.equal(error.message.includes('LEAKY-SECRET-777'), false);
+      return true;
+    });
+    const out = execFileSync(process.execPath, [join(root, 'runner.mjs'), 'schema', 'event', '--run', dir], { encoding: 'utf8' });
+    assert.ok(JSON.parse(out));
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
