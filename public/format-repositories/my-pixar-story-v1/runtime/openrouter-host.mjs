@@ -28,11 +28,6 @@ async function readOpenRouterKey(secretsPath){
 // Same argument contract as CodexHost's wiggly_tool; referenceSha256 may be omitted.
 const ToolArguments=z.object({name:z.string(),sha256:z.string(),referenceSha256:z.string().nullable().optional(),edit:AudioEditPlan.nullable().optional(),region:z.object({x:z.number(),y:z.number(),width:z.number(),height:z.number()}).strict().nullable().optional()}).strict();
 const developerInstructions=(worker)=>`You are ${worker.name}, the ${worker.role} for the Wiggly memoir format. Complete only your assigned task. Use wiggly_tool for granted assets. Return only the requested structured event; never approve for the user, submit provider calls, or claim unavailable perception.`;
-function readyText(message){
- const text=typeof message?.content==='string'?message.content.trim():JSON.stringify(message?.content??'').trim();
- try{const parsed=JSON.parse(text);if(typeof parsed?.eventJson==='string')return parsed.eventJson.trim();}catch{}
- return text;
-}
 
 export class OpenRouterHost {
  constructor({cwd, secretsPath, model=DEFAULT_OPENROUTER_MODEL, timeoutMs=180000, reasoningEffort='medium', maxTokens=OPENROUTER_MAX_TOKENS, maxToolRounds=OPENROUTER_MAX_TOOL_ROUNDS, fetcher=fetch, perceptionTools={}, perceptionProfile=null, tracer=null}={}){
@@ -41,6 +36,7 @@ export class OpenRouterHost {
   this.cwd=cwd??join(process.cwd(),'host-workspace');this.secretsPath=secretsPath;this.model=model;this.timeoutMs=timeoutMs;
   this.reasoningEffort=reasoningEffort;this.maxTokens=maxTokens;this.maxToolRounds=maxToolRounds;
   this.fetcher=fetcher;this.perceptionProfile=perceptionProfile;this.tracer=tracer;
+  this.verifiedModels=new Set();
   this.tools={...perceptionTools,viewImage:async({file})=>({perception:'direct-image',imageUrl:`data:image/${extname(file.path).slice(1).replace('jpg','jpeg')};base64,${(await readFile(file.path)).toString('base64')}`})};
  }
  requestSettings(){
@@ -58,19 +54,22 @@ export class OpenRouterHost {
   const tool=wigglyToolDefinition();
   return [{type:'function',function:{name:tool.name,description:tool.description,parameters:tool.inputSchema}}];
  }
- async chat({model,messages,tools,toolChoice,usageSink}){
+ async chat({model,messages,tools,toolChoice,usageSink,reasoning,maxTokens,verify=false}){
   const key=await readOpenRouterKey(this.secretsPath);
   const forcingSpecificTool=toolChoice&&typeof toolChoice==='object';
-  const body={model,messages,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:this.maxTokens,
+  const body={model,messages,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokens,
    response_format:{type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}},
    // Thinking is switched off explicitly whenever a specific tool call is forced.
-   reasoning:forcingSpecificTool?{enabled:false}:{effort:this.reasoningEffort}};
+   reasoning:reasoning??(forcingSpecificTool?{enabled:false}:{effort:this.reasoningEffort})};
   let response;
   try{
    response=await this.fetcher(OPENROUTER_URL,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','X-Title':'Wiggly memoir studio'},body:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(this.timeoutMs)});
   }catch(error){throw new Error(`OPENROUTER_REQUEST_FAILED: ${error.message}. No model/provider fallback was submitted.`);}
   if(!response.ok){
    const text=await response.text().catch(()=>'');
+   // Bind-time verification only: a task turn's 400/401 keeps the generic error below.
+   if(verify&&(response.status===401||response.status===403))throw new Error(`OPENROUTER_AUTH_FAILED: OpenRouter rejected the API key (HTTP ${response.status}). No worker was bound.`);
+   if(verify&&(response.status===400||response.status===404))throw new Error(`OPENROUTER_MODEL_UNAVAILABLE: ${model} was rejected by OpenRouter (HTTP ${response.status}). No worker was bound.${text?` ${text.slice(0,200).split(key).join('[REDACTED]')}`:''}`);
    if(response.status===402)throw new Error('OpenRouter credits exhausted. Add credits before dispatch; no model/provider fallback was submitted.');
    if(response.status===429){
     const error=new Error(`OpenRouter usage limit reached (HTTP 429). No model/provider fallback was submitted.`);
@@ -134,25 +133,25 @@ export class OpenRouterHost {
    }
   }finally{endTurn(output?'completed':'error');}
  }
+ // Cheap stateless connectivity/auth/model check, at most once per distinct
+ // model per host instance. Only success binds; content is never inspected.
+ async verifyModel(model){
+  if(this.verifiedModels.has(model))return;
+  await this.chat({model,messages:[{role:'user',content:'ping'}],reasoning:{enabled:false},maxTokens:16,verify:true});
+  this.verifiedModels.add(model);
+ }
  async startCrew(model,config=loadStudio().config){
   const capabilityVersion=await this.profile(),path=join(this.cwd,'crew-startup-openrouter.json');
   const openRoles=Object.entries(config.agents).filter(([,a])=>(a.backend??'codex')==='openrouter');
   const models=Object.fromEntries(openRoles.map(([role,a])=>[role,model??a.model]));
-  const draft=await readJson(path)??{models,capabilityVersion,workers:[],pending:null};
-  if(digest(draft.models??{})!==digest(models)||draft.capabilityVersion!==capabilityVersion)throw new Error('OPENROUTER_STARTUP_PROFILE_CHANGED: reconcile the recorded partial crew before changing model/tools.');
-  if(draft.pending)throw new Error(`OPENROUTER_STARTUP_UNCERTAIN: inspect ${path} and saved worker ${draft.pending.workerId??draft.pending.role}; initialization will not be repeated automatically.`);
-  for(const [role,agent] of openRoles){
-   const roleModel=models[role];
-   if(draft.workers.some(w=>w.role===role))continue;
-   draft.pending={role};await saveJson(path,draft);
-   const workerId=`openrouter:${role}:${randomUUID().slice(0,8)}`;
-   const worker={workerId,name:agent.name,role,modelVersion:roleModel,capabilityVersion,execution:'host',backend:'openrouter'};
-   const ready=await this.chat({model:roleModel,messages:[{role:'system',content:developerInstructions(worker)},{role:'user',content:'Initialization only: acknowledge your assigned role by replying READY. Do not use tools, author a deliverable, or claim perception.'}],tools:[]});
-   if(readyText(ready)!=='READY')throw new Error(`OPENROUTER_CREW_NOT_READY: ${agent.name} initialization did not acknowledge the role.`);
-   draft.pending.workerId=workerId;await saveJson(path,draft);
-   draft.workers.push(worker);draft.pending=null;await saveJson(path,draft);
-  }
-  return {workers:draft.workers};
+  // Resumable cache only: keep saved workers still matching role, model and
+  // capability; drop the rest and ignore any stale pending marker.
+  const saved=await readJson(path);
+  const keptByRole=new Map((saved?.workers??[]).filter(w=>models[w.role]!==undefined&&w.modelVersion===models[w.role]&&w.capabilityVersion===capabilityVersion).map(w=>[w.role,w]));
+  for(const m of new Set(openRoles.filter(([role])=>!keptByRole.has(role)).map(([role])=>models[role])))await this.verifyModel(m);
+  const workers=openRoles.map(([role,agent])=>keptByRole.get(role)??{workerId:`openrouter:${role}:${randomUUID().slice(0,8)}`,name:agent.name,role,modelVersion:models[role],capabilityVersion,execution:'host',backend:'openrouter'});
+  await saveJson(path,{models,capabilityVersion,workers,pending:null});
+  return {workers};
  }
  async refreshCrew(crew){
   const capabilityVersion=await this.profile();
@@ -161,11 +160,9 @@ export class OpenRouterHost {
  // Single-role bind without touching the startup file (crew-refresh rebind).
  async startRole(role,agent){
   const capabilityVersion=await this.profile();
+  await this.verifyModel(agent.model);
   const workerId=`openrouter:${role}:${randomUUID().slice(0,8)}`;
-  const worker={workerId,name:agent.name,role,modelVersion:agent.model,capabilityVersion,execution:'host',backend:'openrouter'};
-  const ready=await this.chat({model:agent.model,messages:[{role:'system',content:developerInstructions(worker)},{role:'user',content:'Initialization only: acknowledge your assigned role by replying READY. Do not use tools, author a deliverable, or claim perception.'}],tools:[]});
-  if(readyText(ready)!=='READY')throw new Error(`OPENROUTER_CREW_NOT_READY: ${agent.name} initialization did not acknowledge the role.`);
-  return worker;
+  return {workerId,name:agent.name,role,modelVersion:agent.model,capabilityVersion,execution:'host',backend:'openrouter'};
  }
  close(){}
 }

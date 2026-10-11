@@ -12,6 +12,9 @@ import {CrewHost} from '../runtime/crew-host.mjs';
 const secrets=async(dir,key='ISOLATED-OPENROUTER-KEY')=>{const p=join(dir,'secrets.env');await writeFile(p,`OPENROUTER_API_KEY=${key}\n`);return p;};
 const okResponse=(model,event)=>({ok:true,status:200,headers:{get:()=>null},json:async()=>({model,choices:[{finish_reason:'stop',message:{role:'assistant',content:JSON.stringify({eventJson:JSON.stringify(event)})}}]})});
 const workerFor=cap=>({workerId:'openrouter:text-reviewer:test',name:'Sage',role:'text-reviewer',modelVersion:DEFAULT_OPENROUTER_MODEL,capabilityVersion:cap,backend:'openrouter'});
+const verifyOk=(model,content='pong')=>({ok:true,status:200,headers:{get:()=>null},json:async()=>({model,choices:[{finish_reason:'stop',message:{role:'assistant',content}}]})});
+const httpFail=(status,text='boom')=>({ok:false,status,headers:{get:()=>null},text:async()=>text});
+const echoFetcher=(seen)=>async(url,init)=>{const body=JSON.parse(init.body);if(seen)seen.push(body);return verifyOk(body.model);};
 const scriptTask={step:'script',taskId:'isolated-task',actor:'agent',gate:'author',workflowRevision:2};
 const scriptEvent={taskId:'isolated-task',actor:'agent',workerId:'openrouter:text-reviewer:test',action:'artifact',content:{beats:[]}};
 
@@ -141,15 +144,134 @@ test('exactly one retry on invalid worker JSON, then INVALID_WORKER_EVENT with k
  }finally{await rm(dir,{recursive:true});}
 });
 
-test('READY init turn accepts bare or eventJson-wrapped acknowledgement',async()=>{
- const dir=await mkdtemp(join(tmpdir(),'memoir-or-ready-'));
+test('startRole binds the worker without a READY handshake',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-bind-'));
  try{
   const secretsPath=await secrets(dir);
-  for(const content of ['READY',JSON.stringify({eventJson:'READY'})]){
-   const host=new OpenRouterHost({cwd:join(dir,content.length>10?'a':'b'),secretsPath,fetcher:async()=>({ok:true,status:200,headers:{get:()=>null},json:async()=>({model:DEFAULT_OPENROUTER_MODEL,choices:[{finish_reason:'stop',message:{role:'assistant',content}}]})})});
+  for(const content of ['garbage','']){
+   const bodies=[];
+   const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async(url,init)=>{bodies.push(JSON.parse(init.body));return verifyOk(DEFAULT_OPENROUTER_MODEL,content);}});
    const worker=await host.startRole('text-reviewer',{name:'Sage',model:DEFAULT_OPENROUTER_MODEL});
-   assert.equal(worker.modelVersion,DEFAULT_OPENROUTER_MODEL);assert.match(worker.workerId,/^openrouter:text-reviewer:/);
+   assert.equal(worker.modelVersion,DEFAULT_OPENROUTER_MODEL);assert.match(worker.workerId,/^openrouter:text-reviewer:[0-9a-f]{8}$/);
+   assert.equal(worker.name,'Sage');assert.equal(worker.role,'text-reviewer');
+   assert.equal(worker.execution,'host');assert.equal(worker.backend,'openrouter');assert.ok(worker.capabilityVersion);
+   assert.ok(!JSON.stringify(bodies).match(/READY|acknowledge/));
   }
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('binding sends no READY/acknowledge prompt',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-noready-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const bodies=[];
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:echoFetcher(bodies)});
+  await host.startRole('text-reviewer',{name:'Sage',model:DEFAULT_OPENROUTER_MODEL});
+  await host.startCrew(undefined,{agents:{'text-reviewer':{name:'Sage',backend:'openrouter',model:DEFAULT_OPENROUTER_MODEL}}});
+  assert.ok(bodies.length>=1);
+  assert.ok(!JSON.stringify(bodies).match(/READY|acknowledge/));
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('startCrew checks each distinct model exactly once',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-once-'));
+ try{
+  const secretsPath=await secrets(dir);
+  let n=0;
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async(url,init)=>{n++;return verifyOk(JSON.parse(init.body).model);}});
+  const out=await host.startCrew(undefined,{agents:{'text-reviewer':{name:'Sage',backend:'openrouter',model:DEFAULT_OPENROUTER_MODEL},'cast-designer':{name:'Cee',backend:'openrouter',model:DEFAULT_OPENROUTER_MODEL},'sheet-prompter':{name:'Ess',backend:'openrouter',model:DEFAULT_OPENROUTER_MODEL}}});
+  assert.equal(n,1);assert.equal(out.workers.length,3);
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('verifyModel caches per model on the host instance',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-cache-'));
+ try{
+  const secretsPath=await secrets(dir);
+  let n=0;
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async(url,init)=>{n++;return verifyOk(JSON.parse(init.body).model);}});
+  await host.startRole('text-reviewer',{name:'Sage',model:DEFAULT_OPENROUTER_MODEL});
+  await host.startRole('cast-designer',{name:'Cee',model:DEFAULT_OPENROUTER_MODEL});
+  assert.equal(n,1);
+  await host.startRole('sheet-prompter',{name:'Ess',model:'other/model'});
+  assert.equal(n,2);
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('verify uses a minimal body; runTask bodies are unchanged',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-bodies-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const bodies=[];
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async(url,init)=>{const body=JSON.parse(init.body);bodies.push(body);return body.tools?.length?okResponse(DEFAULT_OPENROUTER_MODEL,scriptEvent):verifyOk(body.model);}});
+  await host.startRole('text-reviewer',{name:'Sage',model:DEFAULT_OPENROUTER_MODEL});
+  const worker=workerFor(await host.profile());
+  await host.runTask(scriptTask,{worker,callTool:async()=>{throw new Error('no tools needed');}});
+  const [verify,task]=bodies;
+  assert.deepEqual(verify.reasoning,{enabled:false});assert.ok(verify.max_tokens<=16);
+  assert.ok(!('tools' in verify)&&!('tool_choice' in verify));
+  assert.equal(verify.provider.require_parameters,true);
+  assert.equal(task.reasoning.effort,'medium');assert.equal(task.max_tokens,OPENROUTER_MAX_TOKENS);
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('auth and model failures are explicit and never leak the key',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-fail-'));
+ try{
+  const secretsPath=await secrets(dir,'SUPER-SECRET-KEY-XYZ');
+  const badKey=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async()=>httpFail(401,'invalid api key')});
+  await assert.rejects(badKey.startRole('text-reviewer',{name:'Sage',model:DEFAULT_OPENROUTER_MODEL}),e=>/OPENROUTER_AUTH_FAILED/.test(e.message)&&!e.message.includes('SUPER-SECRET-KEY-XYZ'));
+  const badModel=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async()=>httpFail(400,'no such model')});
+  await assert.rejects(badModel.startRole('text-reviewer',{name:'Sage',model:DEFAULT_OPENROUTER_MODEL}),/OPENROUTER_MODEL_UNAVAILABLE/);
+  const noKey=new OpenRouterHost({cwd:dir,secretsPath:join(dir,'missing.env'),fetcher:async()=>{throw new Error('must not fetch');}});
+  await assert.rejects(noKey.startRole('text-reviewer',{name:'Sage',model:DEFAULT_OPENROUTER_MODEL}),/OPENROUTER_API_KEY missing/);
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('failed verification records nothing; a rerun binds every role',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-recover-a-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const cfg={agents:{'text-reviewer':{name:'Sage',backend:'openrouter',model:DEFAULT_OPENROUTER_MODEL},'cast-designer':{name:'Cee',backend:'openrouter',model:DEFAULT_OPENROUTER_MODEL}}};
+  const failing=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async()=>httpFail(500,'transient')});
+  await assert.rejects(failing.startCrew(undefined,cfg),/OPENROUTER_REQUEST_FAILED/);
+  let saved=null;try{saved=JSON.parse(await readFile(join(dir,'crew-startup-openrouter.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
+  assert.ok(!saved||saved.workers.length===0);
+  const good=new OpenRouterHost({cwd:dir,secretsPath,fetcher:echoFetcher()});
+  const out=await good.startCrew(undefined,cfg);
+  assert.equal(out.workers.length,2);
+  const reread=JSON.parse(await readFile(join(dir,'crew-startup-openrouter.json'),'utf8'));
+  assert.equal(reread.pending,null);assert.equal(reread.workers.length,2);
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('stale startup file with pending recovers without edits',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-recover-b-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:echoFetcher()});
+  const cap=await host.profile();
+  const cfg={agents:{'text-reviewer':{name:'Sage',backend:'openrouter',model:DEFAULT_OPENROUTER_MODEL},'cast-designer':{name:'Cee',backend:'openrouter',model:DEFAULT_OPENROUTER_MODEL}}};
+  await writeFile(join(dir,'crew-startup-openrouter.json'),JSON.stringify({models:{'text-reviewer':DEFAULT_OPENROUTER_MODEL,'cast-designer':DEFAULT_OPENROUTER_MODEL},capabilityVersion:cap,workers:[{workerId:'openrouter:text-reviewer:deadbeef',name:'Sage',role:'text-reviewer',modelVersion:DEFAULT_OPENROUTER_MODEL,capabilityVersion:'stale-cap',execution:'host',backend:'openrouter'}],pending:{role:'text-reviewer',workerId:'openrouter:text-reviewer:deadbeef'}}));
+  const out=await host.startCrew(undefined,cfg);
+  assert.equal(out.workers.length,2);
+  assert.ok(out.workers.find(w=>w.role==='text-reviewer').workerId!=='openrouter:text-reviewer:deadbeef');
+  const reread=JSON.parse(await readFile(join(dir,'crew-startup-openrouter.json'),'utf8'));
+  assert.equal(reread.pending,null);assert.equal(reread.workers.length,2);
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('matching saved worker keeps its workerId',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-recover-c-'));
+ try{
+  const secretsPath=await secrets(dir);
+  const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:echoFetcher()});
+  const cap=await host.profile();
+  const cfg={agents:{'text-reviewer':{name:'Sage',backend:'openrouter',model:DEFAULT_OPENROUTER_MODEL},'cast-designer':{name:'Cee',backend:'openrouter',model:DEFAULT_OPENROUTER_MODEL}}};
+  await writeFile(join(dir,'crew-startup-openrouter.json'),JSON.stringify({models:{'text-reviewer':DEFAULT_OPENROUTER_MODEL,'cast-designer':DEFAULT_OPENROUTER_MODEL},capabilityVersion:cap,workers:[{workerId:'openrouter:text-reviewer:kept1234',name:'Sage',role:'text-reviewer',modelVersion:DEFAULT_OPENROUTER_MODEL,capabilityVersion:cap,execution:'host',backend:'openrouter'}],pending:null}));
+  const out=await host.startCrew(undefined,cfg);
+  assert.equal(out.workers.length,2);
+  assert.equal(out.workers.find(w=>w.role==='text-reviewer').workerId,'openrouter:text-reviewer:kept1234');
  }finally{await rm(dir,{recursive:true});}
 });
 test('preflight refuses a stale capabilityVersion; profile digests model, settings, tool and perception',async()=>{
@@ -213,5 +335,17 @@ test('malformed tool arguments go back to the model; tool-less requests omit too
   await host.chat({model:DEFAULT_OPENROUTER_MODEL,messages:[],tools:host.toolDefinition(),toolChoice:{type:'function',function:{name:'wiggly_tool'}}});
   assert.deepEqual(bodies.at(-1).reasoning,{enabled:false});
   assert.equal(JSON.stringify(bodies).includes('ISOLATED-OPENROUTER-KEY'),false);
+ }finally{await rm(dir,{recursive:true});}
+});
+
+test('a task-turn HTTP 400/401 keeps the generic request error (bind-time names are verify-only)',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'memoir-or-task400-'));
+ try{
+  const secretsPath=await secrets(dir);
+  for(const status of [400,401]){
+   const host=new OpenRouterHost({cwd:dir,secretsPath,fetcher:async()=>httpFail(status,'bad request')});
+   const worker=workerFor(await host.profile());
+   await assert.rejects(host.runTask(scriptTask,{worker,callTool:async()=>{}}),e=>new RegExp(`OPENROUTER_REQUEST_FAILED: HTTP ${status}`).test(e.message)&&!/MODEL_UNAVAILABLE|AUTH_FAILED/.test(e.message));
+  }
  }finally{await rm(dir,{recursive:true});}
 });
