@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile, readFile, mkdir, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join, dirname } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
   normalizeForCassette,
@@ -387,7 +387,23 @@ test('6. Codex replay from codex-synthetic.jsonl completes turn; changed turn/st
   }
 });
 
-test('7. End-to-end CLI: work-codex --record creates cassette, replay returns ok:true, mutated cassette returns ok:false', async () => {
+// An all-OpenRouter pinned studio so the CLI never launches a real `codex app-server`
+// (absent in CI, where its spawn error left CodexHost.initialize waiting 10 minutes).
+async function allOpenRouterStudio(dir) {
+  const current = loadStudio();
+  const studioDir = join(dir, 'studio-src');
+  const raw = structuredClone(current.config);
+  for (const agent of Object.values(raw.agents)) { agent.backend = 'openrouter'; agent.model = DEFAULT_OPENROUTER_MODEL; }
+  await mkdir(studioDir, { recursive: true });
+  await writeFile(join(studioDir, 'studio.json'), JSON.stringify(raw));
+  for (const path of Object.keys(current.documents)) {
+    await mkdir(dirname(join(studioDir, path)), { recursive: true });
+    await writeFile(join(studioDir, path), current.documents[path].content);
+  }
+  return loadStudio(pathToFileURL(studioDir + '/'));
+}
+
+test('7. End-to-end CLI: work-codex --record creates cassette, replay returns ok:true, mutated cassette returns ok:false', { timeout: 90000 }, async () => {
   const dir = await mkdtemp(join(tmpdir(), 'memoir-e2e-record-replay-'));
   try {
     const runnerPath = join(root, 'runner.mjs');
@@ -408,8 +424,9 @@ test('7. End-to-end CLI: work-codex --record creates cassette, replay returns ok
 
     // Initialize run in sqlite workflow
     const workflow = openWorkflow(join(dir, 'checkpoints.sqlite'));
-    let s = await workflow.init('project', inputs, { workflowRevision: 5 });
-    const studioConfig = loadStudio().config;
+    const studio = await allOpenRouterStudio(dir);
+    let s = await workflow.init('project', inputs, { workflowRevision: 5, studio });
+    const studioConfig = studio.config;
     const workers = Object.entries(crewRoles).map(([role, def]) => {
       const backend = studioConfig.agents[role]?.backend ?? 'codex';
       return {
@@ -505,9 +522,11 @@ test('7. End-to-end CLI: work-codex --record creates cassette, replay returns ok
         '--secrets',
         secretsPath
       ],
-      { encoding: 'utf8' }
+      { encoding: 'utf8', timeout: 60000, killSignal: 'SIGKILL' }
     );
     assert.equal(recordRes.status, 0, `work-codex --record failed: ${recordRes.stderr}`);
+    const recordedLines = (await readFile(join(recordRes.stderr.match(/recorded cassette: (.+)/)[1].trim(), 'cassette.jsonl'), 'utf8')).trim().split('\n').map((l) => JSON.parse(l));
+    assert.equal(recordedLines.filter((l) => l.type === 'codex').length, 0, 'the e2e run must never talk to a real codex app-server');
     assert.match(recordRes.stderr, /recorded cassette: (.+)/);
 
     const match = recordRes.stderr.match(/recorded cassette: (.+)/);
@@ -595,7 +614,7 @@ test('9. run-dir paths are aliased to <RUN> so a Codex replay in a different san
   }
 });
 
-test('10. CASSETTE_SECRET_LEAK never echoes the secret; runner schema command still works', async () => {
+test('10. CASSETTE_SECRET_LEAK never echoes the secret; runner schema command still works', { timeout: 30000 }, async () => {
   const dir = await mkdtemp(join(tmpdir(), 'memoir-leak-msg-'));
   try {
     const cassette = await Cassette.create(join(dir, 'c'), { type: 'header', version: 1 }, { secrets: ['LEAKY-SECRET-777'] });

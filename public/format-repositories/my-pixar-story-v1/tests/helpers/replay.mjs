@@ -23,8 +23,11 @@ export async function replayCassette(dir, options = {}) {
     child.stdout.on('data', (d) => { stdout += d.toString('utf8'); });
     child.stderr.on('data', (d) => { stderr += d.toString('utf8'); });
 
-    child.on('error', reject);
+    // A replay must finish in about a minute; never let a stuck child block the suite.
+    const timer = setTimeout(() => child.kill('SIGKILL'), options.timeoutMs ?? 60000);
+    child.on('error', (error) => { clearTimeout(timer); reject(error); });
     child.on('close', (code) => {
+      clearTimeout(timer);
       try {
         const trimmed = stdout.trim();
         const jsonResult = trimmed ? JSON.parse(trimmed) : null;
