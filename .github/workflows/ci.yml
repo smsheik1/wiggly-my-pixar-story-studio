@@ -120,6 +120,17 @@ jobs:
             # shellcheck disable=SC2086
             node --test --test-concurrency=2 --test-reporter=tap $files 2>&1 | tee /tmp/kit-fast-shard-${{ matrix.shard }}.tap
           fi
+      # Department evals (automated dailies): REPLAY ONLY, never live, no network, no secrets.
+      # Re-scores the committed recordings against the golden assertions and fails on a
+      # regression versus evaluation/dept-evals/baseline.json. A role whose prompt/skill/model
+      # changed since its recording shows as a stale warning: re-record it live locally.
+      - name: Department evals (replay only)
+        if: matrix.shard == 1
+        timeout-minutes: 3
+        run: |
+          cd public/format-repositories/my-pixar-story-v1
+          node runner.mjs dept-eval --all --out /tmp/dept-eval
+          cat /tmp/dept-eval/scorecard.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: kit-fast-tap-${{ matrix.shard }}

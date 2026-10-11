@@ -1,0 +1,421 @@
+{
+  "version": 1,
+  "sourceRun": "phase-d-rehearsal-20261008-r4",
+  "notes": "Golden cases mined from the r4 rehearsal (read-only copy of checkpoints.sqlite). Each case rebuilds the real task packet at that gate, swaps in the CURRENT kit's studio snapshot (skills, rubrics, models) and runs the assigned crew role on it. History references (#N) are indexes into the r4 project history. Assertions are machine-checked; soft assertions are reported but never fail a case. June (scene-reviewer) has no cases: r4 stopped before keyframes, so there is no ground truth for her yet.",
+  "cases": [
+    {
+      "id": "vera-adult-sheets-wrist",
+      "dept": "vera",
+      "priority": 1,
+      "source": {
+        "key": "candidates:shaz-adult",
+        "gate": "review",
+        "version": 1
+      },
+      "truth": {
+        "authority": "shaz",
+        "summary": "Vera r4 rejected all three adult sheets because the watch 'switches wrists'. Shaz said that was wrong (#157) and picked option 2 (index 1) after the redo (#160). Options 1 and 3 drop the silver chain in the 8 portraits (checked by eye, p9 head-to-head); option 2 is clean.",
+        "history": [
+          154,
+          157,
+          160
+        ]
+      },
+      "asserts": [
+        {
+          "id": "no-wrist-false-reject",
+          "type": "mustNotClaim",
+          "pattern": "(switch|swap|flip|opposite|other|different|wrong|alternat|inconsisten|mirror)[^.]{0,60}wrist|wrist[^.]{0,60}(switch|swap|flip|opposite|other|different|wrong|alternat|inconsisten|mirror)",
+          "why": "The 'watch switches wrists' rejection was false (Shaz, #157). Only a failing check making that claim counts."
+        },
+        {
+          "id": "top-pick-option-2",
+          "type": "topPick",
+          "selection": 1,
+          "ifPresent": true,
+          "why": "Option 2 was the clean sheet Shaz picked (#160)."
+        },
+        {
+          "id": "not-pick-chainless",
+          "type": "mustNotPick",
+          "selections": [
+            0,
+            2
+          ],
+          "why": "Options 1 and 3 drop the chain in every portrait."
+        },
+        {
+          "id": "flags-missing-chain",
+          "type": "mustMention",
+          "pattern": "chain|necklace",
+          "soft": true,
+          "why": "Real minor defect in options 1 and 3."
+        }
+      ]
+    },
+    {
+      "id": "vera-late-teen-text-labels",
+      "dept": "vera",
+      "priority": 2,
+      "source": {
+        "key": "candidates:shaz-late-teen",
+        "gate": "review",
+        "version": 2
+      },
+      "truth": {
+        "authority": "shaz",
+        "summary": "Option 2 (index 1) has baked-in view and expression labels ('FRONT VIEW', 'NEUTRAL', ...); Shaz rejected it (#145) and picked option 1 (index 0, no text) (#142). Vera r4 passed all 6 checks and missed the labels. Labels confirmed by eye.",
+        "history": [
+          141,
+          142,
+          145
+        ]
+      },
+      "asserts": [
+        {
+          "id": "flags-baked-in-text",
+          "type": "mustMention",
+          "pattern": "\\btext\\b|label|caption|lettering|written|FRONT VIEW|NEUTRAL",
+          "why": "Option 2 has rendered text labels."
+        },
+        {
+          "id": "not-pick-labelled",
+          "type": "mustNotPick",
+          "selections": [
+            1
+          ],
+          "why": "The labelled sheet must never be the recommendation."
+        },
+        {
+          "id": "top-pick-option-1",
+          "type": "topPick",
+          "selection": 0,
+          "ifPresent": true,
+          "soft": true,
+          "why": "Shaz picked option 1 (#142)."
+        }
+      ]
+    },
+    {
+      "id": "vera-room-generic-unpixar",
+      "dept": "vera",
+      "priority": 3,
+      "source": {
+        "key": "backgroundCandidates:childhood-room",
+        "gate": "review",
+        "version": 2
+      },
+      "truth": {
+        "authority": "shaz",
+        "summary": "Vera r4 approved all three childhood-room plates. Shaz rejected them: \"these backgrounds are all bullshit. this don't look like a pixar film\" - empty, generic, muted ivory/oatmeal rooms (#225).",
+        "history": [
+          220,
+          225
+        ]
+      },
+      "asserts": [
+        {
+          "id": "rejects-generic-room",
+          "type": "verdict",
+          "oneOf": [
+            "rejected"
+          ],
+          "why": "Shaz rejected every plate (#225)."
+        },
+        {
+          "id": "names-style-or-story-gap",
+          "type": "mustMention",
+          "criteria": [
+            "style",
+            "story-specific-set",
+            "scene-fit"
+          ],
+          "pattern": ".",
+          "why": "The failure is style / not dressed from the story."
+        }
+      ]
+    },
+    {
+      "id": "sage-room-brief-generic",
+      "dept": "sage",
+      "priority": 4,
+      "source": {
+        "key": "backgroundBrief:childhood-room",
+        "gate": "review",
+        "version": 1
+      },
+      "truth": {
+        "authority": "shaz",
+        "summary": "Sage r4 approved brief v1. Shaz later rejected it as the empty, generic, muted 'leave space for compositing' approach: ivory palette, calm blank walls, 'a few plain unmarked storage objects', nothing that says it is 8-year-old Shaz's room (#225).",
+        "history": [
+          194,
+          225
+        ]
+      },
+      "asserts": [
+        {
+          "id": "rejects-generic-brief",
+          "type": "verdict",
+          "oneOf": [
+            "rejected"
+          ],
+          "why": "Shaz rejected this brief (#225)."
+        },
+        {
+          "id": "names-generic-dressing",
+          "type": "mustMention",
+          "pattern": "generic|plain|unmarked|ivory|blank|calm|story|specific|lived|scientist|sunglass",
+          "why": "The defect is generic, undressed set design."
+        }
+      ]
+    },
+    {
+      "id": "beau-room-brief-fresh",
+      "dept": "beau",
+      "priority": 5,
+      "source": {
+        "key": "backgroundBrief:childhood-room",
+        "gate": "author",
+        "version": null
+      },
+      "truth": {
+        "authority": "shaz",
+        "summary": "Beau authoring the childhood-room brief from scratch (no feedback in the packet). Shaz rejected the r4 v1 brief for its ivory walls, calm blank walls and 'few plain unmarked storage objects' and asked for a lived-in room dressed from the story (#225); he approved v2 (#231).",
+        "history": [
+          193,
+          225,
+          231
+        ]
+      },
+      "asserts": [
+        {
+          "id": "no-ivory-walls",
+          "type": "contentNotMatches",
+          "pattern": "ivory walls|ivory plaster|oatmeal",
+          "why": "Shaz rejected the restrained ivory/oatmeal palette (#225)."
+        },
+        {
+          "id": "no-plain-unmarked",
+          "type": "contentNotMatches",
+          "pattern": "few plain unmarked|plain unmarked storage",
+          "why": "Shaz rejected 'a few plain unmarked storage objects' (#225)."
+        },
+        {
+          "id": "dressed-from-story",
+          "type": "contentMatches",
+          "pattern": "scien|sunglass",
+          "why": "The room must say it is 8-year-old Shaz's (scientist dream, sunglasses)."
+        },
+        {
+          "id": "zero-people",
+          "type": "contentMatches",
+          "pattern": "zero people|no people|zero characters",
+          "why": "Background plates are composited later; must forbid people."
+        }
+      ]
+    },
+    {
+      "id": "leo-script-r4-answers",
+      "dept": "leo",
+      "priority": 6,
+      "source": {
+        "key": "script",
+        "gate": "author",
+        "version": null
+      },
+      "truth": {
+        "authority": "shaz",
+        "summary": "Leo writing the script from Shaz's locked r4 answers. Shaz approved r4 script v1 (#8), but its beat 2 'no A/C' was read aloud as 'A slash C' and had to be regenerated as 'AC' (#49).",
+        "history": [
+          6,
+          8,
+          49
+        ]
+      },
+      "asserts": [
+        {
+          "id": "no-slash-abbreviations",
+          "type": "contentNotMatches",
+          "field": "beats",
+          "pattern": "\\b[A-Za-z]{1,3}/[A-Za-z]{1,3}\\b",
+          "why": "TTS reads slashes aloud ('A slash C', #49)."
+        },
+        {
+          "id": "keeps-sunglasses-fact",
+          "type": "contentMatches",
+          "field": "beats",
+          "pattern": "sunglass",
+          "why": "Locked childhood fact Shaz approved."
+        },
+        {
+          "id": "keeps-scientist-fact",
+          "type": "contentMatches",
+          "field": "beats",
+          "pattern": "scien",
+          "why": "Locked childhood fact Shaz approved."
+        }
+      ]
+    },
+    {
+      "id": "sage-script-approved",
+      "dept": "sage",
+      "priority": 7,
+      "source": {
+        "key": "script",
+        "gate": "review",
+        "version": 1
+      },
+      "truth": {
+        "authority": "shaz",
+        "summary": "Shaz approved script v1 (#8). Positive control: Sage must not invent defects that block it.",
+        "history": [
+          7,
+          8
+        ]
+      },
+      "asserts": [
+        {
+          "id": "passes-approved-script",
+          "type": "verdict",
+          "oneOf": [
+            "approved",
+            "provisional"
+          ],
+          "why": "Shaz approved this script (#8)."
+        }
+      ]
+    },
+    {
+      "id": "sage-room-brief-approved",
+      "dept": "sage",
+      "priority": 8,
+      "source": {
+        "key": "backgroundBrief:childhood-room",
+        "gate": "review",
+        "version": 2
+      },
+      "truth": {
+        "authority": "shaz",
+        "summary": "Shaz approved brief v2 in chat: \"Approve the brief\" (#231). Positive control.",
+        "history": [
+          227,
+          231
+        ]
+      },
+      "asserts": [
+        {
+          "id": "passes-approved-brief",
+          "type": "verdict",
+          "oneOf": [
+            "approved",
+            "provisional"
+          ],
+          "why": "Shaz approved this brief (#231)."
+        }
+      ]
+    },
+    {
+      "id": "vera-mother-clean",
+      "dept": "vera",
+      "priority": 9,
+      "source": {
+        "key": "candidates:shaz-mother",
+        "gate": "review",
+        "version": 1
+      },
+      "truth": {
+        "authority": "shaz",
+        "summary": "Shaz picked mom option 1 (index 0) and approved (#173). Positive control against false rejections.",
+        "history": [
+          172,
+          173
+        ]
+      },
+      "asserts": [
+        {
+          "id": "passes-approved-sheets",
+          "type": "verdict",
+          "oneOf": [
+            "approved",
+            "provisional"
+          ],
+          "why": "Shaz approved this set (#173)."
+        },
+        {
+          "id": "top-pick-option-1",
+          "type": "topPick",
+          "selection": 0,
+          "ifPresent": true,
+          "soft": true,
+          "why": "Shaz picked option 1 (#173)."
+        }
+      ]
+    },
+    {
+      "id": "sage-room-prompt-unpixar",
+      "dept": "sage",
+      "priority": 10,
+      "source": {
+        "key": "backgroundPrompt:childhood-room",
+        "gate": "review",
+        "version": 2
+      },
+      "truth": {
+        "authority": "shaz",
+        "summary": "Sage r4 approved prompt v2; Shaz rejected it: \"These backgrounds aren't pixar enough\" (#211). The prompt keeps the ivory/oatmeal palette, calm blank walls and plain unmarked objects Shaz later named (#225).",
+        "history": [
+          210,
+          211,
+          225
+        ]
+      },
+      "asserts": [
+        {
+          "id": "rejects-unpixar-prompt",
+          "type": "verdict",
+          "oneOf": [
+            "rejected"
+          ],
+          "why": "Shaz rejected this prompt (#211)."
+        }
+      ]
+    },
+    {
+      "id": "sage-backgrounds-empty-angles",
+      "dept": "sage",
+      "priority": 11,
+      "source": {
+        "key": "backgrounds",
+        "gate": "review",
+        "version": 1
+      },
+      "truth": {
+        "authority": "objective",
+        "summary": "Every location in backgrounds v1 has an empty angles array (Sage r4 correctly rejected, #187); v2 fixed it and Shaz approved (#192).",
+        "history": [
+          187,
+          192
+        ]
+      },
+      "asserts": [
+        {
+          "id": "rejects-empty-angles",
+          "type": "verdict",
+          "oneOf": [
+            "rejected"
+          ],
+          "why": "Objective: no angles at all."
+        },
+        {
+          "id": "names-angles",
+          "type": "mustMention",
+          "criteria": [
+            "angles"
+          ],
+          "pattern": ".",
+          "why": "The defect is the empty angles."
+        }
+      ]
+    }
+  ]
+}

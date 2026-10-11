@@ -82,6 +82,9 @@ async function main() {
   if(command==='crew-template'){print({workers:Object.entries(crewRoles).map(([role,definition])=>({role,name:definition.name,workerId:`bind-host-${role}`,modelVersion:'inherit-host-model',capabilityVersion:'bind-actual-tools-v1',execution:'host',backend:definition.backend??'codex'})),instruction:'Use your current host model and actual independent worker IDs; replace template model/capability values with the actual deployed versions before configuration. Keep each role on its configured backend (codex|openrouter). No external model is required.'});return;}
   if(command==='audio-tasks'){const cases=z.array(AudioCase).parse(await json(option('dataset'))),split=option('split','holdout');if(!['calibration','holdout'].includes(split))throw new Error('Invalid audio split.');print(cases.filter(c=>c.split===split).map(audioTask));return;}
   if(command==='visual-tasks'){const cases=z.array(VisualCase).parse(await json(option('dataset'))),split=option('split','holdout');if(!['calibration','holdout'].includes(split))throw new Error('Invalid visual split.');print(cases.filter(c=>c.split===split).map(visualTask));return;}
+  // Department evals (golden cases per crew department). Replay by default (free, offline);
+  // --live --confirm-spend is the only paid mode, hard-capped in code. Exits 1 on regression.
+  if (command === 'dept-eval') { const { cli } = await import('./evaluation/dept-evals.mjs'); process.exitCode = await cli(rawProcessArgv.slice(3)); return; }
   if (command === 'eval' || command === 'eval-tasks' || command === 'eval-export') {
     const { validateDataset, selectCases, taskForCase, runEvaluation, langsmithExamples } = await import('./evaluation/harness.mjs');
     const dataset = validateDataset(await json(option('dataset', join(root, 'evaluation', 'dataset.json'))));
