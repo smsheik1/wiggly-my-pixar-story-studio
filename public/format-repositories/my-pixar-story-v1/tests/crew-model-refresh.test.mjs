@@ -49,7 +49,7 @@ test('crew-refresh after refresh-crew-models rebinds exactly the moved roles and
  const openrouter={tools:{},refreshCrew:async c=>({workers:c.workers}),startRole:async(role,agent)=>({workerId:`openrouter:${role}:new`,name:agent.name,role,modelVersion:agent.model,capabilityVersion:'or-cap',execution:'host',backend:'openrouter'})};
  const out=await new CrewHost({codex,openrouter,config:p.studio.config}).refreshCrew(legacyCrew,p.studio.config);
  assert.deepEqual([...out.changed].sort(),[...deepseekRoles].sort());
- for(const role of ['script-writer','pixar-prompter','visual-reviewer','scene-reviewer','background-product-owner']){const w=out.workers.find(w=>w.role===role);assert.equal(w.workerId,`thread-${role}`);assert.equal(w.backend,'codex');assert.equal(w.modelVersion,'gpt-6.1-sol');}
+ for(const role of ['script-writer','visual-reviewer','scene-reviewer']){const w=out.workers.find(w=>w.role===role);assert.equal(w.workerId,`thread-${role}`);assert.equal(w.backend,'codex');assert.equal(w.modelVersion,'gpt-6.1-sol');}
  for(const role of deepseekRoles)assert.equal(out.workers.find(w=>w.role===role).modelVersion,'deepseek/deepseek-v4.1-flash');
  // Without refresh-crew-models the legacy pinned config changes nothing.
  const untouched=legacy(initialProject('crew-models-none',inputs,{workflowRevision:2}));
