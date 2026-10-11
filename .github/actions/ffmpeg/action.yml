@@ -21,6 +21,8 @@ runs:
           echo "Cached ffmpeg missing, falling back to apt"
           sudo apt-get update -y && sudo apt-get install -y ffmpeg
         fi
+        # GITHUB_PATH only applies to later steps; make this step see the binaries too.
+        export PATH="$HOME/ffmpeg-static/bin:$PATH"
         ffmpeg -version && ffprobe -version
     - name: Install ffmpeg (cache miss)
       id: miss
@@ -52,6 +54,8 @@ runs:
           sudo apt-get update -y && sudo apt-get install -y ffmpeg
         fi
         echo "static_ok=$STATIC_OK" >> "$GITHUB_OUTPUT"
+        # GITHUB_PATH only applies to later steps; make this step see the binaries too.
+        export PATH="$HOME/ffmpeg-static/bin:$PATH"
         ffmpeg -version && ffprobe -version
     - name: Save ffmpeg static cache
       if: steps.cache.outputs.cache-hit != 'true' && steps.miss.outputs.static_ok == 'true'
