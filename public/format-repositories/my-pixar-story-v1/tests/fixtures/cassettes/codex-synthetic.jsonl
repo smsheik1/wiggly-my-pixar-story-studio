@@ -1,0 +1,9 @@
+{"type":"header","version":1,"createdAt":"2026-10-10T00:00:00.000Z","argv":["work-codex"],"codexVersion":"codex 0.1.0-synthetic","profiles":{"codex":"codex-synthetic-profile","openrouter":null}}
+{"type":"codex","seq":1,"dir":"out","message":{"id":1,"method":"initialize","params":{"clientInfo":{"name":"wiggly_memoir","title":"Wiggly memoir studio","version":"2.0.0"},"capabilities":{"experimentalApi":true}}}}
+{"type":"codex","seq":2,"dir":"in","message":{"id":1,"result":{"platformFamily":"unix"}}}
+{"type":"codex","seq":3,"dir":"out","message":{"method":"initialized","params":{}}}
+{"type":"codex","seq":4,"dir":"out","message":{"id":2,"method":"turn/start","params":{"threadId":"thr-synthetic-1","input":[{"type":"text","text":"{\"instruction\":\"synthetic turn\",\"task\":{\"taskId\":\"synthetic-codex-task-1\"}}"}]}}}
+{"type":"codex","seq":5,"dir":"in","message":{"id":2,"result":{"turn":{"id":"turn-synthetic-1"}}}}
+{"type":"codex","seq":6,"dir":"in","message":{"method":"item/completed","params":{"threadId":"thr-synthetic-1","turnId":"turn-synthetic-1","item":{"type":"agentMessage","text":"{\"eventJson\":\"{\\\"taskId\\\":\\\"synthetic-codex-task-1\\\",\\\"actor\\\":\\\"agent\\\",\\\"workerId\\\":\\\"bind-host-script-writer\\\",\\\"action\\\":\\\"artifact\\\",\\\"content\\\":{\\\"beats\\\":[]}}\"}"}}}}
+{"type":"codex","seq":7,"dir":"in","message":{"method":"turn/completed","params":{"threadId":"thr-synthetic-1","turn":{"id":"turn-synthetic-1","status":"completed","error":null}}}}
+{"type":"result","exitCode":0,"stdout":{"completed":true},"error":null}

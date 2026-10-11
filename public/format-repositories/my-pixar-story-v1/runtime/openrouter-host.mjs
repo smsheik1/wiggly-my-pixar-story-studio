@@ -34,12 +34,13 @@ const ToolArguments=z.object({name:z.string(),sha256:z.string(),referenceSha256:
 const developerInstructions=(worker)=>`You are ${worker.name}, the ${worker.role} for the Wiggly memoir format. Complete only your assigned task. Use wiggly_tool for granted assets. Return only the requested structured event; never approve for the user, submit provider calls, or claim unavailable perception.`;
 
 export class OpenRouterHost {
- constructor({cwd, secretsPath, model=DEFAULT_OPENROUTER_MODEL, timeoutMs=180000, reasoningEffort='medium', maxTokens=OPENROUTER_MAX_TOKENS, maxToolRounds=OPENROUTER_MAX_TOOL_ROUNDS, fetcher=fetch, perceptionTools={}, perceptionProfile=null, tracer=null}={}){
+ constructor({cwd, secretsPath, model=DEFAULT_OPENROUTER_MODEL, timeoutMs=180000, reasoningEffort='medium', maxTokens=OPENROUTER_MAX_TOKENS, maxToolRounds=OPENROUTER_MAX_TOOL_ROUNDS, fetcher=fetch, perceptionTools={}, perceptionProfile=null, tracer=null, profileOverride=null}={}){
   if(['max','xhigh'].includes(reasoningEffort))throw new Error('OPENROUTER_REASONING_LIMIT: reasoning effort must be medium or high, never max/xhigh.');
   if(!['low','medium','high'].includes(reasoningEffort))throw new Error('OPENROUTER_REASONING_LIMIT: reasoning effort must be medium or high.');
   this.cwd=cwd??join(process.cwd(),'host-workspace');this.secretsPath=secretsPath;this.model=model;this.timeoutMs=timeoutMs;
   this.reasoningEffort=reasoningEffort;this.maxTokens=maxTokens;this.maxToolRounds=maxToolRounds;
   this.fetcher=fetcher;this.perceptionProfile=perceptionProfile;this.tracer=tracer;
+  this.profileOverride=profileOverride;
   this.verifiedModels=new Set();
   this.tools={...perceptionTools,viewImage:async({file})=>({perception:'direct-image',imageUrl:`data:image/${extname(file.path).slice(1).replace('jpg','jpeg')};base64,${(await readFile(file.path)).toString('base64')}`})};
  }
@@ -47,6 +48,7 @@ export class OpenRouterHost {
   return {model:this.model,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.reasoningEffort},max_tokens:this.maxTokens};
  }
  async profile(){
+  if(typeof this.profileOverride==='string')return this.profileOverride;
   const tool=wigglyToolDefinition();
   return digest({model:this.model,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.reasoningEffort},maxTokens:this.maxTokens,maxToolRounds:this.maxToolRounds,tool:tool.inputSchema,perception:this.perceptionProfile,instruction:'openrouter-crew-v1'});
  }

@@ -89,3 +89,11 @@ Projects predating this bundle retain the legacy instruction/provider path and a
 Run `node --test tests/studio-instructions.test.mjs` for the snapshot/edit/restart, handoff/refusal, tool-boundary and rejection-loop checks. These are isolated mechanics, not media-quality certification.
 
 At generation planning, Max receives canonical locked narration text and can report `planning-blocked` for missing verified pricing or inputs. This pauses for operator resolution without a generation job, spend approval or replacement voice recording.
+
+## Record and replay
+
+Record model calls during a live command, then replay that command later against new code offline, serving recorded responses for free in about a minute.
+
+- **Recording**: pass `--record` (or set `WIGGLY_RECORD=1`) to `crew-start`, `crew-refresh`, `drive-codex`, `work-codex`, or `dispatch-reconcile`. The runner snapshots the run directory before execution into `<run>/cassettes/<command>-<timestamp>/before/`, normalizes all network requests/responses and Codex JSON-RPC messages (redacting secret values, hashing binary/data URLs), and writes `<dir>/cassette.jsonl` with permissions `0o600`.
+- **Replay**: `node runner.mjs replay --cassette <dir>` or `node runner.mjs replay --run <run>`. Replay creates a temporary sandbox from `before/`, runs the command with network blocked (`REPLAY_NETWORK_BLOCKED`), and validates every call in strict order against recorded responses. If requests differ, replay halts at the first mismatch reporting `REPLAY_MISMATCH`, `REPLAY_EXHAUSTED`, or `REPLAY_INCOMPLETE`. When all recorded calls match, exit codes match, and run directory contents match, replay reports `ok: true`.
+
