@@ -241,5 +241,20 @@
     "backgroundAnglePrompt": "background-prompter.md"
   },
   "communication": "orchestrator-voice.md",
-  "writingPolicy": "grounded-v1"
+  "writingPolicy": "grounded-v1",
+  "gates": {
+    "defaultPolicy": "pick-only",
+    "autoLockSteps": ["shotIntentions", "backgrounds", "backgroundBrief", "backgroundPrompt", "backgroundAngleBrief", "backgroundAnglePrompt", "characterPrompt", "sheetPrompt", "shots", "keyframePrompt"],
+    "autoAuthorizeOperations": ["candidates", "sheet", "backgroundCandidates", "backgroundAngle", "keyframe", "audition", "narration"]
+  },
+  "prescreen": {
+    "enabled": false,
+    "provider": "openrouter-decisions",
+    "model": "openai/gpt-6-luna-decisions",
+    "steps": ["candidates", "backgroundCandidates", "backgroundAngle", "keyframe"],
+    "passAbove": 0.9,
+    "failBelow": 0.4,
+    "maxPerArtifact": 1,
+    "estimatedCostUsdPerCall": 0.002
+  }
 }

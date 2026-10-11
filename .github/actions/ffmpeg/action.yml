@@ -1,0 +1,61 @@
+name: setup-ffmpeg-static
+description: Install pinned static ffmpeg/ffprobe with cache and apt fallback.
+runs:
+  using: composite
+  steps:
+    - name: Restore ffmpeg static cache
+      id: cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/ffmpeg-static
+        key: ffmpeg-static-n8.1.3-autobuild-2026-10-03-18-14-010375af-${{ runner.os }}
+    - name: Install ffmpeg (cache hit)
+      id: hit
+      if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        set -e
+        if [ -x "$HOME/ffmpeg-static/bin/ffmpeg" ] && [ -x "$HOME/ffmpeg-static/bin/ffprobe" ]; then
+          echo "$HOME/ffmpeg-static/bin" >> "$GITHUB_PATH"
+        else
+          echo "Cached ffmpeg missing, falling back to apt"
+          sudo apt-get update -y && sudo apt-get install -y ffmpeg
+        fi
+        ffmpeg -version && ffprobe -version
+    - name: Install ffmpeg (cache miss)
+      id: miss
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -e
+        URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-03-18-14/ffmpeg-n8.1.3-14-g330caae0c1-linux64-gpl-8.1.tar.xz"
+        SHA="010375affede402ccd1632835c9349a18c8658c3b08cb95a725a74cca1701738"
+        TMP="/tmp/ffmpeg-static.tar.xz"
+        STATIC_OK="false"
+        if curl --fail --location --retry 5 --retry-all-errors --connect-timeout 20 -o "$TMP" "$URL" && echo "$SHA  $TMP" | sha256sum -c -; then
+          rm -rf /tmp/ffmpeg-extract
+          mkdir -p /tmp/ffmpeg-extract
+          tar -xJf "$TMP" -C /tmp/ffmpeg-extract
+          BIN_DIR=$(find /tmp/ffmpeg-extract -maxdepth 3 -type f -name ffmpeg | head -1 | xargs dirname)
+          if [ -n "$BIN_DIR" ] && [ -f "$BIN_DIR/ffmpeg" ] && [ -f "$BIN_DIR/ffprobe" ]; then
+            mkdir -p "$HOME/ffmpeg-static/bin"
+            cp "$BIN_DIR/ffmpeg" "$BIN_DIR/ffprobe" "$HOME/ffmpeg-static/bin/"
+            chmod +x "$HOME/ffmpeg-static/bin/ffmpeg" "$HOME/ffmpeg-static/bin/ffprobe"
+            echo "$HOME/ffmpeg-static/bin" >> "$GITHUB_PATH"
+            STATIC_OK="true"
+          else
+            echo "Static archive missing binaries, falling back to apt"
+            sudo apt-get update -y && sudo apt-get install -y ffmpeg
+          fi
+        else
+          echo "Static ffmpeg download or sha256 check failed, falling back to apt"
+          sudo apt-get update -y && sudo apt-get install -y ffmpeg
+        fi
+        echo "static_ok=$STATIC_OK" >> "$GITHUB_OUTPUT"
+        ffmpeg -version && ffprobe -version
+    - name: Save ffmpeg static cache
+      if: steps.cache.outputs.cache-hit != 'true' && steps.miss.outputs.static_ok == 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ~/ffmpeg-static
+        key: ffmpeg-static-n8.1.3-autobuild-2026-10-03-18-14-010375af-${{ runner.os }}

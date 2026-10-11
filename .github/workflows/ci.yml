@@ -65,12 +65,9 @@ jobs:
             scripts/studio-spike/package-lock.json
             public/format-repositories/my-pixar-story-v1/package-lock.json
       # Studio tests shell out to ffmpeg/ffprobe (rehearsal fixtures, phase6 proof).
-      # setup-ffmpeg's download flaked on main (fetch failed / readme version read),
-      # so install from the runner's apt instead and verify both binaries.
+      # Pinned static build (BtbN GPL, cached) with apt fallback; never runs unverified binaries.
       - name: Install ffmpeg
-        run: |
-          command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || (sudo apt-get update -y && sudo apt-get install -y ffmpeg)
-          ffmpeg -version && ffprobe -version
+        uses: ./.github/actions/ffmpeg
         timeout-minutes: 5
       - run: npm run setup
       - name: Studio tests with count guard
@@ -103,11 +100,9 @@ jobs:
           cache: npm
           cache-dependency-path: public/format-repositories/my-pixar-story-v1/package-lock.json
       # Fast tests still shell out to ffmpeg/ffprobe (fixture tones/frames via
-      # lavfi + importMedia), so install from apt (robust, see studio job).
+      # lavfi + importMedia): pinned static build (cached) with apt fallback.
       - name: Install ffmpeg
-        run: |
-          command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || (sudo apt-get update -y && sudo apt-get install -y ffmpeg)
-          ffmpeg -version && ffprobe -version
+        uses: ./.github/actions/ffmpeg
         timeout-minutes: 5
       - run: npm --prefix public/format-repositories/my-pixar-story-v1 ci
       - run: npm --prefix public/format-repositories/my-pixar-story-v1 rebuild better-sqlite3 esbuild
@@ -146,9 +141,7 @@ jobs:
           cache: npm
           cache-dependency-path: public/format-repositories/my-pixar-story-v1/package-lock.json
       - name: Install ffmpeg
-        run: |
-          command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || (sudo apt-get update -y && sudo apt-get install -y ffmpeg)
-          ffmpeg -version && ffprobe -version
+        uses: ./.github/actions/ffmpeg
         timeout-minutes: 5
       - run: npm --prefix public/format-repositories/my-pixar-story-v1 ci
       - run: npm --prefix public/format-repositories/my-pixar-story-v1 rebuild better-sqlite3 esbuild

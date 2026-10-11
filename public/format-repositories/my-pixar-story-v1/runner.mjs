@@ -307,7 +307,7 @@ async function main() {
   const release = await lock(); const workflow = openWorkflow(join(runDir, 'checkpoints.sqlite'));
   try {
     if (command === 'init') {
-      const inputs = await json(args[0]); print(presentation(await workflow.init('project', inputs,{reviewMode:option('review-mode','supervised')}))); return;
+      const inputs = await json(args[0]); const studioDefaults = loadStudio(); const gates = option('gates', studioDefaults.config.gates?.defaultPolicy ?? 'per-step'); if(!['per-step','pick-only'].includes(gates)) throw new Error('--gates must be per-step|pick-only.'); print(presentation(await workflow.init('project', inputs,{reviewMode:option('review-mode','supervised'),gatePolicy:gates}))); return;
     }
     if (command === 'import') { print(await importMedia(args[0], runDir)); return; }
     const status = await workflow.status('project');
