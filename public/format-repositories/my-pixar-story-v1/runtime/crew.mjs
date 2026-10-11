@@ -1,20 +1,107 @@
 import {z} from 'zod';
 import {assertDebugReady} from './debug.mjs';
 import {readFile} from 'node:fs/promises';
-import {text,File,digest} from './contracts.mjs';
-import {loadStudio,studioFor,maximumTools} from './instructions.mjs';
+import {text,File,digest,Content,Event} from './contracts.mjs';
+import {loadStudio,studioFor,maximumTools,backendForAgent} from './instructions.mjs';
 import {taskFor} from './workflow.mjs';
 import {assertAllowed,keyFor,current,sheetKeyFor} from './gates.mjs';
 import {verifyFiles,measureAudio,probe} from './media.mjs';
 import {supervised,reviewPassed} from './gates.mjs';
 import {artifactEvidence} from './evaluators.mjs';
-import {validateEditingInvestigation} from './audio-edit.mjs';
+import {validateEditingInvestigation,AudioEditPlan} from './audio-edit.mjs';
 // These are format capabilities, not arbitrary filesystem/network/shell access.
 export const crewRoles=loadStudio().config.agents;
-export const Crew=z.object({workers:z.array(z.object({workerId:text,name:text,role:z.enum(Object.keys(crewRoles)),modelVersion:text,capabilityVersion:text,execution:z.literal('host')})).min(1)}).strict().superRefine((crew,ctx)=>{
+export const Crew=z.object({workers:z.array(z.object({workerId:text,name:text,role:z.enum(Object.keys(crewRoles)),modelVersion:text,capabilityVersion:text,execution:z.literal('host'),backend:z.enum(['codex','openrouter']).optional()})).min(1)}).strict().superRefine((crew,ctx)=>{
  if(new Set(crew.workers.map(w=>w.role)).size!==crew.workers.length||new Set(crew.workers.map(w=>w.workerId)).size!==crew.workers.length)ctx.addIssue({code:'custom',message:'Each role needs one distinct host worker; IDs cannot impersonate another role.'});
  if(Object.keys(crewRoles).some(role=>!crew.workers.some(w=>w.role===role)))ctx.addIssue({code:'custom',message:'Assign every format role; missing workers cannot silently fall back.'});
 });
+export const workerBackend=(worker,config=null)=>{
+ if(worker?.backend)return worker.backend;
+ const role=worker?.role;
+ if(config?.agents?.[role]?.backend)return config.agents[role].backend;
+ if(crewRoles[role])return backendForAgent(crewRoles[role]);
+ return 'codex';
+};
+// Shared worker packet: identical instruction text, task, contentSchema and
+// eventSchema for every backend (CodexHost and OpenRouter). Hosts attach
+// reference images and the wiggly_tool definition around this packet.
+export const WORKER_PACKET_INSTRUCTION='Complete ONLY this current task. Allowed action is review for review, owner-review for owner-review, plan for produce, otherwise artifact; narration/author and produce may also return an evidenced planning-blocked event. Never return runtime provider-error events. repairFeedback and savedTools describe HISTORICAL attempts, not a current tool failure. Continue the investigation with currently granted tools and compatible cached receipts; do not merely repeat a saved error. Saved narration edit output hashes are not automatically in scope after restart. To resume a saved draft, listen/inspect/transcribe its original current source as required, then call renderAudioEdit with that original source hash and the exact saved plan. This reuses its immutable local receipt, grants the draft hash in the current task, and does not create another draft. Then listen to the granted output before submitting. A current fatal tool failure is handled by the host and must not be fabricated from history. Source facts are in the supplied task. Do not invent facts, approval, tool evidence or perception. For a review, inspect every required criterion and return evidence and repairs, using your exact workerId/modelVersion/capabilityVersion. Missing capabilities mean inconclusive. Return eventJson containing the serialized Event object. Do not emit other text.';
+export function buildWorkerPacket(task,worker){
+ const contentSchema=Content[task.step]?z.toJSONSchema(Content[task.step]):null;
+ if(task.step==='answers'){
+  contentSchema.properties.sourceInputDigest.const=task.sourceInputDigest;
+  contentSchema.properties.inputs.description='When task.originalInputsRequired is true, copy task.sourceInputs exactly, including all keys and original wording. Organize findings in commonSenseChecks; changes require recorded human clarification.';
+ }
+ if(task.step==='script'&&task.workflowRevision>=4)contentSchema.required=[...(contentSchema.required??[]),'proposedCast'];
+ return JSON.stringify({instruction:WORKER_PACKET_INSTRUCTION,task:{...task,worker},contentSchema,eventSchema:z.toJSONSchema(Event)});
+}
+export function wigglyToolDefinition(){
+ return {type:'function',name:'wiggly_tool',description:'Call an allowed format tool on a hash from the current task. For renderAudioEdit supply edit with kind, keepRanges in fractional seconds and reason. Never read another path or submit a generation.',inputSchema:{type:'object',properties:{name:{type:'string'},sha256:{type:'string'},referenceSha256:{type:['string','null']},edit:{anyOf:[z.toJSONSchema(AudioEditPlan),{type:'null'}]},region:{anyOf:[{type:'object',description:'viewImage close-up crop in relative 0-1 coordinates',properties:{x:{type:'number'},y:{type:'number'},width:{type:'number'},height:{type:'number'}},required:['x','y','width','height'],additionalProperties:false},{type:'null'}]}},required:['name','sha256','referenceSha256'],additionalProperties:false}};
+}
+// Quote evidence (Sage/Ava): normalize whitespace + curly/straight quotes,
+// case-sensitive otherwise, minimum 8 chars, must appear verbatim in the
+// artifact, dependencies/criteria text, or this task's tool outputs.
+export const QUOTE_ROLES=['text-reviewer','audio-reviewer'];
+export function normalizeQuote(s){
+ return String(s??'').replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/\s+/g,' ').trim();
+}
+function collectQuoteHaystacks(task,outputs){
+ // Evidence only: the artifact under review, its locked dependencies and this
+ // task's actual tool outputs. Instructions, rubrics and criterion names are
+ // not evidence, so quoting them cannot satisfy the check.
+ const haystacks=[];
+ const strings=value=>{
+  if(typeof value==='string'){haystacks.push(value);return;}
+  if(Buffer.isBuffer(value)||value instanceof Uint8Array)return;
+  if(Array.isArray(value)){for(const v of value)strings(v);return;}
+  if(value&&typeof value==='object'){for(const v of Object.values(value))strings(v);}
+ };
+ strings(task.artifact?.content);
+ strings(task.dependencies);
+ for(const value of outputs.values()){
+  if(typeof value==='string'){haystacks.push(value);continue;}
+  if(!value||typeof value!=='object')continue;
+  // readAsset returns raw bytes; decode text assets so their words can be quoted.
+  if(Buffer.isBuffer(value.bytes)&&/\.(json|md|txt)$/i.test(value.file?.path??''))haystacks.push(value.bytes.toString('utf8'));
+  const {bytes:_bytes,file:_file,imageUrl:_imageUrl,...rest}=value;
+  strings(rest);
+ }
+ return haystacks.map(h=>normalizeQuote(h)).filter(h=>h.length>0);
+}
+export function verifyReviewQuotes({role,task,review,outputs}){
+ if(!QUOTE_ROLES.includes(role))return;
+ if(!review||review.decision==='inconclusive')return;
+ const haystacks=collectQuoteHaystacks(task,outputs);
+ for(const check of review.checks??[]){
+  if(check.status==='inconclusive')continue;
+  if(!['pass','fail'].includes(check.status))continue;
+  const quotes=check.quotes??[];
+  if(!quotes.length)throw Object.assign(new Error(`REVIEW_QUOTE_MISSING: ${check.criterion} needs at least one verbatim quote`),{knownFinished:true});
+  for(const raw of quotes){
+   const q=normalizeQuote(raw);
+   if(q.length<8)throw Object.assign(new Error(`REVIEW_QUOTE_NOT_FOUND: ${check.criterion}: "${String(raw).slice(0,120)}"`),{knownFinished:true});
+   if(!haystacks.some(h=>h.includes(q)))throw Object.assign(new Error(`REVIEW_QUOTE_NOT_FOUND: ${check.criterion}: "${String(raw).slice(0,120)}"`),{knownFinished:true});
+  }
+ }
+}
+// Multi-option recommendation (Vera candidates): for candidate reviews
+// with >1 file and >=1 passing option, require {selection, ranking, reason}
+// with selection a passing option index.
+export function verifyReviewRecommendation({task,review}){
+ const files=task.artifact?.content?.files;
+ if(!['candidates','backgroundCandidates'].includes(task.step))return;
+ if(!Array.isArray(files)||files.length<2)return;
+ if(!review||review.decision==='inconclusive')return;
+ const passing=(review.checks??[]).filter(c=>c.status==='pass').length;
+ const failing=(review.checks??[]).filter(c=>c.status==='fail').length;
+ if(failing>0||passing===0)return;
+ const rec=review.recommendation;
+ if(!rec)throw Object.assign(new Error('REVIEW_RECOMMENDATION_MISSING: rank the passing options and recommend exactly one'),{knownFinished:true});
+ if(!Number.isInteger(rec.selection)||rec.selection<0||rec.selection>=files.length)throw Object.assign(new Error('REVIEW_RECOMMENDATION_MISSING: selection must be a passing option index'),{knownFinished:true});
+ if(!Array.isArray(rec.ranking)||!rec.ranking.length||new Set(rec.ranking).size!==rec.ranking.length||rec.ranking.some(i=>!Number.isInteger(i)||i<0||i>=files.length))throw Object.assign(new Error('REVIEW_RECOMMENDATION_MISSING: ranking must list distinct option indexes'),{knownFinished:true});
+ if(!rec.ranking.includes(rec.selection))throw Object.assign(new Error('REVIEW_RECOMMENDATION_MISSING: selection must be in the ranking'),{knownFinished:true});
+ if(typeof rec.reason!=='string'||!rec.reason.trim())throw Object.assign(new Error('REVIEW_RECOMMENDATION_MISSING: a short reason is required'),{knownFinished:true});
+}
 export function roleFor(p){
  if(p.step==='narration'&&p.gate==='author')return 'voice-director';
  if(p.gate==='owner-review')return 'background-product-owner';
@@ -164,8 +251,10 @@ export async function runCrewTask(p,task,host){
      if (safetyCheck.status !== expected) throw new Error('SAFETY_EVIDENCE_MISMATCH');
    }
   }
-  event.review.toolEvidence=receipts;
- }
- return event;
+   event.review.toolEvidence=receipts;
+   verifyReviewQuotes({role:worker.role,task,review:event.review,outputs});
+   verifyReviewRecommendation({task,review:event.review});
+  }
+  return event;
  }catch(error){throw Object.assign(error,{knownFinished:true,finishedResult:event});}
 }

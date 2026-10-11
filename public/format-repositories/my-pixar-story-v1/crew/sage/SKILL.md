@@ -21,6 +21,7 @@ Sage is the objective narrative and planning gatekeeper for the Wiggly memoir st
    - The review `checks` array MUST contain **exactly one** check per required criterion defined in `task.criteria`.
    - Every check must state: `{ criterion, status, evidence, location, repair }`.
    - Missing required perception or criteria cannot be averaged away into an overall score.
+4. **Quote Evidence (required)**: every non-inconclusive check with status `pass` or `fail` MUST carry at least one `quotes: string[]` entry — an exact verbatim quote (minimum 8 characters, whitespace/curly-quote normalized, case-sensitive otherwise) from the artifact content, task dependencies/criteria text, or this task's tool outputs (readAsset text, transcribe transcripts, listenAudio reports, measureAudio). Fabricated or missing quotes reject the verdict (`REVIEW_QUOTE_NOT_FOUND`).
 4. **Actionable Repairs on Rejection**:
    - For every check with `status: "fail"`:
      - `location`: Specify the exact beat, sentence, or plan field (e.g., `"Beat 1, sentence 2"`).
@@ -39,15 +40,20 @@ Sage is the objective narrative and planning gatekeeper for the Wiggly memoir st
 | `answers` | `source-grounding`, `completeness`, `relationships`, `age-variants`, `locations`, `common-sense` | Verifies factual consistency without requiring optional subprompts. |
 | `script` | `facts`, `relationship`, `clarity`, `emotional-purpose`, `timing`, `common-sense` | Factual grounding against source answers; child-accessible language; 4 ordered 15s beats; direct quotes integrity. |
 | `roster` | `completeness`, `age-variants`, `references` | Verifies necessary characters and distinct age variants from locked script. |
-| `backgrounds` | `scene-coverage`, `locations`, `angles`, `common-sense` | Verifies location and angle registry covers all 4 beats. |
+| `backgrounds` | `scene-coverage`, `locations`, `angles`, `common-sense` | Verifies location and angle registry covers all 4 beats. Master-plate coverage (`angles: []`) passes when all approved shots use master plates (`angleId: null`). Secondary angle plates are required only where approved shots bind explicit alternate angle IDs (`angleId !== null`). |
 | `backgroundBrief` / `backgroundAngleBrief` | `scene-fit`, `facts`, `spatial-action`, `continuity` | Verifies human direction against scene action and script facts. |
-| `backgroundPrompt` / `backgroundAnglePrompt` | `brief-fit`, `style`, `spatial-action`, `continuity` | Verifies technical prompt against Beau's approved brief and empty-room rule. |
+| `backgroundPrompt` / `backgroundAnglePrompt` | `brief-fit`, `style`, `spatial-action`, `continuity` | Verifies technical prompt against Beau's approved brief and empty-of-people-only rule. |
 | `shotIntentions` / `shots` | `coverage`, `timing`, `scene-fit`, `references`, `staging`, `continuity` | Verifies 60.0s timeline math (four 15s beats); contiguous coverage; valid angle bindings. |
 | `keyframePrompt` | `scene-fit`, `reference-grounding`, `staging`, `camera`, `continuity` | Verifies prompt binds setting plate first and character sheets in exact order. |
 | `videoPlan` | `coverage`, `timing`, `keyframe-grounding`, `motion`, `continuity` | Verifies 30fps duration alignment; single camera moves; physical anchors. |
 | `videoPrompt` | `keyframe-grounding`, `motion`, `physical-anchors`, `camera`, `continuity` | Verifies conditioning on approved keyframe; $\le 4000$ chars; valid `repairOnly` flag. |
 | `soundPlan` | `story-fit`, `piano-score`, `effect-timing`, `provenance` | Verifies 60s solo acoustic piano; story-serving Foley; explicit omission reasons. |
 | `editPlan` | `timeline`, `narration-preservation`, `mix`, `continuity`, `provenance` | Verifies clip assembly in 30fps order; locked narration preservation. |
+
+### Background Registry Review (`backgrounds`)
+- **Criteria**: `scene-coverage`, `locations`, `angles`, `common-sense`
+- **Locations & Scene Coverage**: Every location must have at least one scene; scenes must cover all four beats and bind established roster characters.
+- **Angles Evaluation**: In Wiggly's memoir studio, each location automatically produces one master background plate (`backgroundCandidates`). The `angles` array is strictly reserved for *secondary, additional plates* (such as reverse camera setups). When all approved shots in `shotIntentions` use the master view (`angleId: null`), `angles: []` is the exact required configuration and must pass. Never fail `angles` for an empty array when approved shots use master plates, camera pushes, or tighter crops. Secondary angle plates are only required if approved shots explicitly bind non-null `angleId` references.
 
 ---
 

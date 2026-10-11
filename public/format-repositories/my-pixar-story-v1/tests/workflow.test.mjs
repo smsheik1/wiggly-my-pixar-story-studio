@@ -88,7 +88,7 @@ test('each required character gets three candidates + selected-image sheet; all 
     assert.equal(p.characterId, id);
     p = produce(p, { files: [1, 2, 3].map(i => ({ path: `/isolated-test/image-${i}.png`, sha256: file(i).sha256, bytes: 1024, width: 120, height: 90 })), prompt: 'Design character.' });
     p = approved(reviewed(p), { selection: 1 });
-    const prompt = { prompt: `Selected-image sheet of ${id}, four turnaround poses and eight expressions.`, recipeSha256: characterRecipeSha256, referenceSha256: file(2).sha256, turnaround: ['front', 'three-quarter', 'profile', 'back'], expressions: ['neutral', 'happy', 'delighted', 'sad', 'surprised', 'confused', 'angry', 'talking'] };
+    const prompt = { prompt: `Selected-image sheet of ${id}, four turnaround poses and eight expressions. No text, labels, captions, expression names or watermarks anywhere in the image.`, recipeSha256: characterRecipeSha256, referenceSha256: file(2).sha256, turnaround: ['front', 'three-quarter', 'profile', 'back'], expressions: ['neutral', 'happy', 'delighted', 'sad', 'surprised', 'confused', 'angry', 'talking'] };
     assert.throws(() => send(p, 'artifact', { workerId: 'sheet-writer', content: { ...prompt, recipeSha256:'wrong' } }), /recipe hash/);
     assert.throws(() => send(p, 'artifact', { workerId: 'sheet-writer', content: { ...prompt, referenceSha256: 'wrong' } }), /selected character/);
     p = send(p, 'artifact', { workerId: 'sheet-writer', content: prompt }); p = reviewed(p); assert.equal(p.step, 'sheet');

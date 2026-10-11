@@ -6,7 +6,7 @@ import {join,extname} from 'node:path';
 import {z} from 'zod';
 import {Content,Event,digest} from './contracts.mjs';
 import {applyEvent} from './workflow.mjs';
-import {crewRoles,runCrewTask,taskAssets} from './crew.mjs';
+import {crewRoles,runCrewTask,taskAssets,buildWorkerPacket} from './crew.mjs';
 import {AudioEditPlan} from './audio-edit.mjs';
 
 export const DEFAULT_WORKER_MODEL=loadStudio().config.agents['script-writer'].model;
@@ -145,15 +145,27 @@ export class CodexHost {
   }
   return {workers:draft.workers};
  }
- async refreshCrew(crew){
-  const capabilityVersion=await this.profile(),workers=[];
-  for(const worker of crew.workers){
-   const result=await this.call('thread/resume',{threadId:worker.workerId,model:worker.modelVersion,cwd:this.cwd,approvalPolicy:'never',sandbox:'read-only'});
-   if(result.model!==worker.modelVersion||result.thread.id!==worker.workerId)throw new Error('CODEX_WORKER_CHANGED');
-   workers.push({...worker,capabilityVersion});
+  async refreshCrew(crew){
+   const capabilityVersion=await this.profile(),workers=[];
+   for(const worker of crew.workers){
+    const result=await this.call('thread/resume',{threadId:worker.workerId,model:worker.modelVersion,cwd:this.cwd,approvalPolicy:'never',sandbox:'read-only'});
+    if(result.model!==worker.modelVersion||result.thread.id!==worker.workerId)throw new Error('CODEX_WORKER_CHANGED');
+    workers.push({...worker,capabilityVersion});
+   }
+   return {workers};
   }
-  return {workers};
- }
+  // Single-role bind without touching the startup file (crew-refresh rebind
+  // when a role's configured model/backend changed).
+  async startRole(role,agent,model){
+   const roleModel=model??agent.model;
+   const result=await this.call('thread/start',{model:roleModel,allowProviderModelFallback:false,cwd:this.cwd,approvalPolicy:'never',sandbox:'read-only',environments:[],serviceName:'wiggly-memoir',dynamicTools:[tool],developerInstructions:`You are ${agent.name}, the ${role} for the Wiggly memoir format. Complete only your assigned task. Use wiggly_tool for granted assets. Return only the requested structured event; never approve for the user, submit provider calls, or claim unavailable perception.`});
+   if(result.model!==roleModel)throw new Error('CODEX_MODEL_CHANGED: requested model must be used exactly.');
+   const capabilityVersion=await this.profile();
+   const worker={workerId:result.thread.id,name:agent.name,role,modelVersion:result.model,capabilityVersion,execution:'host'};
+   const ready=await this.turn(worker,'Initialization only: acknowledge your assigned role by replying READY. Do not use tools, author a deliverable, or claim perception.');
+   if(ready.trim()!=='READY')throw new Error(`CODEX_CREW_NOT_READY: ${agent.name} initialization did not acknowledge the role.`);
+   return worker;
+  }
 
   // Preflight runs the checks that can fail before any turn starts, so the
   // driver can refuse before writing a started receipt. runTask keeps the
@@ -163,16 +175,10 @@ export class CodexHost {
    const resumed=await this.call('thread/resume',{threadId:worker.workerId,model:worker.modelVersion,cwd:this.cwd,approvalPolicy:'never',sandbox:'read-only'});
    if(resumed.model!==worker.modelVersion||resumed.thread.id!==worker.workerId)throw new Error('CODEX_WORKER_CHANGED');
   }
-  async runTask(task,{worker,callTool}){
-   if(this.active)throw new Error('CODEX_HOST_BUSY: one graph task at a time.');
-   await this.preflight(worker);
-  const contentSchema=Content[task.step]?z.toJSONSchema(Content[task.step]):null;
-  if(task.step==='answers'){
-   contentSchema.properties.sourceInputDigest.const=task.sourceInputDigest;
-   contentSchema.properties.inputs.description='When task.originalInputsRequired is true, copy task.sourceInputs exactly, including all keys and original wording. Organize findings in commonSenseChecks; changes require recorded human clarification.';
-  }
-  if(task.step==='script'&&task.workflowRevision>=4)contentSchema.required=[...(contentSchema.required??[]),'proposedCast'];
-  const input=JSON.stringify({instruction:'Complete ONLY this current task. Allowed action is review for review, owner-review for owner-review, plan for produce, otherwise artifact; narration/author and produce may also return an evidenced planning-blocked event. Never return runtime provider-error events. repairFeedback and savedTools describe HISTORICAL attempts, not a current tool failure. Continue the investigation with currently granted tools and compatible cached receipts; do not merely repeat a saved error. Saved narration edit output hashes are not automatically in scope after restart. To resume a saved draft, listen/inspect/transcribe its original current source as required, then call renderAudioEdit with that original source hash and the exact saved plan. This reuses its immutable local receipt, grants the draft hash in the current task, and does not create another draft. Then listen to the granted output before submitting. A current fatal tool failure is handled by the host and must not be fabricated from history. Source facts are in the supplied task. Do not invent facts, approval, tool evidence or perception. For a review, inspect every required criterion and return evidence and repairs, using your exact workerId/modelVersion/capabilityVersion. Missing capabilities mean inconclusive. Return eventJson containing the serialized Event object. Do not emit other text.',task:{...task,worker},contentSchema,eventSchema:z.toJSONSchema(Event)});
+   async runTask(task,{worker,callTool}){
+    if(this.active)throw new Error('CODEX_HOST_BUSY: one graph task at a time.');
+    await this.preflight(worker);
+   const input=buildWorkerPacket(task,worker);
   const media=[];
   if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){const viewed=await callTool('viewImage',{sha256:file.sha256});media.push({type:'text',text:`Reference image sha256: ${file.sha256}`},{type:'image',url:viewed.imageUrl});}
   const output=await this.turn(worker,[{type:'text',text:input},...media],callTool,{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false});
@@ -271,7 +277,9 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
   if(!['author','owner-review','review','produce'].includes(task.gate)||task.gate==='produce'&&task.step==='film'||['audioReviewerQualification','reviewerQualification'].includes(task.step))return {completed,stop:'graph-gate',status};
   onProgress({step:task.step,gate:task.gate});
    const path=join(receiptDirectory,task.taskId+'.json'),receipt=await readJson(path);
-    if(receipt&&receipt.workerDigest!==digest(task.crewWorker)&&!((receipt.status==='rejected'||receipt.status==='deferred'||receipt.status==='not-dispatched')&&digest({...receipt.worker,capabilityVersion:null})===digest({...task.crewWorker,capabilityVersion:null})))throw new Error('DISPATCH_WORKER_CHANGED');
+    const norm=w=>w&&typeof w==='object'?{...w,backend:w.backend??'codex'}:w;
+    const sameWorker=receipt&&(receipt.workerDigest===digest(task.crewWorker)||digest(norm(receipt.worker))===digest(norm(task.crewWorker)));
+    if(receipt&&!sameWorker&&!((receipt.status==='rejected'||receipt.status==='deferred'||receipt.status==='not-dispatched')&&digest({...norm(receipt.worker),capabilityVersion:null})===digest({...norm(task.crewWorker),capabilityVersion:null})))throw new Error('DISPATCH_WORKER_CHANGED');
     if(receipt?.status==='started')throw new Error(`CODEX_DISPATCH_UNCERTAIN: inspect ${path} and the saved worker turn before reconciling. No automatic rerun.`);
     const attempt=(receipt?.status==='deferred'||receipt?.status==='not-dispatched')?(receipt.attempt||1):((receipt?.attempt??0)+(receipt?.status==='rejected'?1:0)||1);
     let event=receipt?.status==='completed'?receipt.event:null;

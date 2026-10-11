@@ -76,7 +76,7 @@ test('rev-5 import-sheet creates 3-option candidates from one outside file with 
     assert.equal(a.content.files.length, 3);
     assert.ok(a.content.files.every(f => f.sha256 === imported.sha256));
     assert.equal(a.content.provenance.source, 'operator-import');
-    p = send(p, 'review', { workerId: 'vera', artifactId: a.id, artifactDigest: a.digest, review: { decision: 'approved', perception: 'direct-image', checks: criteria.sheet.map(criterion => ({ criterion, status: 'pass', location: 'ISOLATED', evidence: 'ISOLATED' })), toolEvidence: [{ tool: 'viewImage', sha256: imported.sha256 }] } });
+    p = send(p, 'review', { workerId: 'vera', artifactId: a.id, artifactDigest: a.digest, review: { decision: 'approved', perception: 'direct-image', checks: criteria.sheet.map(criterion => ({ criterion, status: 'pass', location: 'ISOLATED', evidence: 'ISOLATED' })), recommendation: { selection: 0, ranking: [0, 1, 2], reason: 'ISOLATED identical imports; option 1 is fine.' }, toolEvidence: [{ tool: 'viewImage', sha256: imported.sha256 }] } });
     // toolEvidence needs every file (same sha, one receipt covers all three since same sha)
     assert.equal(p.gate, 'human');
     p = send(p, 'approve', { artifactId: a.id, artifactDigest: a.digest, message: 'ISOLATED pick', selection: 0, humanReview: { decision: 'approved', perception: 'crew-review', checks: [] } });

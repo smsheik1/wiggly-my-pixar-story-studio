@@ -97,7 +97,7 @@ export function remediation(provider, secretsPath) {
 }
 export async function loadKey(provider, secretsPath) {
   if(provider==='agy')throw new Error('agy needs no API key; do not call loadKey for agy.');
-  const name = {cartesia:'CARTESIA_API_KEY','meta-muse':'META_API_KEY',replicate:'REPLICATE_API_TOKEN',elevenlabs:'ELEVENLABS_API_KEY',gemini:'GEMINI_API_KEY'}[provider];if(!name)throw new Error('Unknown provider.');
+  const name = {cartesia:'CARTESIA_API_KEY','meta-muse':'META_API_KEY',replicate:'REPLICATE_API_TOKEN',elevenlabs:'ELEVENLABS_API_KEY',gemini:'GEMINI_API_KEY',openrouter:'OPENROUTER_API_KEY'}[provider];if(!name)throw new Error('Unknown provider.');
   const source = await readFile(secretsPath, 'utf8');
   const match = source.match(new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=\\s*(.+)\\s*$`, 'm'));
   if (!match) throw new Error(`Missing named ${name} in ${resolve(secretsPath)}.`);

@@ -99,7 +99,7 @@ test('rev 5 skips sheetPrompt/sheet; selection IS the final sheet and downstream
   p = produce(p, { files: [1, 2, 3].map(sheetImage), prompt: prompt.prompt });
   assert.deepEqual(taskFor(p).criteria, criteria.sheet);
   const a = current(p);
-  p = send(p, 'review', { workerId: 'vera', artifactId: a.id, artifactDigest: a.digest, review: { decision: 'approved', perception: 'direct-image', checks: criteria.sheet.map(criterion => ({ criterion, status: 'pass', location: 'ISOLATED', evidence: 'ISOLATED full sheet' })), toolEvidence: a.content.files.map(f => ({ tool: 'viewImage', sha256: f.sha256 })) } });
+  p = send(p, 'review', { workerId: 'vera', artifactId: a.id, artifactDigest: a.digest, review: { decision: 'approved', perception: 'direct-image', checks: criteria.sheet.map(criterion => ({ criterion, status: 'pass', location: 'ISOLATED', evidence: 'ISOLATED full sheet' })), recommendation: { selection: 1, ranking: [1, 0, 2], reason: 'ISOLATED option 2 stages the scripted action best.' }, toolEvidence: a.content.files.map(f => ({ tool: 'viewImage', sha256: f.sha256 })) } });
   assert.equal(p.gate, 'human');
   assert.equal(taskFor(p).reviewPolicy.humanMediaConfirmationRequired, false);
   p = send(p, 'approve', { artifactId: a.id, artifactDigest: a.digest, message: 'ISOLATED pick 1', selection: 1, humanReview: { decision: 'approved', perception: 'crew-review', checks: [] } });

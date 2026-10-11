@@ -17,6 +17,8 @@ import { assemblyManifest, assertFilmInspection } from './runtime/studio.mjs';
 import {presentDeliverable,producerUpdate} from './runtime/presentation.mjs';
 import {Crew,crewRoles,runCrewTask,prepareCrewTask} from './runtime/crew.mjs';
 import {CodexHost,driveCrew,reconcileDispatch,reconcileNotDispatched} from './runtime/codex-host.mjs';
+import {OpenRouterHost} from './runtime/openrouter-host.mjs';
+import {CrewHost} from './runtime/crew-host.mjs';
 import {createGeminiReviewTools,GEMINI_REVIEW_PROFILE} from './runtime/gemini-review.mjs';
 import {createCartesiaTranscriptionTool,CARTESIA_STT_PROFILE} from './runtime/cartesia-stt.mjs';
 import {createAudioEditTools,AUDIO_EDIT_PROFILE} from './runtime/audio-edit.mjs';
@@ -55,7 +57,7 @@ async function verifySubmission(status,event){
 }
 async function main() {
   if(command==='check-provider'){const provider=option('provider');if(args.length)throw new Error('Unknown provider check arguments.');print(await checkProvider(provider,secretsPath));return;}
-  if(command==='crew-template'){print({workers:Object.entries(crewRoles).map(([role,definition])=>({role,name:definition.name,workerId:`bind-host-${role}`,modelVersion:'inherit-host-model',capabilityVersion:'bind-actual-tools-v1',execution:'host'})),instruction:'Use your current host model and actual independent worker IDs; replace template model/capability values with the actual deployed versions before configuration. No external model is required.'});return;}
+  if(command==='crew-template'){print({workers:Object.entries(crewRoles).map(([role,definition])=>({role,name:definition.name,workerId:`bind-host-${role}`,modelVersion:'inherit-host-model',capabilityVersion:'bind-actual-tools-v1',execution:'host',backend:definition.backend??'codex'})),instruction:'Use your current host model and actual independent worker IDs; replace template model/capability values with the actual deployed versions before configuration. Keep each role on its configured backend (codex|openrouter). No external model is required.'});return;}
   if(command==='audio-tasks'){const cases=z.array(AudioCase).parse(await json(option('dataset'))),split=option('split','holdout');if(!['calibration','holdout'].includes(split))throw new Error('Invalid audio split.');print(cases.filter(c=>c.split===split).map(audioTask));return;}
   if(command==='visual-tasks'){const cases=z.array(VisualCase).parse(await json(option('dataset'))),split=option('split','holdout');if(!['calibration','holdout'].includes(split))throw new Error('Invalid visual split.');print(cases.filter(c=>c.split===split).map(visualTask));return;}
   if (command === 'eval' || command === 'eval-tasks' || command === 'eval-export') {
@@ -137,16 +139,33 @@ async function main() {
       const perceptionTools={...createGeminiReviewTools({secretsPath,receiptDirectory:join(runDir,'gemini-reviews'),maxCalls:reviewCalls,beforeRequest}),...createCartesiaTranscriptionTool({secretsPath,receiptDirectory:join(runDir,'cartesia-transcriptions'),maxCalls:transcriptionCalls,beforeRequest}),...createAudioEditTools({runDir})};
       // A four-file review includes twelve tool calls and a structured report.
       // Keep a bounded ten-minute window; timeout still stops without a retry.
-      const host=new CodexHost({cwd:join(runDir,'host-workspace'),timeoutMs:600000,perceptionTools,perceptionProfile:{media:GEMINI_REVIEW_PROFILE,transcription:CARTESIA_STT_PROFILE,audioEditing:AUDIO_EDIT_PROFILE},tracer,onProgress:({worker,item})=>process.stderr.write(`${worker}: ${item}\n`)});
+      // Sol agents run through CodexHost unchanged; DeepSeek agents run through
+      // OpenRouter. The Codex app-server is only spawned when a codex-bound
+      // worker is needed for the command.
+      const studioConfig=studioFor(status.project)?.config??loadStudio().config;
+      const configuredBackends=new Set(Object.values(studioConfig.agents).map(a=>a.backend??'codex'));
+      const boundBackends=new Set((status.project.crew?.workers??[]).map(w=>w.backend??'codex'));
+      const wantCodex=command==='crew-start'?configuredBackends.has('codex'):configuredBackends.has('codex')||boundBackends.has('codex')||!status.project.crew;
+      const wantOpenRouter=command==='crew-start'?configuredBackends.has('openrouter'):configuredBackends.has('openrouter')||boundBackends.has('openrouter');
+      const codexHost=wantCodex?new CodexHost({cwd:join(runDir,'host-workspace'),timeoutMs:600000,perceptionTools,perceptionProfile:{media:GEMINI_REVIEW_PROFILE,transcription:CARTESIA_STT_PROFILE,audioEditing:AUDIO_EDIT_PROFILE},tracer,onProgress:({worker,item})=>process.stderr.write(`${worker}: ${item}\n`)}):null;
+      const openrouterHost=wantOpenRouter?new OpenRouterHost({cwd:join(runDir,'host-workspace'),secretsPath,timeoutMs:600000,perceptionTools,perceptionProfile:{media:GEMINI_REVIEW_PROFILE,transcription:CARTESIA_STT_PROFILE,audioEditing:AUDIO_EDIT_PROFILE},tracer}):null;
+      const host=new CrewHost({codex:codexHost,openrouter:openrouterHost,config:studioConfig});
       try{
         if(command==='dispatch-reconcile'){
           const turnId=option('turn',null),notDispatched=option('not-dispatched',null),message=option('message');if(args.length)throw new Error('Unknown reconciliation arguments. Use --turn <id> --message "<direction>" or --not-dispatched true --message "<direction>".');
-          await host.initialize();
+          const workerBackend=status.pending.crewWorker?.backend??studioConfig.agents[status.pending.crewWorker?.role]?.backend??'codex';
+          if(workerBackend==='openrouter'){
+            if(notDispatched!=='true'||turnId!=null)throw new Error('dispatch-reconcile for an openrouter worker needs --not-dispatched true --message "<direction>" (an OpenRouter worker has no server thread to inspect).');
+            const {reconcileRouterNotDispatched}=await import('./runtime/crew-host.mjs');
+            print(await reconcileRouterNotDispatched(status.pending,{receiptDirectory:join(runDir,'host-dispatch'),message}));return;
+          }
+          if(!codexHost)throw new Error('CODEX_HOST_MISSING: no codex-bound worker is needed for this run; nothing to reconcile.');
+          await codexHost.initialize();
           if(notDispatched!=null){
            if(notDispatched!=='true'||turnId!=null)throw new Error('dispatch-reconcile --not-dispatched true needs --message and no --turn.');
-           print(await reconcileNotDispatched(status.pending,host,{receiptDirectory:join(runDir,'host-dispatch'),message}));return;
+           print(await reconcileNotDispatched(status.pending,codexHost,{receiptDirectory:join(runDir,'host-dispatch'),message}));return;
           }
-          print(await reconcileDispatch(status.pending,host,{receiptDirectory:join(runDir,'host-dispatch'),turnId,message}));return;
+          print(await reconcileDispatch(status.pending,codexHost,{receiptDirectory:join(runDir,'host-dispatch'),turnId,message}));return;
         }
         if(['crew-start','crew-refresh'].includes(command)){
           if(command==='crew-refresh'){
@@ -156,8 +175,10 @@ async function main() {
           const message=option('message'),model=option('model');
           if(!message||command==='crew-start'&&status.project.crew||command==='crew-refresh'&&!status.project.crew)throw new Error('crew-start requires an unconfigured run; crew-refresh requires existing bindings. Supply --message with the actual human instruction.');
           if(status.project.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status)))throw new Error('Reconcile outstanding jobs before changing crew.');
-          await host.initialize();const crew=command==='crew-refresh'?await host.refreshCrew(status.project.crew):await host.startCrew(model,studioFor(status.project)?.config??loadStudio().config);
-          print(presentation(await workflow.respond('project',{taskId:status.pending.taskId,actor:'human',action:'configure-crew',message,crew})));return;
+          if(codexHost)await codexHost.initialize();
+          const crew=command==='crew-refresh'?await host.refreshCrew(status.project.crew,studioConfig):await host.startCrew(model,studioConfig);
+          if(command==='crew-refresh'&&crew.changed?.length)process.stderr.write(`crew-refresh rebound roles: ${crew.changed.join(', ')}\n`);
+          print(presentation(await workflow.respond('project',{taskId:status.pending.taskId,actor:'human',action:'configure-crew',message,crew:{workers:crew.workers}})));return;
         }
         if(!status.project.crew)throw new Error('CREW_NOT_CONFIGURED: use crew-start before local Codex dispatch.');
         const maxTasks=command==='work-codex'?1:Number(option('max-tasks',String(limitsFor(status.project).crewTasksPerDispatch))),repair=option('repair-invalid','false');
@@ -165,7 +186,7 @@ async function main() {
         const recoveryAttempt=recoveryTask||recoveryNumber||recoveryMessage?{taskId:recoveryTask,attempt:Number(recoveryNumber),message:recoveryMessage}:undefined;
         if(recoveryAttempt&&(!recoveryTask||!Number.isInteger(recoveryAttempt.attempt)||!recoveryMessage||maxTasks!==1))throw new Error('Recovery needs exact --recovery-task, --recovery-attempt, --recovery-message and one task.');
         if(!['true','false'].includes(repair))throw new Error('--repair-invalid needs true or false.');
-        await host.initialize();
+        if(codexHost)await codexHost.initialize();
         const result=await driveCrew(workflow,'project',host,{maxTasks,repairInvalid:repair==='true',recoveryAttempt,receiptDirectory:join(runDir,'host-dispatch'),verifySubmission,tracer,onProgress:progress=>process.stderr.write(progress.type==='repair-notice'?`DEFECT FOUND: ${progress.notice.key??progress.notice.artifactId}. ${progress.notice.findings?.map(f=>f.evidence).join(' ')??'See the localized repair notice in status.'} Repair routed through the current task.\n`:`${progress.step}: ${progress.gate}\n`)});
         print({completed:result.completed,stop:result.stop,...presentation(result.status)});return;
       }finally{try{await tracer.flush(5000);}catch{}host.close();}
@@ -249,6 +270,15 @@ async function main() {
       await verifyFiles(imported);
       print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'import-sheet', characterId: character, importFile: imported, importProvenance: provenance, message }))); return;
     }
+    if (command === 'add-reference') {
+      const character = option('character'); const filePath = option('file'); const message = option('message');
+      if (!character || !filePath || !message || args.length) throw new Error('add-reference needs --character <id> --file <abs path> --message "<human instruction>".');
+      if (!filePath.startsWith('/')) throw new Error('add-reference --file must be an absolute path.');
+      const imported = await importMedia(resolve(filePath), runDir);
+      if (!imported.width || !imported.height || imported.durationSeconds) throw new Error('add-reference needs a measured still image.');
+      await verifyFiles(imported);
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'add-reference', characterId: character, importFile: imported, message }))); return;
+    }
     if (command === 'prefer-image-provider') {
       const provider = option('provider'); const message = option('message');
       if (!['meta-muse','agy'].includes(provider) || !message || args.length) throw new Error('prefer-image-provider needs --provider meta-muse|agy --message "<text>" --run <run>.');
@@ -263,6 +293,18 @@ async function main() {
       const message = option('message');
       if (!message || args.length) throw new Error('refresh-keyframe-instructions needs --message "<actual human instruction>" --run <run>.');
       print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'refresh-keyframe-instructions', message }))); return;
+    }
+    if (command === 'refresh-crew-models') {
+      const message = option('message');
+      if (!message || args.length) throw new Error('refresh-crew-models needs --message "<actual human instruction>" --run <run>.');
+      const path=join(runDir,'host-dispatch',status.pending.taskId+'.json');
+      try{if((await json(path)).status==='started')throw new Error('CODEX_DISPATCH_UNCERTAIN: reconcile the saved native dispatch before changing crew models.');}catch(error){if(error.code!=='ENOENT')throw error;}
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'refresh-crew-models', message }))); return;
+    }
+    if (command === 'refresh-text-instructions') {
+      const message = option('message');
+      if (!message || args.length) throw new Error('refresh-text-instructions needs --message "<actual human instruction>" --run <run>.');
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'refresh-text-instructions', message }))); return;
     }
     if (command === 'generate' || command === 'collect') {
       const { project, pending } = status; const job = pending.job;
@@ -304,7 +346,7 @@ async function main() {
         await runtimeEvent('provider-error',{message:diagnostic});throw new Error(`${diagnostic}\n${remediation(job.plan.provider,secretsPath)}`);
       }return;
     }
-    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
+    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, add-reference, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, refresh-text-instructions, refresh-crew-models, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render or finalize. See SKILL.md.');
   } catch(error){
     const latest=await workflow.status('project').catch(()=>null);
     if(latest?.project.debug?.enabled&&!latest.project.debug.paused)await workflow.respond('project',{taskId:latest.pending.taskId,actor:'runtime',action:'debug-stop',message:'Command stopped: '+error.message});

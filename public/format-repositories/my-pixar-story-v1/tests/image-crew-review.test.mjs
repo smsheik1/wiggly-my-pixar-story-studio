@@ -25,7 +25,7 @@ function veraApprovedCandidates() {
   p.artifacts.push({ id: 'candidates:alex@1', key: 'candidates:alex', kind: 'candidates', version: 1, digest: digest({ files, prompt: 'character' }), content: { files, prompt: 'character' }, dependencies: [], valid: true, authoredBy: 'provider-runtime' });
   p.characterId = 'alex'; p.step = 'candidates'; p.gate = 'review';
   const a = current(p);
-  p = send(p, 'review', { workerId: 'vera', artifactId: a.id, artifactDigest: a.digest, review: { decision: 'approved', perception: 'direct-image', checks: criteria.candidates.map(criterion => ({ criterion, status: 'pass', location: 'ISOLATED', evidence: 'ISOLATED Vera pass' })), toolEvidence: files.map(f => ({ tool: 'viewImage', sha256: f.sha256 })) } });
+  p = send(p, 'review', { workerId: 'vera', artifactId: a.id, artifactDigest: a.digest, review: { decision: 'approved', perception: 'direct-image', checks: criteria.candidates.map(criterion => ({ criterion, status: 'pass', location: 'ISOLATED', evidence: 'ISOLATED Vera pass' })), recommendation: { selection: 2, ranking: [2, 0, 1], reason: 'ISOLATED option 3 stages the scripted action best.' }, toolEvidence: files.map(f => ({ tool: 'viewImage', sha256: f.sha256 })) } });
   return p;
 }
 
@@ -58,7 +58,7 @@ test('crew-review ineligible on rejected, missing criterion, or missing viewImag
     for (const old of p.artifacts.filter(x => x.key === 'candidates:alex')) old.valid = false;
     p.artifacts.push(next);
     const b = current(p);
-    const good = { decision: 'approved', perception: 'direct-image', checks: criteria.candidates.map(criterion => ({ criterion, status: 'pass', location: 'ISOLATED', evidence: 'x' })), toolEvidence: files.map(f => ({ tool: 'viewImage', sha256: f.sha256 })) };
+    const good = { decision: 'approved', perception: 'direct-image', checks: criteria.candidates.map(criterion => ({ criterion, status: 'pass', location: 'ISOLATED', evidence: 'x' })), recommendation: { selection: 0, ranking: [0, 1, 2], reason: 'ISOLATED option 1 stages the scripted action best.' }, toolEvidence: files.map(f => ({ tool: 'viewImage', sha256: f.sha256 })) };
     const bad = mutate(structuredClone(good));
     if (bad.decision === 'rejected') {
       p = send(p, 'review', { workerId: 'vera', artifactId: b.id, artifactDigest: b.digest, review: bad });
@@ -132,7 +132,7 @@ test('review gate still requires full viewImage of every file even with crops pr
     p.artifacts.push({ id: 'candidates:alex@1', key: 'candidates:alex', kind: 'candidates', version: 1, digest: digest({ files, prompt: 'p' }), content: { files, prompt: 'p' }, dependencies: [], valid: true, authoredBy: 't-visual' });
     p.characterId = 'alex'; p.step = 'candidates'; p.gate = 'review';
     const task = taskFor(p);
-    const verdict = { taskId: task.taskId, action: 'review', actor: 'reviewer', workerId: task.crewWorker.workerId, artifactId: task.artifact.id, artifactDigest: task.artifact.digest, review: { decision: 'approved', perception: 'direct-image', modelVersion: task.crewWorker.modelVersion, capabilityVersion: task.crewWorker.capabilityVersion, checks: task.criteria.map(criterion => ({ criterion, status: 'pass', location: 'x', evidence: 'x' })) } };
+    const verdict = { taskId: task.taskId, action: 'review', actor: 'reviewer', workerId: task.crewWorker.workerId, artifactId: task.artifact.id, artifactDigest: task.artifact.digest, review: { decision: 'approved', perception: 'direct-image', modelVersion: task.crewWorker.modelVersion, capabilityVersion: task.crewWorker.capabilityVersion, checks: task.criteria.map(criterion => ({ criterion, status: 'pass', location: 'x', evidence: 'x' })), recommendation: { selection: 0, ranking: [0, 1, 2], reason: 'ISOLATED option 1 stages the scripted action best.' } } };
     // only crops, no full views -> must fail
     await assert.rejects(runCrewTask(p, task, { tools: { viewImage: async () => ({ perception: 'direct-image' }) }, runTask: async (_t, { callTool }) => { for (const fl of files) await callTool('viewImage', { sha256: fl.sha256, region: { x: 0, y: 0, width: 0.5, height: 0.5 } }); return verdict; } }), /PERCEPTION_NOT_PERFORMED/);
     // full views -> passes

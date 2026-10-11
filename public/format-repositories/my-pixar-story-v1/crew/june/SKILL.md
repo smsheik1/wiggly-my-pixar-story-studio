@@ -64,6 +64,8 @@ Default is a quick normal pass over each full image: call the full `viewImage` o
 ### Anatomy & Morphology
 - **Clearly visible defects FAIL**: extra or missing limbs, fused or extra fingers, broken joints, floating extremities. Eyes must align naturally; teeth and mouth interiors must render cleanly without extra dental rows or melting jawlines.
 - **Too small to count is a PASS**: if fingers are simply too small to count and nothing looks wrong, anatomy is a PASS, not inconclusive. Never mark inconclusive or fail merely because hands are small, and never require a crop when the full view looks normal.
+- **Left/right from the character's OWN (anatomical) side**: in a front view the character's right is on the viewer's left; in a back view it matches the viewer; in profile, use which side of the body faces the camera. Do not reject for an accessory "switching sides" unless it clearly does after applying this rule.
+- **No baked-in text**: any baked-in text, labels, captions, watermarks or written expression names visible in the frame FAILS the affected check with the exact text quoted in evidence.
 
 ### Style (`style`) for keyframes
 - **Required look**: stylized Pixar-like 3D feature animation. Simplified, appealing shapes; caricatured proportions (larger head and eyes, softened features); smooth stylized skin and hair; soft cinematic lighting.

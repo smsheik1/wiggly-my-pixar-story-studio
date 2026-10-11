@@ -30,8 +30,8 @@ export function supervisedCharacters(){
  const c=current(p,'roster').content.characters[0];
  p=approved(reviewed(author(p,{prompt:'character',characterDigest:digest(c),referenceHashes:c.references.map(f=>f.sha256),recipeSha256:characterPromptRecipeSha256},'cast-owner')));
  p=confirmed(reviewed(produce(p,{files:[1,2,3].map(sheetImage),prompt:'character'})),{selection:0});
- p=approved(reviewed(author(p,{prompt:'sheet',recipeSha256:characterRecipeSha256,referenceSha256:image(1).sha256,turnaround:['front','three-quarter','profile','back'],expressions:Array(8).fill('expression')},'sheet-writer')));
- return confirmed(reviewed(produce(p,{files:[sheetImage(4)],prompt:'sheet'})));
+ p=approved(reviewed(author(p,{prompt:'Sheet with no text, labels, captions, expression names or watermarks anywhere in the image.',recipeSha256:characterRecipeSha256,referenceSha256:image(1).sha256,turnaround:['front','three-quarter','profile','back'],expressions:Array(8).fill('expression')},'sheet-writer')));
+ return confirmed(reviewed(produce(p,{files:[sheetImage(4)],prompt:'Sheet with no text, labels, captions, expression names or watermarks anywhere in the image.'})));
 }
 export function supervisedBackgrounds(){
  let p=supervisedCharacters();p=approved(reviewed(author(p,{...registry,...shotPlan},'shot-planner')));
