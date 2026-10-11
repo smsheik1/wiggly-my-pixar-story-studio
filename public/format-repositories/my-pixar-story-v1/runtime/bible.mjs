@@ -11,6 +11,7 @@
 import { z } from 'zod';
 import { text, digest } from './contracts.mjs';
 import { current, locked, sheetKeyFor } from './gates.mjs';
+import { studioFor } from './instructions.mjs';
 
 export const BIBLE_SCHEMA = 'wiggly-production-bible/v1';
 export const UNRESOLVED = 'UNRESOLVED';
@@ -140,11 +141,40 @@ export function biblePacket(p, role, gate, artifact) {
 
 // A draft compiled from the project's locked material. Creative summaries that cannot be
 // derived mechanically are marked UNRESOLVED; signing refuses until they are written.
-export const DEFAULT_STYLE = {
+export const LEGACY_DEFAULT_STYLE = {
   look: 'Pixar-style 3D animated feature film: appealing sculpted forms, expressive faces, warm cinematic lighting; never photoreal.',
   sets: 'Real Pixar feature-film sets: lived-in and story-dressed so each place is obviously this character\'s world. Never empty, generic, muted rooms.',
   rules: ['No text, letters, numbers, logos or signage anywhere in images.', 'Characters are composited later: background plates contain zero people.', 'Every character keeps the exact locked sheet design, wardrobe and props in every shot.'],
 };
+export const DEFAULT_STYLE = LEGACY_DEFAULT_STYLE;
+
+export function defaultStyle(studio) {
+  if (!studio?.config?.craft) return LEGACY_DEFAULT_STYLE;
+  const craftPath = studio.config.craft.path;
+  const houseDoc = studio.documents[`${craftPath}#house-style`]?.content ?? '';
+  const locDoc = studio.documents[`${craftPath}#locations`]?.content ?? '';
+  let look = '', sets = '', rules = [];
+  const parseRule = line => {
+    const m = line.match(/^-\s*\[([A-Z0-9_-]+)\](?:\s*\([^)]*\))?\s*(.*)$/);
+    if (!m) return null;
+    return { id: m[1], text: m[2].trim() };
+  };
+  for (const line of houseDoc.split('\n')) {
+    const parsed = parseRule(line);
+    if (!parsed) continue;
+    if (parsed.id === 'H-STYLE') look = parsed.text;
+    else rules.push(parsed.text);
+  }
+  for (const line of locDoc.split('\n')) {
+    const parsed = parseRule(line);
+    if (parsed?.id === 'L-SETS-DEFAULT') {
+      sets = parsed.text;
+      break;
+    }
+  }
+  return { look, sets, rules };
+}
+
 export function compileBible(p) {
   const script = current(p, 'script'), roster = current(p, 'roster');
   const plan = current(p, 'shotIntentions') ?? current(p, 'backgrounds');
@@ -163,7 +193,7 @@ export function compileBible(p) {
     script: { source: script ? { artifactId: script.id, digest: script.digest } : null, lockedPointer: script ? `${script.id} (locked script in this run)` : UNRESOLVED,
       beats: (script?.content.beats ?? [{ beat: 1, narration: UNRESOLVED }]).map(b => ({ beat: b.beat, narration: b.narration, ...(b.emotionalPurpose ? { purpose: b.emotionalPurpose } : {}) })), notes: [] },
     cast: cast.length ? cast : [{ id: UNRESOLVED, name: UNRESOLVED, ageVariant: UNRESOLVED, minor: false, storyPurpose: UNRESOLVED, sheet: null, lockedDescription: UNRESOLVED, continuity: [UNRESOLVED], referencePhoto: { status: 'missing', note: UNRESOLVED } }],
-    style: DEFAULT_STYLE,
+    style: defaultStyle(studioFor(p)),
     scenes: scenes.length ? scenes : [{ id: UNRESOLVED, beat: 1, location: UNRESOLVED, characterIds: [], timeOfDay: UNRESOLVED, mood: UNRESOLVED, keyProps: [], setDressing: [], notes: [] }],
     openQuestions: [],
   };

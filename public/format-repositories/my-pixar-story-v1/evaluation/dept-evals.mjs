@@ -134,6 +134,12 @@ export function scoreCase(caseDef, outcome) {
   return { status: pass ? 'pass' : 'fail', assertions };
 }
 
+const ROLE_RECIPES = {
+  'sheet-prompter': ['sheetPrompt'],
+  'cast-designer': ['characterPrompt'],
+  'pixar-prompter': ['backgroundPrompt'],
+};
+
 // ---------- fingerprint: what the eval actually tests for a role ----------
 export async function roleFingerprint(role, studio) {
   const { WORKER_PACKET_INSTRUCTION, wigglyToolDefinition } = await import('../runtime/crew.mjs');
@@ -141,13 +147,23 @@ export async function roleFingerprint(role, studio) {
   const { digest } = await import('../runtime/contracts.mjs');
   const agent = studio.config.agents[role];
   const rubricPath = studio.config.reviewers[role] ?? null;
+  const roleStages = ROLE_RECIPES[role] ?? [];
+  const recipePaths = [...new Set(roleStages.map(stage => studio.config.recipes[stage]).filter(Boolean))];
+  const recipes = Object.fromEntries(recipePaths.map(p => [p, studio.documents[p].sha256]));
+  const craft = studio.config.craft
+    ? Object.fromEntries((studio.config.craft.sections[role] ?? []).map(entry => [
+        entry,
+        studio.documents[`${studio.config.craft.path}#${entry}`].sha256,
+      ]))
+    : {};
   const parts = {
     model: agent.model,
     backend: agent.backend ?? 'codex',
     tools: agent.tools,
     skill: { path: agent.skill, sha256: studio.documents[agent.skill].sha256 },
     rubric: rubricPath ? { path: rubricPath, sha256: studio.documents[rubricPath].sha256 } : null,
-    recipes: Object.fromEntries(Object.values(studio.config.recipes).map(p => [p, studio.documents[p].sha256])),
+    recipes,
+    craft,
     traits: modelTraits(agent.model),
     packetInstruction: sha(WORKER_PACKET_INSTRUCTION),
     tool: digest(wigglyToolDefinition().inputSchema),
