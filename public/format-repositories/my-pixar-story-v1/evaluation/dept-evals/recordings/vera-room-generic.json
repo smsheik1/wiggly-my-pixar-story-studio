@@ -1,0 +1,254 @@
+{
+ "caseId": "vera-room-generic",
+ "recordedAt": "2026-10-11T20:46:58.667Z",
+ "model": "meta/muse-spark-1.3-contributor",
+ "mode": "live",
+ "fingerprint": "a842a6ab709ba138e27672e9d2dc5a72c3753fdf9f8e542fe1c0c260277933ee",
+ "fingerprintParts": {
+  "model": "meta/muse-spark-1.3-contributor",
+  "backend": "openrouter",
+  "tools": [
+   "readAsset",
+   "viewImage",
+   "watchVideo"
+  ],
+  "skill": {
+   "path": "crew/vera/SKILL.md",
+   "sha256": "183d527e631370858a41c7c04102538a1f25d94642c1516dbd7480393da2f714"
+  },
+  "rubric": {
+   "path": "evaluation/rubrics/visual.md",
+   "sha256": "2a6994a595c1e064d9fafe19f11828034e892ecf198b9be668cbf8bb16d96138"
+  },
+  "recipes": {},
+  "craft": {
+   "house-style": "b95494eb4b67a8aeb7f1459ada27e811283fd5eae1aa51054f8ade61305a2783",
+   "character-design": "4f211109b20406a51a788788981ad9f19fbbb4af22f43239c9dda3cd04c8adfd",
+   "identity": "d7b647fc5302672cb720c9bf05310ac1a9b3d64390ec77d2a98172756b07ec1c",
+   "character-sheet": "4e8f13843f2d47c138ad5fc2fc35e8034b2129b85df9f4032d6ca761da65a6ab",
+   "locations": "4df46006322bee4704d544d0ba6bbb1f12611796e95d68055ee2a96cdfa323be"
+  },
+  "traits": {
+   "reasoning": "always-on",
+   "inputs": [
+    "text",
+    "image",
+    "video"
+   ],
+   "productionEffort": "xhigh",
+   "maxTokens": 32000
+  },
+  "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
+  "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
+ },
+ "wallMs": 85952,
+ "costUsd": 0.016553426,
+ "requests": [
+  {
+   "seq": 1,
+   "requestSha256": "c93b5bcdb1db0e307f4084c83e274ba31450e2077880e06b6cc246a2c729770f",
+   "status": 200,
+   "ms": 9739,
+   "message": {
+    "content": "Vera reviewing your childhood-room backgrounds — inspecting each plate against the visual criteria.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a12cb6d55870648ebda17d52944630",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f\",\"referenceSha256\":\"null\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 48223,
+    "completion_tokens": 593,
+    "reasoning_tokens": 421,
+    "cost": 0.0049409
+   }
+  },
+  {
+   "seq": 2,
+   "requestSha256": "6ca077473b07ca9134834315fbeb7c308766e078b659710e809d3ec496ba2893",
+   "status": 200,
+   "ms": 4011,
+   "message": {
+    "content": "Confirmed first plate — now inspecting the remaining two candidates.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a12cb6e5a570dfaba9b82c870efb37",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"referenceSha256\":\"null\",\"sha256\":\"a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 48501,
+    "completion_tokens": 230,
+    "reasoning_tokens": 88,
+    "cost": 0.0048961
+   }
+  },
+  {
+   "seq": 3,
+   "requestSha256": "5f3cef52833eb91d47e0f7b1421a210bc515af5cd714eaee51daa11d00af3f13",
+   "status": 200,
+   "ms": 16744,
+   "message": {
+    "content": "Vera reviewing your childhood-room backgrounds — inspecting each plate against the visual criteria.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a12cb726f07547826a4660a23b7aee",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"referenceSha256\":\"null\",\"sha256\":\"6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 48765,
+    "completion_tokens": 1635,
+    "reasoning_tokens": 1431,
+    "cost": 0.0052035
+   }
+  },
+  {
+   "seq": 4,
+   "requestSha256": "163dcecdade58288f1a3d29106d89667d713f159436c4857d409b05b9a53a71b",
+   "status": 200,
+   "ms": 54982,
+   "message": {
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"2cd7b124c595d5cee1d60decafdcc70c85cd20e57c7cc41f54d1c1609d56d6c5\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:visual-reviewer\\\",\\\"artifactId\\\":\\\"backgroundCandidates:childhood-room@2\\\",\\\"artifactDigest\\\":\\\"e6db511f9550d350f1c08f984a86b87d394d303c0e5462e2db234c587e2e07eb\\\",\\\"review\\\":{\\\"decision\\\":\\\"rejected\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-fit\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Directly inspected all three plates: simple domestic interior with wooden plank floor, left-wall curtained window, low rear-wall cabinet and far-right closed doorway with single chair screen-right matches childhood-encouragement simple domestic interior for quiet 8-year-old and mother conversation. No scientist costume, experiment or extra relatives shown.\\\",\\\"location\\\":\\\"All three candidates, full frame room geography\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Directly inspected all three plates: stylized feature-quality 3D animated film look with chunky rounded chair and cabinet forms, broad bevels, simplified wood grain, curtains in few generous folds, matte upholstery, smooth warm ivory plaster and soft warm daylight. No photographic scratches, chipped plaster, fabric weave or strong focus falloff; rear cabinet remains readable. No baked-in text, labels or watermarks. Not photoreal, 2D, anime, claymation or sketch.\\\",\\\"location\\\":\\\"All three candidates, full frame architecture, furniture and fabrics\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"story-specific-set\\\",\\\"status\\\":\\\"fail\\\",\\\"evidence\\\":\\\"Directly inspected all three plates: rear cabinet holds only 3 plain unmarked beige boxes/pots; walls are blank calm ivory with no shelves, toys, drawings or family cues; floor is bare planks. Nothing tells whose room it is - no 8-year-old cues from locked memory such as Yugioh cards/play, sunglasses motif, sibling family-viewing cues, or mother presence; palette is only ivory/oatmeal/natural wood with no saturated story accent on props.\\\",\\\"location\\\":\\\"All three candidates: rear cabinet top, ivory background walls and open floor center\\\",\\\"repair\\\":\\\"Regenerate retaining approved geography, chunky stylized treatment, warm daylight, empty two-shot staging and no text/people, but dress from locked story with specific lived-in 8-year-old family props on cabinet/walls/floor edge (e.g. neatly kept Yugioh deck/cards, age-8 book/toy cues consistent with family viewing) with one saturated accent on a story prop while keeping burgundy/teal character accents and film accent out of room; remove plain unmarked boxes and blank calm walls; preserve clear floor and calm face backgrounds without scientist equipment.\\\"},{\\\"criterion\\\":\\\"empty-environment\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Directly inspected all three plates: zero people, silhouettes, crowd figures or humanoid presence, including window views which are blown-out white with no figures, and no people in reflections or artwork. Only room and empty chair rendered.\\\",\\\"location\\\":\\\"All three candidates, full frame including window views and cabinet\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"spatial-action\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Directly inspected all three plates: open standing position screen-left and single adult-scale chair screen-right angled inward at similar depth share one focal plane; clear floor for grounded feet, open space between positions and unobstructed foreground corridor for slow straight push to medium two-shot; calm ivory areas behind future face positions.\\\",\\\"location\\\":\\\"All three candidates: screen-left open floor, screen-right chair and foreground corridor\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"continuity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Directly inspected all three plates: each preserves child-eye-level medium-wide facing rear wall at slight angle revealing left wall, with left curtained window, rear low cabinet outside action area, far-right closed doorway and inward chair orientation, plus diffuse daylight from left for closer framing and final hold. Matches shot-childhood-encouragement camera and empty angle registry.\\\",\\\"location\\\":\\\"All three candidates: window, cabinet, doorway and chair orientation\\\",\\\"repair\\\":\\\"\\\"}],\\\"toolEvidence\\\":[{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737\\\"}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\"}}\"}"
+   },
+   "usage": {
+    "prompt_tokens": 49026,
+    "completion_tokens": 6627,
+    "reasoning_tokens": 5318,
+    "cost": 0.001512926
+   }
+  }
+ ],
+ "outcome": {
+  "event": {
+   "taskId": "2cd7b124c595d5cee1d60decafdcc70c85cd20e57c7cc41f54d1c1609d56d6c5",
+   "action": "review",
+   "actor": "reviewer",
+   "workerId": "dept-eval:visual-reviewer",
+   "artifactId": "backgroundCandidates:childhood-room@2",
+   "artifactDigest": "e6db511f9550d350f1c08f984a86b87d394d303c0e5462e2db234c587e2e07eb",
+   "review": {
+    "decision": "rejected",
+    "repairTarget": "current",
+    "perception": "direct-image",
+    "checks": [
+     {
+      "criterion": "scene-fit",
+      "status": "pass",
+      "evidence": "Directly inspected all three plates: simple domestic interior with wooden plank floor, left-wall curtained window, low rear-wall cabinet and far-right closed doorway with single chair screen-right matches childhood-encouragement simple domestic interior for quiet 8-year-old and mother conversation. No scientist costume, experiment or extra relatives shown.",
+      "location": "All three candidates, full frame room geography",
+      "repair": ""
+     },
+     {
+      "criterion": "style",
+      "status": "pass",
+      "evidence": "Directly inspected all three plates: stylized feature-quality 3D animated film look with chunky rounded chair and cabinet forms, broad bevels, simplified wood grain, curtains in few generous folds, matte upholstery, smooth warm ivory plaster and soft warm daylight. No photographic scratches, chipped plaster, fabric weave or strong focus falloff; rear cabinet remains readable. No baked-in text, labels or watermarks. Not photoreal, 2D, anime, claymation or sketch.",
+      "location": "All three candidates, full frame architecture, furniture and fabrics",
+      "repair": ""
+     },
+     {
+      "criterion": "story-specific-set",
+      "status": "fail",
+      "evidence": "Directly inspected all three plates: rear cabinet holds only 3 plain unmarked beige boxes/pots; walls are blank calm ivory with no shelves, toys, drawings or family cues; floor is bare planks. Nothing tells whose room it is - no 8-year-old cues from locked memory such as Yugioh cards/play, sunglasses motif, sibling family-viewing cues, or mother presence; palette is only ivory/oatmeal/natural wood with no saturated story accent on props.",
+      "location": "All three candidates: rear cabinet top, ivory background walls and open floor center",
+      "repair": "Regenerate retaining approved geography, chunky stylized treatment, warm daylight, empty two-shot staging and no text/people, but dress from locked story with specific lived-in 8-year-old family props on cabinet/walls/floor edge (e.g. neatly kept Yugioh deck/cards, age-8 book/toy cues consistent with family viewing) with one saturated accent on a story prop while keeping burgundy/teal character accents and film accent out of room; remove plain unmarked boxes and blank calm walls; preserve clear floor and calm face backgrounds without scientist equipment."
+     },
+     {
+      "criterion": "empty-environment",
+      "status": "pass",
+      "evidence": "Directly inspected all three plates: zero people, silhouettes, crowd figures or humanoid presence, including window views which are blown-out white with no figures, and no people in reflections or artwork. Only room and empty chair rendered.",
+      "location": "All three candidates, full frame including window views and cabinet",
+      "repair": ""
+     },
+     {
+      "criterion": "spatial-action",
+      "status": "pass",
+      "evidence": "Directly inspected all three plates: open standing position screen-left and single adult-scale chair screen-right angled inward at similar depth share one focal plane; clear floor for grounded feet, open space between positions and unobstructed foreground corridor for slow straight push to medium two-shot; calm ivory areas behind future face positions.",
+      "location": "All three candidates: screen-left open floor, screen-right chair and foreground corridor",
+      "repair": ""
+     },
+     {
+      "criterion": "continuity",
+      "status": "pass",
+      "evidence": "Directly inspected all three plates: each preserves child-eye-level medium-wide facing rear wall at slight angle revealing left wall, with left curtained window, rear low cabinet outside action area, far-right closed doorway and inward chair orientation, plus diffuse daylight from left for closer framing and final hold. Matches shot-childhood-encouragement camera and empty angle registry.",
+      "location": "All three candidates: window, cabinet, doorway and chair orientation",
+      "repair": ""
+     }
+    ],
+    "modelVersion": "meta/muse-spark-1.3-contributor",
+    "capabilityVersion": "bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e",
+    "toolEvidence": [
+     {
+      "tool": "viewImage",
+      "sha256": "c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "437f52e87b3c3512414bcefd5a3b1d8895e1f23f6affc5d51ab6d9b1031ab1ec"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "42212cc85c7eabcb347766f3acd591cf82fef0d582306e9dffb7422900d5a011"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "5ae70416c08ac07a8ff631cb0a492227e9e83f60598b22062c085c53151c6b8f"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f",
+      "referenceSha256": "null"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048",
+      "referenceSha256": "null"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737",
+      "referenceSha256": "null"
+     }
+    ]
+   }
+  },
+  "valid": true,
+  "gateAccepted": true,
+  "error": null
+ }
+}

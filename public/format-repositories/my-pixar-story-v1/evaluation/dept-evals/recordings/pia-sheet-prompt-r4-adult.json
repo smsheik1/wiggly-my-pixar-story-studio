@@ -1,0 +1,109 @@
+{
+ "caseId": "pia-sheet-prompt-r4-adult",
+ "recordedAt": "2026-10-11T20:59:26.220Z",
+ "model": "meta/muse-spark-1.3-contributor",
+ "mode": "live",
+ "fingerprint": "c5cf1fad3f6d22eca43a2706a5f41aa07db6a1eee6c63ed379d2f4bf48c9b8d2",
+ "fingerprintParts": {
+  "model": "meta/muse-spark-1.3-contributor",
+  "backend": "openrouter",
+  "tools": [
+   "readAsset",
+   "viewImage"
+  ],
+  "skill": {
+   "path": "crew/pia/SKILL.md",
+   "sha256": "525d46d35b2f3eb1662de07166f2520318dd451eed817c79917252807386dc09"
+  },
+  "rubric": null,
+  "recipes": {
+   "character-sheet-recipe.md": "caab53afd48de0b91e77b04da50a688da273aeeb5c86335aa807cf12d60ac143"
+  },
+  "craft": {
+   "house-style": "b95494eb4b67a8aeb7f1459ada27e811283fd5eae1aa51054f8ade61305a2783",
+   "character-design": "4f211109b20406a51a788788981ad9f19fbbb4af22f43239c9dda3cd04c8adfd",
+   "prompt-rules": "695bcaf66bf660f9e50b132b3989a38607dbf3c306241da94106102c8844b7c5",
+   "identity": "d7b647fc5302672cb720c9bf05310ac1a9b3d64390ec77d2a98172756b07ec1c",
+   "character-sheet": "4e8f13843f2d47c138ad5fc2fc35e8034b2129b85df9f4032d6ca761da65a6ab",
+   "edit-prompts": "fa03e26afdf3e19d4622a8038e60cb8a2491557a43f7f9bba8c19634e91934ec",
+   "working-method": "1ea99fc7df46276f47d812b5918b878a625ac15c462c4c6699fab66b7416daa3"
+  },
+  "traits": {
+   "reasoning": "always-on",
+   "inputs": [
+    "text",
+    "image",
+    "video"
+   ],
+   "productionEffort": "xhigh",
+   "maxTokens": 32000
+  },
+  "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
+  "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
+ },
+ "wallMs": 130230,
+ "costUsd": 0.006386416,
+ "requests": [
+  {
+   "seq": 1,
+   "requestSha256": "92b33bd06cf96bd9c1303fe4c0548bc20ea15635eca375446746522254603505",
+   "status": 200,
+   "ms": 66071,
+   "message": {
+    "content": "Pia preparing your adult character sheet — inspecting the reference photo to ground every likeness and wardrobe detail.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a12cc26bfe75b69f6c4462662a4c38",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"referenceSha256\":\"null\",\"sha256\":\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 30619,
+    "completion_tokens": 7617,
+    "reasoning_tokens": 7225,
+    "cost": 0.004498962
+   }
+  },
+  {
+   "seq": 2,
+   "requestSha256": "838861acc5f4dab2892db7f71c25ed3467717850535a9a24c3be6871f6def0d8",
+   "status": 200,
+   "ms": 63925,
+   "message": {
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"bf7213c1b69b7de01c1e307408f3891a4effa1b25255e1334f28b68952234e04\\\",\\\"action\\\":\\\"artifact\\\",\\\"actor\\\":\\\"agent\\\",\\\"workerId\\\":\\\"dept-eval:sheet-prompter\\\",\\\"characterId\\\":\\\"shaz-adult\\\",\\\"content\\\":{\\\"prompt\\\":\\\"Create ONE complete cinematic stylized 3D animated-feature character model sheet for adult Shaz, whose exact adult age is unspecified. Use the attached adult photograph as the sole age-specific likeness reference. Preserve the warm medium complexion, gently angular oval face, defined jaw, rounded chin, dark-brown eyes, thick dark eyebrows, rounded nose, softly full lips, short black hair with close sides and a raised swept-back top, and neatly trimmed dark beard connected to the moustache. Translate these recognizable traits into simplified sculpted animation geometry: visibly enlarged expressive head and eyes, broad soft facial planes, rounded ears and sculpted hair clumps. Maintain an adult build with broad shoulders and approximately seven-heads-tall stylized adult proportions. Smooth matte skin with gentle subsurface scattering and broad tonal transitions; no photographic pores or etched forehead wrinkles. Render the beard and moustache as coherent simplified sculpted masses and soft shading, without realistic individual stubble. Match the rust-red textured crew-neck sweater, sleeves pushed to the forearms, silver chain necklace and dark watch exclusively on the anatomical left wrist. Preserve the visible dark trousers; interpret their unshown lower cut as straight-leg and add simple dark low-top sneakers with pale soles as an unverified design choice. Keep the face unobstructed, without glasses. Use tactile stylized knit fabric, broad garment folds, coherent dimensional materials and polished feature-animation lighting. Single seamless flat background, exact same flat mid-grey colour #B5B5B5 across the full canvas, with no gradient, no vignette and no shadow on the backdrop, soft even studio lighting throughout with consistent spacing. Compose exactly TWELVE cells in THREE rows of FOUR columns, one depiction per cell. Reserve the upper half for four full-body turnarounds and the lower half for two portrait rows. TOP ROW, left to right: FRONT, THREE-QUARTER at approximately 45 degrees, PROFILE at 90 degrees, BACK at 180 degrees. Exactly four equal-scale neutral standing figures aligned on a common baseline, arms relaxed slightly away from the torso, empty open hands, feet flat and parallel, weight even on both feet, head level, neutral closed-lip expression, eyes to camera, and natural joints. Show five digits per hand. Fit every figure entirely inside its cell, with margins above the hairstyle and below the shoe soles; keep the head, both hands, legs and complete footwear uncropped. Keep the sweater rust-red in every view and continue its knit material coherently over the back. Keep the dark watch exclusively on the anatomical left wrist in every turnaround view, correcting the mirror error where front, three-quarter and back previously showed it on the anatomical right. MIDDLE ROW, exactly four head-and-shoulder portraits, left to right: neutral, happy, delighted, sad. BOTTOM ROW, exactly four head-and-shoulder portraits, left to right: surprised, confused, angry, talking. Neutral uses relaxed closed lips; happy gently lifts cheeks with closed lips; delighted uses a broad open delighted smile; sad uses gently pinched inner brows and downturned lips; surprised uses raised brows and slightly parted lips; confused uses tilted brows and asymmetrical mouth; angry uses firm lips and focused drawn brows; talking uses slightly parted lips as in mid-speech. Coordinate brows, eyelids, eyes, cheeks and mouth for distinct readable acting. Preserve the same adult face, complexion, hairstyle, beard, body proportions, sweater and accessories across all twelve depictions, and show the same silver chain necklace visible in all eight head-and-shoulder portraits, matching its turnaround length and placement. Exactly four turnarounds plus eight portraits; no duplicate or intermediate views, repeated expressions, additional columns, cropped shoes, alternate ages or outfits, photographic faces, props, scenery or overlapping figures. The sheet must contain no text of any kind: no labels, view names, expression names, captions, titles, numbers or watermarks anywhere in the image. View and expression names above are staging instructions only and must never appear as rendered text.\\\",\\\"characterDigest\\\":\\\"43302ed64acb63f15f6508db59ac99b4f1a8f6ea9a6e0c5484f7dcf8f635727b\\\",\\\"referenceHashes\\\":[\\\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\\\"],\\\"recipeSha256\\\":\\\"caab53afd48de0b91e77b04da50a688da273aeeb5c86335aa807cf12d60ac143\\\"}}\"}"
+   },
+   "usage": {
+    "prompt_tokens": 30896,
+    "completion_tokens": 8972,
+    "reasoning_tokens": 7680,
+    "cost": 0.001887454
+   }
+  }
+ ],
+ "outcome": {
+  "event": {
+   "taskId": "bf7213c1b69b7de01c1e307408f3891a4effa1b25255e1334f28b68952234e04",
+   "action": "artifact",
+   "actor": "agent",
+   "workerId": "dept-eval:sheet-prompter",
+   "characterId": "shaz-adult",
+   "content": {
+    "prompt": "Create ONE complete cinematic stylized 3D animated-feature character model sheet for adult Shaz, whose exact adult age is unspecified. Use the attached adult photograph as the sole age-specific likeness reference. Preserve the warm medium complexion, gently angular oval face, defined jaw, rounded chin, dark-brown eyes, thick dark eyebrows, rounded nose, softly full lips, short black hair with close sides and a raised swept-back top, and neatly trimmed dark beard connected to the moustache. Translate these recognizable traits into simplified sculpted animation geometry: visibly enlarged expressive head and eyes, broad soft facial planes, rounded ears and sculpted hair clumps. Maintain an adult build with broad shoulders and approximately seven-heads-tall stylized adult proportions. Smooth matte skin with gentle subsurface scattering and broad tonal transitions; no photographic pores or etched forehead wrinkles. Render the beard and moustache as coherent simplified sculpted masses and soft shading, without realistic individual stubble. Match the rust-red textured crew-neck sweater, sleeves pushed to the forearms, silver chain necklace and dark watch exclusively on the anatomical left wrist. Preserve the visible dark trousers; interpret their unshown lower cut as straight-leg and add simple dark low-top sneakers with pale soles as an unverified design choice. Keep the face unobstructed, without glasses. Use tactile stylized knit fabric, broad garment folds, coherent dimensional materials and polished feature-animation lighting. Single seamless flat background, exact same flat mid-grey colour #B5B5B5 across the full canvas, with no gradient, no vignette and no shadow on the backdrop, soft even studio lighting throughout with consistent spacing. Compose exactly TWELVE cells in THREE rows of FOUR columns, one depiction per cell. Reserve the upper half for four full-body turnarounds and the lower half for two portrait rows. TOP ROW, left to right: FRONT, THREE-QUARTER at approximately 45 degrees, PROFILE at 90 degrees, BACK at 180 degrees. Exactly four equal-scale neutral standing figures aligned on a common baseline, arms relaxed slightly away from the torso, empty open hands, feet flat and parallel, weight even on both feet, head level, neutral closed-lip expression, eyes to camera, and natural joints. Show five digits per hand. Fit every figure entirely inside its cell, with margins above the hairstyle and below the shoe soles; keep the head, both hands, legs and complete footwear uncropped. Keep the sweater rust-red in every view and continue its knit material coherently over the back. Keep the dark watch exclusively on the anatomical left wrist in every turnaround view, correcting the mirror error where front, three-quarter and back previously showed it on the anatomical right. MIDDLE ROW, exactly four head-and-shoulder portraits, left to right: neutral, happy, delighted, sad. BOTTOM ROW, exactly four head-and-shoulder portraits, left to right: surprised, confused, angry, talking. Neutral uses relaxed closed lips; happy gently lifts cheeks with closed lips; delighted uses a broad open delighted smile; sad uses gently pinched inner brows and downturned lips; surprised uses raised brows and slightly parted lips; confused uses tilted brows and asymmetrical mouth; angry uses firm lips and focused drawn brows; talking uses slightly parted lips as in mid-speech. Coordinate brows, eyelids, eyes, cheeks and mouth for distinct readable acting. Preserve the same adult face, complexion, hairstyle, beard, body proportions, sweater and accessories across all twelve depictions, and show the same silver chain necklace visible in all eight head-and-shoulder portraits, matching its turnaround length and placement. Exactly four turnarounds plus eight portraits; no duplicate or intermediate views, repeated expressions, additional columns, cropped shoes, alternate ages or outfits, photographic faces, props, scenery or overlapping figures. The sheet must contain no text of any kind: no labels, view names, expression names, captions, titles, numbers or watermarks anywhere in the image. View and expression names above are staging instructions only and must never appear as rendered text.",
+    "characterDigest": "43302ed64acb63f15f6508db59ac99b4f1a8f6ea9a6e0c5484f7dcf8f635727b",
+    "referenceHashes": [
+     "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
+    ],
+    "recipeSha256": "caab53afd48de0b91e77b04da50a688da273aeeb5c86335aa807cf12d60ac143"
+   }
+  },
+  "valid": true,
+  "gateAccepted": true,
+  "error": null
+ }
+}

@@ -1,0 +1,163 @@
+{
+ "caseId": "sage-room-prompt-generic",
+ "recordedAt": "2026-10-11T20:52:52.834Z",
+ "model": "meta/muse-spark-1.3-contributor",
+ "mode": "live",
+ "fingerprint": "b64e4f832fac3010738c4ecd97ee182c63b84be604fe63e14814f6237948ae94",
+ "fingerprintParts": {
+  "model": "meta/muse-spark-1.3-contributor",
+  "backend": "openrouter",
+  "tools": [
+   "readAsset",
+   "viewImage"
+  ],
+  "skill": {
+   "path": "crew/sage/SKILL.md",
+   "sha256": "7812b87353aa6ea1d55d6cf0d9410db1fa4baea6dda28c2d3f532e3f1af73cbc"
+  },
+  "rubric": {
+   "path": "evaluation/rubrics/text.md",
+   "sha256": "3845150ebb23f77c599d0a24354b966a50587bcb3278f6f82c9f58beaf14807a"
+  },
+  "recipes": {
+   "character-prompter.md": "235dadf0cb428eedf1edf2b782247f72cd6cd45aa4c7d27a9c6334a1256962af",
+   "character-sheet-recipe.md": "caab53afd48de0b91e77b04da50a688da273aeeb5c86335aa807cf12d60ac143",
+   "background-prompter.md": "4a5f3ac96581dc854b3f184c8a6520196203989338c766919ad0d47a469247dc"
+  },
+  "craft": {
+   "house-style": "b95494eb4b67a8aeb7f1459ada27e811283fd5eae1aa51054f8ade61305a2783",
+   "script-craft": "fed7726674482cfc50ae682c4c9f07bb058536c3cb1e0bc8b8d8c7f6403159f0",
+   "character-design": "4f211109b20406a51a788788981ad9f19fbbb4af22f43239c9dda3cd04c8adfd",
+   "prompt-rules": "695bcaf66bf660f9e50b132b3989a38607dbf3c306241da94106102c8844b7c5",
+   "identity": "d7b647fc5302672cb720c9bf05310ac1a9b3d64390ec77d2a98172756b07ec1c",
+   "character-sheet": "4e8f13843f2d47c138ad5fc2fc35e8034b2129b85df9f4032d6ca761da65a6ab",
+   "edit-prompts": "fa03e26afdf3e19d4622a8038e60cb8a2491557a43f7f9bba8c19634e91934ec",
+   "locations": "4df46006322bee4704d544d0ba6bbb1f12611796e95d68055ee2a96cdfa323be",
+   "working-method": "1ea99fc7df46276f47d812b5918b878a625ac15c462c4c6699fab66b7416daa3"
+  },
+  "traits": {
+   "reasoning": "always-on",
+   "inputs": [
+    "text",
+    "image",
+    "video"
+   ],
+   "productionEffort": "xhigh",
+   "maxTokens": 32000
+  },
+  "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
+  "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
+ },
+ "wallMs": 112805,
+ "costUsd": 0.0072191,
+ "requests": [
+  {
+   "seq": 1,
+   "requestSha256": "5c326ed6e2ad92186e59803b81c17ebb5d4807f2f51cef5fc838c52b660c1cf6",
+   "status": 200,
+   "ms": 112649,
+   "message": {
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"952760f2c92d3566dd6cd386a33c49cbafd06e69d3ee5f2d6444a130115a3d00\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"backgroundPrompt:childhood-room@2\\\",\\\"artifactDigest\\\":\\\"bb60b94b30c014fbe5ee5d2a5759f4cad4ef281897cca620c308b263b9adfab1\\\",\\\"review\\\":{\\\"decision\\\":\\\"rejected\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-text\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"brief-fit\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Prompt retains approved brief geography and empty-plate rule: child-eye-level medium-wide rear-wall view, warm ivory walls with wooden floor and left curtained window, screen-right inward chair, rear low cabinet, far-right closed doorway, and zero-people rule. Architecture and furnishings stay labeled proposed production design with no remembered-home claim. Photoreal-repair wording does not relocate landmarks.\\\",\\\"location\\\":\\\"content.prompt paragraphs 2-4; backgroundBrief:childhood-room@1 direction\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Warm ivory walls and a simple wooden plank floor frame a softly curtained window along the left wall.\\\",\\\"Render zero people, zero characters, zero crowds and zero silhouettes, including reflections, artwork and window views.\\\",\\\"Use warm ivory walls, a simple wooden floor and a softly curtained window along the left wall.\\\"]},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"fail\\\",\\\"evidence\\\":\\\"Prompt fixes prior photoreal rendering with sculpted forms, broad bevels, simplified silhouettes and minimal focus falloff, but remains an empty, generic, catalog/undressed set with no lived-in story-dressing telling whose space and when (age 8, era, hobbies, dreams). It specifies plain/unmarked props, calm blank walls, and a single furnishing in the staging area. Muted ivory/oatmeal alone is not a failure and never rescues undressing. Material [L-DRESSED] defect, not taste.\\\",\\\"location\\\":\\\"content.prompt paragraph 2, sentence 3; paragraph 3, sentences 1-4\\\",\\\"repair\\\":\\\"Replace generic dressing with specific interpreted lived-in props labeled as proposed production design, keeping empty-of-people and muted palette with one saturated accent while keeping burgundy and teal character colors out. For example: change plain oatmeal seat to worn oatmeal weave with softened edge wear; change plain unmarked storage to 2-3 described worn children's picture books, small toy magnifier and folded blanket; dress calm walls with one small child's crayon star drawing and one small shelf. No brands, text, scientist costume/equipment, or new remembered event. Coordinate with Beau to amend brief wording likewise.\\\",\\\"quotes\\\":[\\\"plain oatmeal upholstered seat\\\",\\\"holding a few plain unmarked storage objects\\\",\\\"Leave calm ivory wall areas behind both future face positions\\\",\\\"The single chair is the only furnishing within the staging area.\\\"]},{\\\"criterion\\\":\\\"spatial-action\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Reserves open standing screen-left and seated chair screen-right at similar depth sharing one focal plane, with clear intervening space and broad foreground camera path for slow straight push into medium two-shot. Grounded-foot clearance supports approved two-shot and expression hold without difficult action.\\\",\\\"location\\\":\\\"content.prompt paragraph 2; shot-childhood-encouragement camera, action and staging\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Place both reserved staging positions at similar depth so a standing child's face and a seated adult's face can share one focal plane.\\\",\\\"Keep clear space between them and a broad unobstructed foreground camera path for a slow straight push into a medium two-shot.\\\",\\\"Child-eye-level medium-wide two-shot; slow straight push toward a medium two-shot, retaining both faces throughout.\\\"]},{\\\"criterion\\\":\\\"continuity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Fixes window, doorway, cabinet, chair orientation and light direction through push and expression hold; reserves burgundy/teal for later character composition; asserts proposed design with no people, no readable text, no scientist equipment, and no secondary angle. Matches brief continuity and null angle binding.\\\",\\\"location\\\":\\\"content.prompt paragraphs 2-4; backgroundBrief:childhood-room@1 continuityNotes; locationEntry.angles []\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Window, doorway, cabinet, chair orientation and light direction remain fixed through the planned push and expression hold.\\\",\\\"Keep the palette warm ivory, oatmeal and muted natural wood; reserve burgundy and teal for later character composition.\\\",\\\"This master serves the registered scene; no secondary angle is required by the current registry.\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\"}}\"}"
+   },
+   "usage": {
+    "prompt_tokens": 43943,
+    "completion_tokens": 14124,
+    "reasoning_tokens": 12829,
+    "cost": 0.0072191
+   }
+  }
+ ],
+ "outcome": {
+  "event": {
+   "taskId": "952760f2c92d3566dd6cd386a33c49cbafd06e69d3ee5f2d6444a130115a3d00",
+   "action": "review",
+   "actor": "reviewer",
+   "workerId": "dept-eval:text-reviewer",
+   "artifactId": "backgroundPrompt:childhood-room@2",
+   "artifactDigest": "bb60b94b30c014fbe5ee5d2a5759f4cad4ef281897cca620c308b263b9adfab1",
+   "review": {
+    "decision": "rejected",
+    "repairTarget": "current",
+    "perception": "direct-text",
+    "checks": [
+     {
+      "criterion": "brief-fit",
+      "status": "pass",
+      "evidence": "Prompt retains approved brief geography and empty-plate rule: child-eye-level medium-wide rear-wall view, warm ivory walls with wooden floor and left curtained window, screen-right inward chair, rear low cabinet, far-right closed doorway, and zero-people rule. Architecture and furnishings stay labeled proposed production design with no remembered-home claim. Photoreal-repair wording does not relocate landmarks.",
+      "location": "content.prompt paragraphs 2-4; backgroundBrief:childhood-room@1 direction",
+      "repair": "",
+      "quotes": [
+       "Warm ivory walls and a simple wooden plank floor frame a softly curtained window along the left wall.",
+       "Render zero people, zero characters, zero crowds and zero silhouettes, including reflections, artwork and window views.",
+       "Use warm ivory walls, a simple wooden floor and a softly curtained window along the left wall."
+      ]
+     },
+     {
+      "criterion": "style",
+      "status": "fail",
+      "evidence": "Prompt fixes prior photoreal rendering with sculpted forms, broad bevels, simplified silhouettes and minimal focus falloff, but remains an empty, generic, catalog/undressed set with no lived-in story-dressing telling whose space and when (age 8, era, hobbies, dreams). It specifies plain/unmarked props, calm blank walls, and a single furnishing in the staging area. Muted ivory/oatmeal alone is not a failure and never rescues undressing. Material [L-DRESSED] defect, not taste.",
+      "location": "content.prompt paragraph 2, sentence 3; paragraph 3, sentences 1-4",
+      "repair": "Replace generic dressing with specific interpreted lived-in props labeled as proposed production design, keeping empty-of-people and muted palette with one saturated accent while keeping burgundy and teal character colors out. For example: change plain oatmeal seat to worn oatmeal weave with softened edge wear; change plain unmarked storage to 2-3 described worn children's picture books, small toy magnifier and folded blanket; dress calm walls with one small child's crayon star drawing and one small shelf. No brands, text, scientist costume/equipment, or new remembered event. Coordinate with Beau to amend brief wording likewise.",
+      "quotes": [
+       "plain oatmeal upholstered seat",
+       "holding a few plain unmarked storage objects",
+       "Leave calm ivory wall areas behind both future face positions",
+       "The single chair is the only furnishing within the staging area."
+      ]
+     },
+     {
+      "criterion": "spatial-action",
+      "status": "pass",
+      "evidence": "Reserves open standing screen-left and seated chair screen-right at similar depth sharing one focal plane, with clear intervening space and broad foreground camera path for slow straight push into medium two-shot. Grounded-foot clearance supports approved two-shot and expression hold without difficult action.",
+      "location": "content.prompt paragraph 2; shot-childhood-encouragement camera, action and staging",
+      "repair": "",
+      "quotes": [
+       "Place both reserved staging positions at similar depth so a standing child's face and a seated adult's face can share one focal plane.",
+       "Keep clear space between them and a broad unobstructed foreground camera path for a slow straight push into a medium two-shot.",
+       "Child-eye-level medium-wide two-shot; slow straight push toward a medium two-shot, retaining both faces throughout."
+      ]
+     },
+     {
+      "criterion": "continuity",
+      "status": "pass",
+      "evidence": "Fixes window, doorway, cabinet, chair orientation and light direction through push and expression hold; reserves burgundy/teal for later character composition; asserts proposed design with no people, no readable text, no scientist equipment, and no secondary angle. Matches brief continuity and null angle binding.",
+      "location": "content.prompt paragraphs 2-4; backgroundBrief:childhood-room@1 continuityNotes; locationEntry.angles []",
+      "repair": "",
+      "quotes": [
+       "Window, doorway, cabinet, chair orientation and light direction remain fixed through the planned push and expression hold.",
+       "Keep the palette warm ivory, oatmeal and muted natural wood; reserve burgundy and teal for later character composition.",
+       "This master serves the registered scene; no secondary angle is required by the current registry."
+      ]
+     }
+    ],
+    "modelVersion": "meta/muse-spark-1.3-contributor",
+    "capabilityVersion": "bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e",
+    "toolEvidence": [
+     {
+      "tool": "viewImage",
+      "sha256": "437f52e87b3c3512414bcefd5a3b1d8895e1f23f6affc5d51ab6d9b1031ab1ec"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "42212cc85c7eabcb347766f3acd591cf82fef0d582306e9dffb7422900d5a011"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "5ae70416c08ac07a8ff631cb0a492227e9e83f60598b22062c085c53151c6b8f"
+     }
+    ]
+   }
+  },
+  "valid": true,
+  "gateAccepted": true,
+  "error": null
+ }
+}
