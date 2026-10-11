@@ -3,7 +3,55 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Nightly full run (3 AM CT): every test, even if no PR needed the slow suite.
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+# Never auto-cancel main pushes; PRs cancel superseded runs to save minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      slow: ${{ steps.decide.outputs.slow }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Partition check first: cheap, pure node, no deps. Fails fast if the
+      # fast/slow split drops or double-runs a file.
+      - name: Partition check (fast/slow split is exact)
+        run: |
+          node --version
+          node public/format-repositories/my-pixar-story-v1/tests/check-partition.mjs
+      # The slow suite runs on push to main, schedule, and workflow_dispatch
+      # (non-PR events), and on PRs that touch code the slow tests cover.
+      # Almost every real code PR touches KIT/runtime/**, so those PRs still run
+      # the slow suite -- but in parallel with the fast suite (wall = max, not sum).
+      # Unknown paths count as slow: losing coverage is worse than a slower PR.
+      # Slow suite is skipped only when every changed file is a fast test file,
+      # docs/, a top-level .md, lib/, or studio harness code (not the memoir
+      # format packaging). Everything else (runtime, prompts, studio.json, crew
+      # skills, fixtures, helpers, packaging, CI) runs it.
+      - name: Decide whether the slow suite must run
+        id: decide
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "non-PR event (${{ github.event_name }}): running slow suite"
+            echo "slow=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          kit=public/format-repositories/my-pixar-story-v1
+          changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          echo "$changed"
+          # Fail-safe allowlist (see tests/needs-slow.mjs): fast-only unless every
+          # changed file is a fast test, docs, lib/ or studio harness code.
+          slow=$(printf '%s\n' "$changed" | node $kit/tests/needs-slow.mjs)
+          echo "slow=$slow"
+          echo "slow=$slow" >> "$GITHUB_OUTPUT"
   studio:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -16,12 +64,14 @@ jobs:
           cache-dependency-path: |
             scripts/studio-spike/package-lock.json
             public/format-repositories/my-pixar-story-v1/package-lock.json
+      # Studio tests shell out to ffmpeg/ffprobe (rehearsal fixtures, phase6 proof).
+      # setup-ffmpeg's download flaked on main (fetch failed / readme version read),
+      # so install from the runner's apt instead and verify both binaries.
       - name: Install ffmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
+        run: |
+          command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || (sudo apt-get update -y && sudo apt-get install -y ffmpeg)
+          ffmpeg -version && ffprobe -version
         timeout-minutes: 5
-      - name: Verify ffmpeg
-        run: ffmpeg -version && ffprobe -version
-        timeout-minutes: 1
       - run: npm run setup
       - name: Studio tests with count guard
         run: |
@@ -38,7 +88,7 @@ jobs:
           test "$summary" = "123"
           test "$pass" = "123"
       - run: npm run check
-  kit:
+  kit-fast:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -52,12 +102,54 @@ jobs:
           node-version: 26
           cache: npm
           cache-dependency-path: public/format-repositories/my-pixar-story-v1/package-lock.json
+      # Fast tests still shell out to ffmpeg/ffprobe (fixture tones/frames via
+      # lavfi + importMedia), so install from apt (robust, see studio job).
       - name: Install ffmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
+        run: |
+          command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || (sudo apt-get update -y && sudo apt-get install -y ffmpeg)
+          ffmpeg -version && ffprobe -version
         timeout-minutes: 5
-      - name: Verify ffmpeg
-        run: ffmpeg -version && ffprobe -version
-        timeout-minutes: 1
+      - run: npm --prefix public/format-repositories/my-pixar-story-v1 ci
+      - run: npm --prefix public/format-repositories/my-pixar-story-v1 rebuild better-sqlite3 esbuild
+      # No renderer-bundle extract here: no fast test renders (the only renderFilm
+      # caller asserts DEBUG_PAUSED before touching the bundle).
+      - name: Kit fast tests shard ${{ matrix.shard }}/4
+        run: |
+          set -o pipefail
+          cd public/format-repositories/my-pixar-story-v1
+          files=$(node tests/list-tests.mjs fast --shard ${{ matrix.shard }}/4) || exit 1
+          echo "fast shard ${{ matrix.shard }}/4 files:"; echo "$files"
+          if [ -z "$files" ]; then
+            printf 'TAP version 13\n1..0\n# pass 0\n# fail 0\n' | tee /tmp/kit-fast-shard-${{ matrix.shard }}.tap
+          else
+            # shellcheck disable=SC2086
+            node --test --test-concurrency=2 --test-reporter=tap $files 2>&1 | tee /tmp/kit-fast-shard-${{ matrix.shard }}.tap
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kit-fast-tap-${{ matrix.shard }}
+          path: /tmp/kit-fast-shard-${{ matrix.shard }}.tap
+  kit-slow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [changes]
+    if: needs.changes.outputs.slow == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: public/format-repositories/my-pixar-story-v1/package-lock.json
+      - name: Install ffmpeg
+        run: |
+          command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || (sudo apt-get update -y && sudo apt-get install -y ffmpeg)
+          ffmpeg -version && ffprobe -version
+        timeout-minutes: 5
       - run: npm --prefix public/format-repositories/my-pixar-story-v1 ci
       - run: npm --prefix public/format-repositories/my-pixar-story-v1 rebuild better-sqlite3 esbuild
       - name: Install official Memoir renderer (hash-verified, same archive as npm run setup)
@@ -69,31 +161,67 @@ jobs:
           mkdir -p public/format-repositories/my-pixar-story-v1/build
           tar -xzf "$archive" -C public/format-repositories/my-pixar-story-v1 build/remotion
           test -f public/format-repositories/my-pixar-story-v1/build/remotion/renderer-manifest.json
-      - name: Kit tests shard ${{ matrix.shard }}/4
+      - name: Kit slow tests shard ${{ matrix.shard }}/4
         run: |
           set -o pipefail
           cd public/format-repositories/my-pixar-story-v1
-          node --test --test-concurrency=2 --test-shard=${{ matrix.shard }}/4 --test-reporter=tap "tests/*.test.mjs" 2>&1 | tee /tmp/kit-shard-${{ matrix.shard }}.tap
+          files=$(node tests/list-tests.mjs slow --shard ${{ matrix.shard }}/4) || exit 1
+          echo "slow shard ${{ matrix.shard }}/4 files:"; echo "$files"
+          if [ -z "$files" ]; then
+            printf 'TAP version 13\n1..0\n# pass 0\n# fail 0\n' | tee /tmp/kit-slow-shard-${{ matrix.shard }}.tap
+          else
+            # shellcheck disable=SC2086
+            node --test --test-concurrency=2 --test-reporter=tap $files 2>&1 | tee /tmp/kit-slow-shard-${{ matrix.shard }}.tap
+          fi
       - uses: actions/upload-artifact@v4
         with:
-          name: kit-tap-${{ matrix.shard }}
-          path: /tmp/kit-shard-${{ matrix.shard }}.tap
-  kit-totals:
+          name: kit-slow-tap-${{ matrix.shard }}
+          path: /tmp/kit-slow-shard-${{ matrix.shard }}.tap
+  kit-fast-totals:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [kit]
+    needs: [kit-fast]
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: /tmp/kit-taps
-      - name: Assert kit totals (407 tests across 4 shards, 0 failures)
+      # Fast count F is pinned in KIT/tests/expected-counts.json (fast+slow=total);
+      # adding a test file updates that one file, nothing else.
+      - name: Assert kit fast totals
         run: |
-          shards=$(( $(ls /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l) ))
-          pass=$(( $(grep -h "^ok " /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l) ))
-          fail=$(( $(grep -h "^not ok" /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | wc -l) ))
-          summary=$(grep -h "^# pass " /tmp/kit-taps/kit-tap-*/kit-shard-*.tap | awk '{s+=$3} END {print s+0}')
-          echo "kit shards=$shards pass=$pass summary_pass=$summary fail=$fail"
+          expected=$(node -p "require('./public/format-repositories/my-pixar-story-v1/tests/expected-counts.json').fast")
+          total=$(node -p "require('./public/format-repositories/my-pixar-story-v1/tests/expected-counts.json').total")
+          fast_total=$(node -p "require('./public/format-repositories/my-pixar-story-v1/tests/expected-counts.json').fast+require('./public/format-repositories/my-pixar-story-v1/tests/expected-counts.json').slow")
+          test "$fast_total" = "$total"
+          shards=$(( $(ls /tmp/kit-taps/kit-fast-tap-*/kit-fast-shard-*.tap | wc -l) ))
+          pass=$(( $(grep -h "^ok " /tmp/kit-taps/kit-fast-tap-*/kit-fast-shard-*.tap | wc -l) ))
+          fail=$(( $(grep -h "^not ok" /tmp/kit-taps/kit-fast-tap-*/kit-fast-shard-*.tap | wc -l) ))
+          summary=$(grep -h "^# pass " /tmp/kit-taps/kit-fast-tap-*/kit-fast-shard-*.tap | awk '{s+=$3} END {print s+0}')
+          echo "kit-fast shards=$shards pass=$pass summary_pass=$summary fail=$fail expected=$expected"
           test "$shards" = "4"
           test "$fail" = "0"
-          test "$pass" = "407"
-          test "$summary" = "407"
+          test "$pass" = "$expected"
+          test "$summary" = "$expected"
+  kit-slow-totals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [changes, kit-slow]
+    if: needs.changes.outputs.slow == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/kit-taps
+      - name: Assert kit slow totals
+        run: |
+          expected=$(node -p "require('./public/format-repositories/my-pixar-story-v1/tests/expected-counts.json').slow")
+          shards=$(( $(ls /tmp/kit-taps/kit-slow-tap-*/kit-slow-shard-*.tap | wc -l) ))
+          pass=$(( $(grep -h "^ok " /tmp/kit-taps/kit-slow-tap-*/kit-slow-shard-*.tap | wc -l) ))
+          fail=$(( $(grep -h "^not ok" /tmp/kit-taps/kit-slow-tap-*/kit-slow-shard-*.tap | wc -l) ))
+          summary=$(grep -h "^# pass " /tmp/kit-taps/kit-slow-tap-*/kit-slow-shard-*.tap | awk '{s+=$3} END {print s+0}')
+          echo "kit-slow shards=$shards pass=$pass summary_pass=$summary fail=$fail expected=$expected"
+          test "$shards" = "4"
+          test "$fail" = "0"
+          test "$pass" = "$expected"
+          test "$summary" = "$expected"
