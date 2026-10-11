@@ -33,21 +33,23 @@ function workerLabel(worker,step){
  return worker?`${worker.name} (${roles[worker.role]??worker.role})`:null;
 }
 function lastResult(project){
- const h=project.history?.findLast(h=>(h.artifactId||h.jobId||h.action==='planning-blocked')&&['artifact','review','owner-review','approve','receipt','rendered','plan','authorize','begin','job-id','provider-error','reconcile','planning-blocked'].includes(h.action));
+ const h=project.history?.findLast(h=>(h.artifactId||h.jobId||h.action==='planning-blocked')&&['artifact','review','owner-review','approve','auto-lock','receipt','rendered','plan','authorize','begin','job-id','provider-error','reconcile','planning-blocked'].includes(h.action));
  if(!h)return null; // Historical rows without provenance never acquire invented worker identities.
  if(h.action==='planning-blocked')return {sequence:h.sequence,actor:h.actor,worker:h.worker??null,action:h.action,message:h.blocker?.kind==='editing-infeasible'?`${workerLabel(h.worker,h.step)} could not make a clean repair to the existing recording.`:project.gate==='escalate'?`${workerLabel(h.worker,h.step)??'The generation planner'} is blocked because required planning information is missing.`:`${workerLabel(h.worker,h.step)??'The generation planner'} previously reported missing planning information.`,blocker:h.blocker??null,diagnostic:h.message,findings:[]};
  if(!h.artifactId){
   const job=project.jobs.find(j=>j.id===h.jobId);if(!job)return null;
   const reconciled=job.reconciliation?.outcome;
-  const messages={reconcile:reconciled==='confirmed-no-result'?'You confirmed the original request produced no result. A fresh scoped plan is required.':reconciled==='confirmed-unusable-result'?'You confirmed the original result is unusable. A fresh scoped plan is required.':'You directed collection of the existing request. No replacement request is authorized.',plan:`${workerLabel(h.worker,h.step)??'The planner'} prepared a request and cost estimate for ${(stageNames[job.plan.operation]??job.plan.operation).toLowerCase()}.`,authorize:'You authorized the exact request and spend.',begin:'The runtime started submitting the authorized request; its outcome is not confirmed.', 'job-id':'The provider accepted the request; the saved job is awaiting collection.', 'provider-error':'Provider error: execution stopped. The original request needs reconciliation before any retry.'};
+  const planMsg = job.authorization?.message?.startsWith('AUTO-AUTHORIZED') ? `${workerLabel(h.worker,h.step)??'The planner'} prepared a request for ${(stageNames[job.plan.operation]??job.plan.operation).toLowerCase()}, auto-authorized within your budget.` : `${workerLabel(h.worker,h.step)??'The planner'} prepared a request and cost estimate for ${(stageNames[job.plan.operation]??job.plan.operation).toLowerCase()}.`;
+  const messages={reconcile:reconciled==='confirmed-no-result'?'You confirmed the original request produced no result. A fresh scoped plan is required.':reconciled==='confirmed-unusable-result'?'You confirmed the original result is unusable. A fresh scoped plan is required.':'You directed collection of the existing request. No replacement request is authorized.',plan:planMsg,authorize:'You authorized the exact request and spend.',begin:'The runtime started submitting the authorized request; its outcome is not confirmed.', 'job-id':'The provider accepted the request; the saved job is awaiting collection.', 'provider-error':'Provider error: execution stopped. The original request needs reconciliation before any retry.'};
   return {sequence:h.sequence,actor:h.actor,worker:h.worker??null,jobId:job.id,requestDigest:job.digest,message:messages[h.action],findings:[],...(h.action==='provider-error'?{diagnostic:h.message}:{})};
  }
  const a=project.artifacts.find(a=>a.id===h.artifactId&&a.digest===h.artifactDigest);
  if(!a||h.action==='approve'&&(!a.valid||!a.approvedBy)||h.action==='review'&&a.kind!=='film'&&project.step===a.kind&&project.gate==='review')return null;
  const who=workerLabel(h.worker,h.step),label=stageNames[h.step]??h.step;
- let message,findings=[];
- if(h.action==='approve')message=`${label} locked by your approval.`;
- else if(['review','owner-review'].includes(h.action)){
+  let message,findings=[];
+  if(h.action==='approve')message=`${label} locked by your approval.`;
+  else if(h.action==='auto-lock')message=`${label} locked after ${who??'independent review'}'s review; no approval needed from you.`;
+  else if(['review','owner-review'].includes(h.action)){
   const r=h.action==='owner-review'?a.ownerReview:h.step==='film'?(h.worker?.role==='scene-reviewer'?a.visualReview:a.audioReview):a.review;
   if(!r||h.action==='review'&&h.step!=='film'&&a.reviewSequence!==h.sequence)return null;
   findings=r.checks.filter(c=>c.status!=='pass');

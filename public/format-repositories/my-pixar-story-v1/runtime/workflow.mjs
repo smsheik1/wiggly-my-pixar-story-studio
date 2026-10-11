@@ -15,7 +15,7 @@ import { shotFor, shotReferences, referenceBindings, planningReferences, validat
 import { requestDescriptor,planningAccountGuide,generationEstimate,narrationGenerationTexts } from './providers.mjs';
 import {scriptQuoteChecks,transcriptDiff} from './evaluators.mjs';
 import {AudioEditReceipt,AUDIO_EDIT_PROFILE,validateAudioEdit,validateEditingInvestigation} from './audio-edit.mjs';
-import { VERSION, Inputs, Project, Content, Review, Event, Plans, IntakeConfirmation, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, criteria, digest } from './contracts.mjs';
+import { VERSION, Inputs, Project, Content, Review, Event, Plans, IntakeConfirmation, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
 
 import { keyFor, current, locked, audioLocked, assertAllowed, backgroundSteps, imageSteps, authorSteps, supervised, reviewPassed, refinedWorkflow, miniProduction, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact, sheetWorkflow } from './gates.mjs';
 export { keyFor, current, locked, audioLocked, assertAllowed, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact } from './gates.mjs';
@@ -45,10 +45,14 @@ function briefOwner(p, brief) {
   return (role && p.crew.workers.find(w => w.role === role)?.workerId) ?? brief.authoredBy;
 }
 const audioEditingEnabled=p=>studioFor(p)?.config.agents['voice-director'].tools.includes('renderAudioEdit');
+export const pickOnly=p=>supervised(p)&&p.gatePolicy==='pick-only';
+export const gateConfig=p=>studioFor(p)?.config.gates;
 export function initialProject(id, inputs, options = {}) {
   const workflowRevision=options.workflowRevision ?? (options.reviewMode==='qualified'?2:5),studio=options.studio??loadStudio();
-  return Project.parse({ formatVersion: VERSION, schemaVersion: 2, studio, workflowRevision, productionProfile:options.productionProfile??studio.config.generation.video.profile, id, reviewMode:options.reviewMode ?? 'supervised', budget:{maxCostUsd:studio.config.limits.initialSpendCeilingUsd,reservations:[]}, inputs: Inputs.parse(inputs), step: workflowRevision>=3?'answers':'script', gate: 'author', characterId: null,
-    sequence: 0, artifacts: [], jobs: [], history: [], allowances: [], feedback: [], reviewDisagreements: 0 });
+  const base={ formatVersion: VERSION, schemaVersion: 2, studio, workflowRevision, productionProfile:options.productionProfile??studio.config.generation.video.profile, id, reviewMode:options.reviewMode ?? 'supervised', budget:{maxCostUsd:studio.config.limits.initialSpendCeilingUsd,reservations:[]}, inputs: Inputs.parse(inputs), step: workflowRevision>=3?'answers':'script', gate: 'author', characterId: null,
+    sequence: 0, artifacts: [], jobs: [], history: [], allowances: [], feedback: [], reviewDisagreements: 0 };
+  if(options.gatePolicy!==undefined)base.gatePolicy=options.gatePolicy;
+  return Project.parse(base);
 }
 function invalidate(p, id) {
   const affected = new Set([id]);
@@ -300,6 +304,11 @@ export function crewReviewEligible(p, a = current(p)) {
     const checks = a.review.checks ?? [];
     if (checks.length !== needed.length || needed.some(c => !checks.some(x => x.criterion === c && x.status === 'pass'))) return false;
     const evidence = a.review.toolEvidence ?? [];
+    if (a.prescreen?.verdict === 'pass' && a.review?.modelVersion === a.prescreen.model) {
+      let ok = true;
+      for (const f of files) if (!evidence.some(r => r.tool === 'decisions-prescreen' && r.sha256 === f.sha256)) ok = false;
+      if (ok) return true;
+    }
     for (const f of files) {
       if (!evidence.some(r => r.tool === 'viewImage' && r.sha256 === f.sha256)) return false;
     }
@@ -355,7 +364,7 @@ export function taskFor(p) {
     ...(p.step==='videoPrompt'||p.step==='video'?{videoBinding:videoBinding(p)}:{}),
     ...(p.step==='music'?{soundDirection:current(p,'soundPlan').content.music}:p.step==='effect'?{soundDirection:effectFor(p)}:{}),
     actor: p.gate === 'review' ? 'reviewer' : ['human', 'authorize', 'escalate'].includes(p.gate) ? 'human' : 'agent',
-    proposedCast:current(p,'script')?.content.proposedCast??null, intakeConfirmation:current(p,'roster')?.intakeConfirmation??current(p,'script')?.intakeConfirmation??current(p,'answers')?.intakeConfirmation??null, artifact: a ?? null, ...previousVersionFor(p, a), job: job ?? null, inputs: effectiveInputs(p),
+    proposedCast:current(p,'script')?.content.proposedCast??null, intakeConfirmation:current(p,'roster')?.intakeConfirmation??current(p,'script')?.intakeConfirmation??current(p,'answers')?.intakeConfirmation??null, artifact: a ?? null, prescreen: current(p)?.prescreen ?? null, ...previousVersionFor(p, a), job: job ?? null, inputs: effectiveInputs(p),
     dependencies: dependencies(p).map(id => p.artifacts.find(a => a.id === id)),
     creativeDirections:p.creativeDirections??[],
     feedback: p.feedback.filter(f => f.key === keyFor(p)), criteria: p.step==='film'&&p.gate==='review'?filmCriteria(p):criteriaFor(p),
@@ -382,6 +391,7 @@ const requiredActor = (e, actor) => { if (e.actor !== actor) throw new Error(`${
 export function applyEvent(project, raw) {
   const p = structuredClone(Project.parse(project));
   const e = Event.parse(raw);
+  let autoLockEntry = null;
   if (e.taskId !== taskFor(p).taskId) throw new Error('STALE_TASK: read current status before responding.');
   if(p.lifecycle==='abandoned'){
     if(!['note','reconcile'].includes(e.action))throw new Error('PROJECT_ABANDONED: no new production or approvals; reconcile saved provider outcomes only.');
@@ -725,7 +735,16 @@ export function applyEvent(project, raw) {
     if (ownerReview && r.decision === 'approved') p.gate = 'review';
     else {
     a.review = r; a.reviewSequence=p.sequence+1;
-    if (reviewPassed(r)) { p.gate = 'human'; if (p.step === 'sheetPrompt'&&!supervised(p)) next(p); }
+    if (reviewPassed(r)) {
+      const autoLock = pickOnly(p) && gateConfig(p)?.autoLockSteps?.includes(p.step) && !a.content.files && r.decision === 'approved';
+      if (autoLock) {
+        const at = new Date().toISOString();
+        a.approvedBy = { message: 'AUTO-LOCK (pick-only policy): independent agent review passed; no human approval requested.', at };
+        // Recorded after the review entry (see end of applyEvent) so the operator's latest result is the auto-lock.
+        autoLockEntry = { action: 'auto-lock', actor: 'runtime', step: p.step, artifactId: a.id, artifactDigest: a.digest, message: 'AUTO-LOCK (pick-only policy): independent agent review passed; no human approval requested.', at, ...(activity.worker ? { worker: activity.worker } : {}) };
+        next(p);
+      } else { p.gate = 'human'; if (p.step === 'sheetPrompt'&&!supervised(p)) next(p); }
+    }
     else {
       if ((['keyframe','video','film'].includes(p.step)||refinedWorkflow(p)&&p.step==='candidates'||miniProduction(p)&&imageSteps.includes(p.step)) && r.decision === 'rejected') {
         p.reviewDisagreements = 0;
@@ -742,6 +761,54 @@ export function applyEvent(project, raw) {
     if(p.step==='film'&&r.decision==='rejected'&&p.gate==='produce'){reopen(p,revisionRoot(p,filmRepair),JSON.stringify(r.checks.filter(c=>c.status!=='pass')));}
     if ((['keyframe','video'].includes(p.step)||refinedWorkflow(p)&&p.step==='candidates'||miniProduction(p)&&imageSteps.includes(p.step)) && r.decision === 'rejected' && p.gate === 'produce') {
       repairVisual(p, JSON.stringify(r.checks.filter(c => c.status !== 'pass')));
+    }
+  } else if (e.action === 'prescreen') {
+    requiredActor(e, 'runtime');
+    const prescreen = Prescreen.parse(e.prescreen);
+    const cfg = studioFor(p)?.config.prescreen;
+    if (!cfg || cfg.enabled !== true) throw new Error('PRESCREEN_DISABLED: enable prescreen in the pinned studio snapshot first.');
+    if (p.gate !== 'review') throw new Error('PRESCREEN_GATE: prescreen binds the current artifact at its review gate only.');
+    if (!cfg.steps.includes(p.step)) throw new Error(`PRESCREEN_STEP: prescreen is not enabled for step ${p.step}.`);
+    if (prescreen.model !== cfg.model) throw new Error('PRESCREEN_MODEL_MISMATCH: prescreen model must equal the pinned snapshot model.');
+    const a = current(p);
+    if (!a || e.artifactId !== a.id || e.artifactDigest !== a.digest) throw new Error('PRESCREEN_ARTIFACT_MISMATCH: prescreen must bind the current artifact id and digest.');
+    if (a.prescreen) throw new Error('PRESCREEN_ALREADY_RECORDED: this artifact already has a prescreen result.');
+    const files = a.content.files ?? [];
+    if (!files.length || prescreen.files.length !== files.length) throw new Error('PRESCREEN_FILES_MISMATCH: prescreen files must match the artifact files by index and sha256.');
+    for (let i = 0; i < files.length; i++) {
+      if (prescreen.files[i].index !== i || prescreen.files[i].sha256 !== files[i].sha256) throw new Error('PRESCREEN_FILES_MISMATCH: prescreen files must match the artifact files by index and sha256.');
+    }
+    const cost = Math.max(prescreen.usage.costUsd, prescreen.usage.estimatedCostUsd);
+    requireBudget(p, cost);
+    p.budget ??= { maxCostUsd: 0, reservations: [] };
+    if (cost > 0) p.budget.reservations.push({ id: `prescreen:${a.id}`, provider: 'openrouter-decisions', estimatedCostUsd: cost });
+    a.prescreen = prescreen;
+    const needed = criteriaFor(p);
+    let clear = prescreen.verdict === 'pass';
+    if (clear) {
+      for (const c of needed) {
+        for (const f of prescreen.files) {
+          if (!f.checks.some(x => x.criterion === c && x.status === 'pass')) { clear = false; break; }
+        }
+        if (!clear) break;
+      }
+    }
+    if (clear) {
+      if (files.length === 1) {
+        if (prescreen.ranking !== null) clear = false;
+      } else {
+        const r = prescreen.ranking;
+        if (!Array.isArray(r) || r.length !== files.length || new Set(r).size !== files.length || r.some(i => !Number.isInteger(i) || i < 0 || i >= files.length)) clear = false;
+      }
+    }
+    if (clear) {
+      const minProb = Math.min(...prescreen.files.flatMap(f => f.checks.map(c => c.probability)));
+      a.review = { decision: 'approved', perception: 'direct-image',
+        checks: needed.map(c => ({ criterion: c, status: 'pass', evidence: `Decisions ${prescreen.model}: P(good) ≥ ${prescreen.thresholds.passAbove} on every option (${minProb}).`, location: 'all options', repair: '' })),
+        ...(prescreen.ranking ? { recommendation: { selection: prescreen.ranking[0], ranking: prescreen.ranking, reason: 'Decisions API ranking (first-pass, not Vera).' } } : {}),
+        modelVersion: prescreen.model, toolEvidence: prescreen.files.map(f => ({ tool: 'decisions-prescreen', sha256: f.sha256 })) };
+      a.reviewSequence = p.sequence + 1;
+      p.gate = 'human';
     }
   } else if (e.action === 'approve') {
     requiredActor(e, 'human');
@@ -837,6 +904,22 @@ export function applyEvent(project, raw) {
     if (p.jobs.filter(j => j.key === keyFor(p) && ((['keyframe','video'].includes(p.step)||refinedWorkflow(p)&&p.step==='candidates'||miniProduction(p)&&imageSteps.includes(p.step)) ? hasDependency(p,j.dependencies,generationScope(p)) : JSON.stringify(j.dependencies) === JSON.stringify(dependencies(p))) && ['submitting', 'submitted', 'ready', 'uncertain', 'failed'].includes(j.status) && countsTowardAttemptCap(p,j)).length >= limitsFor(p).generationAttempts) throw new Error('ATTEMPT_LIMIT: configured generation request limit reached for these dependencies. Stop and resolve the deliverable with the user.');
     const request = requestDescriptor(p, plan);
     const bound = { plan, request, dependencies: dependencies(p) };
+    const forbiddenAuto = ['video','music','effect','clone'].includes(plan.operation);
+    const autoOp = !forbiddenAuto && pickOnly(p) && gateConfig(p)?.autoAuthorizeOperations?.includes(plan.operation);
+    if (autoOp) {
+      const cost = planTotalCost(plan);
+      try {
+        requireBudget(p, cost);
+        const kind = imageSteps.includes(plan.operation) ? 'image' : 'narration voice';
+        p.jobs.push({ id: `job-${p.jobs.length + 1}`, key: keyFor(p), plan, request, dependencies: bound.dependencies, digest: digest(bound), status: 'authorized', authorization: { message: `AUTO-AUTHORIZED (pick-only policy): ${kind} request within project budget cap.`, at: new Date().toISOString() } });
+        p.gate = 'collect';
+      } catch (err) {
+        if (!String(err.message).includes('PROJECT_BUDGET_EXCEEDED')) throw err;
+        p.jobs.push({ id: `job-${p.jobs.length + 1}`, key: keyFor(p), plan, request, dependencies: bound.dependencies, digest: digest(bound), status: 'planned' });
+        p.gate = 'authorize';
+      }
+      if (imageSteps.includes(p.step)) delete p.imageProviderPreference;
+    } else {
     const technicalRepair = p.step==='video' && p.artifacts.findLast(a=>a.review?.decision==='rejected'&&a.dependencies.includes(current(p,'videoPlan').id)&&((a.key===keyFor(p)&&a.review.checks.some(c=>c.status==='fail'&&['integrity','anatomy','identity','continuity','motion'].includes(c.criterion)))||(a.kind==='film'&&p.artifacts.find(v=>v.id===a.review.repairArtifactId)?.key===keyFor(p)&&a.review.checks.some(c=>c.status==='fail'&&['technical','visual-continuity'].includes(c.criterion)))));
     const userRevision = p.history.findLast(h=>['changes','redo','reject','resolve'].includes(h.action));
     const repairIsCurrent = technicalRepair && (!userRevision || technicalRepair.reviewSequence>userRevision.sequence);
@@ -844,6 +927,7 @@ export function applyEvent(project, raw) {
     if(allowance)requireBudget(p,planTotalCost(plan));
     p.jobs.push({ id: `job-${p.jobs.length + 1}`, key: keyFor(p), plan, request, dependencies: bound.dependencies, digest: digest(bound), status: allowance ? 'authorized' : 'planned', ...(allowance ? { allowanceId: allowance.id, authorization: { message: allowance.message, at: new Date().toISOString() } } : {}) }); p.gate = allowance ? 'collect' : 'authorize';
     if (imageSteps.includes(p.step)) delete p.imageProviderPreference;
+    }
   } else if (e.action === 'authorize') {
     requiredActor(e, 'human'); const j = p.jobs.findLast(j => j.key === keyFor(p));
     if (p.gate !== 'authorize' || j.status !== 'planned' || e.jobId !== j.id || e.artifactDigest !== j.digest || !e.message) throw new Error('Authorization must bind the exact generation request, estimate and current dependencies.');
@@ -862,6 +946,7 @@ export function applyEvent(project, raw) {
   if(['artifact','receipt','rendered'].includes(e.action)){const a=current(p,submittedKey);activity.artifactId=a.id;activity.artifactDigest=a.digest;}
   if(e.action==='plan')activity.jobId=p.jobs.at(-1).id;
   p.history.push({ sequence: p.sequence, action: e.action, actor: e.actor, ...activity, message: e.message ?? '', at: new Date().toISOString() });
+  if (autoLockEntry) { p.sequence++; p.history.push({ sequence: p.sequence, ...autoLockEntry }); }
   return Project.parse(p);
 }
 

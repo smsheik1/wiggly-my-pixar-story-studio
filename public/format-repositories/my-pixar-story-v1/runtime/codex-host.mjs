@@ -58,24 +58,50 @@ function turnFailureMessage(turn){
 }
 
 export class CodexHost {
- constructor({cwd,spawnProcess=spawn,timeoutMs=180000,onProgress=()=>{},perceptionTools={},perceptionProfile=null,tracer=null,codexVersion=()=>execFileSync('codex',['--version'],{encoding:'utf8'}).trim(),profileOverride=null}={}){
-  this.cwd=cwd;this.timeoutMs=timeoutMs;this.onProgress=onProgress;this.sequence=0;this.pending=new Map();this.active=null;this.perceptionProfile=perceptionProfile;this.tracer=tracer;
-  this.codexVersion=codexVersion;this.profileOverride=profileOverride;
+ constructor({cwd,spawnProcess=spawn,timeoutMs=180000,startTimeoutMs=15000,onProgress=()=>{},perceptionTools={},perceptionProfile=null,tracer=null,codexVersion=()=>execFileSync('codex',['--version'],{encoding:'utf8'}).trim(),profileOverride=null}={}){
+  this.cwd=cwd;this.timeoutMs=timeoutMs;this.startTimeoutMs=startTimeoutMs;this.onProgress=onProgress;this.sequence=0;this.pending=new Map();this.active=null;this.perceptionProfile=perceptionProfile;this.tracer=tracer;
+  this.codexVersion=codexVersion;this.profileOverride=profileOverride;this.started=false;this.startError=null;this.exited=false;
   this.child=spawnProcess('codex',['app-server','--stdio',...enabled.flatMap(name=>['--enable',name]),...disabled.flatMap(name=>['--disable',name]),'-c','web_search="disabled"'],{stdio:['pipe','pipe','pipe']});
   this.lines=createInterface({input:this.child.stdout});
   this.lines.on('line',line=>{try{this.message(JSON.parse(line));}catch(error){this.fail(error);}});
   // Do not print ambient host logs, credentials or media payloads.
   this.child.stderr.on('data',()=>{});
-  this.child.on('error',error=>this.fail(error));
-  this.child.on('exit',()=>this.fail(new Error('CODEX_HOST_EXITED: stopped; no task/provider retry was submitted.')));
+  try { this.child.stdin.on('error', err => { try { this.fail(this.startError ?? err); } catch {} }); } catch {}
+  this.child.on('error',error=>{
+    if (this.started) { this.fail(error); return; }
+    const reason = error?.code === 'ENOENT' ? 'codex not found (ENOENT)' : `spawn failed (${error?.code ?? 'unknown'})`;
+    this.startError = new Error(`CODEX_HOST_START_FAILED: ${reason}; no task/provider request was submitted. Check that codex is installed and on PATH (codex --version) and that 'codex app-server --stdio' starts.`);
+    this.fail(this.startError);
+  });
+  this.child.on('exit',(code,signal)=>{
+    this.exited = true;
+    if (this.started) { this.fail(new Error('CODEX_HOST_EXITED: stopped; no task/provider retry was submitted.')); return; }
+    const reason = `codex app-server exited early (code ${code}, signal ${signal})`;
+    this.startError = new Error(`CODEX_HOST_START_FAILED: ${reason}; no task/provider request was submitted. Check that codex is installed and on PATH (codex --version) and that 'codex app-server --stdio' starts.`);
+    this.fail(this.startError);
+  });
   this.tools={...perceptionTools,viewImage:async({file})=>({perception:'direct-image',imageUrl:`data:image/${extname(file.path).slice(1).replace('jpg','jpeg')};base64,${(await readFile(file.path)).toString('base64')}`})};
  }
- send(value){this.child.stdin.write(JSON.stringify(value)+'\n');}
- call(method,params){return new Promise((resolve,reject)=>{const id=++this.sequence,timer=setTimeout(()=>{this.pending.delete(id);reject(new Error(`CODEX_TIMEOUT: ${method}; stop and inspect the worker, never resubmit automatically.`));},this.timeoutMs);this.pending.set(id,{resolve,reject,timer});this.send({id,method,params});});}
+ send(value){
+  if (this.startError) throw this.startError;
+  if (this.exited || this.child.exitCode !== null && this.child.exitCode !== undefined || this.child.signalCode !== null && this.child.signalCode !== undefined) {
+    if (this.started) throw new Error('CODEX_HOST_EXITED: stopped; no task/provider retry was submitted.');
+    throw this.startError ?? new Error(`CODEX_HOST_START_FAILED: codex app-server exited early; no task/provider request was submitted. Check that codex is installed and on PATH (codex --version) and that 'codex app-server --stdio' starts.`);
+  }
+  this.child.stdin.write(JSON.stringify(value)+'\n');
+ }
+ call(method,params){
+  if (this.startError) return Promise.reject(this.startError);
+  if (this.exited || this.child.exitCode !== null && this.child.exitCode !== undefined || this.child.signalCode !== null && this.child.signalCode !== undefined) {
+    if (this.started) return Promise.reject(new Error('CODEX_HOST_EXITED: stopped; no task/provider retry was submitted.'));
+    return Promise.reject(this.startError ?? new Error(`CODEX_HOST_START_FAILED: codex app-server exited early; no task/provider request was submitted. Check that codex is installed and on PATH (codex --version) and that 'codex app-server --stdio' starts.`));
+  }
+  return new Promise((resolve,reject)=>{const id=++this.sequence,timer=setTimeout(()=>{this.pending.delete(id);reject(new Error(`CODEX_TIMEOUT: ${method}; stop and inspect the worker, never resubmit automatically.`));},this.timeoutMs);this.pending.set(id,{resolve,reject,timer,method});try{this.send({id,method,params});}catch(err){clearTimeout(timer);this.pending.delete(id);reject(err);}});
+ }
  fail(error){for(const entry of this.pending.values()){clearTimeout(entry.timer);entry.reject(error);}this.pending.clear();this.active?.reject(error);}
  message(message){
   const entry=this.pending.get(message.id);
-  if(entry){clearTimeout(entry.timer);this.pending.delete(message.id);message.error?entry.reject(new Error(`CODEX_HOST_ERROR: ${message.error.message}`)):entry.resolve(message.result);return;}
+  if(entry){clearTimeout(entry.timer);this.pending.delete(message.id);if(message.error){entry.reject(new Error(`CODEX_HOST_ERROR: ${message.error.message}`));}else{if(entry.method==='initialize')this.started=true;entry.resolve(message.result);}return;}
   if(this.active&&message.params?.threadId===this.active.threadId&&!this.active.turnId){this.active.buffer.push(message);return;}
   if(message.method==='item/tool/call'&&message.id!==undefined){const target=this.active;if(target)target.pendingTools=(target.pendingTools??0)+1;void Promise.resolve(this.toolCall(message)).finally(()=>{if(target)target.pendingTools=Math.max(0,(target.pendingTools??1)-1);});return;}
   if(message.id!==undefined){this.send({id:message.id,error:{code:-32601,message:'This client only permits the scoped format tool.'}});this.active?.reject(new Error('UNEXPECTED_HOST_REQUEST: human approvals and ambient actions are not delegated.'));return;}
@@ -119,7 +145,35 @@ export class CodexHost {
     this.send({id:message.id,result:{success:true,contentItems}});
    }catch(error){if(active&&!error.stopDispatch){active.finishedTools??=[];active.finishedTools.push({type:'dynamicToolCall',status:'failed',tool:'wiggly_tool'});}if(error.stopDispatch)this.active?.reject(error);this.send({id:message.id,result:{success:false,contentItems:[{type:'inputText',text:error.message}]}});}
   }
- async initialize(){await mkdir(this.cwd,{recursive:true});await this.call('initialize',{clientInfo:{name:'wiggly_memoir',title:'Wiggly memoir studio',version:'2.0.0'},capabilities:{experimentalApi:true}});this.send({method:'initialized',params:{}});}
+ async initialize(){
+  await mkdir(this.cwd,{recursive:true});
+  if (this.startError) throw this.startError;
+  const secs = Math.round(this.startTimeoutMs / 1000);
+  let timeout;
+  const handshakeTimeout = new Promise((_, reject) => {
+    timeout = setTimeout(() => {
+      const err = new Error(`CODEX_HOST_START_FAILED: no app-server handshake within ${secs}s; no task/provider request was submitted. Check that codex is installed and on PATH (codex --version) and that 'codex app-server --stdio' starts.`);
+      this.startError = err;
+      try { this.child.kill('SIGKILL'); } catch {}
+      this.fail(err);
+      reject(err);
+    }, this.startTimeoutMs);
+    if (timeout.unref) timeout.unref();
+  });
+  try {
+    await Promise.race([
+      this.call('initialize', { clientInfo: { name: 'wiggly_memoir', title: 'Wiggly memoir studio', version: '2.0.0' }, capabilities: { experimentalApi: true } }),
+      handshakeTimeout,
+    ]);
+    clearTimeout(timeout);
+    if (this.startError) throw this.startError;
+    this.started = true;
+    this.send({ method: 'initialized', params: {} });
+  } catch (err) {
+    clearTimeout(timeout);
+    throw err;
+  }
+ }
  async profile(){
   if(typeof this.profileOverride==='string')return this.profileOverride;
   const version=(typeof this.codexVersion==='function'?this.codexVersion():this.codexVersion)??execFileSync('codex',['--version'],{encoding:'utf8'}).trim();

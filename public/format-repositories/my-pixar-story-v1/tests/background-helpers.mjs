@@ -3,8 +3,8 @@ import { current, taskFor, characterRecipeSha256, backgroundRecipeSha256 } from 
 import { criteria } from '../runtime/contracts.mjs';
 export const image = n => ({ path: `/isolated-test/background-${n}.png`, sha256: file(n).sha256, bytes: 100, width: 1600, height: 900 });
 export const sheetImage = n => ({ path: `/isolated-test/sheet-${n}.png`, sha256: file(n).sha256, bytes: 100, width: 1200, height: 900 });
-export function backgroundProject() {
-  let p = audioProject();
+export function backgroundProject(opts = {}) {
+  let p = audioProject(opts);
   p = approved(reviewed(send(p, 'artifact', { workerId: 'cast-owner', content: { characters: [{ id: 'alex', name: 'Alex', ageVariant: 'adult', important: true, references: [image(1)], notes: 'isolated fixture' }] } })));
   p = approved(reviewed(produce(p, { files: [1,2,3].map(sheetImage), prompt: 'character' })), { selection: 0 });
   p = reviewed(send(p, 'artifact', { workerId: 'sheet-writer', content: { prompt: 'Sheet with no text, labels, captions, expression names or watermarks anywhere in the image.', recipeSha256: characterRecipeSha256, referenceSha256: image(1).sha256, turnaround: ['front','three-quarter','profile','back'], expressions: Array(8).fill('expression') } }));

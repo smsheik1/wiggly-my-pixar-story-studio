@@ -32,11 +32,29 @@ test('after a crew rebind the worker now bound to the brief author role passes t
 
 test('an unrelated worker still cannot pass the owner check after a rebind', () => {
   const p = rebound();
-  for (const other of ['sage', 'pixar-prompter', 'background-owner']) assert.throws(() => verdict(p, other, 'owner-review'));
+  for (const other of ['sage', 'pixar-prompter', 'background-owner']) assert.throws(() => verdict(p, other, 'owner-review'), /CREW_PERMISSION_DENIED|original owner check/);
   // Gate level, independent of crew assignment: the owner is the role's bound worker only.
   const q = rebound({ 'background-product-owner': 'imposter' });
   q.history.findLast(h => h.action === 'artifact' && h.artifactId === current(q, `backgroundBrief:${q.locationId}`).id).worker.role = 'cast-designer';
   assert.throws(() => verdict(q, 'imposter', 'owner-review'), /original owner check/);
+});
+
+test('1. gate alone rejects the original author as independent reviewer', { timeout: 10000 }, () => {
+  const p = verdict(rebound(), 'beau-rebound', 'owner-review');
+  assert.equal(p.gate, 'review');
+  const q = structuredClone(p);
+  const textWorker = q.crew.workers.find((w) => w.role === 'text-reviewer');
+  textWorker.workerId = 'background-owner';
+  assert.throws(() => verdict(q, 'background-owner', 'review'), /original owner check followed by a distinct independent reviewer/);
+});
+
+test('2. gate alone rejects rebound owner when brief history has no recorded role', { timeout: 10000 }, () => {
+  const p = rebound();
+  const b = current(p, `backgroundBrief:${p.locationId}`);
+  const h = p.history.findLast((x) => x.action === 'artifact' && x.artifactId === b.id);
+  delete h.worker;
+  p.crew = { workers: Object.keys(crewRoles).map((role) => ({ workerId: role === 'background-product-owner' ? 'beau-rebound' : role === 'pixar-prompter' ? 'pixar-prompter' : role === 'text-reviewer' ? 'sage' : `w-${role}`, name: crewRoles[role].name, role, modelVersion: 'm', capabilityVersion: 'c', execution: 'host' })) };
+  assert.throws(() => verdict(p, 'beau-rebound', 'owner-review'), /original owner check/);
 });
 
 test('owner and independent reviewer must still be distinct workers after a rebind', () => {
