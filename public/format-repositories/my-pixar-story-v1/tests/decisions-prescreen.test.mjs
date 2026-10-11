@@ -157,8 +157,10 @@ test('1. Luna request for 3-option backgroundCandidates: 1 POST, top-level state
     }
 
     // Check questions: opt<i>__<crit> with type noul
+    // continuity needs a master-plate reference image, which is never sent: not asked.
+    assert.ok(!('opt0__continuity' in body.questions));
     for (let i = 0; i < 3; i++) {
-      for (const crit of [...criteria, 'no-text']) {
+      for (const crit of ['scene-fit', 'style', 'story-specific-set', 'empty-environment', 'spatial-action', 'anatomy', 'brief-fit', 'no-text']) {
         const qKey = `opt${i}__${crit}`;
         assert.ok(qKey in body.questions, `Missing question ${qKey}`);
         assert.equal(body.questions[qKey].type, 'noul');
@@ -301,7 +303,8 @@ test('3. Response parsing: noul 0.95 -> pass, 0.2 -> fail, 0.6 -> inconclusive, 
       const body = JSON.parse(opts.body);
       const answers = {
         'opt0__scene-fit': { type: 'noul', noul: 0.95 },
-        'opt0__likeness': { type: 'noul', noul: 0.2 },
+        'opt0__likeness': { type: 'noul', noul: 0.99 },
+        'opt0__brief-fit': { type: 'noul', noul: 0.2 },
         'opt0__anatomy': { type: 'noul', noul: 0.6 },
         'opt0__no-text': { type: 'noul', noul: NaN },
       };
@@ -329,7 +332,9 @@ test('3. Response parsing: noul 0.95 -> pass, 0.2 -> fail, 0.6 -> inconclusive, 
     const fRes = result.files[0];
     const cMap = Object.fromEntries(fRes.checks.map(c => [c.criterion, c.status]));
     assert.equal(cMap['scene-fit'], 'pass');
-    assert.equal(cMap.likeness, 'fail');
+    // likeness is never asked or scored (Vera's job); brief-fit is always asked.
+    assert.equal(cMap.likeness, undefined);
+    assert.equal(cMap['brief-fit'], 'fail');
     assert.equal(cMap.anatomy, 'inconclusive');
     assert.equal(cMap['no-text'], 'inconclusive');
 
@@ -587,7 +592,7 @@ async function seedRun(runDir, project) {
   saver.db.close();
 }
 
-test('9. end-to-end: runner prescreen applies a clear pass and forwards the set to the human pick with a ranking', { timeout: 90000 }, async (t) => {
+test('9. end-to-end: runner prescreen records a clear pass as leads; Vera still reviews (no likeness/continuity from the prescreen)', { timeout: 90000 }, async (t) => {
   const tmp = await mkdtemp(join(tmpdir(), 'dec-e2e-'));
   t.after(() => rm(tmp, { recursive: true, force: true }));
   const runDir = join(tmp, 'run');
@@ -633,25 +638,29 @@ test('9. end-to-end: runner prescreen applies a clear pass and forwards the set 
   try {
     const { project } = await wf.status('project');
     const a = current(project);
-    assert.equal(project.gate, 'human');
+    // The prescreen never checks continuity/likeness (they need reference images), so even a
+    // clear pass on everything it asks cannot stand in for Vera: the set stays at her review,
+    // with the prescreen findings and ranking attached as leads.
+    assert.equal(project.gate, 'review');
+    assert.equal(a.review, undefined);
     assert.equal(a.prescreen.verdict, 'pass');
     assert.equal(a.prescreen.servedModel, 'openai/gpt-6-luna-decisions-2026-10-01');
-    assert.deepEqual(a.review.recommendation.ranking, [2, 0, 1]);
-    assert.equal(a.review.recommendation.selection, 2);
+    assert.deepEqual(a.prescreen.ranking, [2, 0, 1]);
+    assert.ok(a.prescreen.files.every(f => f.checks.some(c => c.criterion === 'brief-fit') && !f.checks.some(c => ['likeness', 'continuity'].includes(c.criterion))));
     assert.ok(project.budget.reservations.some(x => x.provider === 'openrouter-decisions'));
   } finally { wf.close(); }
 });
 
-test('10. replay inputs come from the real project: roster photos and rev-5 sheet criteria for sheets, brief text for rooms', { timeout: 10000 }, async () => {
+test('10. replay inputs come from the real project: rev-5 sheet criteria and the scrubbed generation prompt for sheets (never roster photos), brief text for rooms', { timeout: 10000 }, async () => {
   const { replayInputs } = await import('../evaluation/decisions-replay.mjs');
   const photo = { path: '/x/ref.jpg', sha256: 'a'.repeat(64), bytes: 10, width: 640, height: 427 };
   const project = { workflowRevision: 5, artifacts: [
     { key: 'roster', valid: true, content: { characters: [{ id: 'kid', name: 'Kid', ageVariant: 'child', references: [photo], notes: 'curly hair' }] } },
     { key: 'backgroundBrief:room', valid: true, content: { direction: 'A cramped 1990s bedroom.', knownDetails: ['bunk bed', 'cricket bat'], references: [] } },
   ] };
-  const sheet = replayInputs(project, { key: 'candidates:kid', step: 'candidates', artifact: { content: { files: [], prompt: 'p' } } });
-  assert.deepEqual(sheet.references, [photo]);
-  assert.match(sheet.contextText, /Kid \(child\)\. curly hair/);
+  const sheet = replayInputs(project, { key: 'candidates:kid', step: 'candidates', artifact: { content: { files: [], prompt: 'Use the attached photograph as the likeness reference. Teal headscarf and yellow raincoat. Twelve cells.' } } });
+  assert.equal(sheet.references, undefined);
+  assert.equal(sheet.contextText, 'Teal headscarf and yellow raincoat. Twelve cells.');
   assert.deepEqual(sheet.criteria, rubric.sheet);
   const room = replayInputs(project, { key: 'backgroundCandidates:room', step: 'backgroundCandidates', artifact: { content: { files: [] } } });
   assert.match(room.contextText, /cramped 1990s bedroom[\s\S]*bunk bed; cricket bat/);

@@ -64,20 +64,6 @@ async function verifySubmission(status,event){
   await verifyFiles({content:event.content,intakeConfirmation:event.intakeConfirmation});
   if(['artifact','plan','approve','authorize','owner-review'].includes(event.action)||event.action==='review'&&event.review?.decision!=='inconclusive')await verifyFiles(status.project.artifacts.filter(a=>a.valid));
 }
-// Decisions prescreen inputs: the character's reference photos and cast entry for sheets,
-// the background brief's text (and any references) for rooms. The roster is an artifact.
-function prescreenInputs(p){
-  if(['candidates','sheet'].includes(p.step)){
-    const c=current(p,'roster')?.content?.characters?.find(ch=>ch.id===p.characterId);
-    return {refs:c?.references??[],contextText:c?[`Character: ${c.name} (${c.ageVariant}).`,c.notes??''].join(' ').trim():''};
-  }
-  if(['backgroundCandidates','backgroundAngle'].includes(p.step)){
-    const b=current(p,`backgroundBrief:${p.locationId}`)?.content;
-    const known=Array.isArray(b?.knownDetails)?b.knownDetails.map(d=>typeof d==='string'?d:JSON.stringify(d)).join('; '):'';
-    return {refs:b?.references??[],contextText:[b?.direction??'',known?`Known details: ${known}`:''].filter(Boolean).join('\n').slice(0,6000)};
-  }
-  return {refs:[],contextText:''};
-}
 
 // Test-only Decisions fetcher (NODE_ENV=test + WIGGLY_TEST_DECISIONS_FIXTURE): answers every
 // requested question from a canned fixture. Never active outside tests; no network.
@@ -803,16 +789,16 @@ async function main() {
                 const art = current(pNow);
                 if (art && art.content?.files?.length) {
                   await verifyFiles(art.content.files);
-                  const { runPrescreen } = await import('./runtime/decisions-prescreen.mjs');
+                  const { runPrescreen, prescreenBrief } = await import('./runtime/decisions-prescreen.mjs');
                   const { criteriaFor } = await import('./runtime/workflow.mjs');
                   const criteria = criteriaFor(pNow);
-                  const { refs, contextText } = prescreenInputs(pNow);
+                  // No reference photos and no likeness: the prescreen checks deformities, text and the brief only.
+                  const contextText = prescreenBrief(pNow, art);
                   const prescreenResult = await runPrescreen({
                     config: pConf,
                     secretsPath,
                     step: pNow.step,
                     files: art.content.files,
-                    references: refs,
                     contextText,
                     criteria,
                     tracer,
@@ -860,14 +846,14 @@ async function main() {
       }
       await verifyFiles(art.content.files);
       const isDryRun = args.includes('--dry-run');
-      const { refs, contextText } = prescreenInputs(project);
-      const { estimatePrescreenCost, buildRequests, runPrescreen } = await import('./runtime/decisions-prescreen.mjs');
+      const { estimatePrescreenCost, buildRequests, runPrescreen, prescreenBrief } = await import('./runtime/decisions-prescreen.mjs');
+      const contextText = prescreenBrief(project, art);
       const { criteriaFor } = await import('./runtime/workflow.mjs');
       const criteria = criteriaFor(project);
-      const estCost = estimatePrescreenCost({ model: pConf.model, files: art.content.files, references: refs, contextText });
+      const estCost = estimatePrescreenCost({ model: pConf.model, files: art.content.files, contextText });
       process.stdout.write(`Estimated prescreen cost: $${estCost.toFixed(5)}\n`);
       if (isDryRun) {
-        const planned = await buildRequests({ model: pConf.model, step: project.step, files: art.content.files, references: refs, contextText, criteria });
+        const planned = await buildRequests({ model: pConf.model, step: project.step, files: art.content.files, contextText, criteria });
         print({ plannedRequests: planned.length, imageCount: art.content.files.length, estimatedCostUsd: estCost });
         return;
       }
@@ -885,7 +871,6 @@ async function main() {
           ...(testFetcher ? { fetcher: testFetcher } : {}),
           step: project.step,
           files: art.content.files,
-          references: refs,
           contextText,
           criteria,
           tracer,
