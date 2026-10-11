@@ -31,12 +31,11 @@ jobs:
       # (non-PR events), and on PRs that touch code the slow tests cover.
       # Almost every real code PR touches KIT/runtime/**, so those PRs still run
       # the slow suite -- but in parallel with the fast suite (wall = max, not sum).
-      # If in doubt a path is included below: losing coverage is worse than a slower PR.
-      # Slow triggers: KIT runtime + entry points + renderer build + evaluation rubrics,
-      # the slow manifest itself and its files, kit packaging metadata, the studio
-      # format-packaging code the renderer bundle comes from, shared kit test helpers
-      # (slow suites import them), and workflow changes. Fast-only test files, docs,
-      # and studio-only code run just the fast suite + studio.
+      # Unknown paths count as slow: losing coverage is worse than a slower PR.
+      # Slow suite is skipped only when every changed file is a fast test file,
+      # docs/, a top-level .md, lib/, or studio harness code (not the memoir
+      # format packaging). Everything else (runtime, prompts, studio.json, crew
+      # skills, fixtures, helpers, packaging, CI) runs it.
       - name: Decide whether the slow suite must run
         id: decide
         run: |
@@ -46,21 +45,13 @@ jobs:
             exit 0
           fi
           kit=public/format-repositories/my-pixar-story-v1
-          slow_files=$(node -p "JSON.parse(require('fs').readFileSync('$kit/tests/slow-tests.json','utf8')).files.map(f => '$kit/'+f.replace(/\./g,'\\.')).join('|')")
-          pattern="^($kit/(runtime/|runner\\.mjs|build-renderer\\.mjs|evaluation/|package\\.json|package-lock\\.json|tests/(slow-tests\\.json|expected-counts\\.json|test-timings\\.json|helpers\\.mjs|.*-helpers\\.mjs|helpers/)|$slow_files)|scripts/studio-spike/(format-packages/|memoir-format\\.ts)|\\.github/workflows/)"
-          echo "slow pattern: $pattern"
-          changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" || true)
+          changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
           echo "$changed"
-          if [ -z "$changed" ]; then
-            echo "empty diff: running slow suite to be safe"
-            echo "slow=true" >> "$GITHUB_OUTPUT"
-          elif echo "$changed" | grep -qE "$pattern"; then
-            echo "slow-triggering paths changed: running slow suite"
-            echo "slow=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "no slow-triggering paths changed: fast suite only"
-            echo "slow=false" >> "$GITHUB_OUTPUT"
-          fi
+          # Fail-safe allowlist (see tests/needs-slow.mjs): fast-only unless every
+          # changed file is a fast test, docs, lib/ or studio harness code.
+          slow=$(printf '%s\n' "$changed" | node $kit/tests/needs-slow.mjs)
+          echo "slow=$slow"
+          echo "slow=$slow" >> "$GITHUB_OUTPUT"
   studio:
     runs-on: ubuntu-latest
     timeout-minutes: 15
