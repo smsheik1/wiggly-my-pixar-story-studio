@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { loadStudio, workerInstructions, StudioSnapshot } from '../runtime/instructions.mjs';
 import { initialProject, taskFor } from '../runtime/workflow.mjs';
 import { prepareCrewTask, buildWorkerPacket, WORKER_PACKET_INSTRUCTION } from '../runtime/crew.mjs';
-import { compileBible, defaultStyle, LEGACY_DEFAULT_STYLE, DEFAULT_STYLE } from '../runtime/bible.mjs';
+import { compileBible, defaultStyle, LEGACY_DEFAULT_STYLE, PIPELINE_STYLE_RULES } from '../runtime/bible.mjs';
 import { roleFingerprint } from '../evaluation/dept-evals.mjs';
 import { digest } from '../runtime/contracts.mjs';
 import { inputs } from './helpers.mjs';
@@ -210,13 +210,20 @@ test('6. bible default style: compileBible extracts style from pinned house-styl
   const p = initialProject('bible-style-p1', inputs);
   const compiled = compileBible(p);
 
-  // Craft-enabled project: extracted from pinned sections
-  assert.equal(compiled.style.look, 'One house style line: feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon.');
-  assert.equal(compiled.style.sets, 'Default sets style line used by the bible when a location has no override.');
-  assert.deepEqual(compiled.style.rules, [
-    'Push values further than you want ("deeply worn", not "slightly worn"); generators drift back to defaults.',
-    'No brand, vendor, renderer or film names in any prompt or brief, and never the word for the studio we are emulating.',
-  ]);
+  // Craft-enabled project: extracted from pinned sections (wording-independent, so Muse can
+  // rewrite the guide without touching this test).
+  const st0 = loadStudio();
+  const rulesOf = key => st0.documents[`craft-guide.md#${key}`].content.split('\n').map(l => l.trim().match(/^-\s*\[([A-Z0-9_-]+)\](?:\s*\([^)]*\))?\s*(.*)$/)).filter(Boolean).map(m => ({ id: m[1], text: m[2].trim() }));
+  const house = rulesOf('house-style');
+  assert.equal(compiled.style.look, house.find(r => r.id === 'H-STYLE').text);
+  assert.equal(compiled.style.sets, rulesOf('locations').find(r => r.id === 'L-SETS-DEFAULT').text);
+  assert.deepEqual(compiled.style.rules, [...house.filter(r => r.id !== 'H-STYLE').map(r => r.text), ...PIPELINE_STYLE_RULES]);
+  assert.ok(!/pixar/i.test(JSON.stringify(compiled.style)), 'craft-era bible style never names the studio');
+
+  // A craft snapshot missing H-STYLE fails loudly instead of falling back
+  const broken = structuredClone(st0);
+  broken.documents['craft-guide.md#house-style'] = { content: '## [house-style] House style\n', sha256: 'x' };
+  assert.throws(() => defaultStyle(broken), /BIBLE_STYLE_MISSING: \[H-STYLE\]/);
 
   // Project without craft: explicitly falls back to LEGACY_DEFAULT_STYLE
   const studio = loadStudio();
@@ -241,9 +248,6 @@ test('6. bible default style: compileBible extracts style from pinned house-styl
   assert.deepEqual(defaultStyle(null), LEGACY_DEFAULT_STYLE);
   assert.deepEqual(defaultStyle(legacyStudio), LEGACY_DEFAULT_STYLE);
   assert.deepEqual(defaultStyle(studio), compiled.style);
-
-  // Exported DEFAULT_STYLE is identical to LEGACY_DEFAULT_STYLE
-  assert.deepEqual(DEFAULT_STYLE, LEGACY_DEFAULT_STYLE);
 });
 
 test('7. dept-evals roleFingerprint: includes role-scoped craft map and restricts recipes to the role\'s actual usage', { timeout: 20000 }, async () => {
@@ -262,9 +266,16 @@ test('7. dept-evals roleFingerprint: includes role-scoped craft map and restrict
   const cleoFp = await roleFingerprint('cast-designer', studio);
   assert.deepEqual(Object.keys(cleoFp.parts.recipes), ['character-prompter.md']);
 
-  // 3. pixar-prompter (Theo): has background-prompter.md only
+  // 3. pixar-prompter (Theo): background-prompter.md only (master + angle stages share it)
   const theoFp = await roleFingerprint('pixar-prompter', studio);
   assert.deepEqual(Object.keys(theoFp.parts.recipes), ['background-prompter.md']);
+
+  // 3b. reviewers who see a recipe in their task carry it: Sage reviews all prompt steps,
+  // Beau owner-reviews Theo's background prompts.
+  const sageFp = await roleFingerprint('text-reviewer', studio);
+  assert.deepEqual(Object.keys(sageFp.parts.recipes).sort(), ['background-prompter.md', 'character-prompter.md', 'character-sheet-recipe.md']);
+  const beauFp = await roleFingerprint('background-product-owner', studio);
+  assert.deepEqual(Object.keys(beauFp.parts.recipes), ['background-prompter.md']);
 
   // 4. shot-planner (Sam): has script-craft#S-REACTION and NO recipes
   const samFp = await roleFingerprint('shot-planner', studio);

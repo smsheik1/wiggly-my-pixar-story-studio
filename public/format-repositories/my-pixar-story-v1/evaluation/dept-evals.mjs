@@ -134,10 +134,15 @@ export function scoreCase(caseDef, outcome) {
   return { status: pass ? 'pass' : 'fail', assertions };
 }
 
+// Recipe stages each role actually sees in its task packet (workflow.mjs taskFor attaches
+// task.recipe by step, at every gate). Reviewers and the brief owner see the recipe of the
+// work they check, so it belongs in their fingerprint too.
 const ROLE_RECIPES = {
   'sheet-prompter': ['sheetPrompt'],
   'cast-designer': ['characterPrompt'],
-  'pixar-prompter': ['backgroundPrompt'],
+  'pixar-prompter': ['backgroundPrompt', 'backgroundAnglePrompt'],
+  'background-product-owner': ['backgroundPrompt', 'backgroundAnglePrompt'],
+  'text-reviewer': ['characterPrompt', 'sheetPrompt', 'backgroundPrompt', 'backgroundAnglePrompt'],
 };
 
 // ---------- fingerprint: what the eval actually tests for a role ----------

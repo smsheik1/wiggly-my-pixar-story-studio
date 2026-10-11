@@ -146,33 +146,28 @@ export const LEGACY_DEFAULT_STYLE = {
   sets: 'Real Pixar feature-film sets: lived-in and story-dressed so each place is obviously this character\'s world. Never empty, generic, muted rooms.',
   rules: ['No text, letters, numbers, logos or signage anywhere in images.', 'Characters are composited later: background plates contain zero people.', 'Every character keeps the exact locked sheet design, wardrobe and props in every shot.'],
 };
-export const DEFAULT_STYLE = LEGACY_DEFAULT_STYLE;
+// Pipeline invariants, not craft: they hold for every craft-era bible regardless of guide wording.
+export const PIPELINE_STYLE_RULES = ['Characters are composited later: background plates contain zero people.', 'Every character keeps the exact locked sheet design, wardrobe and props in every shot.'];
+const RULE_LINE = /^-\s*\[([A-Z0-9_-]+)\](?:\s*\([^)]*\))?\s*(.*)$/;
+const ruleLines = content => content.split('\n').map(l => l.trim().match(RULE_LINE)).filter(Boolean).map(m => ({ id: m[1], text: m[2].trim() }));
 
+// Craft-era snapshots read the style from the pinned craft sections; snapshots without
+// craft keep LEGACY_DEFAULT_STYLE. Chosen by snapshot shape, never as a fallback: a craft
+// snapshot missing H-STYLE or L-SETS-DEFAULT is an error.
 export function defaultStyle(studio) {
   if (!studio?.config?.craft) return LEGACY_DEFAULT_STYLE;
   const craftPath = studio.config.craft.path;
-  const houseDoc = studio.documents[`${craftPath}#house-style`]?.content ?? '';
-  const locDoc = studio.documents[`${craftPath}#locations`]?.content ?? '';
-  let look = '', sets = '', rules = [];
-  const parseRule = line => {
-    const m = line.match(/^-\s*\[([A-Z0-9_-]+)\](?:\s*\([^)]*\))?\s*(.*)$/);
-    if (!m) return null;
-    return { id: m[1], text: m[2].trim() };
+  const doc = id => {
+    const d = studio.documents[`${craftPath}#${id}`];
+    if (!d) throw new Error(`BIBLE_STYLE_MISSING: craft section ${id} is not pinned in this studio snapshot.`);
+    return ruleLines(d.content);
   };
-  for (const line of houseDoc.split('\n')) {
-    const parsed = parseRule(line);
-    if (!parsed) continue;
-    if (parsed.id === 'H-STYLE') look = parsed.text;
-    else rules.push(parsed.text);
-  }
-  for (const line of locDoc.split('\n')) {
-    const parsed = parseRule(line);
-    if (parsed?.id === 'L-SETS-DEFAULT') {
-      sets = parsed.text;
-      break;
-    }
-  }
-  return { look, sets, rules };
+  const house = doc('house-style'), locations = doc('locations');
+  const look = house.find(r => r.id === 'H-STYLE')?.text;
+  const sets = locations.find(r => r.id === 'L-SETS-DEFAULT')?.text;
+  if (!look) throw new Error('BIBLE_STYLE_MISSING: [H-STYLE] not found in craft section house-style.');
+  if (!sets) throw new Error('BIBLE_STYLE_MISSING: [L-SETS-DEFAULT] not found in craft section locations.');
+  return { look, sets, rules: [...house.filter(r => r.id !== 'H-STYLE').map(r => r.text), ...PIPELINE_STYLE_RULES] };
 }
 
 export function compileBible(p) {
