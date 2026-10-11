@@ -187,6 +187,105 @@
       ]
     }
   },
+  "craft": {
+    "path": "craft-guide.md",
+    "sections": {
+      "script-writer": [
+        "script-craft",
+        "working-method"
+      ],
+      "text-reviewer": [
+        "house-style",
+        "script-craft",
+        "character-design",
+        "prompt-rules",
+        "identity",
+        "character-sheet",
+        "edit-prompts",
+        "locations",
+        "working-method"
+      ],
+      "cast-designer": [
+        "house-style",
+        "character-design",
+        "prompt-rules",
+        "identity",
+        "working-method"
+      ],
+      "sheet-prompter": [
+        "house-style",
+        "character-design",
+        "prompt-rules",
+        "identity",
+        "character-sheet",
+        "edit-prompts",
+        "working-method"
+      ],
+      "background-product-owner": [
+        "house-style",
+        "locations",
+        "working-method"
+      ],
+      "pixar-prompter": [
+        "house-style",
+        "prompt-rules",
+        "edit-prompts",
+        "locations",
+        "working-method"
+      ],
+      "shot-planner": [
+        "script-craft#S-REACTION"
+      ],
+      "composition-writer": [
+        "house-style",
+        "prompt-rules",
+        "edit-prompts",
+        "composition",
+        "working-method"
+      ],
+      "motion-director": [
+        "video-sources",
+        "video-animation",
+        "video-architecture",
+        "video-blocks",
+        "video-transitions",
+        "video-failures",
+        "working-method"
+      ],
+      "video-prompt-engineer": [
+        "house-style",
+        "video-sources",
+        "video-animation",
+        "video-architecture",
+        "video-blocks",
+        "video-transitions",
+        "video-failures",
+        "working-method"
+      ],
+      "sound-designer": [],
+      "film-editor": [],
+      "audio-reviewer": [],
+      "visual-reviewer": [
+        "house-style",
+        "character-design",
+        "identity",
+        "character-sheet",
+        "locations"
+      ],
+      "scene-reviewer": [
+        "house-style",
+        "composition",
+        "video-sources",
+        "video-animation",
+        "video-architecture",
+        "video-blocks",
+        "video-transitions",
+        "video-failures"
+      ],
+      "generation-planner": [],
+      "voice-director": []
+    }
+  },
   "generation": {
     "voice": {
       "provider": "cartesia",
