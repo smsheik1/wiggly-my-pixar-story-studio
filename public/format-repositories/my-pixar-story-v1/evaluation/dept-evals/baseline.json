@@ -1,0 +1,108 @@
+{
+  "updatedAt": "2026-10-11T08:00:02.031Z",
+  "note": "Assertion ids that passed at this baseline. A later run losing any of them is a regression (exit 1).",
+  "cases": {
+    "vera-adult-sheets-wrist": {
+      "status": "pass",
+      "passing": [
+        "completes",
+        "no-wrist-false-reject",
+        "top-pick-option-2",
+        "not-pick-chainless"
+      ],
+      "failing": [],
+      "model": "meta/muse-spark-1.3-contributor"
+    },
+    "vera-late-teen-text-labels": {
+      "status": "pass",
+      "passing": [
+        "completes",
+        "flags-baked-in-text",
+        "not-pick-labelled"
+      ],
+      "failing": [],
+      "model": "meta/muse-spark-1.3-contributor"
+    },
+    "vera-room-generic-unpixar": {
+      "status": "pass",
+      "passing": [
+        "completes",
+        "rejects-generic-room",
+        "names-style-or-story-gap"
+      ],
+      "failing": [],
+      "model": "meta/muse-spark-1.3-contributor"
+    },
+    "sage-room-brief-generic": {
+      "status": "fail",
+      "passing": [],
+      "failing": [
+        "completes",
+        "rejects-generic-brief",
+        "names-generic-dressing"
+      ],
+      "model": "meta/muse-spark-1.3-contributor"
+    },
+    "beau-room-brief-fresh": {
+      "status": "pass",
+      "passing": [
+        "completes",
+        "no-ivory-walls",
+        "no-plain-unmarked",
+        "dressed-from-story",
+        "zero-people"
+      ],
+      "failing": [],
+      "model": "meta/muse-spark-1.3-contributor"
+    },
+    "leo-script-r4-answers": {
+      "status": "fail",
+      "passing": [
+        "completes",
+        "keeps-sunglasses-fact",
+        "keeps-scientist-fact"
+      ],
+      "failing": [
+        "no-slash-abbreviations"
+      ],
+      "model": "meta/muse-spark-1.3-contributor"
+    },
+    "sage-script-approved": {
+      "status": "fail",
+      "passing": [],
+      "failing": [
+        "completes",
+        "passes-approved-script"
+      ],
+      "model": "meta/muse-spark-1.3-contributor"
+    },
+    "sage-room-brief-approved": {
+      "status": "fail",
+      "passing": [],
+      "failing": [
+        "completes",
+        "passes-approved-brief"
+      ],
+      "model": "meta/muse-spark-1.3-contributor"
+    },
+    "vera-mother-clean": {
+      "status": "pass",
+      "passing": [
+        "completes",
+        "passes-approved-sheets"
+      ],
+      "failing": [],
+      "model": "meta/muse-spark-1.3-contributor"
+    },
+    "sage-room-prompt-unpixar": {
+      "status": "fail",
+      "passing": [
+        "completes"
+      ],
+      "failing": [
+        "rejects-unpixar-prompt"
+      ],
+      "model": "meta/muse-spark-1.3-contributor"
+    }
+  }
+}

@@ -1,0 +1,252 @@
+{
+ "caseId": "vera-mother-clean",
+ "recordedAt": "2026-10-11T07:57:03.816Z",
+ "model": "meta/muse-spark-1.3-contributor",
+ "mode": "live",
+ "fingerprint": "eccaa6ffa3829c1a012bbfae89184c6a605ff13d4947115aefeb12bd4718b3ca",
+ "fingerprintParts": {
+  "model": "meta/muse-spark-1.3-contributor",
+  "backend": "openrouter",
+  "tools": [
+   "readAsset",
+   "viewImage",
+   "watchVideo"
+  ],
+  "skill": {
+   "path": "crew/vera/SKILL.md",
+   "sha256": "576488212eb64f723a4aa4c9a312a7f6662392e52ca35fcef9fa9df67f91157d"
+  },
+  "rubric": {
+   "path": "evaluation/rubrics/visual.md",
+   "sha256": "145bba0ef8769f47f0e1c20fa8cc239b7d420f3c106cf287e60609e86690596b"
+  },
+  "recipes": {
+   "character-prompter.md": "af2ade078cd958898cfa96c70b7dce4b74ff16f54adaefc8423f0bc513b854e8",
+   "character-sheet-recipe.md": "25e531524ebfccc084a56025a04dd70526b76406a17b490ed2dea6b3840dc8f9",
+   "background-prompter.md": "39895d6dbd7db8298fb5301f5be52f6cbc9c7c4374e9e518ab561a9ee6d7b61c"
+  },
+  "traits": {
+   "reasoning": "always-on",
+   "inputs": [
+    "text",
+    "image",
+    "video"
+   ],
+   "productionEffort": "xhigh",
+   "maxTokens": 32000
+  },
+  "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
+  "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
+ },
+ "wallMs": 97756,
+ "costUsd": 0.008822590000000002,
+ "requests": [
+  {
+   "seq": 1,
+   "requestSha256": "ae39501bea04e6d22e56414d0dde054ae7fcc71f078a8e6debe56c579ee5b32c",
+   "status": 200,
+   "ms": 21307,
+   "message": {
+    "content": "Vera reviewing the mother candidates — inspecting each sheet against the brief.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a129f5f3b474fb9cfdcbb5d60e4ad7",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"5ae70416c08ac07a8ff631cb0a492227e9e83f60598b22062c085c53151c6b8f\",\"referenceSha256\":\"null\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 33909,
+    "completion_tokens": 2732,
+    "reasoning_tokens": 2510,
+    "cost": 0.003386834
+   }
+  },
+  {
+   "seq": 2,
+   "requestSha256": "f5774933a24c7da336a051277d618a652942b5c76cc7e6dbc0513bc565582d6f",
+   "status": 200,
+   "ms": 17119,
+   "message": {
+    "content": "Inspection in progress — viewing the remaining mother sheets for detailed comparison.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a129f6363277d5944e794e89bc400c",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"referenceSha256\":\"null\",\"sha256\":\"deb8bb0bb765856b3cd5a57c278797c8cbbf0843bb9526cbe3c3617e6b0ecb65\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 34177,
+    "completion_tokens": 1347,
+    "reasoning_tokens": 1147,
+    "cost": 0.0036871
+   }
+  },
+  {
+   "seq": 3,
+   "requestSha256": "734072a077ba482527d669afaaa9c71cf1e6d87a923c47a84fdb255e010e29f2",
+   "status": 200,
+   "ms": 15681,
+   "message": {
+    "content": "Vera is comparing the three mother sheets for style and consistency — pulling the final full view to finalize the recommendation.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a129f6741c71cdadcf8adb152f0f92",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"referenceSha256\":\"null\",\"sha256\":\"a9808a0fb7fc1df872fbbff9596616658a4c38a7ee9096bfb38305f6a304ee2b\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 34449,
+    "completion_tokens": 1631,
+    "reasoning_tokens": 1434,
+    "cost": 0.000423322
+   }
+  },
+  {
+   "seq": 4,
+   "requestSha256": "f917955a2ac5e78b4e05d7aeba56cc4dd4503d1bb6cca324421311c74a8c28c8",
+   "status": 200,
+   "ms": 43261,
+   "message": {
+    "content": "{\"eventJson\":\"{\\\"taskId\\\":\\\"5d7ab148af10096a1799ff90e2f5edff3afb2ab9135435e0e2b47394326cafab\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:visual-reviewer\\\",\\\"artifactId\\\":\\\"candidates:shaz-mother@1\\\",\\\"artifactDigest\\\":\\\"e2d995bbcd40ef83242680aa1dc873780566da78aab49a456f29682db8f6e032\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"likeness\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Directly inspected all three sheets (0/1/2). Each shows the same interpreted adult mother: softly rounded oval face with full cheeks, rounded chin, gently arched dark eyebrows, large dark-brown eyes, warm medium-brown complexion, plain muted teal hijab framing unobstructed face and draping over shoulders/upper chest. No photo reference exists; design is fictional production choice per brief and supports readable encouraging smile for excitement/pride beat. No real-person resemblance claimed.\\\",\\\"location\\\":\\\"All 4 turnaround figures and 8 portraits in each of the 3 options\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Stylized Pixar-like 3D feature animation in all three options: simplified appealing shapes, enlarged expressive head and eyes, broad soft facial planes, smooth matte stylized skin with no photographic pores, blemishes, wrinkles or stubble, soft three-point lighting on neutral grey backdrop. Not photoreal, hybrid, 2D, anime, claymation or sketch. No baked-in text, labels, view/expression names, captions, numbers, logos or watermarks in any sheet.\\\",\\\"location\\\":\\\"Full sheets for options 0, 1, 2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"anatomy\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Quick full-view pass over every figure: two arms, two legs, natural joints, empty hands with normal-looking fingers; no clearly visible extra/missing limbs, fused/extra fingers, broken joints or floating extremities. Eyes align naturally; mouth interiors render cleanly in open-smile portraits. Some turnaround fingers are too small to count, which is a pass.\\\",\\\"location\\\":\\\"Hands and limbs in all turnaround views; faces in all 8 portraits per option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"turnaround\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each option shows exactly four equal-scale neutral full-body figures on a common baseline in order front, three-quarter at ~45 degrees, profile at 90 degrees, back at 180 degrees. Entire hijab, head, both hands, legs and complete dark flats visible and uncropped with clear margins above head and below soles, arms relaxed slightly away from torso. No duplicate, intermediate, cropped or extra figures.\\\",\\\"location\\\":\\\"Top row of options 0, 1, 2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"expressions\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each option shows exactly eight head-and-shoulder portraits in two rows of four in locked order: middle row neutral, warm smile, pure joy with broad open smile, thoughtful concentration; bottom row determined resolve, gentle surprise with raised brows and parted lips, tender concern, playful mischief with asymmetrical smile. All eight are distinct and clearly readable with coordinated brows/eyes/cheeks/mouth; full covered head and shoulders inside cell. No duplicate expressions or extra portraits.\\\",\\\"location\\\":\\\"Middle and bottom rows of options 0, 1, 2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"consistency\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Outfit, hijab, complexion, age and proportions identical within each option across all 12 depictions: muted teal hijab fully covering all hair and entire neck with no visible hair, hairline, strands or bun, same teal hip-length open cardigan, ivory round-neck blouse, charcoal straight-leg trousers and dark closed-toe flats; same warm medium-brown complexion, adult build and facial structure. Turnaround rotation preserves colors, fit and drape; portraits preserve identity and clothing.\\\",\\\"location\\\":\\\"Full 12-figure grids for options 0, 1, 2\\\",\\\"repair\\\":\\\"\\\"}],\\\"recommendation\\\":{\\\"selection\\\":0,\\\"ranking\\\":[0,2,1],\\\"reason\\\":\\\"Option 0 has cleanest neutral vs smile vs joy distinction and neutral turnaround while fully preserving hijab coverage and outfit; options 2 and 1 also pass with same design language.\\\"},\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\",\\\"toolEvidence\\\":[{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"5ae70416c08ac07a8ff631cb0a492227e9e83f60598b22062c085c53151c6b8f\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"deb8bb0bb765856b3cd5a57c278797c8cbbf0843bb9526cbe3c3617e6b0ecb65\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"a9808a0fb7fc1df872fbbff9596616658a4c38a7ee9096bfb38305f6a304ee2b\\\"}]}}\"}"
+   },
+   "usage": {
+    "prompt_tokens": 34728,
+    "completion_tokens": 6127,
+    "reasoning_tokens": 4789,
+    "cost": 0.001325334
+   }
+  }
+ ],
+ "outcome": {
+  "event": {
+   "taskId": "5d7ab148af10096a1799ff90e2f5edff3afb2ab9135435e0e2b47394326cafab",
+   "action": "review",
+   "actor": "reviewer",
+   "workerId": "dept-eval:visual-reviewer",
+   "artifactId": "candidates:shaz-mother@1",
+   "artifactDigest": "e2d995bbcd40ef83242680aa1dc873780566da78aab49a456f29682db8f6e032",
+   "review": {
+    "decision": "approved",
+    "repairTarget": "current",
+    "perception": "direct-image",
+    "checks": [
+     {
+      "criterion": "likeness",
+      "status": "pass",
+      "evidence": "Directly inspected all three sheets (0/1/2). Each shows the same interpreted adult mother: softly rounded oval face with full cheeks, rounded chin, gently arched dark eyebrows, large dark-brown eyes, warm medium-brown complexion, plain muted teal hijab framing unobstructed face and draping over shoulders/upper chest. No photo reference exists; design is fictional production choice per brief and supports readable encouraging smile for excitement/pride beat. No real-person resemblance claimed.",
+      "location": "All 4 turnaround figures and 8 portraits in each of the 3 options",
+      "repair": ""
+     },
+     {
+      "criterion": "style",
+      "status": "pass",
+      "evidence": "Stylized Pixar-like 3D feature animation in all three options: simplified appealing shapes, enlarged expressive head and eyes, broad soft facial planes, smooth matte stylized skin with no photographic pores, blemishes, wrinkles or stubble, soft three-point lighting on neutral grey backdrop. Not photoreal, hybrid, 2D, anime, claymation or sketch. No baked-in text, labels, view/expression names, captions, numbers, logos or watermarks in any sheet.",
+      "location": "Full sheets for options 0, 1, 2",
+      "repair": ""
+     },
+     {
+      "criterion": "anatomy",
+      "status": "pass",
+      "evidence": "Quick full-view pass over every figure: two arms, two legs, natural joints, empty hands with normal-looking fingers; no clearly visible extra/missing limbs, fused/extra fingers, broken joints or floating extremities. Eyes align naturally; mouth interiors render cleanly in open-smile portraits. Some turnaround fingers are too small to count, which is a pass.",
+      "location": "Hands and limbs in all turnaround views; faces in all 8 portraits per option",
+      "repair": ""
+     },
+     {
+      "criterion": "turnaround",
+      "status": "pass",
+      "evidence": "Each option shows exactly four equal-scale neutral full-body figures on a common baseline in order front, three-quarter at ~45 degrees, profile at 90 degrees, back at 180 degrees. Entire hijab, head, both hands, legs and complete dark flats visible and uncropped with clear margins above head and below soles, arms relaxed slightly away from torso. No duplicate, intermediate, cropped or extra figures.",
+      "location": "Top row of options 0, 1, 2",
+      "repair": ""
+     },
+     {
+      "criterion": "expressions",
+      "status": "pass",
+      "evidence": "Each option shows exactly eight head-and-shoulder portraits in two rows of four in locked order: middle row neutral, warm smile, pure joy with broad open smile, thoughtful concentration; bottom row determined resolve, gentle surprise with raised brows and parted lips, tender concern, playful mischief with asymmetrical smile. All eight are distinct and clearly readable with coordinated brows/eyes/cheeks/mouth; full covered head and shoulders inside cell. No duplicate expressions or extra portraits.",
+      "location": "Middle and bottom rows of options 0, 1, 2",
+      "repair": ""
+     },
+     {
+      "criterion": "consistency",
+      "status": "pass",
+      "evidence": "Outfit, hijab, complexion, age and proportions identical within each option across all 12 depictions: muted teal hijab fully covering all hair and entire neck with no visible hair, hairline, strands or bun, same teal hip-length open cardigan, ivory round-neck blouse, charcoal straight-leg trousers and dark closed-toe flats; same warm medium-brown complexion, adult build and facial structure. Turnaround rotation preserves colors, fit and drape; portraits preserve identity and clothing.",
+      "location": "Full 12-figure grids for options 0, 1, 2",
+      "repair": ""
+     }
+    ],
+    "recommendation": {
+     "selection": 0,
+     "ranking": [
+      0,
+      2,
+      1
+     ],
+     "reason": "Option 0 has cleanest neutral vs smile vs joy distinction and neutral turnaround while fully preserving hijab coverage and outfit; options 2 and 1 also pass with same design language."
+    },
+    "modelVersion": "meta/muse-spark-1.3-contributor",
+    "capabilityVersion": "bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e",
+    "toolEvidence": [
+     {
+      "tool": "viewImage",
+      "sha256": "5ae70416c08ac07a8ff631cb0a492227e9e83f60598b22062c085c53151c6b8f"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "deb8bb0bb765856b3cd5a57c278797c8cbbf0843bb9526cbe3c3617e6b0ecb65"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "a9808a0fb7fc1df872fbbff9596616658a4c38a7ee9096bfb38305f6a304ee2b"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "437f52e87b3c3512414bcefd5a3b1d8895e1f23f6affc5d51ab6d9b1031ab1ec"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "5ae70416c08ac07a8ff631cb0a492227e9e83f60598b22062c085c53151c6b8f",
+      "referenceSha256": "null"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "deb8bb0bb765856b3cd5a57c278797c8cbbf0843bb9526cbe3c3617e6b0ecb65",
+      "referenceSha256": "null"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "a9808a0fb7fc1df872fbbff9596616658a4c38a7ee9096bfb38305f6a304ee2b",
+      "referenceSha256": "null"
+     }
+    ]
+   }
+  },
+  "valid": true,
+  "gateAccepted": true,
+  "error": null
+ }
+}

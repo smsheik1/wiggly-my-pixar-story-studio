@@ -1,0 +1,149 @@
+{
+ "caseId": "sage-room-brief-approved",
+ "recordedAt": "2026-10-11T07:56:43.042Z",
+ "model": "meta/muse-spark-1.3-contributor",
+ "mode": "live",
+ "fingerprint": "2a2f7dfdeab36dedb9ed6a5f42194bcde6d509e1f8d571ee1d6efbd438fdf600",
+ "fingerprintParts": {
+  "model": "meta/muse-spark-1.3-contributor",
+  "backend": "openrouter",
+  "tools": [
+   "readAsset",
+   "viewImage"
+  ],
+  "skill": {
+   "path": "crew/sage/SKILL.md",
+   "sha256": "caf59dc9167b0da55cc58c436e19c0351095815a3393861b1ee978c64414e1c0"
+  },
+  "rubric": {
+   "path": "evaluation/rubrics/text.md",
+   "sha256": "c9fd0d08cf39be370a329408fb84bbc975c611b6df9f531b93a782c816c6182f"
+  },
+  "recipes": {
+   "character-prompter.md": "af2ade078cd958898cfa96c70b7dce4b74ff16f54adaefc8423f0bc513b854e8",
+   "character-sheet-recipe.md": "25e531524ebfccc084a56025a04dd70526b76406a17b490ed2dea6b3840dc8f9",
+   "background-prompter.md": "39895d6dbd7db8298fb5301f5be52f6cbc9c7c4374e9e518ab561a9ee6d7b61c"
+  },
+  "traits": {
+   "reasoning": "always-on",
+   "inputs": [
+    "text",
+    "image",
+    "video"
+   ],
+   "productionEffort": "xhigh",
+   "maxTokens": 32000
+  },
+  "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
+  "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
+ },
+ "wallMs": 81625,
+ "costUsd": 0.0063782,
+ "requests": [
+  {
+   "seq": 1,
+   "requestSha256": "e8e4876b822f3b39ba76f563359746d85ffbc685c800667ddba42040a228db14",
+   "status": 200,
+   "ms": 81465,
+   "message": {
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"d7eab149edaffde57b08ff5ecff58b18f8ef1520e65157f2372a4e880ef288e9\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"backgroundBrief:childhood-room@2\\\",\\\"artifactDigest\\\":\\\"3cf158353fb01fe5b229dcf07f7d012fdb0771e9d525d7d65b41ae04c82dbc46\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"perception\\\":\\\"direct-text\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-fit\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Direction builds a warm cinematic Pixar bedroom dressed from Beat 1 story elements and preserves the childhood-encouragement intent. Card binders, CRT viewing nook, science dressing and spare sunglasses illustrate the quiet child, while the seated mother position preserves pride reaction. Furnishings are framed as interpretation, with no new remembered event asserted. Matches approved scene description and implements human detail direction.\\\",\\\"location\\\":\\\"content.direction; content.sceneIds: childhood-encouragement\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Build a warm, cinematic childhood bedroom that immediately suggests quiet eight-year-old Shaz\\\",\\\"Eight-year-old Shaz shares his scientist ambition with his mother in a simple domestic interior.\\\"]},{\\\"criterion\\\":\\\"facts\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Known details trace directly to locked answers for age 8, quiet manner, sunglasses, scientist ambition with unknown motive, maternal excitement and apparent pride, Yu-Gi-Oh GX co-viewing with siblings and card battling with stated age gaps. Mid-2000s Dallas/McKinney and Muslim family framing is explicitly labeled as human production direction, with room architecture marked as undocumented. All bunk bed, CRT, cards, science props, prayer rug and drawings are labeled Proposed interpretation. No invented promise, motive, direct quote or trademarked logo appears.\\\",\\\"location\\\":\\\"content.knownDetails; content.proposedDetails; content.direction interpretation disclaimer\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"He wanted to become a scientist without knowing why; his mother became excited when he said so and seemed proud of him.\\\",\\\"when i was 8 years old, i wanted to be a scientist\\\",\\\"The shared bedroom and all physical furnishings are proposed interpretation, not documented memories.\\\"]},{\\\"criterion\\\":\\\"spatial-action\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Clear central conversation area and locked child-eye-level medium-wide two-shot geometry remain workable for a straight push retaining both faces. Standing screen-left and seated screen-right positions with inward facing, practical chair scale, grounded feet and unobstructed camera path are preserved. Props, cables, shoes and toys are kept outside foot positions and path, card spread is static dressing not a new action, and bounced fill keeps faces readable.\\\",\\\"location\\\":\\\"content.direction central-area sentences; content.continuityNotes locked-shot sentence\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Arrange this detail around the edges of a clear central conversation area, rather than evenly filling every surface.\\\",\\\"Preserve the locked shot: child-eye-level medium-wide two-shot, Shaz standing screen-left and mother seated screen-right, facing inward at similar depth with faces close in height.\\\"]},{\\\"criterion\\\":\\\"continuity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Empty-plate, no-text and no-figure rules are explicit, with generic abstract cards and dark TV avoiding trademarked characters and logos. No siblings or additional participants are added, and science props are presented without experiment, costume, dialogue or new event. Revised master status with no secondary angle matches backgrounds angles empty and all shots angleId null, preserving prior room orientation and selected accessory cues for later compositing. This is text continuity only, not rendered likeness certification.\\\",\\\"location\\\":\\\"content.direction no-people and no-text sentences; content.continuityNotes final sentences\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Render zero people, zero characters and zero silhouettes, including in reflections, drawings, cards and the television.\\\",\\\"Absolutely no text, letters, numbers, logos, labels or signage anywhere.\\\",\\\"This revised master replaces the earlier generic room design; no secondary angle is added.\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\"}}\"}"
+   },
+   "usage": {
+    "prompt_tokens": 37032,
+    "completion_tokens": 13375,
+    "reasoning_tokens": 12201,
+    "cost": 0.0063782
+   }
+  }
+ ],
+ "outcome": {
+  "event": {
+   "taskId": "d7eab149edaffde57b08ff5ecff58b18f8ef1520e65157f2372a4e880ef288e9",
+   "action": "review",
+   "actor": "reviewer",
+   "workerId": "dept-eval:text-reviewer",
+   "artifactId": "backgroundBrief:childhood-room@2",
+   "artifactDigest": "3cf158353fb01fe5b229dcf07f7d012fdb0771e9d525d7d65b41ae04c82dbc46",
+   "review": {
+    "decision": "approved",
+    "repairTarget": "current",
+    "perception": "direct-text",
+    "checks": [
+     {
+      "criterion": "scene-fit",
+      "status": "pass",
+      "evidence": "Direction builds a warm cinematic Pixar bedroom dressed from Beat 1 story elements and preserves the childhood-encouragement intent. Card binders, CRT viewing nook, science dressing and spare sunglasses illustrate the quiet child, while the seated mother position preserves pride reaction. Furnishings are framed as interpretation, with no new remembered event asserted. Matches approved scene description and implements human detail direction.",
+      "location": "content.direction; content.sceneIds: childhood-encouragement",
+      "repair": "",
+      "quotes": [
+       "Build a warm, cinematic childhood bedroom that immediately suggests quiet eight-year-old Shaz",
+       "Eight-year-old Shaz shares his scientist ambition with his mother in a simple domestic interior."
+      ]
+     },
+     {
+      "criterion": "facts",
+      "status": "pass",
+      "evidence": "Known details trace directly to locked answers for age 8, quiet manner, sunglasses, scientist ambition with unknown motive, maternal excitement and apparent pride, Yu-Gi-Oh GX co-viewing with siblings and card battling with stated age gaps. Mid-2000s Dallas/McKinney and Muslim family framing is explicitly labeled as human production direction, with room architecture marked as undocumented. All bunk bed, CRT, cards, science props, prayer rug and drawings are labeled Proposed interpretation. No invented promise, motive, direct quote or trademarked logo appears.",
+      "location": "content.knownDetails; content.proposedDetails; content.direction interpretation disclaimer",
+      "repair": "",
+      "quotes": [
+       "He wanted to become a scientist without knowing why; his mother became excited when he said so and seemed proud of him.",
+       "when i was 8 years old, i wanted to be a scientist",
+       "The shared bedroom and all physical furnishings are proposed interpretation, not documented memories."
+      ]
+     },
+     {
+      "criterion": "spatial-action",
+      "status": "pass",
+      "evidence": "Clear central conversation area and locked child-eye-level medium-wide two-shot geometry remain workable for a straight push retaining both faces. Standing screen-left and seated screen-right positions with inward facing, practical chair scale, grounded feet and unobstructed camera path are preserved. Props, cables, shoes and toys are kept outside foot positions and path, card spread is static dressing not a new action, and bounced fill keeps faces readable.",
+      "location": "content.direction central-area sentences; content.continuityNotes locked-shot sentence",
+      "repair": "",
+      "quotes": [
+       "Arrange this detail around the edges of a clear central conversation area, rather than evenly filling every surface.",
+       "Preserve the locked shot: child-eye-level medium-wide two-shot, Shaz standing screen-left and mother seated screen-right, facing inward at similar depth with faces close in height."
+      ]
+     },
+     {
+      "criterion": "continuity",
+      "status": "pass",
+      "evidence": "Empty-plate, no-text and no-figure rules are explicit, with generic abstract cards and dark TV avoiding trademarked characters and logos. No siblings or additional participants are added, and science props are presented without experiment, costume, dialogue or new event. Revised master status with no secondary angle matches backgrounds angles empty and all shots angleId null, preserving prior room orientation and selected accessory cues for later compositing. This is text continuity only, not rendered likeness certification.",
+      "location": "content.direction no-people and no-text sentences; content.continuityNotes final sentences",
+      "repair": "",
+      "quotes": [
+       "Render zero people, zero characters and zero silhouettes, including in reflections, drawings, cards and the television.",
+       "Absolutely no text, letters, numbers, logos, labels or signage anywhere.",
+       "This revised master replaces the earlier generic room design; no secondary angle is added."
+      ]
+     }
+    ],
+    "modelVersion": "meta/muse-spark-1.3-contributor",
+    "capabilityVersion": "bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e",
+    "toolEvidence": [
+     {
+      "tool": "viewImage",
+      "sha256": "437f52e87b3c3512414bcefd5a3b1d8895e1f23f6affc5d51ab6d9b1031ab1ec"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "7b8630477532b5df3f5f2fc3cc50626f2f3da968c16ae6d8e0b4fd0c701e5a81"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "42212cc85c7eabcb347766f3acd591cf82fef0d582306e9dffb7422900d5a011"
+     },
+     {
+      "tool": "viewImage",
+      "sha256": "5ae70416c08ac07a8ff631cb0a492227e9e83f60598b22062c085c53151c6b8f"
+     }
+    ]
+   }
+  },
+  "valid": false,
+  "gateAccepted": false,
+  "error": "REVIEW_QUOTE_NOT_FOUND: facts: \"when i was 8 years old, i wanted to be a scientist\""
+ }
+}
