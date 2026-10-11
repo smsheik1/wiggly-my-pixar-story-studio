@@ -257,7 +257,7 @@
       ]
     },
     {
-      "id": "sage-script-approved",
+      "id": "sage-script-slash-abbrev",
       "dept": "sage",
       "priority": 7,
       "source": {
@@ -267,21 +267,33 @@
       },
       "truth": {
         "authority": "shaz",
-        "summary": "Shaz approved script v1 (#8). Positive control: Sage must not invent defects that block it.",
+        "summary": "Shaz approved script v1 (#8), but its beat 2 \"no A/C\" was read aloud by TTS as \"A slash C\" and had to be regenerated as \"AC\" (#49). Shaz wants that caught at review (Oct 11): Sage must reject the script for the slash abbreviation and must not invent any other defect.",
         "history": [
           7,
-          8
+          8,
+          49
         ]
       },
       "asserts": [
         {
-          "id": "passes-approved-script",
+          "id": "rejects-slash-abbrev",
           "type": "verdict",
           "oneOf": [
-            "approved",
-            "provisional"
+            "rejected"
           ],
-          "why": "Shaz approved this script (#8)."
+          "why": "Beat 2 \"no A/C\" is narrated as \"A slash C\" (#49); Shaz wants it caught."
+        },
+        {
+          "id": "names-slash-abbrev",
+          "type": "mustMention",
+          "pattern": "A/C|slash",
+          "why": "The failing check must name the slash abbreviation (A/C)."
+        },
+        {
+          "id": "no-other-defects",
+          "type": "mustNotClaim",
+          "pattern": "^(?![\\s\\S]*(A/C|slash))",
+          "why": "Apart from the slash, Shaz approved this script (#8): any failing check that is not about the slash abbreviation is an invented defect."
         }
       ]
     },
