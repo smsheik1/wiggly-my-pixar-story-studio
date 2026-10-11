@@ -21,6 +21,8 @@
   "tests/gemini-review.test.mjs": 2.2,
   "tests/generation-planner.test.mjs": 0.3,
   "tests/grounded-writing.test.mjs": 0.5,
+  "tests/guidance-pairing.test.mjs": 0.3,
+  "tests/guidance-wiring.test.mjs": 2.5,
   "tests/image-crew-review.test.mjs": 1.1,
   "tests/image-fallback.test.mjs": 3.4,
   "tests/import-sheet.test.mjs": 0.6,

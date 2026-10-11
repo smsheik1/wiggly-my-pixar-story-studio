@@ -1,0 +1,789 @@
+{
+  "version": 1,
+  "craftSha256": "799b1806432a15b1da6e383e4e888702526df398e534d71d0a0adde2ddd338f1",
+  "duplicationBaseline": 52,
+  "files": [
+    {
+      "path": "craft-guide.md#house-style",
+      "kind": "craft",
+      "roles": [
+        "text-reviewer",
+        "cast-designer",
+        "sheet-prompter",
+        "background-product-owner",
+        "pixar-prompter",
+        "composition-writer",
+        "video-prompt-engineer",
+        "visual-reviewer",
+        "scene-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section house-style loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#script-craft",
+      "kind": "craft",
+      "roles": [
+        "script-writer",
+        "text-reviewer",
+        "shot-planner"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section script-craft loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#character-design",
+      "kind": "craft",
+      "roles": [
+        "text-reviewer",
+        "cast-designer",
+        "sheet-prompter",
+        "visual-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section character-design loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#prompt-rules",
+      "kind": "craft",
+      "roles": [
+        "text-reviewer",
+        "cast-designer",
+        "sheet-prompter",
+        "pixar-prompter",
+        "composition-writer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section prompt-rules loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#identity",
+      "kind": "craft",
+      "roles": [
+        "text-reviewer",
+        "cast-designer",
+        "sheet-prompter",
+        "visual-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section identity loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#character-sheet",
+      "kind": "craft",
+      "roles": [
+        "text-reviewer",
+        "sheet-prompter",
+        "visual-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section character-sheet loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#edit-prompts",
+      "kind": "craft",
+      "roles": [
+        "text-reviewer",
+        "sheet-prompter",
+        "pixar-prompter",
+        "composition-writer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section edit-prompts loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#locations",
+      "kind": "craft",
+      "roles": [
+        "text-reviewer",
+        "background-product-owner",
+        "pixar-prompter",
+        "visual-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section locations loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#composition",
+      "kind": "craft",
+      "roles": [
+        "composition-writer",
+        "scene-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section composition loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#video-sources",
+      "kind": "craft",
+      "roles": [
+        "motion-director",
+        "video-prompt-engineer",
+        "scene-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section video-sources loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#video-animation",
+      "kind": "craft",
+      "roles": [
+        "motion-director",
+        "video-prompt-engineer",
+        "scene-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section video-animation loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#video-architecture",
+      "kind": "craft",
+      "roles": [
+        "motion-director",
+        "video-prompt-engineer",
+        "scene-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section video-architecture loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#video-blocks",
+      "kind": "craft",
+      "roles": [
+        "motion-director",
+        "video-prompt-engineer",
+        "scene-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section video-blocks loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#video-transitions",
+      "kind": "craft",
+      "roles": [
+        "motion-director",
+        "video-prompt-engineer",
+        "scene-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section video-transitions loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#video-failures",
+      "kind": "craft",
+      "roles": [
+        "motion-director",
+        "video-prompt-engineer",
+        "scene-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section video-failures loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md#working-method",
+      "kind": "craft",
+      "roles": [
+        "script-writer",
+        "text-reviewer",
+        "cast-designer",
+        "sheet-prompter",
+        "background-product-owner",
+        "pixar-prompter",
+        "composition-writer",
+        "motion-director",
+        "video-prompt-engineer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Craft section working-method loaded into assigned agent packets"
+    },
+    {
+      "path": "craft-guide.md",
+      "kind": "doc",
+      "roles": [],
+      "status": "active",
+      "audience": "human",
+      "owner": "muse",
+      "reason": "Canonical craft guide reference document"
+    },
+    {
+      "path": "crew/leo/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "script-writer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Script writer skill"
+    },
+    {
+      "path": "crew/sage/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Text reviewer skill"
+    },
+    {
+      "path": "crew/cleo/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "cast-designer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Cast designer skill"
+    },
+    {
+      "path": "crew/pia/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "sheet-prompter"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Character sheet prompter skill"
+    },
+    {
+      "path": "crew/sam/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "shot-planner"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Shot planner skill"
+    },
+    {
+      "path": "crew/beau/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "background-product-owner"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Background product owner skill"
+    },
+    {
+      "path": "crew/theo/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "pixar-prompter"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Pixar prompter skill"
+    },
+    {
+      "path": "crew/cam/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "composition-writer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Composition writer skill"
+    },
+    {
+      "path": "crew/mo/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "motion-director"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Motion director skill"
+    },
+    {
+      "path": "crew/vin/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "video-prompt-engineer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Video prompt engineer skill"
+    },
+    {
+      "path": "crew/finn/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "sound-designer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Sound designer skill"
+    },
+    {
+      "path": "crew/eli/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "film-editor"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Film editor skill"
+    },
+    {
+      "path": "crew/max/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "generation-planner"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Generation planner skill"
+    },
+    {
+      "path": "crew/nora/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "voice-director"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Voice director skill"
+    },
+    {
+      "path": "crew/vera/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "visual-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Visual reviewer skill"
+    },
+    {
+      "path": "crew/june/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "scene-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Scene reviewer skill"
+    },
+    {
+      "path": "crew/ava/SKILL.md",
+      "kind": "skill",
+      "roles": [
+        "audio-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Audio reviewer skill"
+    },
+    {
+      "path": "evaluation/rubrics/text.md",
+      "kind": "rubric",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Independent text review rubric"
+    },
+    {
+      "path": "evaluation/rubrics/visual.md",
+      "kind": "rubric",
+      "roles": [
+        "visual-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Independent visual review rubric"
+    },
+    {
+      "path": "evaluation/rubrics/scene.md",
+      "kind": "rubric",
+      "roles": [
+        "scene-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Independent scene review rubric"
+    },
+    {
+      "path": "evaluation/rubrics/audio.md",
+      "kind": "rubric",
+      "roles": [
+        "audio-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Independent audio review rubric"
+    },
+    {
+      "path": "background-prompter.md",
+      "kind": "recipe",
+      "roles": [
+        "pixar-prompter",
+        "background-product-owner",
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Background prompt authoring procedure recipe"
+    },
+    {
+      "path": "character-sheet-recipe.md",
+      "kind": "recipe",
+      "roles": [
+        "sheet-prompter",
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "muse",
+      "reason": "Rev 5 character model sheet authoring recipe"
+    },
+    {
+      "path": "orchestrator-voice.md",
+      "kind": "doc",
+      "roles": [],
+      "status": "active",
+      "audience": "operator",
+      "owner": "muse",
+      "reason": "Producer communication instructions for user dialogue"
+    },
+    {
+      "path": "questionnaire.json",
+      "kind": "doc",
+      "roles": [
+        "script-writer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "operator",
+      "reason": "Questionnaire questions and intake prompts"
+    },
+    {
+      "path": "AGENTS.md",
+      "kind": "doc",
+      "roles": [],
+      "status": "active",
+      "audience": "operator",
+      "owner": "muse",
+      "reason": "Agent guidelines and runtime instructions"
+    },
+    {
+      "path": "README.md",
+      "kind": "doc",
+      "roles": [],
+      "status": "active",
+      "audience": "human",
+      "owner": "muse",
+      "reason": "Kit documentation overview"
+    },
+    {
+      "path": "SKILL.md",
+      "kind": "doc",
+      "roles": [],
+      "status": "active",
+      "audience": "operator",
+      "owner": "muse",
+      "reason": "Operating skill for studio runner"
+    },
+    {
+      "path": "evaluation/README.md",
+      "kind": "doc",
+      "roles": [],
+      "status": "active",
+      "audience": "human",
+      "owner": "muse",
+      "reason": "Evaluation framework documentation"
+    },
+    {
+      "path": "craft-sources/dan-kieft-pixar-prompter.md",
+      "kind": "source",
+      "roles": [],
+      "status": "active",
+      "audience": "human",
+      "owner": "dan",
+      "reason": "Vendored clean source reference for craft provenance"
+    },
+    {
+      "path": "character-prompter.md",
+      "kind": "legacy",
+      "roles": [
+        "cast-designer"
+      ],
+      "status": "legacy",
+      "audience": "legacy",
+      "owner": "muse",
+      "removeBy": "2026-12-31",
+      "reason": "Rev <=4 legacy character prompt recipe; superseded by character-sheet-recipe.md"
+    },
+    {
+      "path": "evaluation/reviewer.md",
+      "kind": "legacy",
+      "roles": [
+        "text-reviewer",
+        "visual-reviewer",
+        "scene-reviewer",
+        "audio-reviewer"
+      ],
+      "status": "legacy",
+      "audience": "legacy",
+      "owner": "agy",
+      "removeBy": "2026-12-31",
+      "reason": "Superseded by per-department rubrics under evaluation/rubrics/"
+    },
+    {
+      "path": "runtime/legacy-instructions.mjs",
+      "kind": "legacy",
+      "roles": [],
+      "status": "legacy",
+      "audience": "legacy",
+      "owner": "agy",
+      "removeBy": "2026-12-31",
+      "reason": "Legacy instructions loader for historical revisions"
+    },
+    {
+      "path": "scripts/studio-spike/format-packages/memoir-v2.0.0.tgz",
+      "kind": "legacy",
+      "roles": [],
+      "status": "legacy",
+      "audience": "legacy",
+      "owner": "operator",
+      "removeBy": "2026-12-31",
+      "reason": "Studio spike format package tarball; kept for CI hash verification"
+    }
+  ],
+  "provenance": [
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§0.1",
+      "rule": "S-DIRECT",
+      "decision": "kept",
+      "reason": "Adapted into script-craft S-DIRECT: choose, order, and emphasise only sourced facts."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§0.2",
+      "rule": "S-QUOTES-VERBATIM",
+      "decision": "kept",
+      "reason": "Dialogue lock is foundational; direct quotes from source kept word for word."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§0.3",
+      "rule": "script-craft",
+      "decision": "kept",
+      "reason": "Four-beat structure and script craft rules adapted into script-craft section."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§0.4",
+      "rule": null,
+      "decision": "dropped",
+      "reason": "Painted storyboards dropped in P14 (open question 4: skip painted storyboards)."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§1",
+      "rule": "character-design",
+      "decision": "kept",
+      "reason": "Core character prompting principles adapted into character-design section."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§2",
+      "rule": "C-TEMPLATE",
+      "decision": "kept",
+      "reason": "Intake character description rules adapted into character-design C-TEMPLATE."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§3",
+      "rule": "character-design",
+      "decision": "kept",
+      "reason": "Silhouette, proportions, head size rules adapted into character-design C-SHAPE and C-EXAGGERATION."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§4",
+      "rule": "character-design",
+      "decision": "kept",
+      "reason": "Seven-part character template adapted into character-design."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§5",
+      "rule": "prompt-rules",
+      "decision": "kept",
+      "reason": "Prompt writing constraints adapted into prompt-rules P-FULL-PROMPT and P-SHORT."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§6",
+      "rule": "C-IDENTITY",
+      "decision": "changed",
+      "reason": "Changed from Dan variation advice to strict identity fidelity preserving skin tone, hair colour, and face from photos."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§7",
+      "rule": "E-ONLY-CHANGES",
+      "decision": "kept",
+      "reason": "Delta-only editing principle adapted into edit-prompts E-ONLY-CHANGES."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§8",
+      "rule": "character-sheet",
+      "decision": "kept",
+      "reason": "Format B turnaround, fixed eight expressions, and failure table adapted into character-sheet section."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§9",
+      "rule": "locations",
+      "decision": "kept",
+      "reason": "Adapted into locations section: lived-in story dressing, muted palette with one saturated accent (Decision 5)."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§10",
+      "rule": "V-SOURCES",
+      "decision": "kept",
+      "reason": "Video generation conditioning hierarchy adapted into video-sources section."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§11",
+      "rule": "video-animation",
+      "decision": "kept",
+      "reason": "Motion design and physics rules adapted into video-animation section."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§12",
+      "rule": "video-architecture",
+      "decision": "kept",
+      "reason": "Structured video prompting format adapted into video-architecture section."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§13",
+      "rule": "V-ONE-SHOT",
+      "decision": "kept",
+      "reason": "Single continuous shot mandate per clip adapted into V-ONE-SHOT."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§14",
+      "rule": "video-architecture",
+      "decision": "kept",
+      "reason": "Shot block layout and timecode timing rules adapted into video-architecture."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§15",
+      "rule": "video-blocks",
+      "decision": "kept",
+      "reason": "Block parameters and exclusion rules adapted into video-blocks section."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§16",
+      "rule": "V-TRANSITIONS",
+      "decision": "kept",
+      "reason": "Cut continuity and transition rules adapted into video-transitions section."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§17",
+      "rule": "V-FAILURES",
+      "decision": "kept",
+      "reason": "Temporal defect rejection table adapted into video-failures section."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§18",
+      "rule": "working-method",
+      "decision": "kept",
+      "reason": "Full update deliverables and delta change summaries adapted into working-method section."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§19",
+      "rule": "working-method",
+      "decision": "kept",
+      "reason": "Pre-send authoring verification checklist adapted into working-method rules."
+    }
+  ],
+  "allowlist": [
+    {
+      "path": "crew/mo/SKILL.md",
+      "term": "seedance-mini-480p",
+      "reason": "config-tied production profile identifier"
+    },
+    {
+      "path": "crew/mo/SKILL.md",
+      "term": "legacy-seedance-hd",
+      "reason": "config-tied legacy profile identifier"
+    },
+    {
+      "path": "crew/max/SKILL.md",
+      "term": "Seedance",
+      "reason": "generation planner Replicate provider name"
+    }
+  ]
+}
