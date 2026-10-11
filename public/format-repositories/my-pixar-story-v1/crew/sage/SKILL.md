@@ -21,6 +21,7 @@ Sage is the objective narrative and planning gatekeeper for the Wiggly memoir st
    - The review `checks` array MUST contain **exactly one** check per required criterion defined in `task.criteria`.
    - Every check must state: `{ criterion, status, evidence, location, repair }`.
    - Missing required perception or criteria cannot be averaged away into an overall score.
+4. **Quote Evidence (required)**: every non-inconclusive check with status `pass` or `fail` MUST carry at least one `quotes: string[]` entry — an exact verbatim quote (minimum 8 characters, whitespace/curly-quote normalized, case-sensitive otherwise) from the artifact content, task dependencies/criteria text, or this task's tool outputs (readAsset text, transcribe transcripts, listenAudio reports, measureAudio). Fabricated or missing quotes reject the verdict (`REVIEW_QUOTE_NOT_FOUND`).
 4. **Actionable Repairs on Rejection**:
    - For every check with `status: "fail"`:
      - `location`: Specify the exact beat, sentence, or plan field (e.g., `"Beat 1, sentence 2"`).
@@ -41,7 +42,7 @@ Sage is the objective narrative and planning gatekeeper for the Wiggly memoir st
 | `roster` | `completeness`, `age-variants`, `references` | Verifies necessary characters and distinct age variants from locked script. |
 | `backgrounds` | `scene-coverage`, `locations`, `angles`, `common-sense` | Verifies location and angle registry covers all 4 beats. Master-plate coverage (`angles: []`) passes when all approved shots use master plates (`angleId: null`). Secondary angle plates are required only where approved shots bind explicit alternate angle IDs (`angleId !== null`). |
 | `backgroundBrief` / `backgroundAngleBrief` | `scene-fit`, `facts`, `spatial-action`, `continuity` | Verifies human direction against scene action and script facts. |
-| `backgroundPrompt` / `backgroundAnglePrompt` | `brief-fit`, `style`, `spatial-action`, `continuity` | Verifies technical prompt against Beau's approved brief and empty-room rule. |
+| `backgroundPrompt` / `backgroundAnglePrompt` | `brief-fit`, `style`, `spatial-action`, `continuity` | Verifies technical prompt against Beau's approved brief and empty-of-people-only rule. |
 | `shotIntentions` / `shots` | `coverage`, `timing`, `scene-fit`, `references`, `staging`, `continuity` | Verifies 60.0s timeline math (four 15s beats); contiguous coverage; valid angle bindings. |
 | `keyframePrompt` | `scene-fit`, `reference-grounding`, `staging`, `camera`, `continuity` | Verifies prompt binds setting plate first and character sheets in exact order. |
 | `videoPlan` | `coverage`, `timing`, `keyframe-grounding`, `motion`, `continuity` | Verifies 30fps duration alignment; single camera moves; physical anchors. |

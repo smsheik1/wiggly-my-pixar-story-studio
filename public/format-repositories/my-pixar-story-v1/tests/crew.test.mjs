@@ -70,7 +70,7 @@ test('automated media verdicts require successful connected tools, not bare perc
   const path=join(dir,'tone.wav');execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=700:duration=0.15',path]);const file=await importMedia(path,dir);
   const p=soundLocked();p.step='music';p.gate='review';p.crew=crew;p.artifacts.push({id:'music@1',key:'music',kind:'music',valid:true,authoredBy:'composer',digest:'isolated-music',content:{files:[file]}});
   const task=taskFor(p),worker=task.crewWorker;
-  const verdict=()=>event(p,'review',{workerId:worker.workerId,artifactId:'music@1',artifactDigest:'isolated-music',review:{decision:'approved',perception:'direct-audio',modelVersion:worker.modelVersion,capabilityVersion:worker.capabilityVersion,checks:task.criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED tool protocol only',location:'whole fixture'}))}});
+   const verdict=()=>event(p,'review',{workerId:worker.workerId,artifactId:'music@1',artifactDigest:'isolated-music',review:{decision:'approved',perception:'direct-audio',modelVersion:worker.modelVersion,capabilityVersion:worker.capabilityVersion,checks:task.criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED tool protocol only',location:'whole fixture',quotes:[file.sha256.slice(0,16)]}))}});
   await assert.rejects(runCrewTask(p,task,{runTask:async()=>verdict()}),/PERCEPTION_NOT_PERFORMED/);
   const host={tools:{listenAudio:async()=>({perception:'direct-audio',seconds:0.01})},runTask:async(_task,{callTool})=>{await callTool('listenAudio',{sha256:file.sha256});return verdict();}};
   await assert.rejects(runCrewTask(p,task,host),/PERCEPTION_NOT_PERFORMED/);
@@ -82,7 +82,7 @@ test('audition measurements bind actual tool outputs; a writer cannot substitute
  const dir=await mkdtemp(join(tmpdir(),'memoir-grounded-stt-'));try{
   const output=join(dir,'tone.wav'),source=join(dir,'sample.wav');execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=400:duration=0.15',output]);execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=600:duration=10',source]);const file=await importMedia(output,dir),sample=await importMedia(source,dir);
   const p=audioProject();p.step='audition';p.gate='review';current(p,'voiceSample').content.files=[sample];const a=current(p);a.content.files=[file];a.digest=digest(a.content);const q=current(p,'audioReviewerQualification').content;p.crew={workers:crew.workers.map(w=>w.role==='audio-reviewer'?{...w,workerId:q.workerId,modelVersion:q.modelVersion,capabilityVersion:q.capabilityVersion}:w)};const task=taskFor(p);
-  const host={tools:{listenAudio:async()=>({perception:'direct-audio',seconds:file.durationSeconds}),transcribe:async()=>({transcript:'Words were skipped',method:'ISOLATED STT'}),speakerSimilarity:async()=>({score:0.1,method:'ISOLATED embedding',calibrationNotes:'ISOLATED protocol test'})},runTask:async(_task,{worker,callTool})=>{for(const tool of ['listenAudio','measureAudio','transcribe','speakerSimilarity'])await callTool(tool,{sha256:file.sha256,referenceSha256:sample.sha256});return event(p,'review',{workerId:worker.workerId,artifactId:a.id,artifactDigest:a.digest,review:{decision:'approved',perception:'direct-audio',modelVersion:worker.modelVersion,capabilityVersion:worker.capabilityVersion,coverage:{artifactSha256:file.sha256,audioFiles:[{sha256:file.sha256,seconds:file.durationSeconds}]},checks:task.criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED improper writer assumption',location:'whole fixture'})),measurements:{transcripts:[script.beats[0].narration],speakerSimilarity:0.99}}});}};
+  const host={tools:{listenAudio:async()=>({perception:'direct-audio',seconds:file.durationSeconds}),transcribe:async()=>({transcript:'Words were skipped',method:'ISOLATED STT'}),speakerSimilarity:async()=>({score:0.1,method:'ISOLATED embedding',calibrationNotes:'ISOLATED protocol test'})},runTask:async(_task,{worker,callTool})=>{for(const tool of ['listenAudio','measureAudio','transcribe','speakerSimilarity'])await callTool(tool,{sha256:file.sha256,referenceSha256:sample.sha256});return event(p,'review',{workerId:worker.workerId,artifactId:a.id,artifactDigest:a.digest,review:{decision:'approved',perception:'direct-audio',modelVersion:worker.modelVersion,capabilityVersion:worker.capabilityVersion,coverage:{artifactSha256:file.sha256,audioFiles:[{sha256:file.sha256,seconds:file.durationSeconds}]},checks:task.criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED improper writer assumption',location:'whole fixture',quotes:['Words were skipped']})),measurements:{transcripts:[script.beats[0].narration],speakerSimilarity:0.99}}});}};
   const result=await runCrewTask(p,task,host);assert.deepEqual(result.review.measurements.transcripts,['Words were skipped']);assert.equal(result.review.measurements.speakerSimilarity,0.1);assert.throws(()=>applyEvent(p,result),/differs from the locked script/);
  }finally{await rm(dir,{recursive:true});}
 });
@@ -140,7 +140,7 @@ test('safety logic matches expected bounds', async () => {
      const r = event(p, 'review', {workerId: worker.workerId, artifactId: a.id, artifactDigest: a.digest, review: {
        decision, perception: 'direct-audio', modelVersion: worker.modelVersion, capabilityVersion: worker.capabilityVersion,
       coverage: {artifactSha256: file.sha256, audioFiles: [{sha256: file.sha256, seconds: file.durationSeconds}]},
-      checks: task.criteria.map(c => ({criterion: c, status: c === 'safety' ? safeStatus : 'pass', evidence: 'ISOLATED', location: 'whole fixture'})),
+      checks: task.criteria.map(c => ({criterion: c, status: c === 'safety' ? safeStatus : 'pass', evidence: 'ISOLATED', location: 'whole fixture', quotes: [script.beats[0].narration.slice(0,24)]})),
       measurements: {transcripts: [script.beats[0].narration]}
     }});
     r.review.measurements.identityBasis = 'recorded-reference';
@@ -169,13 +169,13 @@ test('safety logic matches expected bounds', async () => {
 
 test('review-gate runCrewTask fills missing model/capability versions from the assigned worker',async()=>{
  let p=bind(initialProject('crew-versions',inputs,{workflowRevision:2}));p=send(p,'artifact',{workerId:'host-script-writer',content:script});const task=taskFor(p),worker=task.crewWorker;
- const result=await runCrewTask(p,task,{runTask:async()=>event(p,'review',{workerId:worker.workerId,artifactId:current(p).id,artifactDigest:current(p).digest,review:{decision:'approved',perception:'direct-text',checks:task.criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED',location:'whole'}))}})});
+  const result=await runCrewTask(p,task,{runTask:async()=>event(p,'review',{workerId:worker.workerId,artifactId:current(p).id,artifactDigest:current(p).digest,review:{decision:'approved',perception:'direct-text',checks:task.criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED',location:'whole',quotes:[script.beats[0].narration.slice(0,24)]}))}})});
  assert.equal(result.workerId,worker.workerId);assert.equal(result.review.modelVersion,worker.modelVersion);assert.equal(result.review.capabilityVersion,worker.capabilityVersion);
 });
 
 test('all-pass review marked provisional is a bounded-repair rejection on the crew path',async()=>{
  let p=bind(initialProject('crew-verdict',inputs,{workflowRevision:2}));p=send(p,'artifact',{workerId:'host-script-writer',content:script});const task=taskFor(p),worker=task.crewWorker;
- const review=decision=>event(p,'review',{workerId:worker.workerId,artifactId:current(p).id,artifactDigest:current(p).digest,review:{decision,perception:'direct-text',modelVersion:worker.modelVersion,capabilityVersion:worker.capabilityVersion,checks:task.criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED',location:'whole'}))}});
+  const review=decision=>event(p,'review',{workerId:worker.workerId,artifactId:current(p).id,artifactDigest:current(p).digest,review:{decision,perception:'direct-text',modelVersion:worker.modelVersion,capabilityVersion:worker.capabilityVersion,checks:task.criteria.map(criterion=>({criterion,status:'pass',evidence:'ISOLATED',location:'whole',quotes:[script.beats[0].narration.slice(0,24)]}))}});
  await assert.rejects(runCrewTask(p,task,{runTask:async()=>review('provisional')}),e=>e.knownFinished&&/REVIEW_VERDICT_MISMATCH/.test(e.message));
  const result=await runCrewTask(p,task,{runTask:async()=>review('approved')});assert.equal(result.review.decision,'approved');assert.equal(applyEvent(p,result).gate,'human');
 });

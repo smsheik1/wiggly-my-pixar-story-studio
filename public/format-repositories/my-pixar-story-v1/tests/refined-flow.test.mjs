@@ -109,7 +109,7 @@ test('native character prompt author and Sage reviewer must actually view every 
   await assert.rejects(runCrewTask(p,task,{runTask:async()=>submission}),/CHARACTER_REFERENCES_NOT_VIEWED/);
   const host={tools:{viewImage:async()=>({perception:'direct-image'})},runTask:async(_task,{callTool})=>{await callTool('viewImage',{sha256:photo.sha256});return submission;}};
   p=applyEvent(p,await runCrewTask(p,task,host));task=taskFor(p);assert.equal(task.formatRole,'text-reviewer');
-  submission={taskId:task.taskId,action:'review',actor:'reviewer',workerId:task.crewWorker.workerId,artifactId:task.artifact.id,artifactDigest:task.artifact.digest,review:{decision:'approved',perception:'direct-text',modelVersion:'ISOLATED',capabilityVersion:'ISOLATED',checks:task.criteria.map(criterion=>({criterion,status:'pass',location:'ISOLATED',evidence:'ISOLATED reference inspection'}))}};
+   submission={taskId:task.taskId,action:'review',actor:'reviewer',workerId:task.crewWorker.workerId,artifactId:task.artifact.id,artifactDigest:task.artifact.digest,review:{decision:'approved',perception:'direct-text',modelVersion:'ISOLATED',capabilityVersion:'ISOLATED',checks:task.criteria.map(criterion=>({criterion,status:'pass',location:'ISOLATED',evidence:'ISOLATED reference inspection',quotes:['Exact full-body character design']}))}};
   await assert.rejects(runCrewTask(p,task,{runTask:async()=>submission}),/CHARACTER_REFERENCES_NOT_VIEWED/);
   const seen=await runCrewTask(p,task,host);assert.equal(seen.review.toolEvidence[0].sha256,photo.sha256);assert.equal(applyEvent(p,seen).gate,'human');
  }finally{await rm(dir,{recursive:true});}

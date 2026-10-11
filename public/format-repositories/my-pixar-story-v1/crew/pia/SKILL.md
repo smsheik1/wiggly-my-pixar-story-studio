@@ -29,7 +29,8 @@ Pia is the prompt engineer and visual staging specialist for the Wiggly memoir s
 3. Formulate the prompt according to `character-sheet-recipe.md`:
    - Specify neutral grey studio backdrop and soft three-point lighting.
    - Specify top row: 4 full-body poses matching the exact turnaround tuple `["front", "three-quarter", "profile", "back"]`.
-   - Specify bottom rows: 8 expressive portraits with named emotional states (e.g., neutral, warm smile, joy, thoughtful, determined, gentle surprise, concerned, mischievous).
+   - Specify bottom rows: 8 expressive portraits with named emotional states (e.g., neutral, warm smile, joy, thoughtful, determined, gentle surprise, concerned, mischievous). Name each expression explicitly in the authored prompt for the model, but the names must never be rendered as text in the image.
+   - State the no-text clause in every prompt: no text, labels, captions, expression names or watermarks anywhere in the image.
    - Require feature-quality stylized 3D CG materials with subsurface scattering and tactile fabric textures.
 4. Return an `artifact` Event with `kind: "sheetPrompt"`.
 
@@ -82,7 +83,7 @@ viewImage({ "sha256": "c111222333444555666777888999aaabbbcccdddeeefff00011122233
   "action": "artifact",
   "workerId": "pia-host-01",
   "content": {
-    "prompt": "Cinematic 3D animation character model sheet of an 8-year-old child with curly dark-brown hair, warm hazel eyes, subtle freckles, wearing washed denim overalls over an ochre yellow striped t-shirt and scuffed red canvas sneakers. Neutral light grey studio background, even soft lighting, zero environment clutter. Top row: four matching full-body neutral T-poses showing front view, three-quarter view, profile side view, and back view; head, hands, feet fully visible and uncropped. Bottom section: two rows of four matching head-and-shoulders expressive portraits showing neutral, warm smile, pure joy, thoughtful concentration, determined grit, gentle surprise, tender concern, and playful mischief. Stylized 3D digital animation render, clean subsurface scattering, tactile fabric textures, RenderMan aesthetic.",
+    "prompt": "Cinematic 3D animation character model sheet of an 8-year-old child with curly dark-brown hair, warm hazel eyes, subtle freckles, wearing washed denim overalls over an ochre yellow striped t-shirt and scuffed red canvas sneakers. Neutral light grey studio background, even soft lighting, zero environment clutter. Top row: four matching full-body neutral T-poses showing front view, three-quarter view, profile side view, and back view; head, hands, feet fully visible and uncropped. Bottom section: two rows of four matching head-and-shoulders expressive portraits showing neutral, warm smile, pure joy, thoughtful concentration, determined grit, gentle surprise, tender concern, and playful mischief. No text, labels, captions, expression names or watermarks anywhere in the image. Stylized 3D digital animation render, clean subsurface scattering, tactile fabric textures, RenderMan aesthetic.",
     "recipeSha256": "4b92d6e38a201bcf5c110992a7e4b9d034f59048f72365922718ec3205739db8",
     "referenceSha256": "c111222333444555666777888999aaabbbcccdddeeefff000111222333444555",
     "turnaround": ["front", "three-quarter", "profile", "back"],

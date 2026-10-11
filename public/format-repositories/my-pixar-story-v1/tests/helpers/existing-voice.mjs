@@ -38,7 +38,8 @@ export function reviewEvent(p) {
         status: criterion === 'voice-match' ? 'inconclusive' : 'pass',
         evidence: criterion === 'voice-match' ? 'ISOLATED: no original recording; actual human must recognize their voice.' : 'ISOLATED mock check',
         location: 'whole fixture',
-        repair: ''
+        repair: '',
+        quotes: [draft.beats[0].narration.slice(0,24)],
       })),
       measurements: {
         identityBasis: 'human-recognition',

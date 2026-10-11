@@ -7,8 +7,8 @@ export function backgroundProject() {
   let p = audioProject();
   p = approved(reviewed(send(p, 'artifact', { workerId: 'cast-owner', content: { characters: [{ id: 'alex', name: 'Alex', ageVariant: 'adult', important: true, references: [image(1)], notes: 'isolated fixture' }] } })));
   p = approved(reviewed(produce(p, { files: [1,2,3].map(sheetImage), prompt: 'character' })), { selection: 0 });
-  p = reviewed(send(p, 'artifact', { workerId: 'sheet-writer', content: { prompt: 'sheet', recipeSha256: characterRecipeSha256, referenceSha256: image(1).sha256, turnaround: ['front','three-quarter','profile','back'], expressions: Array(8).fill('expression') } }));
-  return approved(reviewed(produce(p, { files: [sheetImage(4)], prompt: 'sheet' })));
+  p = reviewed(send(p, 'artifact', { workerId: 'sheet-writer', content: { prompt: 'Sheet with no text, labels, captions, expression names or watermarks anywhere in the image.', recipeSha256: characterRecipeSha256, referenceSha256: image(1).sha256, turnaround: ['front','three-quarter','profile','back'], expressions: Array(8).fill('expression') } }));
+  return approved(reviewed(produce(p, { files: [sheetImage(4)], prompt: 'Sheet with no text, labels, captions, expression names or watermarks anywhere in the image.' })));
 }
 export const registry = { locations: ['home', 'shop'].map((id,i) => ({ id, name: id, scenes: [1,2].map((_,j) => ({ id: `${id}-${j}`, beat: i*2+j+1, description: 'A remembered bicycle repair.', action: 'Space to hold a bicycle.', characterIds: ['alex'], sourceAnswers: [] })), angles: [{ id: 'reverse', sceneIds: [`${id}-0`], direction: 'Reverse view preserving bicycle space.' }] })) };
 export const author = (p, content, workerId = 'background-owner') => send(p, 'artifact', { workerId, content });
