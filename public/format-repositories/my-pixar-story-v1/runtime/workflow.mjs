@@ -35,6 +35,15 @@ const location = p => current(p, 'backgrounds')?.content.locations.find(l => l.i
 const briefKey = p => `${p.step === 'backgroundAnglePrompt' ? 'backgroundAngleBrief' : 'backgroundBrief'}:${p.locationId}${p.step === 'backgroundAnglePrompt' ? ':' + p.angleId : ''}`;
 const promptKey = p => `${p.step === 'backgroundAngle' ? 'backgroundAnglePrompt' : 'backgroundPrompt'}:${p.locationId}${p.step === 'backgroundAngle' ? ':' + p.angleId : ''}`;
 const isPrompt = p => ['backgroundPrompt', 'backgroundAnglePrompt'].includes(p.step);
+// The brief owner for prompt owner-review. Normally the brief's author. If an
+// explicit crew rebind (crew-refresh after refresh-crew-models) replaced that
+// worker, the owner is the worker now bound to the author's recorded role;
+// any other worker, including other roles, is never the owner.
+function briefOwner(p, brief) {
+  if (!brief || !p.crew || p.crew.workers.some(w => w.workerId === brief.authoredBy)) return brief?.authoredBy;
+  const role = p.history.findLast(h => h.action === 'artifact' && h.artifactId === brief.id)?.worker?.role;
+  return (role && p.crew.workers.find(w => w.role === role)?.workerId) ?? brief.authoredBy;
+}
 const audioEditingEnabled=p=>studioFor(p)?.config.agents['voice-director'].tools.includes('renderAudioEdit');
 export function initialProject(id, inputs, options = {}) {
   const workflowRevision=options.workflowRevision ?? (options.reviewMode==='qualified'?2:5),studio=options.studio??loadStudio();
@@ -213,7 +222,7 @@ export function validateArtifactContent(p, content, author, previous=current(p))
   }
   if (isPrompt(p)) {
     const brief = current(p, briefKey(p));
-    if (!locked(p, brief.key) || author === brief.authoredBy || parsed.briefDigest !== brief.digest || parsed.recipeSha256 !== recipeFor(p,p.step,{sha256:backgroundRecipeSha256}).sha256) throw new Error('Prompter must be distinct from owner and bind the approved brief and packaged Pixar recipe.');
+    if (!locked(p, brief.key) || author === brief.authoredBy || author === briefOwner(p, brief) || parsed.briefDigest !== brief.digest || parsed.recipeSha256 !== recipeFor(p,p.step,{sha256:backgroundRecipeSha256}).sha256) throw new Error('Prompter must be distinct from owner and bind the approved brief and packaged Pixar recipe.');
   }
   if (['backgroundCandidates', 'backgroundAngle'].includes(p.step) && parsed.files.some(f => Math.abs(f.width / f.height - 16 / 9) > 0.03)) throw new Error('Background plates must be measured 16:9 widescreen.');
   if (['backgroundCandidates', 'backgroundAngle'].includes(p.step) && parsed.prompt !== current(p, promptKey(p)).content.prompt) throw new Error('Background must use the approved prompt exactly.');
@@ -342,7 +351,7 @@ export function taskFor(p) {
     approvedScript: current(p, 'script') ?? null, inputPriority: ['characterPrompt','candidates','sheetPrompt','sheet'].includes(p.step)?['approvedScript','castEntry','castEntry.references','inputs.answers']:['immediateScenes', 'approvedScript', 'inputs.answers'],
     ...(p.step==='characterPrompt'?{recipe:sheetWorkflow(p)?recipeFor(p,'sheetPrompt',{content:characterRecipe,sha256:characterRecipeSha256}):recipeFor(p,'characterPrompt',{content:characterPromptRecipe,sha256:characterPromptRecipeSha256})}:{}),
     ...(p.step==='sheetPrompt'?{recipe:recipeFor(p,'sheetPrompt',{content:characterRecipe,sha256:characterRecipeSha256})}:{}),
-    ...(isPrompt(p) ? { recipe: recipeFor(p,p.step,{content:backgroundRecipe,sha256:backgroundRecipeSha256}), ownerWorkerId: current(p, briefKey(p))?.authoredBy } : {}),
+    ...(isPrompt(p) ? { recipe: recipeFor(p,p.step,{content:backgroundRecipe,sha256:backgroundRecipeSha256}), ownerWorkerId: briefOwner(p, current(p, briefKey(p))) } : {}),
     ...(p.step==='videoPrompt'||p.step==='video'?{videoBinding:videoBinding(p)}:{}),
     ...(p.step==='music'?{soundDirection:current(p,'soundPlan').content.music}:p.step==='effect'?{soundDirection:effectFor(p)}:{}),
     actor: p.gate === 'review' ? 'reviewer' : ['human', 'authorize', 'escalate'].includes(p.gate) ? 'human' : 'agent',
@@ -665,7 +674,7 @@ export function applyEvent(project, raw) {
     requiredActor(e, ownerReview ? 'agent' : 'reviewer');
     const a = current(p);
     if (p.gate !== (ownerReview ? 'owner-review' : 'review') || !a || e.artifactId !== a.id || e.artifactDigest !== a.digest || !e.workerId || e.workerId === a.authoredBy) throw new Error('Review must bind the current artifact and use a distinct reviewer worker.');
-    if (isPrompt(p) && (ownerReview ? e.workerId !== current(p, briefKey(p)).authoredBy : e.workerId === current(p, briefKey(p)).authoredBy || a.ownerReview?.decision !== 'approved')) throw new Error('Prompt requires the original owner check followed by a distinct independent reviewer.');
+    if (isPrompt(p) && (() => { const brief = current(p, briefKey(p)), owner = briefOwner(p, brief); return ownerReview ? e.workerId !== owner : e.workerId === brief.authoredBy || e.workerId === owner || a.ownerReview?.decision !== 'approved'; })()) throw new Error('Prompt requires the original owner check followed by a distinct independent reviewer.');
     const r = Review.parse(e.review);
     if(r.perception==='crew-review')throw new Error('Crew review must not be asserted as an automated review perception.');
     if(['audition','narration'].includes(p.step)&&voiceBasis(p).kind==='existing-clone'){
