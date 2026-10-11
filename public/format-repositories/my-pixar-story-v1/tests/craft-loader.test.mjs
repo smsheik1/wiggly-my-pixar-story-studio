@@ -217,7 +217,9 @@ test('6. bible default style: compileBible extracts style from pinned house-styl
   const house = rulesOf('house-style');
   assert.equal(compiled.style.look, house.find(r => r.id === 'H-STYLE').text);
   assert.equal(compiled.style.sets, rulesOf('locations').find(r => r.id === 'L-SETS-DEFAULT').text);
-  assert.deepEqual(compiled.style.rules, [...house.filter(r => r.id !== 'H-STYLE').map(r => r.text), ...PIPELINE_STYLE_RULES]);
+  const minText = rulesOf('locations').find(r => r.id === 'L-MIN-TEXT').text;
+  assert.deepEqual(compiled.style.rules, [...house.filter(r => r.id !== 'H-STYLE').map(r => r.text), ...PIPELINE_STYLE_RULES, `Location plates: ${minText}`]);
+  assert.ok(compiled.style.rules.some(r => /no text.*character sheets and keyframes/i.test(r)), 'sheets and keyframes never carry text (Shaz)');
   assert.ok(!/pixar/i.test(JSON.stringify(compiled.style)), 'craft-era bible style never names the studio');
 
   // A craft snapshot missing H-STYLE fails loudly instead of falling back

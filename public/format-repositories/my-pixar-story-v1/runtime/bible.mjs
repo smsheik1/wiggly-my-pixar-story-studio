@@ -147,7 +147,7 @@ export const LEGACY_DEFAULT_STYLE = {
   rules: ['No text, letters, numbers, logos or signage anywhere in images.', 'Characters are composited later: background plates contain zero people.', 'Every character keeps the exact locked sheet design, wardrobe and props in every shot.'],
 };
 // Pipeline invariants, not craft: they hold for every craft-era bible regardless of guide wording.
-export const PIPELINE_STYLE_RULES = ['Characters are composited later: background plates contain zero people.', 'Every character keeps the exact locked sheet design, wardrobe and props in every shot.'];
+export const PIPELINE_STYLE_RULES = ['No text, letters, numbers, logos or signage anywhere in character sheets and keyframes.', 'Characters are composited later: background plates contain zero people.', 'Every character keeps the exact locked sheet design, wardrobe and props in every shot.'];
 const RULE_LINE = /^-\s*\[([A-Z0-9_-]+)\](?:\s*\([^)]*\))?\s*(.*)$/;
 const ruleLines = content => content.split('\n').map(l => l.trim().match(RULE_LINE)).filter(Boolean).map(m => ({ id: m[1], text: m[2].trim() }));
 
@@ -167,7 +167,10 @@ export function defaultStyle(studio) {
   const sets = locations.find(r => r.id === 'L-SETS-DEFAULT')?.text;
   if (!look) throw new Error('BIBLE_STYLE_MISSING: [H-STYLE] not found in craft section house-style.');
   if (!sets) throw new Error('BIBLE_STYLE_MISSING: [L-SETS-DEFAULT] not found in craft section locations.');
-  return { look, sets, rules: [...house.filter(r => r.id !== 'H-STYLE').map(r => r.text), ...PIPELINE_STYLE_RULES] };
+  const minText = locations.find(r => r.id === 'L-MIN-TEXT')?.text;
+  if (!minText) throw new Error('BIBLE_STYLE_MISSING: [L-MIN-TEXT] not found in craft section locations.');
+  // Location plates follow the guide's minimal-text rule; sheets and keyframes never carry text.
+  return { look, sets, rules: [...house.filter(r => r.id !== 'H-STYLE').map(r => r.text), ...PIPELINE_STYLE_RULES, `Location plates: ${minText}`] };
 }
 
 export function compileBible(p) {
