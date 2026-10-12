@@ -79,3 +79,32 @@ test('LangGraph Studio entry exports the runner graph and langgraph.json points 
  assert.equal(cfg.graphs['wiggly-my-pixar-story'],'./runtime/studio-graph.mjs:graph');
  assert.equal(cfg.env,'./secrets.env');
 });
+
+test('audio transcript quotes are attached by the runtime from transcribe output',{timeout:10000},async()=>{
+ const {verifyReviewQuotes}=await import('../runtime/crew.mjs');
+ const files=[{sha256:'a'.repeat(64)},{sha256:'b'.repeat(64)}];
+ const outputs=new Map([[`transcribe:${files[0].sha256}`,{transcript:'At home I watched Yu-Gi-Oh! GX.'}],[`transcribe:${files[1].sha256}`,{transcript:'50,000 felt like six figures.'}]]);
+ const task={step:'narration',artifact:{content:{files}}};
+ const review={decision:'approved',checks:[{criterion:'transcript',status:'pass',quotes:['Shaz (standing r4 instruction: feedback note)']}]};
+ verifyReviewQuotes({role:'audio-reviewer',task,review,outputs});
+ assert.deepEqual(review.checks[0].quotes,['At home I watched Yu-Gi-Oh! GX.','50,000 felt like six figures.']);
+ // Other criteria still need the reviewer's own valid quotes.
+ const bad={decision:'approved',checks:[{criterion:'delivery',status:'pass',quotes:['Shaz feedback note text']}]};
+ assert.throws(()=>verifyReviewQuotes({role:'audio-reviewer',task,review:bad,outputs}),/REVIEW_QUOTE_NOT_FOUND/);
+});
+
+test('repair retries re-run required audio perception through the broker',{timeout:10000},async()=>{
+ const {reuseRepairPerception}=await import('../runtime/crew.mjs');
+ const p={reviewMode:'supervised'},files=[{sha256:'a'.repeat(64)},{sha256:'b'.repeat(64)}];
+ const calls=[];const callTool=async(tool,args)=>{calls.push(`${tool}:${args.sha256[0]}`);return {};};
+ const base={step:'narration',gate:'review',artifact:{content:{files}}};
+ assert.deepEqual(await reuseRepairPerception(p,base,{role:'audio-reviewer'},callTool),[]);
+ const reused=await reuseRepairPerception(p,{...base,repairFeedback:{error:'x'}},{role:'audio-reviewer'},callTool);
+ assert.equal(reused.length,6);assert.deepEqual(calls.sort(),['listenAudio:a','listenAudio:b','measureAudio:a','measureAudio:b','transcribe:a','transcribe:b']);
+ assert.deepEqual(await reuseRepairPerception(p,{...base,repairFeedback:{error:'x'}},{role:'scene-reviewer'},callTool),[]);
+});
+
+test('drive defaults: perception estimates exist and are positive',{timeout:10000},async()=>{
+ const {PERCEPTION_ESTIMATES_USD}=await import('../runtime/budget.mjs');
+ assert.equal(PERCEPTION_ESTIMATES_USD.review,0.02);assert.equal(PERCEPTION_ESTIMATES_USD.transcription,0.005);
+});

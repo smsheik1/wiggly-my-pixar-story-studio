@@ -12,3 +12,6 @@ export function requireBudget(p,cost){
  if(cost===0)return;
  if(spendSummary(p).totalReservedUsd+cost>(p.budget?.maxCostUsd??0)+1e-9)throw new Error('PROJECT_BUDGET_EXCEEDED: no provider request is permitted; obtain an explicit human budget increase.');
 }
+// Default per-call estimates for metered perception when a drive omits the flags
+// (Gemini listening/watching review, Cartesia batch STT). Explicit flags win.
+export const PERCEPTION_ESTIMATES_USD = Object.freeze({ review: 0.02, transcription: 0.005 });

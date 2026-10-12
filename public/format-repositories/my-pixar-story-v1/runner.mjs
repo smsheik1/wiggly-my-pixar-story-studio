@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import {loadStudio,studioFor,limitsFor,communicationFor} from './runtime/instructions.mjs';
+import { PERCEPTION_ESTIMATES_USD } from './runtime/budget.mjs';
 import {assertDebugReady,debugSnapshot} from './runtime/debug.mjs';
 import { readFile, mkdir, writeFile, unlink, cp, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { resolve, join, dirname, basename } from 'node:path';
@@ -425,8 +426,12 @@ async function main() {
     if(command==='debug-inspect'){if(args.length)throw new Error('Unknown debug-inspect arguments.');print(await debugSnapshot(status,runDir));return;}
     if(['dispatch-reconcile','crew-start','crew-refresh','drive-codex','work-codex'].includes(command)){
       const reviewCalls=Number(option('review-calls','0'));
-      const transcriptionCalls=Number(option('transcription-calls','0'));
-      const reviewCost=Number(option('review-cost-usd','0')),transcriptionCost=Number(option('transcription-cost-usd','0'));
+      // Defaults so a drive cannot silently block Ava's tools: one STT call per
+      // current audio file (x3 finished attempts) on audition/narration, and the
+      // configured per-call estimates. Explicit flags still win.
+      const audioFiles=['audition','narration'].includes(status.pending?.step)?(current(status.project,status.pending.step)?.content?.files?.length??0):0;
+      const transcriptionCalls=Number(option('transcription-calls',String(Math.min(32,audioFiles*limitsFor(status.project).finishedWorkerAttempts))));
+      const reviewCost=Number(option('review-cost-usd',String(PERCEPTION_ESTIMATES_USD.review))),transcriptionCost=Number(option('transcription-cost-usd',String(PERCEPTION_ESTIMATES_USD.transcription)));
       // Optional live LangSmith tracing: enabled only with LANGSMITH_API_KEY in
       // the --secrets file; off when WIGGLY_TRACING=off or no key. Never breaks a run.
       let budgetQueue=Promise.resolve();
