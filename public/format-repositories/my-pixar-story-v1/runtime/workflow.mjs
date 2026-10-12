@@ -153,7 +153,8 @@ function next(p) {
 // (source 'script') word for word, normalized exactly like verifyReviewQuotes.
 // Plain-string entries are pre-P16 briefs and stay loadable without verification.
 function verifyKnownDetails(p, parsed) {
-  const answers = current(p, 'answers')?.content.inputs.answers ?? null;
+  const inputs = current(p, 'answers')?.content.inputs ?? p.inputs;
+  const answers = inputs.answers ?? null;
   const scriptHay = [];
   const collect = v => { if (typeof v === 'string') scriptHay.push(normalizeQuote(v)); else if (Array.isArray(v)) v.forEach(collect); else if (v && typeof v === 'object') Object.values(v).forEach(collect); };
   collect(current(p, 'script')?.content);
