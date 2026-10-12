@@ -63,6 +63,10 @@ export const BibleContent = z.object({
   cast: z.array(CastMember).min(1),
   style: z.object({ look: text, sets: text, rules: z.array(text).min(1) }).strict(),
   scenes: z.array(Scene).min(1),
+  // Per-story film accent: the colour plus the key story prop it comes from. Beau keeps
+  // it out of rooms, Theo copies the spec block whole. Optional on read so historical
+  // bibles without it still load; compileBible drafts it UNRESOLVED for signing.
+  filmAccent: z.object({ colour: text, keyProp: text }).strict().optional(),
   openQuestions: z.array(text).default([]),
 }).strict().superRefine((b, ctx) => {
   const ids = b.cast.map(c => c.id);
@@ -133,6 +137,8 @@ export function biblePacket(p, role, gate, artifact) {
   const staleArtifact = reviewing && artifact && BIBLE_DOWNSTREAM_STEPS.includes(artifact.kind) && artifact.bible?.hash !== signed.hash;
   return {
     status: 'signed', version: signed.version, hash: signed.hash, signedBy: signed.signature.by, signedAt: signed.signature.at, sections,
+    // Beau builds rooms around it (kept out) and Theo copies the spec block whole.
+    ...(signed.content.filmAccent && ['background-product-owner', 'pixar-prompter'].includes(role) ? { filmAccent: signed.content.filmAccent } : {}),
     instruction: reviewing ? REVIEW_INSTRUCTION : AUTHOR_INSTRUCTION,
     ...(latest !== signed ? { note: `Draft v${latest.version} is unsigned; it is NOT in force. Work against signed v${signed.version}.` } : {}),
     ...(staleArtifact ? { staleWarning: `This deliverable was made ${artifact.bible ? `against signed v${artifact.bible.version}` : 'without a signed bible'}; check it against signed v${signed.version}.` } : {}),
@@ -193,6 +199,7 @@ export function compileBible(p) {
     cast: cast.length ? cast : [{ id: UNRESOLVED, name: UNRESOLVED, ageVariant: UNRESOLVED, minor: false, storyPurpose: UNRESOLVED, sheet: null, lockedDescription: UNRESOLVED, continuity: [UNRESOLVED], referencePhoto: { status: 'missing', note: UNRESOLVED } }],
     style: defaultStyle(studioFor(p)),
     scenes: scenes.length ? scenes : [{ id: UNRESOLVED, beat: 1, location: UNRESOLVED, characterIds: [], timeOfDay: UNRESOLVED, mood: UNRESOLVED, keyProps: [], setDressing: [], notes: [] }],
+    filmAccent: { colour: UNRESOLVED, keyProp: UNRESOLVED },
     openQuestions: [],
   };
 }
@@ -272,6 +279,7 @@ export function renderBibleMarkdown(entry, { runDir = null, superseded = false }
     out.push('- **Continuity (every shot):**', ...c.continuity.map(x => `  - ${x}`), '');
   }
   out.push('## Style', '', `**Look:** ${b.style.look}`, '', `**Sets:** ${b.style.sets}`, '', list(b.style.rules), '');
+  if (b.filmAccent) out.push(`**Film accent:** ${b.filmAccent.colour} (from ${b.filmAccent.keyProp}). Kept out of rooms; named in every brief spec block as "Film accent kept out: <colour>".`, '');
   out.push('## Scene digest', '');
   for (const s of b.scenes) {
     out.push(`### Beat ${s.beat}: ${s.location} (\`${s.id}\`)`, '');

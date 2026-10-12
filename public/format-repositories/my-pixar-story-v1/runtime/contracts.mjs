@@ -35,7 +35,8 @@ export const IntakeConfirmation=z.object({
  resolvedFindings:z.array(z.object({findingDigest:text,resolution:text})),
 }).strict();
 const Scene = z.object({ id: slug, beat: z.number().int().min(1).max(4), description: text, action: text, characterIds: z.array(slug), sourceAnswers: z.array(z.enum(Object.keys(Inputs.shape.answers.shape))) });
-const Brief = z.object({ direction: text, sceneIds: z.array(slug).min(1), knownDetails: z.array(text), proposedDetails: z.array(text), continuityNotes: text, references: z.array(File).default([]) });
+const KnownDetail = z.object({ detail: text, quote: text, source: z.enum(['answers', 'script']), field: text }).strict();
+const Brief = z.object({ direction: text, sceneIds: z.array(slug).min(1), knownDetails: z.array(z.union([text, KnownDetail])), proposedDetails: z.array(text), continuityNotes: text, references: z.array(File).default([]) });
 const BackgroundPrompt = z.object({ prompt: text, recipeSha256: text, briefDigest: text, changeSummary: text });
 const Origin = z.object({ source: z.enum(['generated','imported']), description: text, usageRights: text });
 export const SheetProvenance = z.object({ source: z.enum(['generated', 'operator-import']), originalPath: text.optional(), sha256: text.optional(), importedAt: text.optional(), message: text.optional() }).strict();
@@ -76,6 +77,9 @@ export const Content = {
   sheet: z.object({ files: z.array(File).length(1), prompt: text, provenance: SheetProvenance.optional() }),
 };
 Content.shotIntentions = z.object({locations:Content.backgrounds.shape.locations,shots:Content.shots.shape.shots});
+// Supervised Phase 2 patch: Sam returns only {id, staging, continuityNotes} per locked
+// shot, in locked order; the runtime merges it into the locked intentions.
+export const ShotsPatch = z.object({ shots: z.array(z.object({ id: slug, staging: text, continuityNotes: text }).strict()).min(4) }).strict();
 export const criteria = {
   voiceSample: ['consent', 'integrity', 'reference-duration'],
   clone: ['voice-provenance', 'consent', 'provider-receipt'],
@@ -131,7 +135,7 @@ export const Plans = z.object({ provider: z.enum(['cartesia', 'meta-muse', 'agy'
   estimatedCostUsd: z.number().nonnegative(), fallbackEstimatedCostUsd: z.number().nonnegative().optional(), parameters: z.object({ model: text.optional(), prompt: text.optional(), cartesiaVersion: text.optional() }).strict() }).strict();
 const CreativeDirection=z.object({scope:z.enum(['script','cast']),direction:text,sourceMessages:z.array(text).min(1)}).strict();
 export const AudioInvestigation=z.object({beat:z.number().int().min(1).max(4),sha256:text,inspection:z.object({durationSeconds:z.number().positive(),method:text,pauses:z.array(z.object({startSeconds:z.number().nonnegative(),endSeconds:z.number().nonnegative()}))}),transcription:z.object({transcript:text,method:text,words:z.array(z.object({word:text,start:z.number().nonnegative(),end:z.number().nonnegative()}))})}).strict();
-export const PlanningBlocker=z.object({kind:z.enum(['account-readiness','missing-input','editing-infeasible']),problem:text.max(180),solution:text.max(240),steps:z.array(text.max(240)).min(1).max(5),beats:z.array(z.number().int().min(1).max(4)).min(1).max(4).optional()}).strict();
+export const PlanningBlocker=z.object({kind:z.enum(['account-readiness','missing-input','editing-infeasible','plate-conflict','locked-change']),problem:text.max(180),solution:text.max(240),steps:z.array(text.max(240)).min(1).max(5),beats:z.array(z.number().int().min(1).max(4)).min(1).max(4).optional()}).strict();
 export const Prescreen=z.object({provider:z.literal('openrouter-decisions'),model:text,servedModel:text,verdict:z.enum(['pass','fail','uncertain']),
  files:z.array(z.object({index:z.number().int().nonnegative(),sha256:text.regex(/^[a-f0-9]{64}$/),verdict:z.enum(['pass','fail','uncertain']),
   checks:z.array(z.object({criterion:text,question:text,probability:z.number().min(0).max(1),status:z.enum(['pass','fail','inconclusive'])})).min(1)})).min(1),

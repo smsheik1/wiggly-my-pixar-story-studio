@@ -18,11 +18,11 @@ const echoFetcher=(seen)=>async(url,init)=>{const body=JSON.parse(init.body);if(
 const scriptTask={step:'script',taskId:'isolated-task',actor:'agent',gate:'author',workflowRevision:2};
 const scriptEvent={taskId:'isolated-task',actor:'agent',workerId:'openrouter:text-reviewer:test',action:'artifact',content:{beats:[]}};
 
-test('studio puts every crew agent on OpenRouter Muse Spark 1.3 Contributor; no agent is on codex',{timeout:10000},()=>{
+test('studio puts every crew agent on OpenRouter; Ava hears audio on Gemini, everyone else on Muse',{timeout:10000},()=>{
  const agents=loadStudio().config.agents;
  assert.equal(Object.keys(agents).length,17);
  for(const [role,agent] of Object.entries(agents)){
-  assert.equal(agent.backend,'openrouter',role);assert.equal(agent.model,'meta/muse-spark-1.3-contributor',role);
+  assert.equal(agent.backend,'openrouter',role);assert.equal(agent.model,role==='audio-reviewer'?'google/gemini-3.8-flash':'meta/muse-spark-1.3-contributor',role);
  }
 });
 

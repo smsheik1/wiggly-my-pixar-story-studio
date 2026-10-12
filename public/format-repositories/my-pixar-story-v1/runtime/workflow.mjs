@@ -8,11 +8,11 @@ import { createHash } from 'node:crypto';
 import { extname } from 'node:path';
 import { Annotation, Command, START, StateGraph, interrupt } from '@langchain/langgraph';
 import { SqliteSaver } from '@langchain/langgraph-checkpoint-sqlite';
-import {Crew,roleFor,assignedWorker,assertCrewEvent} from './crew.mjs';
+import {Crew,roleFor,assignedWorker,assertCrewEvent,normalizeQuote} from './crew.mjs';
 import {requireAudioQualification} from '../evaluation/audio-qualification.mjs';
 import { studioSteps, studioDependencies, studioNext, validateStudioContent, videoBinding, effectFor } from './studio.mjs';
 import { requireVisualQualification } from '../evaluation/visual-qualification.mjs';
-import { shotFor, shotReferences, referenceBindings, planningReferences, validateShots, validateLocationRegistry, validateKeyframePrompt } from './shots.mjs';
+import { shotFor, shotReferences, referenceBindings, planningReferences, validateShots, validateLocationRegistry, validateKeyframePrompt, mergeShotsPatch } from './shots.mjs';
 import { requestDescriptor,planningAccountGuide,generationEstimate,narrationGenerationTexts } from './providers.mjs';
 import {scriptQuoteChecks,transcriptDiff} from './evaluators.mjs';
 import {AudioEditReceipt,AUDIO_EDIT_PROFILE,validateAudioEdit,validateEditingInvestigation} from './audio-edit.mjs';
@@ -148,8 +148,30 @@ function next(p) {
   const reusable = ['voiceSample', 'clone'].includes(p.step) ? !!current(p) : p.step === 'sheetPrompt' && !supervised(p) ? current(p)?.review?.decision === 'approved' : locked(p, keyFor(p));
   if (p.step !== 'complete' && reusable) next(p);
 }
+// Beau's knownDetails with {detail, quote, source, field} must quote the locked
+// answers (source 'answers', field '<answerKey>.<field>') or the approved script
+// (source 'script') word for word, normalized exactly like verifyReviewQuotes.
+// Plain-string entries are pre-P16 briefs and stay loadable without verification.
+function verifyKnownDetails(p, parsed) {
+  const inputs = current(p, 'answers')?.content.inputs ?? p.inputs;
+  const answers = inputs.answers ?? null;
+  const scriptHay = [];
+  const collect = v => { if (typeof v === 'string') scriptHay.push(normalizeQuote(v)); else if (Array.isArray(v)) v.forEach(collect); else if (v && typeof v === 'object') Object.values(v).forEach(collect); };
+  collect(current(p, 'script')?.content);
+  for (const entry of parsed.knownDetails ?? []) {
+    if (typeof entry === 'string') continue;
+    const quote = normalizeQuote(entry.quote);
+    if (entry.source === 'answers') {
+      const dot = entry.field.indexOf('.'), record = dot < 0 ? null : answers?.[entry.field.slice(0, dot)]?.[entry.field.slice(dot + 1)];
+      if (!quote || typeof record !== 'string' || !normalizeQuote(record).includes(quote)) throw Object.assign(new Error(`KNOWN_DETAIL_UNSOURCED: "${entry.detail}" is not quoted word for word from locked answer field ${entry.field}.`), { knownFinished: true });
+    } else if (!quote || !scriptHay.some(h => h.includes(quote))) throw Object.assign(new Error(`KNOWN_DETAIL_UNSOURCED: "${entry.detail}" is not quoted word for word from the approved script.`), { knownFinished: true });
+  }
+}
 /** Pure content checks shared with the opt-in SQL producer. No workflow transition. */
 export function validateArtifactContent(p, content, author, previous=current(p)) {
+  // Supervised Phase 2: Sam submits a staging patch; merge it into the locked
+  // intentions and validate the merged full plan. Non-supervised keeps the full object.
+  if(p.step==='shots'&&supervised(p)){const merged=Content.shots.parse(mergeShotsPatch(p,content));validateShots(p,merged);return merged;}
   const parsed = Content[p.step].parse(content);
   if(p.step==='clone'&&p.voiceChoice){
     const choice=p.voiceChoice,expected={kind:'existing',lookup:choice.lookup,selectionMessage:choice.selectedBy.message,consentMessage:choice.consentMessage};
@@ -240,10 +262,11 @@ export function validateArtifactContent(p, content, author, previous=current(p))
     const allowed = p.step === 'backgroundAngleBrief' ? location(p).angles.find(a => a.id === p.angleId).sceneIds : location(p).scenes.map(s => s.id);
     if (new Set(parsed.sceneIds).size !== parsed.sceneIds.length || allowed.some(id => !parsed.sceneIds.includes(id)) || parsed.sceneIds.some(id => !allowed.includes(id))) throw new Error('Brief must cover exactly its immediate scenes.');
     if (parsed.references.some(f => !f.width || !f.height || f.durationSeconds)) throw new Error('Background references must be measured still images.');
+    verifyKnownDetails(p, parsed);
   }
   if (isPrompt(p)) {
     const brief = current(p, briefKey(p));
-    if (!locked(p, brief.key) || author === brief.authoredBy || author === briefOwner(p, brief) || parsed.briefDigest !== brief.digest || parsed.recipeSha256 !== recipeFor(p,p.step,{sha256:backgroundRecipeSha256}).sha256) throw new Error('Prompter must be distinct from owner and bind the approved brief and packaged Pixar recipe.');
+    if (!locked(p, brief.key) || author === brief.authoredBy || author === briefOwner(p, brief) || parsed.briefDigest !== brief.digest || parsed.recipeSha256 !== recipeFor(p,p.step,{sha256:backgroundRecipeSha256}).sha256) throw new Error('Prompter must be distinct from owner and bind the approved brief and background recipe.');
   }
   if (['backgroundCandidates', 'backgroundAngle'].includes(p.step) && parsed.files.some(f => Math.abs(f.width / f.height - 16 / 9) > 0.03)) throw new Error('Background plates must be measured 16:9 widescreen.');
   if (['backgroundCandidates', 'backgroundAngle'].includes(p.step) && parsed.prompt !== current(p, promptKey(p)).content.prompt) throw new Error('Background must use the approved prompt exactly.');
@@ -347,11 +370,12 @@ function previousVersionFor(p, a) {
 }
 export function taskFor(p) {
   const a = current(p), loaded=workerInstructions(p,roleFor(p));
+  const stepGuide=(()=>{const skillPath=loaded?.skill?.path;if(!skillPath)return {};const stepPath=skillPath.replace(/\/SKILL\.md$/,`/steps/${p.step}.md`);const doc=studioFor(p)?.documents[stepPath];return doc?{stepGuide:{path:stepPath,content:doc.content,sha256:doc.sha256}}:{};})();
   const shot = ['keyframePrompt', 'keyframe'].includes(p.step) ? shotFor(p) : ['videoPrompt','video'].includes(p.step)?videoBinding(p).shot:null;
   const sceneLocation = shot ? current(p, 'backgrounds').content.locations.find(l => l.id === shot.locationId) : location(p);
   const job = p.jobs.findLast(j => j.key === keyFor(p) && !['ready', 'failed'].includes(j.status));
   const voiceIdState = consentedVoiceIdentity(p, a);
-  return { ...loaded, communication:communicationFor(p),studioConfig:studioFor(p)?.config??null,taskId: digest({ id: p.id, sequence: p.sequence, step: p.step, gate: p.gate }), projectId: p.id,
+  return { ...loaded, ...stepGuide, communication:communicationFor(p),studioConfig:studioFor(p)?.config??null,taskId: digest({ id: p.id, sequence: p.sequence, step: p.step, gate: p.gate }), projectId: p.id,
     reviewPolicy:{mode:p.reviewMode,qualificationRequired:!supervised(p),humanMediaConfirmationRequired:supervised(p)&&!crewReviewEligible(p,a),speakerMeasurementRequired:!supervised(p),automaticVideoRepairAllowed:!supervised(p)&&!miniProduction(p)},
     lifecycle:p.lifecycle,budget:spendSummary(p),
     voiceIdentity: {basis: voiceBasis(p).kind==='recorded-reference'?'recorded-reference':voiceIdState.verified?'consented-voice-id':'human-recognition', verified: voiceIdState.verified, boundVoiceId: voiceIdState.boundVoiceId},
@@ -903,7 +927,7 @@ export function applyEvent(project, raw) {
     if (!e.allowance || !e.message) throw new Error('Allowance requires explicit user limits and original message.');
     p.allowances.push({ ...e.allowance, id: `allowance-${p.allowances.length + 1}`, message: e.message, at: new Date().toISOString() });
   } else if(e.action==='planning-blocked'){
-    requiredActor(e,'agent');if(!(p.gate==='produce'&&p.step!=='film'||p.step==='narration'&&p.gate==='author')||!e.message||e.plan)throw new Error('PLANNING_BLOCKER_SCOPE: only the assigned planner/editor may report an evidenced blocker; no plan or approval.');
+    requiredActor(e,'agent');const authorBlocked=p.gate==='author'&&((['shotIntentions','shots'].includes(p.step)&&worker?.role==='shot-planner')||(p.step==='backgrounds'&&worker?.role==='background-product-owner'));if(!(p.gate==='produce'&&p.step!=='film'||p.step==='narration'&&p.gate==='author'||authorBlocked)||!e.message||e.plan)throw new Error('PLANNING_BLOCKER_SCOPE: only the assigned planner/editor may report an evidenced blocker; no plan or approval.');
     if(e.blocker?.kind==='editing-infeasible'&&!(p.step==='narration'&&p.gate==='author'))throw new Error('AUDIO_EDIT_SCOPE_DENIED');
     if(!e.blocker)throw new Error('PLANNING_HELP_REQUIRED: report the problem, solution and baby steps with the diagnostic.');
     if(p.step==='narration'&&p.gate==='author'){if(e.blocker.kind!=='editing-infeasible')throw new Error('AUDIO_EDIT_INVESTIGATION_REQUIRED: editor refusals require investigated editing evidence; tool failures are not infeasibility.');validateEditingInvestigation(taskFor(p),e);}

@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {Project,criteria,digest} from '../runtime/contracts.mjs';
 import {initialProject,current,taskFor,assertAllowed,openWorkflow,revisionImpact,characterRecipeSha256} from '../runtime/workflow.mjs';
 import {image,author,registry,brief,prompt,ownerChecked} from './background-helpers.mjs';
-import {shotPlan} from './shot-helpers.mjs';
+import {shotPlan,shotPatch} from './shot-helpers.mjs';
 import {narrationLocked,locked} from '../runtime/gates.mjs';
 import {inputs,script,file,send,authored,reviewed,approved,produce,intakeFixture} from './helpers.mjs';
 
@@ -76,12 +76,14 @@ test('shot intentions lead backgrounds; no approved references or user narration
  const changed=structuredClone(registry);changed.locations[0].name='Different unapproved setting';
  assert.throws(()=>author(p,changed),/derive exactly/);
 });
-test('post-background staging cannot change locked shot action/timing but may refine physical placement',()=>{
+test('post-background staging is a patch: locked fields stay locked, staging refines placement',()=>{
  const p=supervisedBackgrounds();assert.equal(p.step,'shots');
- const changed=structuredClone(shotPlan);changed.shots[0].action='Invented new action';assert.throws(()=>author(p,changed,'shot-planner'),/preserve approved shot intentions/);
- const refined=structuredClone(shotPlan);refined.shots[0].staging='Use approved actual doorway clearance.';
+ const changed=structuredClone(shotPlan);changed.shots[0].action='Invented new action';assert.throws(()=>author(p,changed,'shot-planner'),/SHOTS_PATCH_EXTRA_FIELD/);
+ const refined=shotPatch('Use approved actual doorway clearance.');
  const q=approved(reviewed(author(p,refined,'shot-planner')));assert.equal(q.step,'keyframePrompt');
  assert.equal(current(q,'shots').dependencies.includes(current(q,'shotIntentions').id),true);
+ assert.equal(current(q,'shots').content.shots[0].staging,'Use approved actual doorway clearance.');
+ assert.equal(current(q,'shots').content.shots[0].action,current(q,'shotIntentions').content.shots[0].action);
 });
 
 test('one durable ceiling covers generation and inference; failures and rewinds do not reset it',()=>{

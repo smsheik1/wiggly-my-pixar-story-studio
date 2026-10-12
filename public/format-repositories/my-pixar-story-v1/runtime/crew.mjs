@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {assertDebugReady} from './debug.mjs';
 import {assertBibleReady} from './bible.mjs';
 import {readFile} from 'node:fs/promises';
-import {text,File,digest,Content,Event} from './contracts.mjs';
+import {text,File,digest,Content,Event,ShotsPatch} from './contracts.mjs';
 import {loadStudio,studioFor,maximumTools,backendForAgent} from './instructions.mjs';
 import {taskFor} from './workflow.mjs';
 import {assertAllowed,keyFor,current,sheetKeyFor} from './gates.mjs';
@@ -30,9 +30,12 @@ export const workerBackend=(worker,config=null)=>{
 // Shared worker packet: identical instruction text, task, contentSchema and
 // eventSchema for every backend (CodexHost and OpenRouter). Hosts attach
 // reference images and the wiggly_tool definition around this packet.
-export const WORKER_PACKET_INSTRUCTION='Complete ONLY this current task. Allowed action is review for review, owner-review for owner-review, plan for produce, otherwise artifact; narration/author and produce may also return an evidenced planning-blocked event. Never return runtime provider-error events. repairFeedback and savedTools describe HISTORICAL attempts, not a current tool failure. Continue the investigation with currently granted tools and compatible cached receipts; do not merely repeat a saved error. Saved narration edit output hashes are not automatically in scope after restart. To resume a saved draft, listen/inspect/transcribe its original current source as required, then call renderAudioEdit with that original source hash and the exact saved plan. This reuses its immutable local receipt, grants the draft hash in the current task, and does not create another draft. Then listen to the granted output before submitting. A current fatal tool failure is handled by the host and must not be fabricated from history. Source facts are in the supplied task. Do not invent facts, approval, tool evidence or perception. For a review, inspect every required criterion and return evidence and repairs, using your exact workerId/modelVersion/capabilityVersion. Missing capabilities mean inconclusive. Return eventJson containing the serialized Event object. Do not emit other text.';
+export const WORKER_PACKET_INSTRUCTION='Complete ONLY this current task. Allowed action is review for review, owner-review for owner-review, plan for produce, otherwise artifact; narration/author, shot-planner on shotIntentions/shots author, background-product-owner on backgrounds author and produce may also return an evidenced planning-blocked event. Never return runtime provider-error events. repairFeedback and savedTools describe HISTORICAL attempts, not a current tool failure. Continue the investigation with currently granted tools and compatible cached receipts; do not merely repeat a saved error. Saved narration edit output hashes are not automatically in scope after restart. To resume a saved draft, listen/inspect/transcribe its original current source as required, then call renderAudioEdit with that original source hash and the exact saved plan. This reuses its immutable local receipt, grants the draft hash in the current task, and does not create another draft. Then listen to the granted output before submitting. A current fatal tool failure is handled by the host and must not be fabricated from history. Source facts are in the supplied task. Do not invent facts, approval, tool evidence or perception. For a review, inspect every required criterion and return evidence and repairs, using your exact workerId/modelVersion/capabilityVersion. Missing capabilities mean inconclusive. Return eventJson containing the serialized Event object. Do not emit other text.';
 export function buildWorkerPacket(task,worker){
- const contentSchema=Content[task.step]?z.toJSONSchema(Content[task.step]):null;
+  // Supervised Phase 2: Sam stages only {id, staging, continuityNotes}; the runtime
+  // merges the patch into the locked intentions before validation and review.
+  const patchStep=task.step==='shots'&&task.reviewPolicy?.mode==='supervised';
+  const contentSchema=patchStep?z.toJSONSchema(ShotsPatch):Content[task.step]?z.toJSONSchema(Content[task.step]):null;
  if(task.step==='answers'){
   contentSchema.properties.sourceInputDigest.const=task.sourceInputDigest;
   contentSchema.properties.inputs.description='When task.originalInputsRequired is true, copy task.sourceInputs exactly, including all keys and original wording. Organize findings in commonSenseChecks; changes require recorded human clarification.';
@@ -48,7 +51,7 @@ export function wigglyToolDefinition(){
 // case-sensitive otherwise, minimum 8 chars, must appear verbatim in the
 // artifact, dependencies/criteria text, the SIGNED production bible, or this
 // task's tool outputs.
-export const QUOTE_ROLES=['text-reviewer','audio-reviewer'];
+export const QUOTE_ROLES=['text-reviewer','audio-reviewer','background-product-owner'];
 export function normalizeQuote(s){
  return String(s??'').replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/\s+/g,' ').trim();
 }
@@ -205,7 +208,7 @@ export async function prepareCrewTask(p,task){
  const expected=taskFor(p);
  if(task.taskId!==expected.taskId||task.step!==p.step||task.gate!==p.gate)throw new Error('STALE_TASK: read current status before dispatch.');
  // No worker can receive replaced, omitted, stale or invented project context.
- const fields=['generationEstimate','planningGuide','generationTexts','voiceIdentity','voiceBasis','voiceChoice','imageProviderPreference','imageProviderDirective','creativeDirections','productionBible','workflowRevision','proposedCast','locationEntry','characterReferences','narration','projectId','artifact','dependencies','approvedScript','lockedAnswers','inputs','sourceInputs','sourceInputDigest','originalInputsRequired','questionnaire','castEntry','recipe','references','referenceBindings','availableLocations','shotIntentions','immediateScenes','shot','videoBinding','visualReferences','voiceReference','intakeConfirmation','feedback','criteria','formatRole','crewWorker','skill','allowedTools','studioConfig','studioSha256','instruction','craft'];
+ const fields=['generationEstimate','planningGuide','generationTexts','voiceIdentity','voiceBasis','voiceChoice','imageProviderPreference','imageProviderDirective','creativeDirections','productionBible','workflowRevision','proposedCast','locationEntry','characterReferences','narration','projectId','artifact','dependencies','approvedScript','lockedAnswers','inputs','sourceInputs','sourceInputDigest','originalInputsRequired','questionnaire','castEntry','recipe','references','referenceBindings','availableLocations','shotIntentions','immediateScenes','shot','videoBinding','visualReferences','voiceReference','intakeConfirmation','feedback','criteria','formatRole','crewWorker','skill','stepGuide','allowedTools','studioConfig','studioSha256','instruction','craft'];
  for(const field of fields)if(digest(task[field]??null)!==digest(expected[field]??null))throw new Error(`TASK_INPUT_MISMATCH: ${field} is missing, changed or stale; read the current task packet.`);
  if(['author','produce'].includes(p.gate))assertAllowed(p,p.step);
  for(const a of expected.dependencies??[])if(!a.valid||(!a.approvedBy&&a.kind!=='clone')||current(p,a.key)?.id!==a.id)throw new Error(`TASK_INPUT_NOT_LOCKED: ${a.key}`);
@@ -238,7 +241,7 @@ export async function runCrewTask(p,task,host){
  }
  try{
  const expected=task.gate==='review'?'review':task.gate==='owner-review'?'owner-review':task.gate==='produce'?'plan':'artifact';
- if(event.taskId!==task.taskId||event.actor!==task.actor||!(event.action===expected||(task.gate==='produce'||task.step==='narration'&&task.gate==='author')&&event.action==='planning-blocked'))throw new Error('CREW_PERMISSION_DENIED: worker may only submit its assigned deliverable; no human approvals, state writes or provider calls.');
+  if(event.taskId!==task.taskId||event.actor!==task.actor||!(event.action===expected||(task.gate==='produce'||task.step==='narration'&&task.gate==='author'||task.gate==='author'&&((['shotIntentions','shots'].includes(task.step)&&worker?.role==='shot-planner')||(task.step==='backgrounds'&&worker?.role==='background-product-owner')))&&event.action==='planning-blocked'))throw new Error('CREW_PERMISSION_DENIED: worker may only submit its assigned deliverable; no human approvals, state writes or provider calls.');
  assertCrewEvent(p,event);
  if(task.step==='narration'&&task.gate==='author'&&event.action==='planning-blocked'){
   if(event.blocker?.kind!=='editing-infeasible')throw new Error('AUDIO_EDIT_INVESTIGATION_REQUIRED: editor refusals require investigated editing evidence; unavailable tools must stop as tool errors.');

@@ -36,7 +36,7 @@ test('safety self-check: no forbidden process, network or host imports in source
   assert.ok(!/['"]codex\s+app-server['"]/.test(source), 'must not mention starting codex app-server');
 });
 
-test('check 5: writer->reviewer pairing: all checked rules appear in reviewer rubric or skill', { timeout: 20000 }, async () => {
+test('check 5: writer->reviewer pairing: checked-rule sections reach reviewers and reviewer rule IDs are real', { timeout: 20000 }, async () => {
   // Pair against the LIVE guide (not the frozen P14 contract), so a check tag added to
   // craft-guide.md later is enforced too.
   const guide = await readFile(resolve(kitDir, 'craft-guide.md'), 'utf8');
@@ -50,9 +50,20 @@ test('check 5: writer->reviewer pairing: all checked rules appear in reviewer ru
   assert.ok(contract.sections.length >= 16 && contract.sections.flatMap(s => s.rules).length >= 83, 'craft guide parsed');
   const studio = loadStudio();
 
+  // Reviewer text is the skill plus the rubric plus (for Sage) the per-step
+  // guides. Short core skills no longer name every rule ID: the full rule
+  // text reaches the packet via task.craft for every mapped section, and the
+  // step guide carries the step's criteria.
+  const { readdirSync } = await import('node:fs');
+  let sageSteps = '';
+  try {
+    for (const f of readdirSync(resolve(kitDir, 'crew/sage/steps')).filter(f => f.endsWith('.md')).sort()) {
+      sageSteps += '\n' + (await readFile(resolve(kitDir, 'crew/sage/steps', f), 'utf8'));
+    }
+  } catch {}
   const reviewerDocs = {
     vera: (await readFile(resolve(kitDir, 'crew/vera/SKILL.md'), 'utf8')) + '\n' + (await readFile(resolve(kitDir, 'evaluation/rubrics/visual.md'), 'utf8')),
-    sage: (await readFile(resolve(kitDir, 'crew/sage/SKILL.md'), 'utf8')) + '\n' + (await readFile(resolve(kitDir, 'evaluation/rubrics/text.md'), 'utf8')),
+    sage: (await readFile(resolve(kitDir, 'crew/sage/SKILL.md'), 'utf8')) + '\n' + (await readFile(resolve(kitDir, 'evaluation/rubrics/text.md'), 'utf8')) + '\n' + sageSteps,
     june: (await readFile(resolve(kitDir, 'crew/june/SKILL.md'), 'utf8')) + '\n' + (await readFile(resolve(kitDir, 'evaluation/rubrics/scene.md'), 'utf8')),
     ava: (await readFile(resolve(kitDir, 'crew/ava/SKILL.md'), 'utf8')) + '\n' + (await readFile(resolve(kitDir, 'evaluation/rubrics/audio.md'), 'utf8')),
     beau: await readFile(resolve(kitDir, 'crew/beau/SKILL.md'), 'utf8')
@@ -66,18 +77,12 @@ test('check 5: writer->reviewer pairing: all checked rules appear in reviewer ru
     beau: 'background-product-owner'
   };
 
-  const missingRules = [];
   const unmappedSections = [];
 
   for (const section of contract.sections) {
     for (const rule of section.rules) {
       for (const tag of rule.check) {
         if (tag === 'none') continue;
-        const doc = reviewerDocs[tag];
-        if (!doc || !doc.includes(rule.id)) {
-          missingRules.push({ ruleId: rule.id, sectionId: section.id, reviewerTag: tag });
-        }
-
         // Verify reviewer has section mapped in studio.json
         const role = tagToRole[tag];
         const mappedSections = studio.config.craft?.sections[role] ?? [];
@@ -89,7 +94,20 @@ test('check 5: writer->reviewer pairing: all checked rules appear in reviewer ru
   }
 
   assert.deepEqual(unmappedSections, [], `reviewers must have rule sections mapped in studio.json: ${JSON.stringify(unmappedSections)}`);
-  assert.deepEqual(missingRules, [], `reviewer rubrics/skills must check every assigned rule ID: ${JSON.stringify(missingRules)}`);
+
+  // Every rule ID a reviewer doc names must be a real rule in the guide
+  // (no stale references after rewrites).
+  const validIds = new Set(contract.sections.map(s => s.id).concat(contract.sections.flatMap(s => s.rules.map(r => r.id))));
+  const staleRefs = [];
+  for (const [tag, doc] of Object.entries(reviewerDocs)) {
+    const seen = new Set();
+    for (const m of doc.matchAll(/\[([A-Z][A-Z0-9_-]{2,})\]/g)) {
+      if (seen.has(m[1])) continue;
+      seen.add(m[1]);
+      if (!validIds.has(m[1])) staleRefs.push({ reviewerTag: tag, ruleId: m[1] });
+    }
+  }
+  assert.deepEqual(staleRefs, [], `reviewer docs must only name real craft rule IDs: ${JSON.stringify(staleRefs)}`);
 });
 
 test('check 6: provenance: dan guide section mapping, rule targets, and craftSha256 match', { timeout: 20000 }, async () => {

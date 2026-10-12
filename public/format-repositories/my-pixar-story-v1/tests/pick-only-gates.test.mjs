@@ -14,7 +14,7 @@ import { criteria, digest } from '../runtime/contracts.mjs';
 import { inputs, questionnaire, send, reviewed, approved, file } from './helpers.mjs';
 import { backgroundProject, registry, author, brief, prompt, image } from './background-helpers.mjs';
 import { supervisedAudio, supervisedCharacters, supervisedBackgrounds, confirmed } from './supervised-helpers.mjs';
-import { shotPlan } from './shot-helpers.mjs';
+import { shotPlan, shotPatch } from './shot-helpers.mjs';
 import { producerUpdate } from '../runtime/presentation.mjs';
 
 function legacyBackgroundsLocked() {
@@ -182,7 +182,7 @@ test('11. keyframePrompt auto-locks and keyframe auto-authorizes', { timeout: 10
   const { composition } = await import('./shot-helpers.mjs');
   let p = supervisedBackgrounds();
   p.gatePolicy = 'pick-only';
-  p = author(p, shotPlan);
+  p = author(p, shotPatch());
   p = passReview(p, 'sage');
   assert.match(p.artifacts.findLast((x) => x.key === 'shots').approvedBy.message, /^AUTO-LOCK/);
   assert.equal(p.step, 'keyframePrompt');
@@ -218,7 +218,7 @@ test('13. answers script roster stay human; shots auto-locks', { timeout: 10000 
   q.gatePolicy = 'pick-only';
   q.step = 'shots';
   q.gate = 'author';
-  q = author(q, shotPlan);
+  q = author(q, shotPatch());
   const s = current(q);
   q = send(q, 'review', { workerId: 'sage', artifactId: s.id, artifactDigest: s.digest, review: { decision: 'approved', perception: 'direct-text', checks: taskFor(q).criteria.map((criterion) => ({ criterion, status: 'pass', location: 'ISOLATED', evidence: 'ISOLATED', repair: '' })) } });
   assert.match(q.artifacts.findLast((x) => x.key === 'shots').approvedBy.message, /^AUTO-LOCK/);
@@ -226,7 +226,7 @@ test('13. answers script roster stay human; shots auto-locks', { timeout: 10000 
   r.gatePolicy = 'pick-only';
   r.step = 'shots';
   r.gate = 'author';
-  r = author(r, shotPlan);
+  r = author(r, shotPatch());
   const t0 = current(r);
   const prov = send(r, 'review', { workerId: 'sage', artifactId: t0.id, artifactDigest: t0.digest, review: { decision: 'provisional', perception: 'direct-text', checks: taskFor(r).criteria.map((criterion, i) => ({ criterion, status: i === 0 ? 'inconclusive' : 'pass', location: 'ISOLATED', evidence: 'ISOLATED', repair: '' })) } });
   assert.equal(prov.gate, 'human');

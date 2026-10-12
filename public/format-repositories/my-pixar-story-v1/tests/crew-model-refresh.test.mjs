@@ -45,11 +45,11 @@ test('refresh-crew-models keeps a supervised reviewer locked by approved media o
 test('crew-refresh after refresh-crew-models rebinds every role (Sol and DeepSeek) onto Muse without any codex host',{timeout:10000},async()=>{
  let p=legacy(initialProject('crew-models-rebind',inputs,{workflowRevision:2}));
  p=send(p,'refresh-crew-models',{actor:'human',message:'ISOLATED move crew'});
- const openrouter={tools:{},refreshCrew:async c=>({workers:c.workers}),startRole:async(role,agent)=>({workerId:`openrouter:${role}:new`,name:agent.name,role,modelVersion:agent.model,capabilityVersion:'or-cap',execution:'host',backend:'openrouter'})};
- // codex:null: rebinding the old Sol threads must not need Codex at all.
- const out=await new CrewHost({codex:null,openrouter,config:p.studio.config}).refreshCrew(legacyCrew,p.studio.config);
- assert.deepEqual([...out.changed].sort(),Object.keys(crewRoles).sort());
- for(const w of out.workers){assert.equal(w.backend,'openrouter',w.role);assert.equal(w.modelVersion,'meta/muse-spark-1.3-contributor',w.role);assert.equal(w.workerId,`openrouter:${w.role}:new`);}
+  const openrouter={tools:{},refreshCrew:async c=>({workers:c.workers}),startRole:async(role,agent)=>({workerId:`openrouter:${role}:new`,name:agent.name,role,modelVersion:agent.model,capabilityVersion:'or-cap',execution:'host',backend:'openrouter'})};
+  // codex:null: rebinding the old Sol threads must not need Codex at all.
+  const out=await new CrewHost({codex:null,openrouter,config:p.studio.config}).refreshCrew(legacyCrew,p.studio.config);
+  assert.deepEqual([...out.changed].sort(),Object.keys(crewRoles).sort());
+  for(const w of out.workers){assert.equal(w.backend,'openrouter',w.role);assert.equal(w.modelVersion,kit[w.role].model,w.role);assert.equal(w.workerId,`openrouter:${w.role}:new`);}
  assert.equal(CrewHost.backendsNeeded('crew-refresh',p.studio.config,legacyCrew.workers).codex,false);
  // Without refresh-crew-models the legacy pinned config changes nothing (and still routes to codex).
  const codex={tools:{},refreshCrew:async c=>({workers:c.workers.map(w=>({...w,capabilityVersion:'codex-cap'}))}),startRole:async()=>{throw new Error('no codex role should move');}};

@@ -1,5 +1,5 @@
 import { current, locked, supervised, characterSheet, characterSheetArtifact, sheetKeyFor } from './gates.mjs';
-import { digest } from './contracts.mjs';
+import { digest, ShotsPatch } from './contracts.mjs';
 export const shotFor = p => current(p, 'shots')?.content.shots.find(s => s.id === p.shotId);
 export function shotReferences(p, shot = shotFor(p)) {
   const background = current(p, shot.angleId ? `backgroundAngle:${shot.locationId}:${shot.angleId}` : `backgroundCandidates:${shot.locationId}`);
@@ -10,6 +10,25 @@ export function shotReferences(p, shot = shotFor(p)) {
   })];
 }
 export const referenceBindings = p => shotReferences(p).map(({ file, ...binding }) => binding);
+// Supervised Phase 2: merge Sam's staging patch into the locked intentions to build
+// the full shots artifact, then validate the merged result. Patch entries carry only
+// {id, staging, continuityNotes}; every other field stays locked.
+export function mergeShotsPatch(p, content) {
+  const intents = current(p, 'shotIntentions')?.content.shots;
+  if (!intents) throw new Error('SHOT_INTENTIONS_REQUIRED: approve shot intentions before staging.');
+  const raw = content?.shots;
+  if (!Array.isArray(raw)) throw new Error('SHOTS_PATCH_COUNT: supervised shots needs { shots: [{ id, staging, continuityNotes }] } matching the locked intentions.');
+  for (const entry of raw) {
+    const keys = Object.keys(entry ?? {}).sort().join(',');
+    if (keys !== 'continuityNotes,id,staging') throw new Error('SHOTS_PATCH_EXTRA_FIELD: supervised shots entries carry only id, staging and continuityNotes.');
+  }
+  if (raw.length !== intents.length) throw new Error(`SHOTS_PATCH_COUNT: patch has ${raw.length} shots but the locked intentions have ${intents.length}.`);
+  const parsed = ShotsPatch.parse(content);
+  const ids = new Set(intents.map(s => s.id));
+  for (const entry of parsed.shots) if (!ids.has(entry.id)) throw new Error(`SHOTS_PATCH_UNKNOWN_ID: ${entry.id} is not a locked shot id.`);
+  if (parsed.shots.some((entry, i) => entry.id !== intents[i].id)) throw new Error('SHOTS_PATCH_ORDER: patch shots must keep the locked intentions order and ids one-to-one.');
+  return { shots: intents.map((shot, i) => ({ ...shot, staging: parsed.shots[i].staging, continuityNotes: parsed.shots[i].continuityNotes })) };
+}
 export function validateLocationRegistry(p,locations){
  const ids=locations.map(l=>l.id),scenes=locations.flatMap(l=>l.scenes);
  if(new Set(ids).size!==ids.length||new Set(scenes.map(s=>s.id)).size!==scenes.length||[1,2,3,4].some(b=>!scenes.some(s=>s.beat===b)))throw new Error('Background registry needs unique locations/scenes covering all four beats.');

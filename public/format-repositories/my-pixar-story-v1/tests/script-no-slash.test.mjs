@@ -89,9 +89,31 @@ test("Leo's skill file contains the no-slash rule", T, async () => {
 test("Sage's skill + text rubric contain the lived-in/generic-room rule and the new evidence sources", T, async () => {
   const sageSkill = await readFile(new URL('../crew/sage/SKILL.md', import.meta.url), 'utf8');
   const textRubric = await readFile(new URL('../evaluation/rubrics/text.md', import.meta.url), 'utf8');
+  const briefGuide = await readFile(new URL('../crew/sage/steps/backgroundBrief.md', import.meta.url), 'utf8');
+  const promptGuide = await readFile(new URL('../crew/sage/steps/backgroundPrompt.md', import.meta.url), 'utf8');
+  const angleBriefGuide = await readFile(new URL('../crew/sage/steps/backgroundAngleBrief.md', import.meta.url), 'utf8');
+  const anglePromptGuide = await readFile(new URL('../crew/sage/steps/backgroundAnglePrompt.md', import.meta.url), 'utf8');
 
-  for (const doc of [sageSkill, textRubric]) {
-    // Lived-in / Pixar set-dressing lessons
+  // Lived-in set-dressing lessons now live in the per-step guides: the brief
+  // guides carry lived-in/story-dressed; every background guide carries the rest.
+  for (const doc of [briefGuide, angleBriefGuide]) {
+    assert.match(doc, /lived-in/);
+    assert.match(doc, /story-dressed/);
+  }
+  for (const doc of [briefGuide, promptGuide, angleBriefGuide, anglePromptGuide]) {
+    assert.match(doc, /stylized animated feature set/);
+    assert.match(doc, /catalog/);
+    assert.match(doc, /"plain" or "unmarked" props/);
+    assert.match(doc, /muted palette with one saturated accent/);
+    assert.doesNotMatch(doc, /ivory\/oatmeal\/neutral\/restrained/);
+    assert.match(doc, /"blank" or "calm" walls/);
+    assert.match(doc, /Empty of people/);
+    assert.match(doc, /Material defects, not taste/);
+  }
+
+  // The text rubric keeps the full room rule and the evidence-source list.
+  {
+    const doc = textRubric;
     assert.match(doc, /lived-in/);
     assert.match(doc, /Pixar/);
     assert.match(doc, /story-dressed/);
@@ -111,4 +133,12 @@ test("Sage's skill + text rubric contain the lived-in/generic-room rule and the 
     assert.match(doc, /signed production bible/i);
     assert.match(doc, /drafts never count/i);
   }
+
+  // Sage core states the quote rule in its current wording.
+  assert.match(sageSkill, /verbatim quote/);
+  assert.match(sageSkill, /locked answers/);
+  assert.match(sageSkill, /creative directions/);
+  assert.match(sageSkill, /approved shot plan/);
+  assert.match(sageSkill, /production bible/);
+  assert.match(sageSkill, /Never from a draft/);
 });

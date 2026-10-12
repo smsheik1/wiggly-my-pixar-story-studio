@@ -30,5 +30,5 @@ test('sheet prompt validator rejects prompts without the no-text clause',()=>{
 
 test('Vera sheet example carries the no-text clause',async()=>{
  const vera=await readFile(new URL('../crew/vera/SKILL.md',import.meta.url),'utf8');
- assert.match(vera,/No rendered text/);
+ assert.match(vera,/Any baked-in text, label, caption, expression name or watermark on a sheet fails `style`/);
 });

@@ -130,7 +130,7 @@
     "audio-reviewer": {
       "name": "Ava",
       "backend": "openrouter",
-      "model": "meta/muse-spark-1.3-contributor",
+      "model": "google/gemini-3.8-flash",
       "skill": "crew/ava/SKILL.md",
       "tools": [
         "readAsset",

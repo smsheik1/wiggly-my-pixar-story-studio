@@ -39,9 +39,9 @@ export const PRESCREEN_QUESTIONS = {
   },
   'style': {
     type: 'noul',
-    instructions: 'Is this image rendered in stylized 3D animated-feature (Pixar-like) style, and not photoreal and not 2D?',
+    instructions: 'Is this image rendered in a stylized 3D animated-feature look, and not photoreal and not 2D?',
     criteria: {
-      true: 'Stylized 3D animated-feature Pixar-like rendering with appealing shapes, soft lighting and caricatured proportions',
+      true: 'Stylized 3D animated-feature rendering with appealing shapes, soft lighting and caricatured proportions',
       false: 'Photoreal, photographic skin/textures, uncanny-valley realism, 2D drawing, sketch or flat style',
     },
   },

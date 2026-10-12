@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "craftSha256": "39b3d83da8abb26b2e20040c6b60db0df02adc9f3ea51dfbf0e1d8e385f724f9",
+  "craftSha256": "5cfedd43203422b27ea40d5a17a996461a251c65b701fb58bb0a3e30e5e77eaf",
   "duplicationBaseline": 52,
   "files": [
     {
@@ -258,6 +258,182 @@
       "audience": "model",
       "owner": "agy",
       "reason": "Text reviewer skill"
+    },
+    {
+      "path": "crew/sage/steps/answers.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for answers"
+    },
+    {
+      "path": "crew/sage/steps/backgroundAngleBrief.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for backgroundAngleBrief"
+    },
+    {
+      "path": "crew/sage/steps/backgroundAnglePrompt.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for backgroundAnglePrompt"
+    },
+    {
+      "path": "crew/sage/steps/backgroundBrief.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for backgroundBrief"
+    },
+    {
+      "path": "crew/sage/steps/backgroundPrompt.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for backgroundPrompt"
+    },
+    {
+      "path": "crew/sage/steps/backgrounds.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for backgrounds"
+    },
+    {
+      "path": "crew/sage/steps/characterPrompt.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for characterPrompt"
+    },
+    {
+      "path": "crew/sage/steps/editPlan.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for editPlan"
+    },
+    {
+      "path": "crew/sage/steps/keyframePrompt.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for keyframePrompt"
+    },
+    {
+      "path": "crew/sage/steps/roster.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for roster"
+    },
+    {
+      "path": "crew/sage/steps/script.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for script"
+    },
+    {
+      "path": "crew/sage/steps/shotIntentions.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for shotIntentions"
+    },
+    {
+      "path": "crew/sage/steps/shots.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for shots"
+    },
+    {
+      "path": "crew/sage/steps/soundPlan.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for soundPlan"
+    },
+    {
+      "path": "crew/sage/steps/videoPlan.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for videoPlan"
+    },
+    {
+      "path": "crew/sage/steps/videoPrompt.md",
+      "kind": "step",
+      "roles": [
+        "text-reviewer"
+      ],
+      "status": "active",
+      "audience": "model",
+      "owner": "agy",
+      "reason": "Sage per-step review guide for videoPrompt"
     },
     {
       "path": "crew/cleo/SKILL.md",

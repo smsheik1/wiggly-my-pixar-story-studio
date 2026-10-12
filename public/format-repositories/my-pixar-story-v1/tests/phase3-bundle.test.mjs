@@ -213,14 +213,16 @@ test('Vera skill and visual rubric fail photoreal or 3D-hybrid style and keep th
   const kit = loadStudio();
   const vera = kit.documents['crew/vera/SKILL.md'].content, visual = kit.documents['evaluation/rubrics/visual.md'].content;
   for (const doc of [vera, visual]) {
-    assert.match(doc, /feature-quality 3D animated film/);
+    assert.match(doc, /stylized animated feature/);
+    assert.doesNotMatch(doc, /feature-quality 3D/);
     assert.doesNotMatch(doc, /Pixar/);
-    assert.match(doc, /photoreal\/3D hybrid/);
     assert.match(doc, /fails? `style`/i);
     assert.match(doc, /quick normal pass/);
     assert.match(doc, /too small to count/);
   }
-  assert.match(vera, /Never pass photoreal style to protect likeness/);
+  assert.match(vera, /A photoreal, catalog or generic 3D-render look fails/);
+  assert.match(vera, /not photoreal and not a photo face on a 3D body/);
+  assert.match(visual, /photoreal\/3D hybrid/);
   assert.doesNotMatch(vera, /five distinct fingers/);
 });
 
@@ -252,7 +254,8 @@ test('refresh-text-instructions works at backgrounds step in supervised mode', (
 
 test('Sage skill and text rubric specify that master-plate-only coverage with empty angles array passes', () => {
   const kit = loadStudio();
-  const sage = kit.documents['crew/sage/SKILL.md'].content, textRubric = kit.documents['evaluation/rubrics/text.md'].content;
-  assert.match(sage, /Master-plate coverage \(`angles: \[\]`\) passes when all approved shots use master plates/);
+  const sage = kit.documents['crew/sage/SKILL.md'].content, steps = kit.documents['crew/sage/steps/backgrounds.md'].content, textRubric = kit.documents['evaluation/rubrics/text.md'].content;
+  assert.match(sage, /step guide for this step/);
+  assert.match(steps, /an empty `angles` array is correct and passes/);
   assert.match(textRubric, /Master-plate-only coverage \(`angles: \[\]`\) passes when all approved shots have null angle bindings/);
 });
