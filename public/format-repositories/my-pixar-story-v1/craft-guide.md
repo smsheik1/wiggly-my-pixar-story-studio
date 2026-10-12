@@ -121,42 +121,42 @@ Place approved characters into locked plates without overwriting either referenc
 
 ## [video-sources] Video: sources
 
-Later phase: video is not in production yet; follow your skill where it differs.
+One silent clip per shot, generated from its approved keyframe.
 
-- [V-SOURCES] (check: june) Tag only references actually uploaded, with stable element names; describe states, not transitions; describe what you want instead of banning what you don't.
+- [V-SOURCES] (check: june) Tag only references actually uploaded, with stable element names; describe states, not transitions; start every clip from the shot's approved keyframe as its first frame.
 
 ## [video-animation] Video: animation
 
-Later phase: video is not in production yet; follow your skill where it differs.
+Motion and light that match the keyframe.
 
-- [V-MOTION] (check: june) Design motion as observable results: anticipation winding the opposite way first, snap and settle with a small overshoot, moving holds that breathe, follow-through where hair and cloth arrive late, arcs for hands and heads, and weight read from timing.
-- [V-LIGHT] (check: june) Design lighting per segment: key direction and colour, rim for separation, bounce colour, practicals, atmosphere, and palette as a ratio with one accent; never stock, grain, or photoreal skin language.
+- [V-MOTION] (check: june) Design one action per clip as observable results: anticipation winding the opposite way first, snap and settle with a small overshoot, moving holds that breathe, follow-through where hair and cloth arrive late, arcs for hands and heads, and weight read from timing.
+- [V-LIGHT] (check: june) Design lighting per clip from the keyframe: key direction and colour, rim for separation, bounce colour, practicals, atmosphere, and palette as a ratio with one accent; keep the keyframe's stylized animated-feature look.
 
 ## [video-architecture] Video: architecture
 
-Later phase: video is not in production yet; follow your skill where it differs.
+Single-shot silent clips in the configured 480p profile.
 
-- [V-ONE-SHOT] (check: june) One block equals one shot: never split a continuous camera move across blocks, and start a new block at every hard cut; state the shot and cut counts twice.
-- [V-TIMECODES] (check: june) Use whole-second timecodes that are consecutive and non-overlapping; they are a budget, not frame-accurate edit points.
-- [V-CEILING] (check: june) Never generate more than 30 seconds per segment; when a revision adds a beat, something else comes out.
+- [V-ONE-SHOT] (check: june) One clip per shot: generate from the shot's approved keyframe as its first frame and trim the clip to the shot.
+- [V-DURATION] (check: june) Generate 4-15 whole seconds per clip (generationSeconds integer 4-15); clip duration is a whole number of 30 fps frames.
+- [V-FORMAT] (check: june) Generate silent 480p clips (864x496 16:9); narration, music and effects are added later.
 
 ## [video-blocks] Video: blocks
 
-Later phase: video is not in production yet; follow your skill where it differs.
+One prompt block per clip.
 
-- [V-EXCLUSIONS] (check: june) Size exclusions to the segment's real risks in about three lines: the lines in braces are the only spoken words, no extra cuts, plus whatever this segment could actually get wrong; cut generic bans.
+- [V-EXCLUSIONS] (check: june) Phrase each clip prompt positively with at most one or two negations; state one camera move, one action, and 1-2 look and design anchors.
 
 ## [video-transitions] Video: transitions
 
-Later phase: video is not in production yet; follow your skill where it differs.
+Clips cut together; transitions are the exception.
 
-- [V-TRANSITIONS] (check: june) Keep hard cuts as the default, name any other transition and justify it, and ban everything else.
+- [V-TRANSITIONS] (check: june) Cut hard between clips by default; name and justify any other transition.
 
 ## [video-failures] Video: failures
 
-Later phase: video is not in production yet; follow your skill where it differs.
+Reject defects, not taste.
 
-- [V-FAILURES] (check: june) Check the segment against the video failure table: floaty even motion, chopped continuous moves, extra cuts, photoreal drift, generic characters, stray spoken prose, dead holds, unison ensembles, mugging faces, dead eyes, uninvited fades, left-right flips, and averaged heights.
+- [V-FAILURES] (check: june) Check the clip against the video failure table: floaty even motion, photoreal drift, generic characters, dead holds, unison ensembles, mugging faces, dead eyes, uninvited fades, left-right flips, and averaged heights.
 
 ## [working-method] Working method
 
