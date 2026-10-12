@@ -47,6 +47,7 @@ export function validateShots(p, content, planning=false) {
     if (Math.abs(end - 15) > 0.000001) throw new Error('Each beat requires exactly 15 seconds of planned shots.');
   }
   if (content.shots.some((s, i) => i > 0 && s.beat < content.shots[i - 1].beat)) throw new Error('Shots must be ordered by beat.');
+  for(const s of content.shots)if(Math.abs(s.startSeconds*30-Math.round(s.startSeconds*30))>1e-6||Math.abs(s.durationSeconds*30-Math.round(s.durationSeconds*30))>1e-6)throw new Error('SHOT_FRAME_ALIGNMENT: shot startSeconds and durationSeconds must be whole 30fps frames.');
   const covered = new Set();
   for (const shot of content.shots) {
     const location = (planning?content.locations:current(p,'backgrounds').content.locations).find(l => l.id === shot.locationId);
