@@ -16,7 +16,7 @@ import { shotFor, shotReferences, referenceBindings, planningReferences, validat
 import { requestDescriptor,planningAccountGuide,generationEstimate,narrationGenerationTexts } from './providers.mjs';
 import {scriptQuoteChecks,transcriptDiff} from './evaluators.mjs';
 import {AudioEditReceipt,AUDIO_EDIT_PROFILE,validateAudioEdit,validateEditingInvestigation} from './audio-edit.mjs';
-import { VERSION, Inputs, Project, Content, Review, Event, BibleEvent, Plans, IntakeConfirmation, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
+import { VERSION, Inputs, Project, Content, Review, Event, BibleEvent, Plans, IntakeConfirmation, PhotoInventoryEntry, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
 
 import { keyFor, current, locked, audioLocked, assertAllowed, backgroundSteps, imageSteps, authorSteps, supervised, reviewPassed, refinedWorkflow, miniProduction, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact, sheetWorkflow } from './gates.mjs';
 export { keyFor, current, locked, audioLocked, assertAllowed, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact } from './gates.mjs';
@@ -368,6 +368,13 @@ function previousVersionFor(p, a) {
   return { previousVersion: { id: last.id, version: last.version, digest: last.digest, authoredBy: last.authoredBy ?? null, content: last.content, review: last.review ?? null,
     instruction: 'Your superseded previous version of this deliverable. Revise it according to feedback (latest entry last); if the latest feedback intent is redo, start fresh but avoid what the feedback rejected. Never resubmit it unchanged.' } };
 }
+// Roster photo source before approval: explicit maker records first, then the
+// rev<4 script intake inventory (character name is the maker's label), else none.
+function rosterPhotoInventory(p){
+ if(p.photoInventory?.length)return p.photoInventory;
+ if(p.workflowRevision<4){const intake=current(p,'script')?.intakeConfirmation;if(intake)return intake.characters.filter(c=>c.likeness!=='omit').flatMap(c=>c.references.map(file=>({...file,label:c.name})));}
+ return [];
+}
 export function taskFor(p) {
   const a = current(p), loaded=workerInstructions(p,roleFor(p));
   const stepGuide=(()=>{const skillPath=loaded?.skill?.path;if(!skillPath)return {};const stepPath=skillPath.replace(/\/SKILL\.md$/,`/steps/${p.step}.md`);const doc=studioFor(p)?.documents[stepPath];return doc?{stepGuide:{path:stepPath,content:doc.content,sha256:doc.sha256}}:{};})();
@@ -400,6 +407,7 @@ export function taskFor(p) {
     ...(p.step==='answers'?{questionnaire,sourceInputs:p.inputs,sourceInputDigest:digest(p.inputs),originalInputsRequired:!p.feedback.some(f=>f.key==='answers'&&f.intent&&f.message)}:{}),
     ...(['characterPrompt','candidates','sheetPrompt','sheet'].includes(p.step)?{castEntry:current(p,'roster')?.content.characters.find(c=>c.id===p.characterId)}:{}),
     ...(p.step==='characterPrompt'&&current(p,'roster')?.content.characters.some(c=>c.id===p.characterId)?{characterDigest:digest(current(p,'roster').content.characters.find(c=>c.id===p.characterId))}:{}),
+    ...(p.step==='roster'?{photoInventory:rosterPhotoInventory(p)}:{}),
     approvedScript: current(p, 'script') ?? null, inputPriority: ['characterPrompt','candidates','sheetPrompt','sheet'].includes(p.step)?['approvedScript','castEntry','castEntry.references','inputs.answers']:['immediateScenes', 'approvedScript', 'inputs.answers'],
     ...(p.step==='characterPrompt'?{recipe:sheetWorkflow(p)?recipeFor(p,'sheetPrompt',{content:characterRecipe,sha256:characterRecipeSha256}):recipeFor(p,'characterPrompt',{content:characterPromptRecipe,sha256:characterPromptRecipeSha256})}:{}),
     ...(p.step==='sheetPrompt'?{recipe:recipeFor(p,'sheetPrompt',{content:characterRecipe,sha256:characterRecipeSha256})}:{}),
@@ -569,6 +577,16 @@ export function applyEvent(project, raw) {
     for(const a of p.artifacts.filter(a=>a.valid&&['characterPrompt','candidates','sheetPrompt','sheet'].some(k=>a.key===`${k}:${characterId}`)))invalidate(p,a.id);
     p.characterId=characterId;p.step=refinedWorkflow(p)?'characterPrompt':'candidates';p.gate=refinedWorkflow(p)?'author':'produce';
     p.feedback.push({key:`characterPrompt:${characterId}`,message:e.message});
+  }else if(e.action==='intake-photos'){
+    requiredActor(e,'human');
+    if(!e.message)throw new Error('intake-photos needs --message "<maker note>" with measured stills and labels.');
+    if(current(p,'roster')?.approvedBy)throw new Error('INTAKE_PHOTOS_LOCKED: record maker intake photos before roster approval; use add-reference after approval.');
+    const photos=(e.photoInventory??[]).map(entry=>PhotoInventoryEntry.parse(entry));
+    if(!photos.length)throw new Error('intake-photos needs at least one measured still with a maker label.');
+    const seen=new Set((p.photoInventory??[]).map(f=>f.sha256));
+    for(const entry of photos){if(!entry.width||!entry.height||entry.durationSeconds||!entry.label.trim())throw new Error('intake-photos needs measured still images with maker labels.');if(seen.has(entry.sha256))throw new Error('INTAKE_PHOTO_DUPLICATE: this maker photo is already recorded.');seen.add(entry.sha256);}
+    p.photoInventory=[...(p.photoInventory??[]),...photos];
+    p.feedback.push({key:'roster',message:e.message});
   }else if(e.action==='refresh-writing-instructions'){
     requiredActor(e,'human');
     if(!e.message||p.step!=='script'||!p.studio||locked(p,'script')||p.jobs.length||p.artifacts.some(a=>a.approvedBy&&a.kind!=='answers'))throw new Error('WRITING_REFRESH_LOCKED: explicitly refresh only unapproved script work before media; approved answers and prior review evidence remain unchanged.');

@@ -106,3 +106,47 @@ test('P17 SPEC5: a tampered characterDigest still fails CHARACTER_PROMPT_BINDING
   assert.throws(() => send(p, 'artifact', { workerId: 'cast-owner', content }), /CHARACTER_PROMPT_BINDING_REQUIRED/);
 });
 
+// ---- SPEC 7: photoInventory in the roster packet ----
+
+const still = n => ({ path: `/isolated-test/intake-${n}.png`, sha256: String(50 + n).padStart(64, '0'), bytes: 100, width: 1600, height: 900 });
+
+test('P17 SPEC7: intake-photos records stills with labels and the roster packet carries them whole', T, async () => {
+  let p = audioProject();
+  assert.equal(p.step, 'roster');
+  p = send(p, 'intake-photos', { actor: 'human', photoInventory: [{ ...still(1), label: 'Alex' }, { ...still(2), label: 'Bob' }], message: 'ISOLATED maker intake photos' });
+  assert.deepEqual(p.photoInventory, [{ ...still(1), label: 'Alex' }, { ...still(2), label: 'Bob' }]);
+  assert.equal(p.feedback.at(-1).key, 'roster');
+  const task = taskFor(p);
+  assert.deepEqual(task.photoInventory, [{ ...still(1), label: 'Alex' }, { ...still(2), label: 'Bob' }]);
+  await prepareCrewTask(p, task);
+});
+
+test('P17 SPEC7: roster packet photoInventory is an empty array when there are no photos', T, async () => {
+  const p = audioProject();
+  const task = taskFor(p);
+  assert.deepEqual(task.photoInventory, []);
+  await prepareCrewTask(p, task);
+});
+
+test('P17 SPEC7: rev<4 falls back to the script intake inventory with character-name labels', T, () => {
+  const p = audioProject();
+  assert.ok(p.workflowRevision < 4);
+  current(p, 'script').intakeConfirmation = { voiceConsent: true, characters: [{ id: 'alex', name: 'Alex', ageVariant: 'adult', minor: false, photoRights: true, references: [still(3)], likeness: 'reference', decisionNotes: 'ISOLATED' }], resolvedFindings: [] };
+  assert.deepEqual(taskFor({ ...p, step: 'roster', gate: 'author' }).photoInventory, [{ ...still(3), label: 'Alex' }]);
+});
+
+test('P17 SPEC7: intake-photos rejects non-stills, missing messages and duplicates', T, () => {
+  const p = audioProject();
+  const audio = { path: '/isolated-test/hum.wav', sha256: 'b'.repeat(64), bytes: 100, durationSeconds: 5 };
+  assert.throws(() => send(p, 'intake-photos', { actor: 'human', photoInventory: [{ ...audio, label: 'Alex' }], message: 'ISOLATED non-still' }), /measured still/);
+  assert.throws(() => send(p, 'intake-photos', { actor: 'human', photoInventory: [{ ...still(4), label: 'Alex' }] }), /--message/);
+  const q = send(p, 'intake-photos', { actor: 'human', photoInventory: [{ ...still(4), label: 'Alex' }], message: 'ISOLATED first' });
+  assert.throws(() => send(q, 'intake-photos', { actor: 'human', photoInventory: [{ ...still(4), label: 'Alex again' }], message: 'ISOLATED dupe' }), /INTAKE_PHOTO_DUPLICATE/);
+});
+
+test('P17 SPEC7: intake-photos is locked once the roster is approved', T, () => {
+  const p = audioProject();
+  p.artifacts.push({ id: 'roster@1', key: 'roster', kind: 'roster', version: 1, digest: 'r', content: { characters: [{ id: 'alex', name: 'Alex', ageVariant: 'adult', important: true, references: [still(5)], notes: 'ISOLATED' }] }, dependencies: [], valid: true, authoredBy: 'human', approvedBy: { message: 'ISOLATED', at: new Date().toISOString() } });
+  assert.throws(() => send(p, 'intake-photos', { actor: 'human', photoInventory: [{ ...still(6), label: 'Alex' }], message: 'ISOLATED too late' }), /INTAKE_PHOTOS_LOCKED/);
+});
+

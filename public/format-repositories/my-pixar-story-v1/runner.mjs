@@ -761,6 +761,15 @@ async function main() {
       await verifyFiles(imported);
       print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'add-reference', characterId: character, importFile: imported, message }))); return;
     }
+    if (command === 'intake-photos') {
+      const filePath = option('file'); const label = option('label'); const message = option('message');
+      if (!filePath || !label || !message || args.length) throw new Error('intake-photos needs --file <abs path> --label "<who this photo shows>" --message "<maker note>".');
+      if (!filePath.startsWith('/')) throw new Error('intake-photos --file must be an absolute path.');
+      const imported = await importMedia(resolve(filePath), runDir);
+      if (!imported.width || !imported.height || imported.durationSeconds) throw new Error('intake-photos needs a measured still image.');
+      await verifyFiles(imported);
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'intake-photos', photoInventory: [{ ...imported, label }], message }))); return;
+    }
     if (command === 'prefer-image-provider') {
       const provider = option('provider'); const message = option('message');
       if (!['meta-muse','agy'].includes(provider) || !message || args.length) throw new Error('prefer-image-provider needs --provider meta-muse|agy --message "<text>" --run <run>.');
