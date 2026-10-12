@@ -142,6 +142,15 @@ export async function findBrainFallback({ brainDir, startedAt, imageName }) {
   return pool[0].path;
 }
 
+export const AGY_POLICY_REFUSAL = /prohibited use policy|sensitive words|could not be submitted/i;
+const tail = (v, n = 2000) => { const t = String(v ?? ''); return t.length > n ? t.slice(-n) : t; };
+// Bounded, parsed agy output for traces and receipts on any failure.
+export function agyDiagnostics({ stdout = '', stderr = '', exitCode = null } = {}) {
+  let parsed = null;
+  try { parsed = JSON.parse(String(stdout).trim()); } catch {}
+  return { conversationId: parsed?.conversation_id ?? null, status: parsed?.status ?? null, response: typeof parsed?.response === 'string' ? parsed.response.slice(0, 2000) : null, exitCode, stdoutTail: tail(stdout), stderrTail: tail(stderr) };
+}
+
 function runAgy({ bin, argv, timeoutMs, cwd }) {
   return new Promise((resolvePromise, rejectPromise) => {
     let child;
@@ -156,7 +165,7 @@ function runAgy({ bin, argv, timeoutMs, cwd }) {
       if (done) return;
       done = true;
       try { child.kill('SIGKILL'); } catch {}
-      rejectPromise(new Error(`agy timed out after ${timeoutMs}ms; process killed, no retry submitted.`));
+      const err = new Error(`agy timed out after ${timeoutMs}ms; process killed, no retry submitted.`); err.agyDiagnostics = agyDiagnostics({ stdout, stderr, exitCode: null }); rejectPromise(err);
     }, timeoutMs);
     child.on('error', err => {
       if (done) return;
@@ -172,7 +181,7 @@ function runAgy({ bin, argv, timeoutMs, cwd }) {
       clearTimeout(timer);
       if (code !== 0) {
         const tail = stderr.slice(-800) || stdout.slice(-800) || `exit ${code}`;
-        rejectPromise(new Error(`agy exited ${code}: ${tail}`));
+        const err = new Error(`agy exited ${code}: ${tail}`); err.agyDiagnostics = agyDiagnostics({ stdout, stderr, exitCode: code }); rejectPromise(err);
         return;
       }
       resolvePromise({ stdout, stderr });
@@ -190,7 +199,8 @@ export async function generateAgyImage({ prompt, aspectRatio, imageName, imagePa
   const startedAt = Date.now();
   const agyPrompt = buildAgyPrompt({ prompt, aspectRatio, imageName, imagePaths: imagePaths.map(p => resolve(p)), outputPath: absOutput });
   const argv = ['-p', agyPrompt, '--sandbox', '--dangerously-skip-permissions', '--add-dir', dirname(absOutput), '--output-format', 'json'];
-  await runAgy({ bin: resolvedBin, argv, timeoutMs: resolvedTimeout, cwd: dirname(absOutput) });
+  const run = await runAgy({ bin: resolvedBin, argv, timeoutMs: resolvedTimeout, cwd: dirname(absOutput) });
+  const diagnostics = agyDiagnostics({ ...run, exitCode: 0 });
   let source = null;
   try {
     const st = await stat(absOutput);
@@ -204,7 +214,9 @@ export async function generateAgyImage({ prompt, aspectRatio, imageName, imagePa
     source = brainCopy ?? await findBrainFallback({ brainDir: resolvedBrain, startedAt, imageName: null });
     if (!source) {
       const reported = await agyImageErrorFromLogs({ logDir: logDir ?? agyLogDir(), startedAt });
-      throw new Error(`agy produced no image: requested output missing and no new brain image found.${reported ? ` agy log: ${reported}` : ''}`);
+      const refused = AGY_POLICY_REFUSAL.test(diagnostics.response ?? '');
+      const err = new Error(`${refused ? 'AGY_POLICY_REFUSED: the image model refused the prompt (Google generative-AI policy); ' : ''}agy produced no image: requested output missing and no new brain image found.${diagnostics.conversationId ? ` agy conversation_id: ${diagnostics.conversationId}.` : ''}${diagnostics.response ? ` agy said: ${diagnostics.response.slice(0, 300)}` : ''}${reported ? ` agy log: ${reported}` : ''}`);
+      err.agyDiagnostics = diagnostics; throw err;
     }
   }
   const buffer = await readFile(source);
