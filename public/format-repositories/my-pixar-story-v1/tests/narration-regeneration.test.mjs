@@ -42,7 +42,8 @@ test('one-beat regeneration preserves siblings/locks, posts once and recovers wi
   const measurements={transcripts:current(done,'script').content.beats.map((b,i)=>i===1?'I drove my own car with no AC.':b.narration),speechToTextMethod:'ISOLATED mock STT',referenceSha256:current(done,'voiceSample').content.files[0].sha256,speakerSimilarity:.9,speakerSimilarityMethod:'ISOLATED mock identity',speakingRateWpm:[80,80,80,80],silenceSeconds:[1,1,1,1],measurementNotes:'ISOLATED contract evidence only.'};
   assert.equal(reviewed(done,'approved',{measurements}).gate,'human');
   const unapproved=structuredClone(done);delete current(unapproved).content.audioRegenerations;
-  assert.throws(()=>reviewed(unapproved,'approved',{measurements}),/Speech-to-text/);
+  // r5 join rule: "A/C" and "AC" are the same spoken word, so the fallback line now matches.
+  assert.equal(reviewed(unapproved,'approved',{measurements}).gate,'human');
   const changed=structuredClone(measurements);changed.transcripts[1]='I drove my own boat with no AC.';assert.throws(()=>reviewed(done,'approved',{measurements:changed}),/Speech-to-text/);
   for(const mutate of [x=>x.files[0]=x.files[1],x=>x.audioRegenerations[0].requestDigest='wrong',x=>x.transcripts[1]='invented story',x=>x.voiceId='wrong']){const bad=structuredClone(result);mutate(bad);assert.throws(()=>send(submitted,'receipt',{...receipt,result:bad}),/NARRATION|voice/);}
   const stale=structuredClone(submitted);current(stale).digest='changed';await assert.rejects(executeJob(stale,stale.jobs.at(-1),f.dir,'ISOLATED',()=>{throw new Error('Forbidden');}),/STALE/);

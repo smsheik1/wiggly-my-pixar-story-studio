@@ -15,16 +15,64 @@ export const spokenWords = text => words(text).flatMap(word => {
   if(!/^(?:0|[1-9]\d?)$/.test(word))return [word];
   const n=Number(word);return n<20?[smallNumbers[n]]:[tens[Math.floor(n/10)],...(n%10?[smallNumbers[n%10]]:[])];
 });
+// Join rule: a run of up to JOIN_MAX adjacent words on one side matches a run on
+// the other side at no cost when their concatenated letters are identical, so
+// hyphen/punctuation splits ("Yu-Gi-Oh!", "Yu Gi Oh") equal "Yugioh". Every
+// other difference (missing, extra or wrong word) still costs 1.
+const JOIN_MAX = 4;
 export function transcriptDiff(expected, observed) {
   const a = spokenWords(expected), b = spokenWords(observed);
   // Levenshtein distance counts insertions, deletions and substitutions; punctuation is ignored.
-  let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+  const d = Array.from({ length: a.length + 1 }, (_, i) => { const r = new Array(b.length + 1).fill(0); r[0] = i; return r; });
+  for (let j = 0; j <= b.length; j++) d[0][j] = j;
   for (let i = 1; i <= a.length; i++) {
-    const row = [i];
-    for (let j = 1; j <= b.length; j++) row.push(Math.min(previous[j] + 1, row[j - 1] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)));
-    previous = row;
+    for (let j = 1; j <= b.length; j++) {
+      let best = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      for (let p = 1; p <= Math.min(JOIN_MAX, i); p++) {
+        const left = a.slice(i - p, i).join('');
+        for (let q = 1; q <= Math.min(JOIN_MAX, j); q++) {
+          if (p === 1 && q === 1) continue;
+          if (left === b.slice(j - q, j).join('')) best = Math.min(best, d[i - p][j - q]);
+        }
+      }
+      d[i][j] = best;
+    }
   }
-  return { expectedWords: a.length, observedWords: b.length, editDistance: previous[b.length], wordErrorRate: a.length ? previous[b.length] / a.length : b.length ? 1 : 0 };
+  const editDistance = d[a.length][b.length];
+  return { expectedWords: a.length, observedWords: b.length, editDistance, wordErrorRate: a.length ? editDistance / a.length : b.length ? 1 : 0 };
+}
+// Second pass (after the join-aware compare): the word-level differences left
+// over, as one-for-one substitutions plus a count of pure missing/extra words.
+export function transcriptVariants(expected, observed) {
+  const a = spokenWords(expected), b = spokenWords(observed);
+  const d = Array.from({ length: a.length + 1 }, (_, i) => { const r = new Array(b.length + 1).fill(0); r[0] = i; return r; });
+  for (let j = 0; j <= b.length; j++) d[0][j] = j;
+  const join = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(null));
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    let best = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    for (let p = 1; p <= Math.min(JOIN_MAX, i); p++) { const left = a.slice(i - p, i).join('');
+      for (let q = 1; q <= Math.min(JOIN_MAX, j); q++) { if (p === 1 && q === 1) continue; if (left === b.slice(j - q, j).join('') && d[i - p][j - q] < best) { best = d[i - p][j - q]; join[i][j] = [p, q]; } } }
+    d[i][j] = best;
+  }
+  const substitutions = []; let missingOrExtra = 0, i = a.length, j = b.length;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && join[i][j] && d[i][j] === d[i - join[i][j][0]][j - join[i][j][1]]) { const [p, q] = join[i][j]; i -= p; j -= q; continue; }
+    if (i > 0 && j > 0 && d[i][j] === d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)) { if (a[i - 1] !== b[j - 1]) substitutions.unshift({ expected: a[i - 1], observed: b[j - 1] }); i--; j--; continue; }
+    if (i > 0 && d[i][j] === d[i - 1][j] + 1) { missingOrExtra++; i--; continue; }
+    missingOrExtra++; j--;
+  }
+  return { editDistance: d[a.length][b.length], substitutions, missingOrExtra };
+}
+export const REVIEWER_VARIANT_MAX = 2;
+// A remaining difference is accepted only on the reviewer's evidenced call:
+// no missing/extra words, at most REVIEWER_VARIANT_MAX one-for-one substitutions,
+// and the passing check's evidence names both words of every substitution.
+export function reviewerVariantAccepted(expected, observed, check) {
+  const v = transcriptVariants(expected, observed);
+  if (!v.editDistance) return true;
+  if (check?.status !== 'pass' || v.missingOrExtra || v.substitutions.length > REVIEWER_VARIANT_MAX) return false;
+  const cited = new Set(words(String(check.evidence ?? '')));
+  return v.substitutions.every(s => cited.has(s.expected) && cited.has(s.observed));
 }
 function exactQuoteWords(source, quote) {
   const escaped=quote.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
