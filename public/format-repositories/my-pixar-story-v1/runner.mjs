@@ -644,6 +644,7 @@ async function main() {
       }catch(err){
         commandExitCode = 1;
         commandError = err.message;
+        try{tracer.fail?.(err);}catch{}
         throw err;
       }finally{
         try{await tracer.flush(5000);}catch{}
@@ -917,6 +918,7 @@ async function main() {
           }
           print(presentation(await workflow.status('project')));
         }catch(e){
+          try{tracer.fail?.(e);}catch{}
           const diagnostic=key?e.message.replaceAll(key,'[redacted]'):e.message;
           await runtimeEvent('provider-error',{message:diagnostic});throw new Error(`${diagnostic}\n${remediation(job.plan.provider,secretsPath)}`);
         }
@@ -981,6 +983,9 @@ async function main() {
           message: 'Decisions prescreen',
           prescreen: prescreenResult,
         })));
+      } catch (err) {
+        try { tracer.fail?.(err); } catch {}
+        throw err;
       } finally {
         try { await tracer.flush(5000); } catch {}
       }
