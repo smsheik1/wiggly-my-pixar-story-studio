@@ -9,6 +9,8 @@ export function shotsProject() {
   return locationComplete(p);
 }
 export const shotPlan = { shots: ['home', 'shop'].flatMap((locationId, i) => [0,1].map(j => ({ id: `${locationId}-${j}-wide`, locationId, sceneId: `${locationId}-${j}`, angleId: j === 0 ? 'reverse' : null, beat: i * 2 + j + 1, startSeconds: 0, durationSeconds: 15, characterIds: ['alex'], camera: 'Wide view at child height.', action: 'Alex holds the bicycle steady.', staging: 'Feet on floor, hands contact bicycle, doorway clear.', continuityNotes: 'Preserve workbench and doorway.' }))) };
+// Supervised Phase 2 patch: only {id, staging, continuityNotes} per locked shot, in order.
+export const shotPatch = (staging) => ({ shots: shotPlan.shots.map(s => ({ id: s.id, staging: staging ?? s.staging, continuityNotes: s.continuityNotes })) });
 export function keyframeProject() { return approved(reviewed(author(shotsProject(), shotPlan, 'shot-planner'))); }
 export function composition(p) { const task = taskFor(p); return { prompt: `Use image 1 for room geography and image 2 for Alex identity. ${task.shot.action} ${task.shot.staging} ${task.shot.camera} Single widescreen stylised 3D image.`, shotDigest: task.shotDigest, references: task.referenceBindings }; }
 export function promptLocked(p = keyframeProject()) { return approved(reviewed(author(p, composition(p), 'composition-writer'))); }

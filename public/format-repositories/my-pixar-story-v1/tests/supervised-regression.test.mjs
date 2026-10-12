@@ -6,9 +6,9 @@ import {criteria} from '../runtime/contracts.mjs';
 import {supervisedBackgrounds} from './supervised-helpers.mjs';
 import {approved,reviewed,send} from './helpers.mjs';
 import {author} from './background-helpers.mjs';
-import {shotPlan,composition,generated} from './shot-helpers.mjs';
+import {shotPlan,shotPatch,composition,generated} from './shot-helpers.mjs';
 const corpus=JSON.parse(await readFile(new URL('../evaluation/invented-regression.json',import.meta.url),'utf8'));
-const keyframeReady=()=>approved(reviewed(author(supervisedBackgrounds(),shotPlan,'shot-planner')));
+const keyframeReady=()=>approved(reviewed(author(supervisedBackgrounds(),shotPatch(),'shot-planner')));
 for(const c of corpus.cases)test(`${c.id}: ${c.persona}; ${c.expected} (protocol only)`,()=>{
  let p=keyframeReady();
  if(c.kind==='binding'){

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {Project,criteria,digest} from '../runtime/contracts.mjs';
 import {initialProject,current,characterRecipeSha256,characterPromptRecipeSha256} from '../runtime/workflow.mjs';
 import {image,sheetImage,author,registry,brief,prompt,ownerChecked} from './background-helpers.mjs';
-import {shotPlan,composition,generated} from './shot-helpers.mjs';
+import {shotPlan,shotPatch,composition,generated} from './shot-helpers.mjs';
 import {videoPlan} from './studio-helpers.mjs';
 import {inputs,script,file,send,authored,reviewed,approved,produce,intakeFixture,answersLocked} from './helpers.mjs';
 
@@ -45,7 +45,7 @@ export function supervisedBackgrounds(){
 }
 
 export function supervisedVideoReady(){
- let p=approved(reviewed(author(supervisedBackgrounds(),shotPlan,'shot-planner')));
+  let p=approved(reviewed(author(supervisedBackgrounds(),shotPatch(),'shot-planner')));
  while(p.step!=='videoPlan')p=confirmed(reviewed(generated(approved(reviewed(author(p,composition(p),'composition-writer'))))));
  return approved(reviewed(author(p,videoPlan(p),'motion-director')));
 }
