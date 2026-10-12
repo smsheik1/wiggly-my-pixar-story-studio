@@ -16,7 +16,7 @@ Each narration file is a 15-second window: the spoken take, padded with silence 
 - `renderAudioEdit` takes `edit: { "kind", "keepRanges", "reason" }`:
   - `keepRanges` are the parts to keep: 1 to 32 ordered, non-overlapping ranges inside the file, totalling 1 to 15 seconds. At least something must be removed.
   - `kind: "pause-shortening"`: every removed part must lie inside a detected pause.
-  - `kind: "pronunciation-repair"` removes a glitch inside speech, such as a stutter, a doubled syllable or a click. It's allowed only when the review failed `transcript` or `delivery`, and only after `transcribe` has given you word timings for that file.
+  - `kind: "glitch-removal"` is cut-only: it removes a glitch inside speech, such as a stutter, a doubled syllable or a click, and can't fix a misread word. It's allowed only when the review failed `transcript` or `delivery`, and only after `transcribe` has given you word timings for that file. Older receipts may say `pronunciation-repair`; that old name is still accepted and means the same edit.
   - You get at most three rendered drafts per task.
 - Listen to the full rendered `outputFile` before you submit it.
 - The artifact must:
@@ -36,7 +36,7 @@ Each narration file is a 15-second window: the spoken take, padded with silence 
 1. Read the failed checks in `task.artifact.review` and in `task.feedback`, and note which beats they name.
 2. For each affected beat: listen to the whole take, run `inspectAudio`, and run `transcribe` if speech timing matters.
 3. Too long (`duration`): shorten the longest pauses first, cutting from the middle of each pause. Leave a natural breath, around 0.2 s or more (advice), so the joins don't sound clipped. Keep the pause before the most important line if you can. Don't remove every pause.
-4. A stutter, doubled word or click (`transcript` or `delivery`): use `pronunciation-repair` to drop only the extra sound, with cut points inside the word timings. The result must still read as the locked text, word for word.
+4. A stutter, doubled word or click (`transcript` or `delivery`): use `glitch-removal` to drop only the extra sound, with cut points inside the word timings. The result must still read as the locked text, word for word.
 5. Render, listen to the full result (especially every join), and fix and re-render if a join clicks or clips a consonant.
 6. Submit the narration with only the repaired beats changed. In `message`, say what you cut and where, and why.
 

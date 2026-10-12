@@ -64,7 +64,7 @@ Mode B output, `direction` (abridged):
 Mode D. Theo's prompt opens with the room sentence and includes the layout sentence, but it omits the spec block:
 
 ```json
-{ "action": "owner-review", "artifactId": "backgroundPrompt:kitchen@1", "artifactDigest": "d_kitchen_prompt",
+{ "taskId": "<copy task.taskId>", "action": "owner-review", "actor": "agent", "artifactId": "backgroundPrompt:kitchen@1", "artifactDigest": "<copy the artifact digest from the task>",
   "review": { "decision": "rejected", "perception": "direct-text",
     "checks": [
       { "criterion": "brief-fit", "status": "fail",

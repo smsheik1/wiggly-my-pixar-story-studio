@@ -45,7 +45,7 @@ Pass:
 
 Fail:
 ```json
-{ "action": "review", "artifactId": "script@1", "artifactDigest": "d_script_8801",
+{ "taskId": "<copy task.taskId>", "action": "review", "actor": "reviewer", "artifactId": "script@1", "artifactDigest": "<copy the artifact digest from the task>",
   "review": { "decision": "rejected", "repairTarget": "current", "perception": "direct-text",
     "checks": [
       { "criterion": "facts", "status": "fail",

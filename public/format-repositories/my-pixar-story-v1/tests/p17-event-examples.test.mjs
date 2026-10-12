@@ -42,15 +42,14 @@ function eventFencesWithoutIds(content) {
   return bad;
 }
 
-test('P17 SPEC4: every non-crew Event JSON example with an action key carries taskId and actor', { timeout: 20000 }, async () => {
-  // Crew skills are approved texts (read-only): theo/beau/sage examples predate
-  // the taskId/actor requirement and are excluded here, not edited.
+test('P17 SPEC4: every Event JSON example with an action key carries taskId and actor', { timeout: 20000 }, async () => {
+  // P18: the theo/beau/sage crew examples now carry taskId and actor, so crew
+  // skills are no longer exempt.
   const bad = [];
   for (const f of mdFiles(kitDir)) {
     const rel = relative(kitDir, f);
-    if (rel.startsWith('crew/')) continue;
     const missing = eventFencesWithoutIds(readFileSync(f, 'utf8'));
     for (const b of missing) bad.push({ file: rel, fence: b });
   }
-  assert.deepEqual(bad, [], `non-crew Event examples must carry taskId and actor: ${JSON.stringify(bad)}`);
+  assert.deepEqual(bad, [], `Event examples must carry taskId and actor: ${JSON.stringify(bad)}`);
 });
