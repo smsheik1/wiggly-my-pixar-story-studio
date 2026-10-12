@@ -399,7 +399,9 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
       const childTotals=turnTrace?._childTotals??{};
       const errMsg=extra.error??null;
       const rc=errMsg?traceReasonCode(errMsg):(childTotals.reasonCode??null);
-      turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart,...childTotals,...extra,...(rc?{reasonCode:rc}:{})});
+      // Codex turns run on the ChatGPT subscription: no per-call bill, so cost is an explicit 0 (not missing).
+      const subscription=(task?.crewWorker?.backend??'codex')==='codex';
+      turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart,...childTotals,...extra,...(rc?{reasonCode:rc}:{}),...(subscription?{usage_metadata:{total_cost:0},cost_source:'subscription',cost_note:'codex subscription'}:{})});
     }catch{}
   };
   const runOneTask=async()=>{

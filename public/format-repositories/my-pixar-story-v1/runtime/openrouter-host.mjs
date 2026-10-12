@@ -168,8 +168,10 @@ export class OpenRouterHost {
         const u=result?.usage??{};
         const usageMeta={input_tokens:Number(u.prompt_tokens)||0,output_tokens:Number(u.completion_tokens)||0,total_tokens:(Number(u.prompt_tokens)||0)+(Number(u.completion_tokens)||0),...(u.prompt_tokens_details?{input_token_details:{cached_tokens:Number(u.prompt_tokens_details.cached_tokens)||0}}:{}),output_token_details:{reasoning:Number(u.completion_tokens_details?.reasoning_tokens)||0}};
         // LangSmith reads token counts from outputs.usage_metadata (top level).
-        const costUsd=Number(u.cost)||0;
-        llmHandle?.end?.({content:choice?.message?.content??null,tool_calls:choice?.message?.tool_calls??null,finish_reason:choice?.finish_reason??null,native_finish_reason:choice?.native_finish_reason??null,usage_metadata:{...usageMeta,total_cost:costUsd},inputTokens:usageMeta.input_tokens,outputTokens:usageMeta.output_tokens,reasoningTokens:usageMeta.output_token_details.reasoning,costUsd,generationId:result?.id??null,provider:result?.provider??null,durationMs:Date.now()-llmStart,model});
+        // Billed amount from OpenRouter usage.cost. If absent, record no cost (never a guessed 0).
+        const billed=u.cost!=null&&Number.isFinite(Number(u.cost));
+        const costUsd=billed?Number(u.cost):0;
+        llmHandle?.end?.({content:choice?.message?.content??null,tool_calls:choice?.message?.tool_calls??null,finish_reason:choice?.finish_reason??null,native_finish_reason:choice?.native_finish_reason??null,usage_metadata:billed?{...usageMeta,total_cost:costUsd}:usageMeta,...(billed?{cost_source:'billed'}:{cost_unknown:true,cost_note:`cost unknown for openrouter/${model}`}),inputTokens:usageMeta.input_tokens,outputTokens:usageMeta.output_tokens,reasoningTokens:usageMeta.output_token_details.reasoning,costUsd,generationId:result?.id??null,provider:result?.provider??null,durationMs:Date.now()-llmStart,model});
       }catch{}
     };
     const endLlmFail=(err,status,text)=>{
