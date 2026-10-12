@@ -12,7 +12,7 @@ import {Crew,roleFor,assignedWorker,assertCrewEvent} from './crew.mjs';
 import {requireAudioQualification} from '../evaluation/audio-qualification.mjs';
 import { studioSteps, studioDependencies, studioNext, validateStudioContent, videoBinding, effectFor } from './studio.mjs';
 import { requireVisualQualification } from '../evaluation/visual-qualification.mjs';
-import { shotFor, shotReferences, referenceBindings, planningReferences, validateShots, validateLocationRegistry, validateKeyframePrompt } from './shots.mjs';
+import { shotFor, shotReferences, referenceBindings, planningReferences, validateShots, validateLocationRegistry, validateKeyframePrompt, mergeShotsPatch } from './shots.mjs';
 import { requestDescriptor,planningAccountGuide,generationEstimate,narrationGenerationTexts } from './providers.mjs';
 import {scriptQuoteChecks,transcriptDiff} from './evaluators.mjs';
 import {AudioEditReceipt,AUDIO_EDIT_PROFILE,validateAudioEdit,validateEditingInvestigation} from './audio-edit.mjs';
@@ -150,6 +150,9 @@ function next(p) {
 }
 /** Pure content checks shared with the opt-in SQL producer. No workflow transition. */
 export function validateArtifactContent(p, content, author, previous=current(p)) {
+  // Supervised Phase 2: Sam submits a staging patch; merge it into the locked
+  // intentions and validate the merged full plan. Non-supervised keeps the full object.
+  if(p.step==='shots'&&supervised(p)){const merged=Content.shots.parse(mergeShotsPatch(p,content));validateShots(p,merged);return merged;}
   const parsed = Content[p.step].parse(content);
   if(p.step==='clone'&&p.voiceChoice){
     const choice=p.voiceChoice,expected={kind:'existing',lookup:choice.lookup,selectionMessage:choice.selectedBy.message,consentMessage:choice.consentMessage};

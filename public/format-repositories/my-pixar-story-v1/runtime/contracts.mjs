@@ -76,6 +76,9 @@ export const Content = {
   sheet: z.object({ files: z.array(File).length(1), prompt: text, provenance: SheetProvenance.optional() }),
 };
 Content.shotIntentions = z.object({locations:Content.backgrounds.shape.locations,shots:Content.shots.shape.shots});
+// Supervised Phase 2 patch: Sam returns only {id, staging, continuityNotes} per locked
+// shot, in locked order; the runtime merges it into the locked intentions.
+export const ShotsPatch = z.object({ shots: z.array(z.object({ id: slug, staging: text, continuityNotes: text }).strict()).min(4) }).strict();
 export const criteria = {
   voiceSample: ['consent', 'integrity', 'reference-duration'],
   clone: ['voice-provenance', 'consent', 'provider-receipt'],

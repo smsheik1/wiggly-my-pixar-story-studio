@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {assertDebugReady} from './debug.mjs';
 import {assertBibleReady} from './bible.mjs';
 import {readFile} from 'node:fs/promises';
-import {text,File,digest,Content,Event} from './contracts.mjs';
+import {text,File,digest,Content,Event,ShotsPatch} from './contracts.mjs';
 import {loadStudio,studioFor,maximumTools,backendForAgent} from './instructions.mjs';
 import {taskFor} from './workflow.mjs';
 import {assertAllowed,keyFor,current,sheetKeyFor} from './gates.mjs';
@@ -32,7 +32,10 @@ export const workerBackend=(worker,config=null)=>{
 // reference images and the wiggly_tool definition around this packet.
 export const WORKER_PACKET_INSTRUCTION='Complete ONLY this current task. Allowed action is review for review, owner-review for owner-review, plan for produce, otherwise artifact; narration/author and produce may also return an evidenced planning-blocked event. Never return runtime provider-error events. repairFeedback and savedTools describe HISTORICAL attempts, not a current tool failure. Continue the investigation with currently granted tools and compatible cached receipts; do not merely repeat a saved error. Saved narration edit output hashes are not automatically in scope after restart. To resume a saved draft, listen/inspect/transcribe its original current source as required, then call renderAudioEdit with that original source hash and the exact saved plan. This reuses its immutable local receipt, grants the draft hash in the current task, and does not create another draft. Then listen to the granted output before submitting. A current fatal tool failure is handled by the host and must not be fabricated from history. Source facts are in the supplied task. Do not invent facts, approval, tool evidence or perception. For a review, inspect every required criterion and return evidence and repairs, using your exact workerId/modelVersion/capabilityVersion. Missing capabilities mean inconclusive. Return eventJson containing the serialized Event object. Do not emit other text.';
 export function buildWorkerPacket(task,worker){
- const contentSchema=Content[task.step]?z.toJSONSchema(Content[task.step]):null;
+  // Supervised Phase 2: Sam stages only {id, staging, continuityNotes}; the runtime
+  // merges the patch into the locked intentions before validation and review.
+  const patchStep=task.step==='shots'&&task.reviewPolicy?.mode==='supervised';
+  const contentSchema=patchStep?z.toJSONSchema(ShotsPatch):Content[task.step]?z.toJSONSchema(Content[task.step]):null;
  if(task.step==='answers'){
   contentSchema.properties.sourceInputDigest.const=task.sourceInputDigest;
   contentSchema.properties.inputs.description='When task.originalInputsRequired is true, copy task.sourceInputs exactly, including all keys and original wording. Organize findings in commonSenseChecks; changes require recorded human clarification.';
