@@ -1,9 +1,9 @@
 {
  "caseId": "vera-mother-clean",
- "recordedAt": "2026-10-12T03:04:07.134Z",
+ "recordedAt": "2026-10-12T03:56:14.512Z",
  "model": "meta/muse-spark-1.3-contributor",
  "mode": "live",
- "fingerprint": "fde2a803b415ef3438b1cb05e24a7c9a90f462fb25e836cbc7840dfe62893258",
+ "fingerprint": "de2ca302f18c362bf1bec6a03415e2f811846af6cc9be45c375e742450173494",
  "fingerprintParts": {
   "model": "meta/muse-spark-1.3-contributor",
   "backend": "openrouter",
@@ -14,11 +14,11 @@
   ],
   "skill": {
    "path": "crew/vera/SKILL.md",
-   "sha256": "6c6334c4e54ea21a13e68642e89f704f1bbb7f1d60ba71b952fc3088ae61d847"
+   "sha256": "88a64ed0a277cc77b6ad158e1b9724526429d3ce85a89294a2317f7f2dabf2be"
   },
   "rubric": {
    "path": "evaluation/rubrics/visual.md",
-   "sha256": "e7e46dcb9dc9adb85ca5d10a1b3faba48d87d8aa5cf322e88bb1009eb9784d36"
+   "sha256": "d5e35da018d98e81581d166ed26732370daaaac2c9da5d3d07dbc697e0357fd3"
   },
   "recipes": {},
   "craft": {
@@ -41,21 +41,21 @@
   "packetInstruction": "80fbfdb923416da67163962766e6e5b4c63919b17c2dbd17cdedfa7b4d2d3ea2",
   "tool": "631c771e8b1aa20fbfb01b99aacc5a55f0c2a01b3215b54a0033dec5cd74e751"
  },
- "wallMs": 267306,
- "costUsd": 0.011488722,
+ "wallMs": 130140,
+ "costUsd": 0.013785688,
  "requests": [
   {
    "seq": 1,
-   "requestSha256": "9232acccac31176b429f5a4e70d8806e21a41b04f6200cbeec9fe1fadf3f5869",
+   "requestSha256": "dbe9ea893de8d751f50f84ae0e0355fcc5974135fdc51bf2ca69589ed8c7f509",
    "status": 200,
-   "ms": 40114,
+   "ms": 35597,
    "message": {
-    "content": "Vera reviewing the mother's sheets — inspecting each option against the criteria.",
+    "content": "Vera reviewing the mother sheets — inspecting each candidate against the six criteria.",
     "tool_calls": [
      {
       "type": "function",
       "index": 0,
-      "id": "call_01a12e0dce3a75d1b60446dc9841339f",
+      "id": "call_01a12e3f8d7275d186ba3d8a26362f28",
       "function": {
        "name": "wiggly_tool",
        "arguments": "{\"name\":\"viewImage\",\"sha256\":\"5ae70416c08ac07a8ff631cb0a492227e9e83f60598b22062c085c53151c6b8f\",\"referenceSha256\":\"5ae70416c08ac07a8ff631cb0a492227e9e83f60598b22062c085c53151c6b8f\"}"
@@ -64,24 +64,24 @@
     ]
    },
    "usage": {
-    "prompt_tokens": 37082,
-    "completion_tokens": 3129,
-    "reasoning_tokens": 2835,
-    "cost": 0.004334
+    "prompt_tokens": 37323,
+    "completion_tokens": 4203,
+    "reasoning_tokens": 3873,
+    "cost": 0.0045729
    }
   },
   {
    "seq": 2,
-   "requestSha256": "ca6e64b7e1ee2e418b76d1ffe77d27181248f830debe1c0f3a695126d6786802",
+   "requestSha256": "05a4b07f55ff796b8b97bf7ef770498282c690ed29658a730478c6f8fb3b5e60",
    "status": 200,
-   "ms": 67605,
+   "ms": 4799,
    "message": {
-    "content": "Vera reviewing the mother's sheets — inspecting each option against the criteria.",
+    "content": "All three mother options are in front of me — now completing the required full-size inspections.",
     "tool_calls": [
      {
       "type": "function",
       "index": 0,
-      "id": "call_01a12e0ed6bc7172ba46d0589b0b2238",
+      "id": "call_01a12e3fa15277c29246d889b3a20cec",
       "function": {
        "name": "wiggly_tool",
        "arguments": "{\"name\":\"viewImage\",\"sha256\":\"deb8bb0bb765856b3cd5a57c278797c8cbbf0843bb9526cbe3c3617e6b0ecb65\",\"referenceSha256\":\"deb8bb0bb765856b3cd5a57c278797c8cbbf0843bb9526cbe3c3617e6b0ecb65\"}"
@@ -90,24 +90,24 @@
     ]
    },
    "usage": {
-    "prompt_tokens": 37386,
-    "completion_tokens": 5474,
-    "reasoning_tokens": 5102,
-    "cost": 0.004006966
+    "prompt_tokens": 37628,
+    "completion_tokens": 367,
+    "reasoning_tokens": 178,
+    "cost": 0.0038362
    }
   },
   {
    "seq": 3,
-   "requestSha256": "a21aacaee08601d09a23b65e5343705222277784adfc562d1503a436ec739042",
+   "requestSha256": "9059540e6310cbe7057b7bbc6d8acba687ef6ff3e632573f0df0d5fa9f683422",
    "status": 200,
-   "ms": 59002,
+   "ms": 5791,
    "message": {
-    "content": "Mother's three sheets are nearly identical — verifying the last plate to finalize the ranking.",
+    "content": "All three mother options are in view — finalizing the last required inspection.",
     "tool_calls": [
      {
       "type": "function",
       "index": 0,
-      "id": "call_01a12e0fbcf171e99a5de8d8199c9696",
+      "id": "call_01a12e3fb78375ad928e5cd51bd38d90",
       "function": {
        "name": "wiggly_tool",
        "arguments": "{\"name\":\"viewImage\",\"sha256\":\"a9808a0fb7fc1df872fbbff9596616658a4c38a7ee9096bfb38305f6a304ee2b\",\"referenceSha256\":\"a9808a0fb7fc1df872fbbff9596616658a4c38a7ee9096bfb38305f6a304ee2b\"}"
@@ -116,25 +116,25 @@
     ]
    },
    "usage": {
-    "prompt_tokens": 37697,
-    "completion_tokens": 5083,
-    "reasoning_tokens": 4734,
-    "cost": 0.001124922
+    "prompt_tokens": 37943,
+    "completion_tokens": 503,
+    "reasoning_tokens": 295,
+    "cost": 0.000246066
    }
   },
   {
    "seq": 4,
-   "requestSha256": "e5075e1de6bb5138e2554680919d8086fe0a220be85459dc586892a460e500cf",
+   "requestSha256": "5e888ec07ef677d0f2d6118bda0c73f62fbbb324e4f0fe389121b35ad7f8cb4e",
    "status": 200,
-   "ms": 100149,
+   "ms": 83585,
    "message": {
-    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"5d7ab148af10096a1799ff90e2f5edff3afb2ab9135435e0e2b47394326cafab\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:visual-reviewer\\\",\\\"artifactId\\\":\\\"candidates:shaz-mother@1\\\",\\\"artifactDigest\\\":\\\"e2d995bbcd40ef83242680aa1dc873780566da78aab49a456f29682db8f6e032\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"likeness\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"No photo exists; judged against roster and prompt. All three match interpreted design: warm medium-brown complexion, softly rounded oval face with full cheeks and rounded chin, gently arched dark brows, large dark-brown eyes, fully covering muted teal hijab with no visible hair. Options differ only in subtle rendering strength, not face, skin tone or hair colour.\\\",\\\"location\\\":\\\"Close-up rows, every option; roster shaz-mother notes\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Stylized animated-feature 3D in all three: simplified sculpted geometry, broad soft facial planes, smooth matte skin, tactile knit and woven fabrics, visibly adult average build without oversized child-like head, warm skin not grey, no photoreal pores, no 2D/anime/clay/sketch look, no text, labels or watermarks.\\\",\\\"location\\\":\\\"Full sheet, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"anatomy\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Quick full pass: normal limbs and joints; hands open with large rounded digits, nothing fused, extra, missing or mangled; no extra or missing limbs, broken joints or melted faces; small turnaround hands with nothing clearly wrong.\\\",\\\"location\\\":\\\"Turnaround row, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"turnaround\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Four uncropped full-body figures on one baseline at same height and scale in each option, ordered front, three-quarter at ~45 degrees, profile at 90 degrees, back at 180 degrees; entire hijab, head, both empty hands, legs and flats visible with margins; hands open and empty, no props held.\\\",\\\"location\\\":\\\"Top row, options 0, 1 and 2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"expressions\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Eight head-and-shoulders portraits in locked prompt order in each option: neutral, warm smile, pure joy with broad open smile, thoughtful concentration, determined resolve, gentle surprise with parted lips, tender concern, playful mischief; each readable as itself. Option 1 joy and surprise read broadest; option 2 brows render slightly heavier; option 0 surprise reads softer but still distinct.\\\",\\\"location\\\":\\\"Middle and bottom rows, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"consistency\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Same outfit, hijab coverage/colour/drape, age, skin tone and proportions across all twelve figures in each option: muted teal hijab fully covering hair and neck, teal cardigan over ivory blouse, charcoal trousers, dark flats, no jewelry; no outfit, age or complexion drift.\\\",\\\"location\\\":\\\"Full sheet, every option\\\",\\\"repair\\\":\\\"\\\"}],\\\"recommendation\\\":{\\\"selection\\\":1,\\\"ranking\\\":[1,2,0],\\\"reason\\\":\\\"Clearest expression separation with consistent hijab coverage and even lighting.\\\"},\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"ae56c66cb4677ddf4ac98bbf0ddbc074162931cf5842f80d0942f990b2ef5a32\\\"}}\"}"
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"5d7ab148af10096a1799ff90e2f5edff3afb2ab9135435e0e2b47394326cafab\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:visual-reviewer\\\",\\\"artifactId\\\":\\\"candidates:shaz-mother@1\\\",\\\"artifactDigest\\\":\\\"e2d995bbcd40ef83242680aa1dc873780566da78aab49a456f29682db8f6e032\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"likeness\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"No photo - judged against roster shaz-mother notes and prompt. All three match: warm medium-brown complexion, softly rounded oval face with full cheeks and rounded chin, gently arched dark eyebrows, large dark-brown eyes, softly rounded nose, defined upper lip, plain muted teal hijab fully covering all hair and entire neck. Options differ only in brow weight and lighting softness, never skin, hair colour or face identity.\\\",\\\"location\\\":\\\"Close-up rows, every option; roster shaz-mother notes; prompt appearance lines\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Stylized animated-feature 3D in all three: simplified sculpted geometry, broad soft facial planes, smooth matte skin, tactile knit and woven fabrics, adult average build visibly adult. Not photoreal, not 2D/anime/clay/sketch, no oversized child-like head, no grey dead skin, no text, labels, captions or watermarks.\\\",\\\"location\\\":\\\"Full sheet, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"anatomy\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Quick normal pass over full image: normal limbs, natural joints, open empty hands, complete feet; no fused, extra, missing or mangled fingers, no extra or missing limbs, broken joints, melted faces or mouths. Fingers small in back view but nothing looks wrong.\\\",\\\"location\\\":\\\"Turnaround hands and feet; portrait faces, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"turnaround\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Four uncropped full-body views on common baseline at same height and scale with margins above hijab and below soles, ordered front, three-quarter ~45deg, profile 90deg, back 180deg, arms relaxed slightly away torso, empty hands, no props held anywhere on sheet; cardigan colour and length, blouse neckline, trouser fit and hijab coverage, colour and drape preserved.\\\",\\\"location\\\":\\\"Top row, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"expressions\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Eight head-and-shoulders portraits in two rows of four facing camera with full covered head and shoulders inside cell, per prompt order middle neutral, warm smile, pure joy, thoughtful concentration, bottom determined resolve, gentle surprise, tender concern, playful mischief; each readable distinct - neutral closed lips, smile cheek lift, joy lifted brows broad open smile for excitement, concentration focused slightly drawn brows, resolve firm lips, surprise raised brows lightly parted lips, concern pinched inner brows softened mouth, mischief one raised brow asymmetrical smile. Option 1 joy reads strongest.\\\",\\\"location\\\":\\\"Middle and bottom rows, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"consistency\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Same outfit, hijab, age, skin tone and proportions across all twelve figures within each option: muted teal hip-length open cardigan over ivory round-neck blouse, charcoal straight-leg trousers, dark closed-toe flats, no jewelry, fully covering hijab, warm medium-brown skin, adult build. No outfit or age change. Options differ only in style strength.\\\",\\\"location\\\":\\\"Full sheet, every option\\\",\\\"repair\\\":\\\"\\\"}],\\\"recommendation\\\":{\\\"selection\\\":1,\\\"ranking\\\":[1,0,2],\\\"reason\\\":\\\"Softest modeling with gently arched brows and clearest encouraging joy.\\\"},\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"ae56c66cb4677ddf4ac98bbf0ddbc074162931cf5842f80d0942f990b2ef5a32\\\"}}\"}"
    },
    "usage": {
-    "prompt_tokens": 38007,
-    "completion_tokens": 9543,
-    "reasoning_tokens": 8495,
-    "cost": 0.002022834
+    "prompt_tokens": 38251,
+    "completion_tokens": 10722,
+    "reasoning_tokens": 9571,
+    "cost": 0.005130522
    }
   }
  ],
@@ -154,42 +154,42 @@
      {
       "criterion": "likeness",
       "status": "pass",
-      "evidence": "No photo exists; judged against roster and prompt. All three match interpreted design: warm medium-brown complexion, softly rounded oval face with full cheeks and rounded chin, gently arched dark brows, large dark-brown eyes, fully covering muted teal hijab with no visible hair. Options differ only in subtle rendering strength, not face, skin tone or hair colour.",
-      "location": "Close-up rows, every option; roster shaz-mother notes",
+      "evidence": "No photo - judged against roster shaz-mother notes and prompt. All three match: warm medium-brown complexion, softly rounded oval face with full cheeks and rounded chin, gently arched dark eyebrows, large dark-brown eyes, softly rounded nose, defined upper lip, plain muted teal hijab fully covering all hair and entire neck. Options differ only in brow weight and lighting softness, never skin, hair colour or face identity.",
+      "location": "Close-up rows, every option; roster shaz-mother notes; prompt appearance lines",
       "repair": ""
      },
      {
       "criterion": "style",
       "status": "pass",
-      "evidence": "Stylized animated-feature 3D in all three: simplified sculpted geometry, broad soft facial planes, smooth matte skin, tactile knit and woven fabrics, visibly adult average build without oversized child-like head, warm skin not grey, no photoreal pores, no 2D/anime/clay/sketch look, no text, labels or watermarks.",
+      "evidence": "Stylized animated-feature 3D in all three: simplified sculpted geometry, broad soft facial planes, smooth matte skin, tactile knit and woven fabrics, adult average build visibly adult. Not photoreal, not 2D/anime/clay/sketch, no oversized child-like head, no grey dead skin, no text, labels, captions or watermarks.",
       "location": "Full sheet, every option",
       "repair": ""
      },
      {
       "criterion": "anatomy",
       "status": "pass",
-      "evidence": "Quick full pass: normal limbs and joints; hands open with large rounded digits, nothing fused, extra, missing or mangled; no extra or missing limbs, broken joints or melted faces; small turnaround hands with nothing clearly wrong.",
-      "location": "Turnaround row, every option",
+      "evidence": "Quick normal pass over full image: normal limbs, natural joints, open empty hands, complete feet; no fused, extra, missing or mangled fingers, no extra or missing limbs, broken joints, melted faces or mouths. Fingers small in back view but nothing looks wrong.",
+      "location": "Turnaround hands and feet; portrait faces, every option",
       "repair": ""
      },
      {
       "criterion": "turnaround",
       "status": "pass",
-      "evidence": "Four uncropped full-body figures on one baseline at same height and scale in each option, ordered front, three-quarter at ~45 degrees, profile at 90 degrees, back at 180 degrees; entire hijab, head, both empty hands, legs and flats visible with margins; hands open and empty, no props held.",
-      "location": "Top row, options 0, 1 and 2",
+      "evidence": "Four uncropped full-body views on common baseline at same height and scale with margins above hijab and below soles, ordered front, three-quarter ~45deg, profile 90deg, back 180deg, arms relaxed slightly away torso, empty hands, no props held anywhere on sheet; cardigan colour and length, blouse neckline, trouser fit and hijab coverage, colour and drape preserved.",
+      "location": "Top row, every option",
       "repair": ""
      },
      {
       "criterion": "expressions",
       "status": "pass",
-      "evidence": "Eight head-and-shoulders portraits in locked prompt order in each option: neutral, warm smile, pure joy with broad open smile, thoughtful concentration, determined resolve, gentle surprise with parted lips, tender concern, playful mischief; each readable as itself. Option 1 joy and surprise read broadest; option 2 brows render slightly heavier; option 0 surprise reads softer but still distinct.",
+      "evidence": "Eight head-and-shoulders portraits in two rows of four facing camera with full covered head and shoulders inside cell, per prompt order middle neutral, warm smile, pure joy, thoughtful concentration, bottom determined resolve, gentle surprise, tender concern, playful mischief; each readable distinct - neutral closed lips, smile cheek lift, joy lifted brows broad open smile for excitement, concentration focused slightly drawn brows, resolve firm lips, surprise raised brows lightly parted lips, concern pinched inner brows softened mouth, mischief one raised brow asymmetrical smile. Option 1 joy reads strongest.",
       "location": "Middle and bottom rows, every option",
       "repair": ""
      },
      {
       "criterion": "consistency",
       "status": "pass",
-      "evidence": "Same outfit, hijab coverage/colour/drape, age, skin tone and proportions across all twelve figures in each option: muted teal hijab fully covering hair and neck, teal cardigan over ivory blouse, charcoal trousers, dark flats, no jewelry; no outfit, age or complexion drift.",
+      "evidence": "Same outfit, hijab, age, skin tone and proportions across all twelve figures within each option: muted teal hip-length open cardigan over ivory round-neck blouse, charcoal straight-leg trousers, dark closed-toe flats, no jewelry, fully covering hijab, warm medium-brown skin, adult build. No outfit or age change. Options differ only in style strength.",
       "location": "Full sheet, every option",
       "repair": ""
      }
@@ -198,10 +198,10 @@
      "selection": 1,
      "ranking": [
       1,
-      2,
-      0
+      0,
+      2
      ],
-     "reason": "Clearest expression separation with consistent hijab coverage and even lighting."
+     "reason": "Softest modeling with gently arched brows and clearest encouraging joy."
     },
     "modelVersion": "meta/muse-spark-1.3-contributor",
     "capabilityVersion": "ae56c66cb4677ddf4ac98bbf0ddbc074162931cf5842f80d0942f990b2ef5a32",
