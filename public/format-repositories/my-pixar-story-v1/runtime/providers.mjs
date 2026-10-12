@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir, rename, copyFile, unlink, stat } from 'node:fs/promises';
 import {assertDebugReady} from './debug.mjs';
-import { join, extname, resolve } from 'node:path';
+import { join, extname, resolve, basename } from 'node:path';
 import {legacyGeneration,studioFor,imageUnitCostFor,imageAspectFor,metaMuseSizeFor} from './instructions.mjs';
 import { generateAgyImage, agyBrainDir, agyBinary, agyTimeoutMs, isAgyQuotaError, parseAgyQuotaReset } from './agy-image.mjs';
 export { isAgyQuotaError, parseAgyQuotaReset };
@@ -364,6 +364,12 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
     for (const [i, data] of response.data.entries()) { const path = join(dir, `${i}.${request.output_format}`); await writeFile(path, Buffer.from(data.b64_json, 'base64'), { mode: 0o600 }); files.push(await importMedia(path, runDir)); }
     const unit = job.plan.estimatedCostUsd / request.n;
     result = { files, prompt: request.prompt, provider: 'meta-muse', imageProviders: files.map((_, i) => ({ index: i, provider: 'meta-muse', costUsd: unit })) };
+  }
+  if (tracer && Array.isArray(result?.files) && ['sheet', 'backgroundCandidates', 'backgroundAngle', 'keyframe', 'candidates'].includes(job.plan.operation)) {
+    for (const [idx, f] of result.files.entries()) {
+      const name = result.files.length === 1 ? (f.path ? basename(f.path) : 'image.png') : `option-${idx}-${f.path ? basename(f.path) : 'image.png'}`;
+      try { tracer.attachImage?.({ name, path: f.path, sha256: f.sha256 }); } catch {}
+    }
   }
   await atomicJson(join(dir, 'result.json'), result); return result;
 }

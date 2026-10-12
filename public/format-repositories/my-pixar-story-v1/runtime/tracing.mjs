@@ -11,6 +11,7 @@ export const DEFAULT_LIMITS={
   maxArrayItems:200,
   maxDepth:12,
   maxRunBytes:25*1024*1024,
+  maxImageBytes:5*1024*1024,
 };
 
 function sha256Hex(bytes){
@@ -178,9 +179,9 @@ function extractValue(source,name){
 }
 
 function disabledTracer(){
- const noop={id:'noop',parentId:null,kind:'noop',name:'noop',ended:true,end(){},child(){return {id:'noop',parentId:null,ended:true,end(){},child(){return this;}};}};
+ const noop={id:'noop',parentId:null,kind:'noop',name:'noop',ended:true,end(){},attachImage:async()=>({attachment_skipped:true,reason:'disabled'}),child(){return {id:'noop',parentId:null,ended:true,end(){},attachImage:async()=>({attachment_skipped:true,reason:'disabled'}),child(){return this;}};}};
  const noopFn=()=>noop;
- return {enabled:false,journaling:false,projectName:TRACING_PROJECT,runId:null,runDir:null,rootName:'disabled',turn:noopFn,agentCall:noopFn,llm:noopFn,tool:noopFn,review(){},paidJob(){},child:noopFn,within:(h,fn)=>fn(),current:()=>null,flush:async()=>{},getRunUrl:async()=>null};
+ return {enabled:false,journaling:false,projectName:TRACING_PROJECT,runId:null,runDir:null,rootName:'disabled',turn:noopFn,agentCall:noopFn,llm:noopFn,tool:noopFn,review(){},paidJob(){},child:noopFn,within:(h,fn)=>fn(),current:()=>null,flush:async()=>{},getRunUrl:async()=>null,attachImage:async()=>({attachment_skipped:true,reason:'disabled'}),get byteUsed(){return 0;},get journalBytes(){return 0;},rootHandle:noop};
 }
 
 let warned=false;
@@ -263,6 +264,8 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
  const effLimits={...DEFAULT_LIMITS,...(limits||{})};
  const envBytes=process.env.WIGGLY_TRACE_MAX_BYTES?Number(process.env.WIGGLY_TRACE_MAX_BYTES):null;
  if(Number.isFinite(envBytes)&&envBytes>0)effLimits.maxRunBytes=envBytes;
+ const envImageBytes=process.env.WIGGLY_TRACE_MAX_IMAGE_BYTES?Number(process.env.WIGGLY_TRACE_MAX_IMAGE_BYTES):null;
+ if(Number.isFinite(envImageBytes)&&envImageBytes>0)effLimits.maxImageBytes=envImageBytes;
  const resolvedRootName=rootName??name??'drive-codex';
  // Read secrets file if given; missing file means no key (journal may still apply).
  let source='';
@@ -298,11 +301,13 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
  // Journal setup (async queued, errors swallowed, byte cap applies).
  let journalPath=null;
  let journalQueue=Promise.resolve();
+ let attachQueue=Promise.resolve();
+ const seenAttachmentShas=new Set();
  let journalBytes=0;
  const als=new AsyncLocalStorage();
  let byteUsed=0;
  let budgetWarned=false;
- const noteBytes=(n)=>{byteUsed+=n;journalBytes+=n;};
+ const notePayloadBytes=(n)=>{byteUsed+=n;};
  const overBudget=()=>byteUsed>=effLimits.maxRunBytes;
  const maybeStrip=(fields)=>{
    if(!overBudget())return {fields,stripped:false};
@@ -316,7 +321,7 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
  const appendJournal=(entry)=>{
   if(!journalPath)return;
   const line=JSON.stringify(entry)+'\n';
-  noteBytes(Buffer.byteLength(line));
+  journalBytes+=Buffer.byteLength(line);
   journalQueue=journalQueue.then(async()=>{
     try{await mkdir(join(runDir,'trace'),{recursive:true});await appendFile(journalPath,line,{mode:0o600});}catch(error){warnOnce(error.message);}
   }).catch(()=>{});
@@ -334,15 +339,15 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
  let useLive=false;
  let captured=null;
  let postFake=null;
+ const rootFields=safe(baseMetadata);
+ const rs=maybeStrip(rootFields);
+ notePayloadBytes(Buffer.byteLength(JSON.stringify(rs.fields)));
  if(client){
   captured=client.captured??(client.captured=[]);
   postFake=(run)=>{try{captured.push(run);}catch(error){warnOnce(error.message);}};
   // Root start for fake backend (compat phase 'root', name rootName)
   try{
-    const rootFields=safe(baseMetadata);
-    const rs=maybeStrip(rootFields);
     postFake({phase:'root',id:rootId,parentId:null,kind:'root',name:resolvedRootName,run_type:'chain',project_name:projectName,tags,inputs:rs.fields,metadata:rs.fields,...(rs.stripped?{budgetExhausted:true}:{})});
-    noteBytes(JSON.stringify(rootFields).length);
   }catch(error){warnOnce(error.message);}
  }
  // Live backend init (only when apiKey present and no fake client)
@@ -360,8 +365,138 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
   }catch(error){warnOnce(error.message);useLive=false;rootTree=null;lsClient=null;}
  }
  if(journalPath)appendJournal({ts:new Date().toISOString(),id:rootId,parentId:null,phase:'start',kind:'root',name:resolvedRootName,fields:safe({...baseMetadata,tags})});
+
+ const recordAttachmentSkipped=(handle,name,bytes,reason,filePath=null,mimeType='image/png',sha256=null)=>{
+   handle.metadata=handle.metadata||{};
+   handle.metadata.attachment_skipped=true;
+   handle.metadata.attachment_skip_reason=reason;
+   const skippedEntry={attachment_skipped:true,name,bytes,reason};
+   handle.metadata.skipped_attachments=handle.metadata.skipped_attachments||[];
+   handle.metadata.skipped_attachments.push(skippedEntry);
+   if(handle.tree){
+     handle.tree.metadata=handle.tree.metadata||{};
+     Object.assign(handle.tree.metadata,{attachment_skipped:true,attachment_skip_reason:reason,skipped_attachments:handle.metadata.skipped_attachments});
+     try{handle.tree.patchRun?.().catch(e=>warnOnce(e.message));}catch(e){warnOnce(e.message);}
+   }
+   if(captured){
+     for(const run of captured){
+       if(run.id===handle.id){
+         run.metadata=run.metadata||{};
+         Object.assign(run.metadata,{attachment_skipped:true,attachment_skip_reason:reason,skipped_attachments:handle.metadata.skipped_attachments});
+         run.attachment_skipped=true;
+         run.attachment_skip_reason=reason;
+         run.skipped_attachments=handle.metadata.skipped_attachments;
+       }
+     }
+     postFake({phase:'attachment-skipped',id:handle.id,parentId:handle.parentId,attachment_skipped:true,name,bytes,reason});
+   }
+   if(journalPath){
+     appendJournal({ts:new Date().toISOString(),id:handle.id,parentId:handle.parentId,phase:'attachment',name,mimeType,sha256,bytes,source:filePath?basename(filePath):name,attached:false,skipped:true,reason});
+   }
+ };
+
+ const processAttachment=async(handle,opts={})=>{
+   try{
+     let rawBytes=opts.bytes;
+     const filePath=opts.path;
+     if(!rawBytes&&filePath){
+       try{
+         rawBytes=await readFile(filePath);
+       }catch(readErr){
+         warnOnce(`attachment read failed: ${readErr.message}`);
+         recordAttachmentSkipped(handle,opts.name??(filePath?basename(filePath):'unknown'),0,'read-error',filePath);
+         return {attachment_skipped:true,reason:'read-error'};
+       }
+     }
+     if(!rawBytes){
+       warnOnce('attachImage called without bytes or readable path');
+       recordAttachmentSkipped(handle,opts.name??'unknown',0,'missing-bytes',filePath);
+       return {attachment_skipped:true,reason:'missing-bytes'};
+     }
+     const uint8=rawBytes instanceof Uint8Array?rawBytes:Buffer.from(rawBytes);
+     const byteLen=uint8.byteLength;
+     const sha=opts.sha256??sha256Hex(uint8);
+     let rawName=opts.name??(filePath?basename(filePath):`image-${sha.slice(0,8)}.png`);
+     const safeName=basename(String(safe(rawName)??rawName));
+     const mime=opts.mimeType??(safeName.endsWith('.jpg')||safeName.endsWith('.jpeg')?'image/jpeg':safeName.endsWith('.webp')?'image/webp':'image/png');
+
+     if(handle.attachments&&handle.attachments[safeName]){
+       return handle.attachments[safeName];
+     }
+
+     if(byteLen>effLimits.maxImageBytes){
+       recordAttachmentSkipped(handle,safeName,byteLen,'image-too-large',filePath,mime,sha);
+       return {attachment_skipped:true,name:safeName,bytes:byteLen,reason:'image-too-large'};
+     }
+
+     const needsBudget=!seenAttachmentShas.has(sha);
+     if(needsBudget&&(byteUsed+byteLen>effLimits.maxRunBytes)){
+       recordAttachmentSkipped(handle,safeName,byteLen,'budget-exceeded',filePath,mime,sha);
+       return {attachment_skipped:true,name:safeName,bytes:byteLen,reason:'budget-exceeded'};
+     }
+
+     if(needsBudget){
+       seenAttachmentShas.add(sha);
+       byteUsed+=byteLen;
+     }
+
+     handle.attachments=handle.attachments||{};
+     const tuple=[mime,uint8];
+     tuple.name=safeName;
+     tuple.mime=mime;
+     tuple.mimeType=mime;
+     tuple.bytes=byteLen;
+     tuple.byteLength=byteLen;
+     tuple.sha256=sha;
+     handle.attachments[safeName]=tuple;
+
+     if(handle.tree){
+       handle.tree.attachments=handle.tree.attachments||{};
+       handle.tree.attachments[safeName]=[mime,uint8];
+       try{handle.tree.patchRun?.().catch(e=>warnOnce(e.message));}catch(e){warnOnce(e.message);}
+     }
+
+     if(captured){
+       for(const run of captured){
+         if(run.id===handle.id){
+           run.attachments=handle.attachments;
+         }
+       }
+       postFake({phase:'attachment',id:handle.id,parentId:handle.parentId,name:safeName,mime,mimeType:mime,bytes:byteLen,byteLength:byteLen,sha256:sha});
+     }
+
+     if(journalPath){
+       appendJournal({ts:new Date().toISOString(),id:handle.id,parentId:handle.parentId,phase:'attachment',name:safeName,mimeType:mime,sha256:sha,bytes:byteLen,source:filePath?basename(filePath):safeName,attached:true});
+     }
+
+     return tuple;
+   }catch(err){
+     warnOnce(`attachImage error: ${err.message}`);
+     return {attachment_skipped:true,reason:'error'};
+   }
+ };
+
+ const attachImage=(handleOrOpts,maybeOpts)=>{
+   let targetHandle,opts;
+   if(maybeOpts&&typeof maybeOpts==='object'){
+     targetHandle=handleOrOpts;
+     opts=maybeOpts;
+   }else if(handleOrOpts&&typeof handleOrOpts==='object'&&(handleOrOpts.name||handleOrOpts.path||handleOrOpts.bytes)){
+     opts=handleOrOpts;
+     targetHandle=current()??rootHandle;
+   }else{
+     targetHandle=handleOrOpts??current()??rootHandle;
+     opts=maybeOpts??{};
+   }
+   targetHandle=targetHandle??rootHandle;
+   const p=processAttachment(targetHandle,opts);
+   attachQueue=attachQueue.then(()=>p).catch(()=>{});
+   return p;
+ };
+
  const rootHandle={id:rootId,parentId:null,kind:'root',name:resolvedRootName,run_type:'chain',ended:false,tree:rootTree,
    child:(kind,fields)=>makeChild(kind,fields,rootHandle),
+   attachImage:(opts)=>attachImage(rootHandle,opts),
    end:(outputs={},errorText)=>{/* root ends on flush */}};
  const resolveParent=(explicitParent,defaultToRoot=true)=>{
    if(explicitParent)return explicitParent;
@@ -371,8 +506,8 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
  const emitStart=({id,parentId,kind,runName,runType,fields})=>{
    const s=safe(fields);
    const {fields:effFields,stripped}=maybeStrip(s);
-   const size=JSON.stringify(effFields).length;
-   noteBytes(size);
+   const size=Buffer.byteLength(JSON.stringify(effFields));
+   notePayloadBytes(size);
    const ts=new Date().toISOString();
    // Journal (phase start|end)
    if(journalPath){
@@ -389,8 +524,8 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
  const emitEnd=({id,parentId,kind,outputs,errorText})=>{
    const s=safe(outputs||{});
    const {fields:effFields,stripped}=maybeStrip(s);
-   const size=JSON.stringify(effFields).length;
-   noteBytes(size);
+   const size=Buffer.byteLength(JSON.stringify(effFields));
+   notePayloadBytes(size);
    const ts=new Date().toISOString();
    if(journalPath){
      appendJournal({ts,id,parentId,phase:'end',kind,name:kind,fields:{...effFields,...(errorText?{errorText}:{})},...(stripped?{budgetExhausted:true}:{})});
@@ -431,13 +566,19 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
    }
    const handle={id,parentId,kind:effKind,name:runName,run_type:runType,ended:false,tree,
      child:(k,f)=>makeChild(k,f,handle),
-     end:(outputs={},errorText)=>{
+     attachImage:(opts)=>attachImage(handle,opts),
+     end:(outputs={},errorText,endOpts={})=>{
        if(handle.ended)return;handle.ended=true;open.delete(handle);
+       if(outputs?.attachments&&Array.isArray(outputs.attachments)){for(const att of outputs.attachments)attachImage(handle,att);}
+       if(endOpts?.attachments&&Array.isArray(endOpts.attachments)){for(const att of endOpts.attachments)attachImage(handle,att);}
        emitEnd({id,parentId,kind:effKind,outputs,errorText});
        if(tree){
          try{Promise.resolve(tree.end(safe(outputs||{}),errorText)).then(()=>tree.patchRun()).catch(error=>warnOnce(error.message));}catch(error){warnOnce(error.message);}
        }
      }};
+   if(fields?.attachments&&Array.isArray(fields.attachments)){
+     for(const att of fields.attachments)attachImage(handle,att);
+   }
    open.add(handle);
    return handle;
  }
@@ -459,11 +600,12 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
    for(const handle of [...open]){
      try{handle.end({outcome:'error',error:'unfinished at flush'},'unfinished at flush');}catch(error){warnOnce(error.message);}
    }
-   // Wait for journal queue bounded
+   // Wait for attachQueue and journal queue bounded
    let timer=null;
    try{
      await Promise.race([
        (async()=>{
+         try{await attachQueue;}catch(error){warnOnce(error.message);}
          try{await journalQueue;}catch(error){warnOnce(error.message);}
          if(useLive&&lsClient&&rootTree){
            try{await rootTree.end(safe({runId}));await rootTree.patchRun();await lsClient.awaitPendingTraceBatches();}catch(error){warnOnce(error.message);}
@@ -492,18 +634,24 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
    journalPath,
    ...(captured?{captured}:{}),
    within,current,child:childGeneric,
+   attachImage,
+   get byteUsed(){return byteUsed;},
+   get journalBytes(){return journalBytes;},
+   rootHandle,
    turn:(fields={})=>makeChild('crew-turn',{name:`crew-turn:${fields.role??'unknown'}`,run_type:'chain',...fields},rootHandle),
    agentCall:(fields={})=>makeChild('agent-call',{name:`agent-call:${fields.role??'unknown'}`,run_type:'chain',...fields},null),
    llm:(fields={})=>makeChild('llm',{name:`llm:${fields.model??fields.inputs?.model??'unknown'}`,run_type:'llm',...fields},null),
    tool:(fields={})=>makeChild('tool',{name:`tool:${fields.toolName??fields.name??'unknown'}`,run_type:'tool',...fields},null),
-   review:(fields={})=>{const h=makeChild('review',{name:'review-verdict',run_type:'chain',...fields},null);try{h.end({decision:fields.decision,artifactId:fields.artifactId});}catch(error){warnOnce(error.message);}},
+   review:(fields={})=>{const h=makeChild('review',{name:'review-verdict',run_type:'chain',...fields},null);if(fields.attachments&&Array.isArray(fields.attachments)){for(const att of fields.attachments)attachImage(h,att);}try{h.end({decision:fields.decision,artifactId:fields.artifactId});}catch(error){warnOnce(error.message);}return h;},
    paidJob:(fields={})=>{
-     const {outcome='ok',durationMs=0,jobId,provider,estimatedCostUsd,actualCostUsd,error,...rest}=fields;
+     const {outcome='ok',durationMs=0,jobId,provider,estimatedCostUsd,actualCostUsd,error,attachments,...rest}=fields;
      const h=makeChild('paid-job',{name:`paid-job:${fields.provider??'unknown'}`,run_type:'tool',...fields},null);
+     if(attachments&&Array.isArray(attachments)){for(const att of attachments)attachImage(h,att);}
      try{
        const errorText=outcome!=='ok'?(error||'paid-job error'):undefined;
        h.end({outcome,durationMs,jobId,provider,estimatedCostUsd,actualCostUsd,...rest,...(error?{error}:{})},errorText);
      }catch(error2){warnOnce(error2.message);}
+     return h;
    },
    flush,getRunUrl,
  };
