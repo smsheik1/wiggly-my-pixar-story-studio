@@ -414,6 +414,8 @@ export function taskFor(p) {
     ...(isPrompt(p) ? { recipe: recipeFor(p,p.step,{content:backgroundRecipe,sha256:backgroundRecipeSha256}), ownerWorkerId: briefOwner(p, current(p, briefKey(p))) } : {}),
     ...(p.step==='videoPrompt'||p.step==='video'?{videoBinding:videoBinding(p)}:{}),
     ...(p.step==='music'?{soundDirection:current(p,'soundPlan').content.music}:p.step==='effect'?{soundDirection:effectFor(p)}:{}),
+    ...(['music','effect'].includes(p.step)?{importFile:p.soundImports?.[p.step==='music'?'music':`effect:${p.effectId}`]??null}:{}),
+    ...(p.step==='soundPlan'?{soundDefaults:{musicEnabledByDefault:studioFor(p)?.config.generation.music.enabledByDefault??false,effectsEnabledByDefault:studioFor(p)?.config.generation.effect.enabledByDefault??false}}:{}),
     actor: p.gate === 'review' ? 'reviewer' : ['human', 'authorize', 'escalate'].includes(p.gate) ? 'human' : 'agent',
     proposedCast:current(p,'script')?.content.proposedCast??null, intakeConfirmation:current(p,'roster')?.intakeConfirmation??current(p,'script')?.intakeConfirmation??current(p,'answers')?.intakeConfirmation??null, artifact: a ?? null, prescreen: current(p)?.prescreen ?? null, ...previousVersionFor(p, a), job: job ?? null, inputs: effectiveInputs(p),
     dependencies: dependencies(p).map(id => p.artifacts.find(a => a.id === id)),
@@ -587,6 +589,14 @@ export function applyEvent(project, raw) {
     for(const entry of photos){if(!entry.width||!entry.height||entry.durationSeconds||!entry.label.trim())throw new Error('intake-photos needs measured still images with maker labels.');if(seen.has(entry.sha256))throw new Error('INTAKE_PHOTO_DUPLICATE: this maker photo is already recorded.');seen.add(entry.sha256);}
     p.photoInventory=[...(p.photoInventory??[]),...photos];
     p.feedback.push({key:'roster',message:e.message});
+  }else if(e.action==='import-sound'){
+    requiredActor(e,'human');
+    if(!e.message||!e.importFile)throw new Error('import-sound needs --file and --message.');
+    const file=e.importFile;
+    if(!file||!file.path||!file.sha256||!file.durationSeconds||file.width||file.height)throw new Error('import-sound needs a measured audio-only file.');
+    if(p.step==='music'){const target=current(p,'soundPlan')?.content.music;if(!target||target.mode!=='import')throw new Error('SOUND_IMPORT_MODE: import-sound on music needs that entry in import mode.');p.soundImports={...(p.soundImports??{}),music:{file,message:e.message,at:new Date().toISOString()}};p.feedback.push({key:'music',message:e.message});}
+    else if(p.step==='effect'){const id=e.effectId??p.effectId;if(!id)throw new Error('import-sound needs --effect <id> matching the current effect.');if(p.effectId&&p.effectId!==id)throw new Error('SOUND_IMPORT_EFFECT: import-sound --effect must match the current effect.');const target=(current(p,'soundPlan')?.content.effects??[]).find(x=>x.id===id);if(!target||target.mode!=='import')throw new Error('SOUND_IMPORT_MODE: import-sound on effect needs that entry in import mode.');p.soundImports={...(p.soundImports??{}),[`effect:${id}`]:{file,message:e.message,at:new Date().toISOString()}};p.feedback.push({key:`effect:${id}`,message:e.message});}
+    else throw new Error('SOUND_IMPORT_STEP: import-sound only on the current music or effect step in import mode.');
   }else if(e.action==='refresh-writing-instructions'){
     requiredActor(e,'human');
     if(!e.message||p.step!=='script'||!p.studio||locked(p,'script')||p.jobs.length||p.artifacts.some(a=>a.approvedBy&&a.kind!=='answers'))throw new Error('WRITING_REFRESH_LOCKED: explicitly refresh only unapproved script work before media; approved answers and prior review evidence remain unchanged.');

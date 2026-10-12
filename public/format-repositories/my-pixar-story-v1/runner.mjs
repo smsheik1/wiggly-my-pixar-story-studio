@@ -752,6 +752,15 @@ async function main() {
       await verifyFiles(imported);
       print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'import-sheet', characterId: character, importFile: imported, importProvenance: provenance, message }))); return;
     }
+    if (command === 'import-sound') {
+      const filePath = option('file'); const message = option('message'); const effect = option('effect');
+      if (!filePath || !message || args.length) throw new Error('import-sound needs --file <abs path> --message "<operator note>" [--effect <id>].');
+      if (!filePath.startsWith('/')) throw new Error('import-sound --file must be an absolute path.');
+      const imported = await importMedia(resolve(filePath), runDir);
+      if (!imported.durationSeconds || imported.width || imported.height) throw new Error('import-sound needs a measured audio-only file.');
+      await verifyFiles(imported);
+      print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'import-sound', ...(effect ? { effectId: effect } : {}), importFile: imported, message }))); return;
+    }
     if (command === 'add-reference') {
       const character = option('character'); const filePath = option('file'); const message = option('message');
       if (!character || !filePath || !message || args.length) throw new Error('add-reference needs --character <id> --file <abs path> --message "<human instruction>".');
@@ -955,7 +964,7 @@ async function main() {
       }
       return;
     }
-    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, add-reference, intake-photos, settle-transcript, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, refresh-text-instructions, refresh-crew-models, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render, finalize, prescreen or replay. See SKILL.md.');
+    throw new Error('Use check, check-provider, schema, init, status, present, work, respond, use-voice, verify-voice, reuse-voice, input-folder, import, import-sheet, import-sound, add-reference, intake-photos, settle-transcript, prefer-image-provider, refresh-visual-instructions, refresh-keyframe-instructions, refresh-text-instructions, refresh-crew-models, upgrade-workflow, measure, validate, impact, generate, collect, crew-template, crew-start, crew-refresh, dispatch-reconcile, work-codex, drive-codex, debug, debug-next, debug-inspect, audio-tasks, qualify-audio, visual-tasks, qualify-visual, preview, render, finalize, prescreen or replay. See SKILL.md.');
   } catch(error){
     const latest=await workflow.status('project').catch(()=>null);
     if(latest?.project.debug?.enabled&&!latest.project.debug.paused)await workflow.respond('project',{taskId:latest.pending.taskId,actor:'runtime',action:'debug-stop',message:'Command stopped: '+error.message});
