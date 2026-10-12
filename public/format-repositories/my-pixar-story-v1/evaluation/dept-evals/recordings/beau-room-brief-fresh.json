@@ -1,6 +1,6 @@
 {
  "caseId": "beau-room-brief-fresh",
- "recordedAt": "2026-10-12T03:13:13.397Z",
+ "recordedAt": "2026-10-12T03:36:23.942Z",
  "model": "meta/muse-spark-1.3-contributor",
  "mode": "live",
  "fingerprint": "69b638bd79cb449b48b8b82a2bce5dce0b7856453f7d9d08a90d2facc5fcca02",
@@ -37,22 +37,22 @@
   "packetInstruction": "80fbfdb923416da67163962766e6e5b4c63919b17c2dbd17cdedfa7b4d2d3ea2",
   "tool": "631c771e8b1aa20fbfb01b99aacc5a55f0c2a01b3215b54a0033dec5cd74e751"
  },
- "wallMs": 117173,
- "costUsd": 0.006876,
+ "wallMs": 122401,
+ "costUsd": 0.0070788,
  "requests": [
   {
    "seq": 1,
-   "requestSha256": "14260963895e8e673d9c794b1147e13a9632be09e1e9d020f6bcaa7ec9a33ae3",
+   "requestSha256": "b3de3985cf5710bf266707967bf970193e08e60314e25c44dbde5918f3100673",
    "status": 200,
-   "ms": 116927,
+   "ms": 122218,
    "message": {
-    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"9cc4a627e3c558a806e7da8a2bac0452e16248538205e04ce552fbcf5a66e383\\\",\\\"action\\\":\\\"artifact\\\",\\\"actor\\\":\\\"agent\\\",\\\"workerId\\\":\\\"dept-eval:background-product-owner\\\",\\\"content\\\":{\\\"direction\\\":\\\"A warm, lived-in kid's bedroom shared by two young brothers in a mid-2000s suburban Texas home on a sunny late afternoon. Chunky, softly rounded furniture and well-worn surfaces make the room feel loved and a little messy, with rumpled bedding, scuffed wood and sun-warmed air. A low wooden bunk bed with rumpled dusty-blue and mustard bedding stands along the rear wall beneath a ceiling dotted with small glow-in-the-dark stars. A chunky old tube television with a curved glass screen sits on a low wooden stand in the rear-right corner, glowing with soft colour only and no figures, with a generic dark game box and two tangled controllers spilling onto the rug in front of it. The centre of the floor is a faded patterned rug holding a half-played battle of chunky picture-only trading cards with sunny-yellow backs marked only with simple starburst shapes, plus open binders packed with sleeved cards and small rubber-banded stacks. A small wooden desk along the left wall holds a chunky toy microscope, a big magnifying glass, a kid chemistry set with chunky jars of coloured liquid, and a neat row of plain garden rocks, while the wall above is crowded with taped-up kid drawings of ringed planets and bubbling beakers made as pictures only. A wooden dresser on the right wall holds three spare pairs of chunky kid sunglasses, a school backpack slumps by the closet door, small sneakers lie kicked off beside the rug, and simple toys peek from under the beds. A folded geometric-patterned prayer rug and a string of smooth prayer beads rest on a low shelf by the closet, and worn spots and scuffs mark the floor and furniture edges. Slatted blinds over the left-wall window throw strong striped sunlight across the bedding and rug. Every card back, drawing, book cover, box, screen and fabric shape is blank of any words, letters, numbers, logos or familiar characters. Layout: the bunk bed runs along the rear wall, the desk and drawings line the left wall beneath the blind-covered window, the television stand anchors the rear-right, and the dresser and low shelf stand along the right wall. Open floor stays clear in the centre, with a standing spot screen-left and a simple wooden chair angled inward screen-right facing each other across the rug, each with a calm clear stretch of wall behind its future face. The camera sits at child eye level near the doorway, framing a medium-wide view with room for a slow straight push toward a medium two-shot. Light: warm late-afternoon Texas sun through slatted blinds, strong and readable with soft striped shadows. Bounce: warm bounce off sandy walls and honey wood. Practicals: one small shaded bedside lamp, off. Haze: no. Palette: muted warm honey wood, sandy cream and dusty blue at roughly five to one. Accent: saturated sunny yellow on generic trading-card backs and small toy science details. Film accent kept out: saturated violet-purple, not used anywhere in room.\\\",\\\"sceneIds\\\":[\\\"childhood-encouragement\\\"],\\\"knownDetails\\\":[{\\\"detail\\\":\\\"Shaz was 8 and wanted to be a scientist\\\",\\\"quote\\\":\\\"when i was 8 years old, i wanted to be a scientist\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"He did not know why he wanted to be one\\\",\\\"quote\\\":\\\"i didn't know why i wanted to be one\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"His mom got very excited and seemed proud\\\",\\\"quote\\\":\\\"my mom got very excited and seemed like she was proud of me\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"He did not talk much\\\",\\\"quote\\\":\\\"I didn't talk much\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"He wore sunglasses everywhere as signature style\\\",\\\"quote\\\":\\\"i wore sunglasses everywhere, that was my signature style\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"Siblings watched together as their thing\\\",\\\"quote\\\":\\\"we used to watch yugioh GX together, it was our thing\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"Siblings obsessed with cards and battling\\\",\\\"quote\\\":\\\"We were also obsessed with yugioh cards and battling each other\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"Little brother 2 years younger\\\",\\\"quote\\\":\\\"my little brother, 2 years younger than me\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"Older sister 7 years older\\\",\\\"quote\\\":\\\"my older sister who was 7 years older than me\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"}],\\\"proposedDetails\\\":[\\\"Proposed architecture: low wooden bunk bed along rear wall, small wooden desk along left wall under blind-covered window, low wooden television stand in rear-right corner, wooden dresser and low shelf along right wall, closet door, ceiling with glow-in-the-dark stars, slatted blinds over left-wall window.\\\",\\\"Proposed furnishings: rumpled dusty-blue and mustard kid bedding, faded patterned rug, chunky old tube television with curved glass, generic dark game box with two tangled controllers on floor.\\\",\\\"Proposed story dressing: half-played battle of chunky picture-only trading cards with sunny-yellow backs, open binders with sleeved cards, rubber-banded card stacks on rug.\\\",\\\"Proposed story dressing: chunky toy microscope, big magnifying glass, kid chemistry set with chunky jars, row of plain garden rocks on desk.\\\",\\\"Proposed details: taped-up kid drawings of ringed planets and bubbling beakers as pictures only, three spare pairs of chunky kid sunglasses on dresser, school backpack by door, small sneakers by rug, simple toys under beds, worn spots and scuffs.\\\",\\\"Proposed details: folded geometric-patterned prayer rug and string of smooth prayer beads on low shelf.\\\",\\\"Proposed lighting: warm late-afternoon Texas sun through slatted blinds with striped shadows, small shaded bedside lamp off, no haze.\\\",\\\"Proposed constraint: all card backs, drawings, book covers, boxes, screens and fabrics blank of words, letters, numbers, logos or familiar characters; television shows soft colour glow with no figures.\\\"],\\\"continuityNotes\\\":\\\"Preserve approved staging for childhood-encouragement: standing spot screen-left and simple wooden chair seated spot screen-right facing inward across clear rug, faces close in height in one focal plane, with calm clear wall behind each future face and unobstructed straight camera approach from child eye-level doorway for medium-wide to medium two-shot push. Retain bunk bed rear, desk left under blinds, television rear-right, dresser and shelf right, materials and strong late-afternoon blind lighting throughout, including final expression hold. Support selected burgundy-striped child design and teal-hijab mother design with warm background that keeps faces readable; leave characters out of plate for later compositing. Keep generic trading-card backs, kid drawings, book covers, boxes, screens and rug free of any words, letters, numbers, logos or familiar characters, with television showing only soft colour and no figures. Add no additional relatives, costumes, dialogue, employer or new remembered event; mid-2000s Texas home and shared-brother room are interpreted staging, not documented memory. This master serves registered scene childhood-encouragement; no secondary angle required.\\\",\\\"references\\\":[]}}\"}"
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"9cc4a627e3c558a806e7da8a2bac0452e16248538205e04ce552fbcf5a66e383\\\",\\\"action\\\":\\\"artifact\\\",\\\"actor\\\":\\\"agent\\\",\\\"workerId\\\":\\\"dept-eval:background-product-owner\\\",\\\"content\\\":{\\\"direction\\\":\\\"A small warm kid's bedroom with a bunk bed, full of afternoon light and the happy clutter of an eight-year-old who dreams about science and loves picture card play with his brother and sister. Dusty-blue walls show scuffs and worn spots, taped-up kid drawings of planets and beakers with pictures only and no lettering, and tiny glow stars across the ceiling. A sturdy bunk bed with rumpled kid bedding stands along the back wall, with toys tucked underneath and a school backpack and sneakers dropped nearby. Along the left wall a chunky boxy television sits on a low wooden stand, with a generic game console and tangled controllers on the floor, its screen holding a soft blank glow with no figures and no lettering. A low rug in the middle holds binders and rubber-banded stacks of generic trading cards with picture-only backs and a half-played card battle spread, all with no lettering, no numbers and no logos. A small desk and shelf hold a toy microscope, a magnifying glass, plain jars for a kid chemistry set, and a small rock collection. A dresser holds a few spare pairs of kid sunglasses. On a shelf sits a folded geometric-patterned prayer rug with prayer beads. All architecture and dressing are proposed production design inspired by the locked story facts, not a reconstruction of a documented childhood home. Layout: the bunk bed runs along the back wall, the television and low stand run along the left wall, the dresser and shelf run along the right wall, a simple wooden chair sits screen-right angled inward, open rug floor is kept centre and screen-left for the conversation with clean wall kept behind both future face positions, and the camera is at child eye level near the doorway looking toward the back wall for a medium-wide view that can push straight toward a medium two-shot. Light: warm late-afternoon Texas sun through slatted blinds, strong and readable with soft room fill. Bounce: warm bounce off honey wood floor and soft bounce off dusty-blue walls. Practicals: one small bedside lamp, off. Haze: no. Palette: warm honey wood, dusty blue and soft gold at roughly three to one. Accent: saturated tomato-red on generic trading-card backs and toy microscope details. Film accent kept out: production bible filmAccent colour not supplied in this task packet, kept out of the room entirely.\\\",\\\"sceneIds\\\":[\\\"childhood-encouragement\\\"],\\\"knownDetails\\\":[{\\\"detail\\\":\\\"Shaz was 8 years old\\\",\\\"quote\\\":\\\"when i was 8 years old\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"he wanted to be a scientist\\\",\\\"quote\\\":\\\"i wanted to be a scientist\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"he did not know why he wanted to be one\\\",\\\"quote\\\":\\\"i didn't know why i wanted to be one\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"his mom got very excited\\\",\\\"quote\\\":\\\"my mom got very excited\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"she seemed proud of him\\\",\\\"quote\\\":\\\"seemed like she was proud of me\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"he did not talk much\\\",\\\"quote\\\":\\\"I didn't talk much\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"he wore sunglasses everywhere\\\",\\\"quote\\\":\\\"i wore sunglasses everywhere\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"sunglasses were his signature style\\\",\\\"quote\\\":\\\"that was my signature style\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"he loved Yugioh\\\",\\\"quote\\\":\\\"i loved Yugioh\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"siblings watched GX together\\\",\\\"quote\\\":\\\"we used to watch yugioh GX together\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"siblings obsessed with cards and battling\\\",\\\"quote\\\":\\\"We were also obsessed with yugioh cards and battling each other\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"little brother 2 years younger\\\",\\\"quote\\\":\\\"my little brother, 2 years younger than me\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"older sister 7 years older\\\",\\\"quote\\\":\\\"my older sister who was 7 years older than me\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene1Childhood.memory\\\"},{\\\"detail\\\":\\\"Muslim family context\\\",\\\"quote\\\":\\\"dating app for muslims\\\",\\\"source\\\":\\\"answers\\\",\\\"field\\\":\\\"scene4Romance.memory\\\"}],\\\"proposedDetails\\\":[\\\"Proposed architecture: small kid's bedroom with dusty-blue walls, honey wood floor with worn spots and scuffs, slatted blinds on window and glow-in-the-dark stars on ceiling\\\",\\\"Proposed furnishing: sturdy bunk bed along back wall with rumpled kid bedding and toys tucked underneath\\\",\\\"Proposed furnishing: chunky boxy television on low wooden stand along left wall with generic game console and tangled controllers on floor, screen holding soft blank glow with no figures\\\",\\\"Proposed dressing: binders and rubber-banded stacks of generic trading cards with picture-only backs plus half-played card battle spread on rug, all with no lettering, numbers or logos\\\",\\\"Proposed dressing: toy microscope, magnifying glass, plain jars for kid chemistry set and small rock collection on desk and shelf\\\",\\\"Proposed dressing: few spare pairs of kid sunglasses on dresser\\\",\\\"Proposed dressing: folded geometric-patterned prayer rug with prayer beads on shelf\\\",\\\"Proposed dressing: school backpack, sneakers and worn rug marking everyday kid life\\\",\\\"Proposed dressing: taped-up kid drawings of planets and beakers showing pictures only with no letters or numbers\\\",\\\"Proposed lighting: warm late-afternoon Texas sun through slatted blinds with soft room fill, bedside lamp off\\\"],\\\"continuityNotes\\\":\\\"Preserve approved staging: future standing position screen-left and simple wooden chair seated position screen-right, faces close in height in one focal plane facing inward across clear rug space. Keep clean wall behind both future head positions and leave floor for feet, chair and straight camera push from medium-wide to medium two-shot. Retain bunk bed, window with blinds, television, dresser, shelf, rug card spread and science toys in fixed positions, materials and lighting through push and final hold. Support selected burgundy-striped child and teal-hijab mother designs with warm readable background without rendering either character. Add no new event, dialogue, relatives, employer or location landmark. Ensure absolutely no readable text, letters, numbers, logos, labels or signage anywhere, including card backs, drawings, television glow, books, boxes and rug, with generic picture-only card designs and blank television glow showing no figures.\\\",\\\"references\\\":[]}}\"}"
    },
    "usage": {
-    "prompt_tokens": 34982,
-    "completion_tokens": 16889,
-    "reasoning_tokens": 14981,
-    "cost": 0.006876
+    "prompt_tokens": 34984,
+    "completion_tokens": 17902,
+    "reasoning_tokens": 16170,
+    "cost": 0.0070788
    }
   }
  ],
@@ -63,77 +63,109 @@
    "actor": "agent",
    "workerId": "dept-eval:background-product-owner",
    "content": {
-    "direction": "A warm, lived-in kid's bedroom shared by two young brothers in a mid-2000s suburban Texas home on a sunny late afternoon. Chunky, softly rounded furniture and well-worn surfaces make the room feel loved and a little messy, with rumpled bedding, scuffed wood and sun-warmed air. A low wooden bunk bed with rumpled dusty-blue and mustard bedding stands along the rear wall beneath a ceiling dotted with small glow-in-the-dark stars. A chunky old tube television with a curved glass screen sits on a low wooden stand in the rear-right corner, glowing with soft colour only and no figures, with a generic dark game box and two tangled controllers spilling onto the rug in front of it. The centre of the floor is a faded patterned rug holding a half-played battle of chunky picture-only trading cards with sunny-yellow backs marked only with simple starburst shapes, plus open binders packed with sleeved cards and small rubber-banded stacks. A small wooden desk along the left wall holds a chunky toy microscope, a big magnifying glass, a kid chemistry set with chunky jars of coloured liquid, and a neat row of plain garden rocks, while the wall above is crowded with taped-up kid drawings of ringed planets and bubbling beakers made as pictures only. A wooden dresser on the right wall holds three spare pairs of chunky kid sunglasses, a school backpack slumps by the closet door, small sneakers lie kicked off beside the rug, and simple toys peek from under the beds. A folded geometric-patterned prayer rug and a string of smooth prayer beads rest on a low shelf by the closet, and worn spots and scuffs mark the floor and furniture edges. Slatted blinds over the left-wall window throw strong striped sunlight across the bedding and rug. Every card back, drawing, book cover, box, screen and fabric shape is blank of any words, letters, numbers, logos or familiar characters. Layout: the bunk bed runs along the rear wall, the desk and drawings line the left wall beneath the blind-covered window, the television stand anchors the rear-right, and the dresser and low shelf stand along the right wall. Open floor stays clear in the centre, with a standing spot screen-left and a simple wooden chair angled inward screen-right facing each other across the rug, each with a calm clear stretch of wall behind its future face. The camera sits at child eye level near the doorway, framing a medium-wide view with room for a slow straight push toward a medium two-shot. Light: warm late-afternoon Texas sun through slatted blinds, strong and readable with soft striped shadows. Bounce: warm bounce off sandy walls and honey wood. Practicals: one small shaded bedside lamp, off. Haze: no. Palette: muted warm honey wood, sandy cream and dusty blue at roughly five to one. Accent: saturated sunny yellow on generic trading-card backs and small toy science details. Film accent kept out: saturated violet-purple, not used anywhere in room.",
+    "direction": "A small warm kid's bedroom with a bunk bed, full of afternoon light and the happy clutter of an eight-year-old who dreams about science and loves picture card play with his brother and sister. Dusty-blue walls show scuffs and worn spots, taped-up kid drawings of planets and beakers with pictures only and no lettering, and tiny glow stars across the ceiling. A sturdy bunk bed with rumpled kid bedding stands along the back wall, with toys tucked underneath and a school backpack and sneakers dropped nearby. Along the left wall a chunky boxy television sits on a low wooden stand, with a generic game console and tangled controllers on the floor, its screen holding a soft blank glow with no figures and no lettering. A low rug in the middle holds binders and rubber-banded stacks of generic trading cards with picture-only backs and a half-played card battle spread, all with no lettering, no numbers and no logos. A small desk and shelf hold a toy microscope, a magnifying glass, plain jars for a kid chemistry set, and a small rock collection. A dresser holds a few spare pairs of kid sunglasses. On a shelf sits a folded geometric-patterned prayer rug with prayer beads. All architecture and dressing are proposed production design inspired by the locked story facts, not a reconstruction of a documented childhood home. Layout: the bunk bed runs along the back wall, the television and low stand run along the left wall, the dresser and shelf run along the right wall, a simple wooden chair sits screen-right angled inward, open rug floor is kept centre and screen-left for the conversation with clean wall kept behind both future face positions, and the camera is at child eye level near the doorway looking toward the back wall for a medium-wide view that can push straight toward a medium two-shot. Light: warm late-afternoon Texas sun through slatted blinds, strong and readable with soft room fill. Bounce: warm bounce off honey wood floor and soft bounce off dusty-blue walls. Practicals: one small bedside lamp, off. Haze: no. Palette: warm honey wood, dusty blue and soft gold at roughly three to one. Accent: saturated tomato-red on generic trading-card backs and toy microscope details. Film accent kept out: production bible filmAccent colour not supplied in this task packet, kept out of the room entirely.",
     "sceneIds": [
      "childhood-encouragement"
     ],
     "knownDetails": [
      {
-      "detail": "Shaz was 8 and wanted to be a scientist",
-      "quote": "when i was 8 years old, i wanted to be a scientist",
+      "detail": "Shaz was 8 years old",
+      "quote": "when i was 8 years old",
       "source": "answers",
       "field": "scene1Childhood.memory"
      },
      {
-      "detail": "He did not know why he wanted to be one",
+      "detail": "he wanted to be a scientist",
+      "quote": "i wanted to be a scientist",
+      "source": "answers",
+      "field": "scene1Childhood.memory"
+     },
+     {
+      "detail": "he did not know why he wanted to be one",
       "quote": "i didn't know why i wanted to be one",
       "source": "answers",
       "field": "scene1Childhood.memory"
      },
      {
-      "detail": "His mom got very excited and seemed proud",
-      "quote": "my mom got very excited and seemed like she was proud of me",
+      "detail": "his mom got very excited",
+      "quote": "my mom got very excited",
       "source": "answers",
       "field": "scene1Childhood.memory"
      },
      {
-      "detail": "He did not talk much",
+      "detail": "she seemed proud of him",
+      "quote": "seemed like she was proud of me",
+      "source": "answers",
+      "field": "scene1Childhood.memory"
+     },
+     {
+      "detail": "he did not talk much",
       "quote": "I didn't talk much",
       "source": "answers",
       "field": "scene1Childhood.memory"
      },
      {
-      "detail": "He wore sunglasses everywhere as signature style",
-      "quote": "i wore sunglasses everywhere, that was my signature style",
+      "detail": "he wore sunglasses everywhere",
+      "quote": "i wore sunglasses everywhere",
       "source": "answers",
       "field": "scene1Childhood.memory"
      },
      {
-      "detail": "Siblings watched together as their thing",
-      "quote": "we used to watch yugioh GX together, it was our thing",
+      "detail": "sunglasses were his signature style",
+      "quote": "that was my signature style",
       "source": "answers",
       "field": "scene1Childhood.memory"
      },
      {
-      "detail": "Siblings obsessed with cards and battling",
+      "detail": "he loved Yugioh",
+      "quote": "i loved Yugioh",
+      "source": "answers",
+      "field": "scene1Childhood.memory"
+     },
+     {
+      "detail": "siblings watched GX together",
+      "quote": "we used to watch yugioh GX together",
+      "source": "answers",
+      "field": "scene1Childhood.memory"
+     },
+     {
+      "detail": "siblings obsessed with cards and battling",
       "quote": "We were also obsessed with yugioh cards and battling each other",
       "source": "answers",
       "field": "scene1Childhood.memory"
      },
      {
-      "detail": "Little brother 2 years younger",
+      "detail": "little brother 2 years younger",
       "quote": "my little brother, 2 years younger than me",
       "source": "answers",
       "field": "scene1Childhood.memory"
      },
      {
-      "detail": "Older sister 7 years older",
+      "detail": "older sister 7 years older",
       "quote": "my older sister who was 7 years older than me",
       "source": "answers",
       "field": "scene1Childhood.memory"
+     },
+     {
+      "detail": "Muslim family context",
+      "quote": "dating app for muslims",
+      "source": "answers",
+      "field": "scene4Romance.memory"
      }
     ],
     "proposedDetails": [
-     "Proposed architecture: low wooden bunk bed along rear wall, small wooden desk along left wall under blind-covered window, low wooden television stand in rear-right corner, wooden dresser and low shelf along right wall, closet door, ceiling with glow-in-the-dark stars, slatted blinds over left-wall window.",
-     "Proposed furnishings: rumpled dusty-blue and mustard kid bedding, faded patterned rug, chunky old tube television with curved glass, generic dark game box with two tangled controllers on floor.",
-     "Proposed story dressing: half-played battle of chunky picture-only trading cards with sunny-yellow backs, open binders with sleeved cards, rubber-banded card stacks on rug.",
-     "Proposed story dressing: chunky toy microscope, big magnifying glass, kid chemistry set with chunky jars, row of plain garden rocks on desk.",
-     "Proposed details: taped-up kid drawings of ringed planets and bubbling beakers as pictures only, three spare pairs of chunky kid sunglasses on dresser, school backpack by door, small sneakers by rug, simple toys under beds, worn spots and scuffs.",
-     "Proposed details: folded geometric-patterned prayer rug and string of smooth prayer beads on low shelf.",
-     "Proposed lighting: warm late-afternoon Texas sun through slatted blinds with striped shadows, small shaded bedside lamp off, no haze.",
-     "Proposed constraint: all card backs, drawings, book covers, boxes, screens and fabrics blank of words, letters, numbers, logos or familiar characters; television shows soft colour glow with no figures."
+     "Proposed architecture: small kid's bedroom with dusty-blue walls, honey wood floor with worn spots and scuffs, slatted blinds on window and glow-in-the-dark stars on ceiling",
+     "Proposed furnishing: sturdy bunk bed along back wall with rumpled kid bedding and toys tucked underneath",
+     "Proposed furnishing: chunky boxy television on low wooden stand along left wall with generic game console and tangled controllers on floor, screen holding soft blank glow with no figures",
+     "Proposed dressing: binders and rubber-banded stacks of generic trading cards with picture-only backs plus half-played card battle spread on rug, all with no lettering, numbers or logos",
+     "Proposed dressing: toy microscope, magnifying glass, plain jars for kid chemistry set and small rock collection on desk and shelf",
+     "Proposed dressing: few spare pairs of kid sunglasses on dresser",
+     "Proposed dressing: folded geometric-patterned prayer rug with prayer beads on shelf",
+     "Proposed dressing: school backpack, sneakers and worn rug marking everyday kid life",
+     "Proposed dressing: taped-up kid drawings of planets and beakers showing pictures only with no letters or numbers",
+     "Proposed lighting: warm late-afternoon Texas sun through slatted blinds with soft room fill, bedside lamp off"
     ],
-    "continuityNotes": "Preserve approved staging for childhood-encouragement: standing spot screen-left and simple wooden chair seated spot screen-right facing inward across clear rug, faces close in height in one focal plane, with calm clear wall behind each future face and unobstructed straight camera approach from child eye-level doorway for medium-wide to medium two-shot push. Retain bunk bed rear, desk left under blinds, television rear-right, dresser and shelf right, materials and strong late-afternoon blind lighting throughout, including final expression hold. Support selected burgundy-striped child design and teal-hijab mother design with warm background that keeps faces readable; leave characters out of plate for later compositing. Keep generic trading-card backs, kid drawings, book covers, boxes, screens and rug free of any words, letters, numbers, logos or familiar characters, with television showing only soft colour and no figures. Add no additional relatives, costumes, dialogue, employer or new remembered event; mid-2000s Texas home and shared-brother room are interpreted staging, not documented memory. This master serves registered scene childhood-encouragement; no secondary angle required.",
+    "continuityNotes": "Preserve approved staging: future standing position screen-left and simple wooden chair seated position screen-right, faces close in height in one focal plane facing inward across clear rug space. Keep clean wall behind both future head positions and leave floor for feet, chair and straight camera push from medium-wide to medium two-shot. Retain bunk bed, window with blinds, television, dresser, shelf, rug card spread and science toys in fixed positions, materials and lighting through push and final hold. Support selected burgundy-striped child and teal-hijab mother designs with warm readable background without rendering either character. Add no new event, dialogue, relatives, employer or location landmark. Ensure absolutely no readable text, letters, numbers, logos, labels or signage anywhere, including card backs, drawings, television glow, books, boxes and rug, with generic picture-only card designs and blank television glow showing no figures.",
     "references": []
    }
   },

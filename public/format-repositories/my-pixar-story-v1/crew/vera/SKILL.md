@@ -52,11 +52,11 @@ Check the failure table [R-SHEET-FAILURES] on every sheet, filed as above: turna
 
 ## Background plates
 
-A plate should pass as a set from a stylized animated feature: lived-in, dressed for this story, with chunky, appealing shapes and warm, motivated light. The prompt is your list of what the room should hold.
+A plate should pass as a set from a stylized animated feature: lived-in, dressed for this story, with chunky, appealing shapes and warm, motivated light. The prompt is your list of what the room should hold, but it never lowers the bar: a prompt that asks for a generic room doesn't make a generic room pass.
 
 - `scene-fit`: the room, time of day and light match the prompt and the scenes in `task.immediateScenes`.
 - `style`: a stylized animated feature set. A photoreal, catalog or generic 3D-render look fails.
-- `story-specific-set`: the room is dressed with the props the prompt names. Neutral, era-consistent dressing is fine and is never a failure. Don't ask for hobbies, dreams or keepsakes the prompt doesn't name. Fail an empty, undressed or generic room (plain unmarked objects, blank walls, a catalog showroom), a palette that isn't muted with one saturated accent, or the film accent colour showing anywhere in the room. The film accent colour comes from the production bible and appears in the prompt as "Film accent kept out: <colour>". A muted palette alone never fails a room and never rescues an empty one. Any readable text, brand, logo or real landmark in the plate also fails `story-specific-set`. Transcribe the text exactly.
+- `story-specific-set`: the room is dressed with the props the prompt names. Neutral, era-consistent dressing is fine and is never a failure. Don't ask for hobbies, dreams or keepsakes the prompt doesn't name. Fail an empty, undressed or generic room (plain unmarked objects, blank walls, a catalog showroom) even when it matches the prompt exactly. A room whose only props are furniture and plain, unmarked or generic objects (boxes, vessels, bins) is undressed, however chunky the shapes or warm the light: neutral dressing is fine around story props but never replaces them. This rule comes from the story and the craft text, not from the prompt. When the prompt itself asks for plain, unmarked or generic dressing, say in `evidence` that the prompt is the source, and make the `repair` a prompt fix that dresses the room from the brief's known and proposed details, so the fix goes to the prompt writer instead of regenerating the same room. Also fail a palette that isn't muted with one saturated accent, or the film accent colour showing anywhere in the room. The film accent colour comes from the production bible and appears in the prompt as "Film accent kept out: <colour>". A muted palette alone never fails a room and never rescues an empty one. Any readable text, brand, logo or real landmark in the plate also fails `story-specific-set`. Transcribe the text exactly.
 - `empty-environment`: any person, silhouette, figure or figure-like shape fails, including reflections and shapes in doorways.
 - `spatial-action`: there is clear floor where the prompt's layout keeps it for the scripted action.
 - `continuity`: on an angle plate, it's the same room as the master, with the same walls, doors, windows, materials, landmark props and light. The camera stays on the same side of the action line as the master; turning within that half of the room is fine, and a view from the far side fails. On a master plate, the three options must each agree with the prompt's layout and spec block.
@@ -102,6 +102,7 @@ Its decision is `rejected`, with no `recommendation`.
 - There is one check per criterion in `task.criteria`, and the names are exact.
 - Every fail has a location and a concrete, positive repair.
 - Any text in an image is transcribed exactly.
+- A generic or undressed room fails `story-specific-set` even when its prompt asked for it.
 - The decision matches the checks.
 - A passing multi-file review has a `recommendation` that ranks only clean options.
 - `taskId`, `artifactId` and `artifactDigest` are copied from the task, not from an example.

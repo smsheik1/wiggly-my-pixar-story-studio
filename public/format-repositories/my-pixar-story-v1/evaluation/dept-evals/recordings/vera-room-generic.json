@@ -1,9 +1,9 @@
 {
  "caseId": "vera-room-generic",
- "recordedAt": "2026-10-12T03:01:40.730Z",
+ "recordedAt": "2026-10-12T03:47:19.523Z",
  "model": "meta/muse-spark-1.3-contributor",
  "mode": "live",
- "fingerprint": "fde2a803b415ef3438b1cb05e24a7c9a90f462fb25e836cbc7840dfe62893258",
+ "fingerprint": "de2ca302f18c362bf1bec6a03415e2f811846af6cc9be45c375e742450173494",
  "fingerprintParts": {
   "model": "meta/muse-spark-1.3-contributor",
   "backend": "openrouter",
@@ -14,11 +14,11 @@
   ],
   "skill": {
    "path": "crew/vera/SKILL.md",
-   "sha256": "6c6334c4e54ea21a13e68642e89f704f1bbb7f1d60ba71b952fc3088ae61d847"
+   "sha256": "88a64ed0a277cc77b6ad158e1b9724526429d3ce85a89294a2317f7f2dabf2be"
   },
   "rubric": {
    "path": "evaluation/rubrics/visual.md",
-   "sha256": "e7e46dcb9dc9adb85ca5d10a1b3faba48d87d8aa5cf322e88bb1009eb9784d36"
+   "sha256": "d5e35da018d98e81581d166ed26732370daaaac2c9da5d3d07dbc697e0357fd3"
   },
   "recipes": {},
   "craft": {
@@ -41,73 +41,21 @@
   "packetInstruction": "80fbfdb923416da67163962766e6e5b4c63919b17c2dbd17cdedfa7b4d2d3ea2",
   "tool": "631c771e8b1aa20fbfb01b99aacc5a55f0c2a01b3215b54a0033dec5cd74e751"
  },
- "wallMs": 150758,
- "costUsd": 0.016351872,
+ "wallMs": 210369,
+ "costUsd": 0.017592982,
  "requests": [
   {
    "seq": 1,
-   "requestSha256": "2e5caf1732d933c6d6136b80c41bde298ab61366727e3c02b025a510fec72eea",
+   "requestSha256": "75b0a9b51aabf8d9015d07d88da198b128d64468f612ed00854ff23e2868b39a",
    "status": 200,
-   "ms": 40665,
+   "ms": 134811,
    "message": {
-    "content": "Vera review underway — inspecting the three replacement plates against the six criteria.",
+    "content": "Vera reviewing the childhood-room plates — inspecting the new Pixar-styled candidates against the six background criteria.",
     "tool_calls": [
      {
       "type": "function",
       "index": 0,
-      "id": "call_01a12e0d5bf87639918d7c799effa149",
-      "function": {
-       "name": "wiggly_tool",
-       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f\",\"referenceSha256\":\"\",\"region\":\"null\",\"edit\":\"null\"}"
-      }
-     }
-    ]
-   },
-   "usage": {
-    "prompt_tokens": 47387,
-    "completion_tokens": 3237,
-    "reasoning_tokens": 2955,
-    "cost": 0.0053861
-   }
-  },
-  {
-   "seq": 2,
-   "requestSha256": "a8ffb994f6582cd40fb71895c0758074bdda1e07a65b85600173f6eebcbdb5ae",
-   "status": 200,
-   "ms": 7362,
-   "message": {
-    "content": "Inspecting the plates — retrying the image views with valid tool calls.",
-    "tool_calls": [
-     {
-      "type": "function",
-      "index": 0,
-      "id": "call_01a12e0d79a2764ca6cc6f8e87609cf6",
-      "function": {
-       "name": "wiggly_tool",
-       "arguments": "{\"edit\":\"null\",\"name\":\"viewImage\",\"referenceSha256\":\"null\",\"region\":\"null\",\"sha256\":\"c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f\"}"
-      }
-     }
-    ]
-   },
-   "usage": {
-    "prompt_tokens": 47675,
-    "completion_tokens": 371,
-    "reasoning_tokens": 194,
-    "cost": 0.0048417
-   }
-  },
-  {
-   "seq": 3,
-   "requestSha256": "da6f47343ecd28e41df3db80444397f0648b684787ec2915a5334fa379e7a0c9",
-   "status": 200,
-   "ms": 12801,
-   "message": {
-    "content": "I need to view images but tool call format is failing. Trying minimal parameters.",
-    "tool_calls": [
-     {
-      "type": "function",
-      "index": 0,
-      "id": "call_01a12e0dab9e74eba58410fc9258f687",
+      "id": "call_01a12e37ae7b7121a06c591fed4f5fc2",
       "function": {
        "name": "wiggly_tool",
        "arguments": "{\"name\":\"viewImage\",\"sha256\":\"c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f\",\"referenceSha256\":\"c1530a6f3b7de13ab513017d001af3f04c2aaa3ab305ce09895e9e8dd48f2d8f\"}"
@@ -116,77 +64,77 @@
     ]
    },
    "usage": {
-    "prompt_tokens": 47965,
-    "completion_tokens": 743,
-    "reasoning_tokens": 507,
-    "cost": 0.00030529
+    "prompt_tokens": 47628,
+    "completion_tokens": 5839,
+    "reasoning_tokens": 5415,
+    "cost": 0.0059306
+   }
+  },
+  {
+   "seq": 2,
+   "requestSha256": "12a8b4b883303d587451c1f470890363fc0ecd9ed36f59d23e8c67e57d490747",
+   "status": 200,
+   "ms": 5720,
+   "message": {
+    "content": "Vera is inspecting the remaining room options to complete the full visual check.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a12e37c450733dbf4d6bfb9991ecbf",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048\",\"referenceSha256\":\"a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 47951,
+    "completion_tokens": 280,
+    "reasoning_tokens": 98,
+    "cost": 0.0048511
+   }
+  },
+  {
+   "seq": 3,
+   "requestSha256": "856752ba28416de87ebd082fd503f575d12d8aa063bf25d11aeef8c623c9ce30",
+   "status": 200,
+   "ms": 29974,
+   "message": {
+    "content": "Vera is finishing the inspection of the last candidate.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a12e383af57457a0f66e62be52e0e7",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737\",\"referenceSha256\":\"6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737\"}"
+      }
+     }
+    ]
+   },
+   "usage": {
+    "prompt_tokens": 48255,
+    "completion_tokens": 3916,
+    "reasoning_tokens": 3611,
+    "cost": 0.0056087
    }
   },
   {
    "seq": 4,
-   "requestSha256": "0609731678af6f76f48b6411a7203786ec1b97f77a0dfcdd268cf3fbbd54df3b",
+   "requestSha256": "2f32cede1802412d898f38f5ae4e7dd1e6f03ced5e1673a0012fd6fcbad951b0",
    "status": 200,
-   "ms": 9007,
+   "ms": 39281,
    "message": {
-    "content": "Vera review underway — inspecting the three replacement plates against the six criteria.",
-    "tool_calls": [
-     {
-      "type": "function",
-      "index": 0,
-      "id": "call_01a12e0dceab758b982559148fb65c73",
-      "function": {
-       "name": "wiggly_tool",
-       "arguments": "{\"name\":\"viewImage\",\"referenceSha256\":\"a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048\",\"sha256\":\"a4a1e889e9c47e05ec1850c05164aab6493761c24b26776c88213eaa4982e048\"}"
-      }
-     }
-    ]
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"2cd7b124c595d5cee1d60decafdcc70c85cd20e57c7cc41f54d1c1609d56d6c5\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:visual-reviewer\\\",\\\"artifactId\\\":\\\"backgroundCandidates:childhood-room@2\\\",\\\"artifactDigest\\\":\\\"e6db511f9550d350f1c08f984a86b87d394d303c0e5462e2db234c587e2e07eb\\\",\\\"review\\\":{\\\"decision\\\":\\\"rejected\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-fit\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All three show a simple domestic interior in warm diffuse daylight through left-wall curtains matching the prompt and immediateScenes childhood-encouragement: simple domestic interior for quiet child look toward mother and brightening pride. No scientist equipment, costume, or extra staging contradicts the scene.\\\",\\\"location\\\":\\\"Whole room, every option 0, 1 and 2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All three read as stylized animated feature sets: chunky rounded chair and cabinet with broad bevels, curtains sculpted in a few generous folds, smooth matte upholstery, broad designed wood-grain curves, soft warm animation light and readable depth with minimal focus falloff. No fine scratches, chipped plaster, fabric weave or photographic falloff from the prior failure. Options differ in chair back, cabinet shelf treatment and window mullions but share the same stylized treatment.\\\",\\\"location\\\":\\\"Full plate, architecture, furniture and curtains, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"story-specific-set\\\",\\\"status\\\":\\\"fail\\\",\\\"evidence\\\":\\\"All three are generic undressed rooms whose only props are furniture and plain unmarked objects: option 0 box plus bowl plus jar, option 1 tub plus box plus jar, option 2 three boxes on open shelf, with blank ivory walls and no story-named lived-in dressing showing whose space it is. The prompt is the source asking for 'a few plain unmarked storage objects'. No readable text, brand, logo or landmark appears in any plate. Muted ivory-oatmeal-wood palette alone does not rescue an undressed set.\\\",\\\"location\\\":\\\"Rear cabinet objects and blank walls, options 0, 1 and 2\\\",\\\"repair\\\":\\\"Revise the prompt to dress the room from the brief's known and proposed domestic details with specific lived-in family props showing whose space and era it is on the cabinet and walls, keeping the window, chair screen-right, cabinet, far-right doorway, empty environment, muted palette and no-text rule.\\\"},{\\\"criterion\\\":\\\"empty-environment\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Zero people, silhouettes, figures, figure-like shapes, reflections or artwork figures in any option. Windows show blank overexposed daylight, doorway is closed, cabinet top holds only vessels.\\\",\\\"location\\\":\\\"Whole plate, windows and doorway, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"spatial-action\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Clear plank floor between open standing position screen-left and chair screen-right at similar depth, open space between positions and unobstructed foreground corridor for the locked slow straight push to a medium two-shot, with grounded-foot clearance and calm walls behind future faces.\\\",\\\"location\\\":\\\"Center floor and foreground, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"continuity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All three agree with the prompt layout and spec block: left-wall curtained window, exactly one chair screen-right angled inward, low cabinet against rear wall outside action area, closed doorway at far-right edge, ivory walls and diffuse daylight from the left. Chair-back and cabinet-shelf variations do not change geography.\\\",\\\"location\\\":\\\"Window, chair, cabinet and doorway arrangement, every option\\\",\\\"repair\\\":\\\"\\\"}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"ae56c66cb4677ddf4ac98bbf0ddbc074162931cf5842f80d0942f990b2ef5a32\\\"}}\"}"
    },
    "usage": {
-    "prompt_tokens": 48282,
-    "completion_tokens": 333,
-    "reasoning_tokens": 151,
-    "cost": 0.004068366
-   }
-  },
-  {
-   "seq": 5,
-   "requestSha256": "816831f6d42a354e05c777d331e036759c7027621302b129bf0f2077ebfd848c",
-   "status": 200,
-   "ms": 3843,
-   "message": {
-    "content": "Third plate check — viewing the final option.",
-    "tool_calls": [
-     {
-      "type": "function",
-      "index": 0,
-      "id": "call_01a12e0ddde2715bacef4a622f53b667",
-      "function": {
-       "name": "wiggly_tool",
-       "arguments": "{\"name\":\"viewImage\",\"referenceSha256\":\"6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737\",\"sha256\":\"6980acfeee23b903ba0f2c037fdac8718208cf9d0208197c57ebeed3278b7737\"}"
-      }
-     }
-    ]
-   },
-   "usage": {
-    "prompt_tokens": 48586,
-    "completion_tokens": 205,
-    "reasoning_tokens": 35,
-    "cost": 0.000234702
-   }
-  },
-  {
-   "seq": 6,
-   "requestSha256": "3a2bf22ee9a898114914a5e0a93b198deed019ac622e2fa0668fe21ab59ace24",
-   "status": 200,
-   "ms": 76517,
-   "message": {
-    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"2cd7b124c595d5cee1d60decafdcc70c85cd20e57c7cc41f54d1c1609d56d6c5\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:visual-reviewer\\\",\\\"artifactId\\\":\\\"backgroundCandidates:childhood-room@2\\\",\\\"artifactDigest\\\":\\\"e6db511f9550d350f1c08f984a86b87d394d303c0e5462e2db234c587e2e07eb\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-fit\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All three show a simple domestic interior in diffuse daylight through the left-wall curtained window with warm soft fill, matching the prompt's daylight spec and immediateScenes childhood-encouragement simple domestic interior for a quiet child-mother exchange. Options differ in curtain treatment and light shafts but keep the same room, time of day and light.\\\",\\\"location\\\":\\\"Full frame options 0, 1 and 2; prompt paras 2-4; immediateScenes childhood-encouragement\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All three read as stylized animated-feature sets with chunky rounded wooden chair and cabinet, broad designed wood-grain curves, smooth warm ivory plaster, curtains in few generous folds, matte oatmeal upholstery and soft animation lighting with minimal focus falloff. No photoreal catalog rendering, scanned textures, fine scratches, chipped plaster or fabric weave. Option 2 has slightly stronger chair grain but remains broad and sculpted. No text.\\\",\\\"location\\\":\\\"Full frame every option - chair, cabinet, curtains, floor\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"story-specific-set\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Dressing matches the prompt list in all three: curtained window on left wall, exactly one wooden chair screen-right with oatmeal seat angled inward, low rear-wall cabinet outside action area holding three plain unmarked storage objects, closed doorway at far-right edge. Restrained ivory, oatmeal and muted natural-wood palette with burgundy and teal reserved for cast; neutral era-consistent dressing as prompted. No readable text, brand, logo or landmark in any option.\\\",\\\"location\\\":\\\"Window left, chair screen-right, cabinet rear-center, doorway far-right, options 0, 1 and 2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"empty-environment\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Zero people, silhouettes, figures or figure-like shapes in all three, including reflections, artwork and window views which render as bright diffuse white. Doorway closed with no shape inside.\\\",\\\"location\\\":\\\"Whole frame and window views, doorway, options 0, 1 and 2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"spatial-action\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Clear wooden floor across center and foreground in all three with open standing position screen-left and seated chair screen-right at similar depth for one facial focal plane, open space between positions and unobstructed foreground corridor for the slow straight push to a medium two-shot. Calm ivory wall behind both future face positions.\\\",\\\"location\\\":\\\"Floor center and foreground, screen-left standing clearance and screen-right chair, options 0, 1 and 2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"continuity\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each option agrees with the prompt layout and spec block: rear wall with cabinet outside action area, left-wall window, far-right closed doorway, inward chair orientation, diffuse daylight from left, neutral palette. Options vary only in curtain handling and cabinet object shapes - box-bowl-cylinder vs pots vs boxed hutch - while keeping same walls, doors, materials and light side.\\\",\\\"location\\\":\\\"Rear, left and right walls and furniture orientation, options 0, 1 and 2\\\",\\\"repair\\\":\\\"\\\"}],\\\"recommendation\\\":{\\\"selection\\\":1,\\\"ranking\\\":[1,0,2],\\\"reason\\\":\\\"Softest sculpted forms, cleanest light and clearest staging clearance.\\\"},\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"ae56c66cb4677ddf4ac98bbf0ddbc074162931cf5842f80d0942f990b2ef5a32\\\"}}\"}"
-   },
-   "usage": {
-    "prompt_tokens": 48873,
-    "completion_tokens": 6592,
-    "reasoning_tokens": 5483,
-    "cost": 0.001515714
+    "prompt_tokens": 48544,
+    "completion_tokens": 5379,
+    "reasoning_tokens": 4343,
+    "cost": 0.001202582
    }
   }
  ],
@@ -199,62 +147,53 @@
    "artifactId": "backgroundCandidates:childhood-room@2",
    "artifactDigest": "e6db511f9550d350f1c08f984a86b87d394d303c0e5462e2db234c587e2e07eb",
    "review": {
-    "decision": "approved",
+    "decision": "rejected",
     "repairTarget": "current",
     "perception": "direct-image",
     "checks": [
      {
       "criterion": "scene-fit",
       "status": "pass",
-      "evidence": "All three show a simple domestic interior in diffuse daylight through the left-wall curtained window with warm soft fill, matching the prompt's daylight spec and immediateScenes childhood-encouragement simple domestic interior for a quiet child-mother exchange. Options differ in curtain treatment and light shafts but keep the same room, time of day and light.",
-      "location": "Full frame options 0, 1 and 2; prompt paras 2-4; immediateScenes childhood-encouragement",
+      "evidence": "All three show a simple domestic interior in warm diffuse daylight through left-wall curtains matching the prompt and immediateScenes childhood-encouragement: simple domestic interior for quiet child look toward mother and brightening pride. No scientist equipment, costume, or extra staging contradicts the scene.",
+      "location": "Whole room, every option 0, 1 and 2",
       "repair": ""
      },
      {
       "criterion": "style",
       "status": "pass",
-      "evidence": "All three read as stylized animated-feature sets with chunky rounded wooden chair and cabinet, broad designed wood-grain curves, smooth warm ivory plaster, curtains in few generous folds, matte oatmeal upholstery and soft animation lighting with minimal focus falloff. No photoreal catalog rendering, scanned textures, fine scratches, chipped plaster or fabric weave. Option 2 has slightly stronger chair grain but remains broad and sculpted. No text.",
-      "location": "Full frame every option - chair, cabinet, curtains, floor",
+      "evidence": "All three read as stylized animated feature sets: chunky rounded chair and cabinet with broad bevels, curtains sculpted in a few generous folds, smooth matte upholstery, broad designed wood-grain curves, soft warm animation light and readable depth with minimal focus falloff. No fine scratches, chipped plaster, fabric weave or photographic falloff from the prior failure. Options differ in chair back, cabinet shelf treatment and window mullions but share the same stylized treatment.",
+      "location": "Full plate, architecture, furniture and curtains, every option",
       "repair": ""
      },
      {
       "criterion": "story-specific-set",
-      "status": "pass",
-      "evidence": "Dressing matches the prompt list in all three: curtained window on left wall, exactly one wooden chair screen-right with oatmeal seat angled inward, low rear-wall cabinet outside action area holding three plain unmarked storage objects, closed doorway at far-right edge. Restrained ivory, oatmeal and muted natural-wood palette with burgundy and teal reserved for cast; neutral era-consistent dressing as prompted. No readable text, brand, logo or landmark in any option.",
-      "location": "Window left, chair screen-right, cabinet rear-center, doorway far-right, options 0, 1 and 2",
-      "repair": ""
+      "status": "fail",
+      "evidence": "All three are generic undressed rooms whose only props are furniture and plain unmarked objects: option 0 box plus bowl plus jar, option 1 tub plus box plus jar, option 2 three boxes on open shelf, with blank ivory walls and no story-named lived-in dressing showing whose space it is. The prompt is the source asking for 'a few plain unmarked storage objects'. No readable text, brand, logo or landmark appears in any plate. Muted ivory-oatmeal-wood palette alone does not rescue an undressed set.",
+      "location": "Rear cabinet objects and blank walls, options 0, 1 and 2",
+      "repair": "Revise the prompt to dress the room from the brief's known and proposed domestic details with specific lived-in family props showing whose space and era it is on the cabinet and walls, keeping the window, chair screen-right, cabinet, far-right doorway, empty environment, muted palette and no-text rule."
      },
      {
       "criterion": "empty-environment",
       "status": "pass",
-      "evidence": "Zero people, silhouettes, figures or figure-like shapes in all three, including reflections, artwork and window views which render as bright diffuse white. Doorway closed with no shape inside.",
-      "location": "Whole frame and window views, doorway, options 0, 1 and 2",
+      "evidence": "Zero people, silhouettes, figures, figure-like shapes, reflections or artwork figures in any option. Windows show blank overexposed daylight, doorway is closed, cabinet top holds only vessels.",
+      "location": "Whole plate, windows and doorway, every option",
       "repair": ""
      },
      {
       "criterion": "spatial-action",
       "status": "pass",
-      "evidence": "Clear wooden floor across center and foreground in all three with open standing position screen-left and seated chair screen-right at similar depth for one facial focal plane, open space between positions and unobstructed foreground corridor for the slow straight push to a medium two-shot. Calm ivory wall behind both future face positions.",
-      "location": "Floor center and foreground, screen-left standing clearance and screen-right chair, options 0, 1 and 2",
+      "evidence": "Clear plank floor between open standing position screen-left and chair screen-right at similar depth, open space between positions and unobstructed foreground corridor for the locked slow straight push to a medium two-shot, with grounded-foot clearance and calm walls behind future faces.",
+      "location": "Center floor and foreground, every option",
       "repair": ""
      },
      {
       "criterion": "continuity",
       "status": "pass",
-      "evidence": "Each option agrees with the prompt layout and spec block: rear wall with cabinet outside action area, left-wall window, far-right closed doorway, inward chair orientation, diffuse daylight from left, neutral palette. Options vary only in curtain handling and cabinet object shapes - box-bowl-cylinder vs pots vs boxed hutch - while keeping same walls, doors, materials and light side.",
-      "location": "Rear, left and right walls and furniture orientation, options 0, 1 and 2",
+      "evidence": "All three agree with the prompt layout and spec block: left-wall curtained window, exactly one chair screen-right angled inward, low cabinet against rear wall outside action area, closed doorway at far-right edge, ivory walls and diffuse daylight from the left. Chair-back and cabinet-shelf variations do not change geography.",
+      "location": "Window, chair, cabinet and doorway arrangement, every option",
       "repair": ""
      }
     ],
-    "recommendation": {
-     "selection": 1,
-     "ranking": [
-      1,
-      0,
-      2
-     ],
-     "reason": "Softest sculpted forms, cleanest light and clearest staging clearance."
-    },
     "modelVersion": "meta/muse-spark-1.3-contributor",
     "capabilityVersion": "ae56c66cb4677ddf4ac98bbf0ddbc074162931cf5842f80d0942f990b2ef5a32",
     "toolEvidence": [
