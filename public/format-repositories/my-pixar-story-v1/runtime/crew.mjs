@@ -51,7 +51,7 @@ export function wigglyToolDefinition(){
 // case-sensitive otherwise, minimum 8 chars, must appear verbatim in the
 // artifact, dependencies/criteria text, the SIGNED production bible, or this
 // task's tool outputs.
-export const QUOTE_ROLES=['text-reviewer','audio-reviewer'];
+export const QUOTE_ROLES=['text-reviewer','audio-reviewer','background-product-owner'];
 export function normalizeQuote(s){
  return String(s??'').replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/\s+/g,' ').trim();
 }

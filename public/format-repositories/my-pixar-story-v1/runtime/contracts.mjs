@@ -35,7 +35,8 @@ export const IntakeConfirmation=z.object({
  resolvedFindings:z.array(z.object({findingDigest:text,resolution:text})),
 }).strict();
 const Scene = z.object({ id: slug, beat: z.number().int().min(1).max(4), description: text, action: text, characterIds: z.array(slug), sourceAnswers: z.array(z.enum(Object.keys(Inputs.shape.answers.shape))) });
-const Brief = z.object({ direction: text, sceneIds: z.array(slug).min(1), knownDetails: z.array(text), proposedDetails: z.array(text), continuityNotes: text, references: z.array(File).default([]) });
+const KnownDetail = z.object({ detail: text, quote: text, source: z.enum(['answers', 'script']), field: text }).strict();
+const Brief = z.object({ direction: text, sceneIds: z.array(slug).min(1), knownDetails: z.array(z.union([text, KnownDetail])), proposedDetails: z.array(text), continuityNotes: text, references: z.array(File).default([]) });
 const BackgroundPrompt = z.object({ prompt: text, recipeSha256: text, briefDigest: text, changeSummary: text });
 const Origin = z.object({ source: z.enum(['generated','imported']), description: text, usageRights: text });
 export const SheetProvenance = z.object({ source: z.enum(['generated', 'operator-import']), originalPath: text.optional(), sha256: text.optional(), importedAt: text.optional(), message: text.optional() }).strict();

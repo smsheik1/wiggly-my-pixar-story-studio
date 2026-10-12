@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { extname } from 'node:path';
 import { Annotation, Command, START, StateGraph, interrupt } from '@langchain/langgraph';
 import { SqliteSaver } from '@langchain/langgraph-checkpoint-sqlite';
-import {Crew,roleFor,assignedWorker,assertCrewEvent} from './crew.mjs';
+import {Crew,roleFor,assignedWorker,assertCrewEvent,normalizeQuote} from './crew.mjs';
 import {requireAudioQualification} from '../evaluation/audio-qualification.mjs';
 import { studioSteps, studioDependencies, studioNext, validateStudioContent, videoBinding, effectFor } from './studio.mjs';
 import { requireVisualQualification } from '../evaluation/visual-qualification.mjs';
@@ -148,6 +148,24 @@ function next(p) {
   const reusable = ['voiceSample', 'clone'].includes(p.step) ? !!current(p) : p.step === 'sheetPrompt' && !supervised(p) ? current(p)?.review?.decision === 'approved' : locked(p, keyFor(p));
   if (p.step !== 'complete' && reusable) next(p);
 }
+// Beau's knownDetails with {detail, quote, source, field} must quote the locked
+// answers (source 'answers', field '<answerKey>.<field>') or the approved script
+// (source 'script') word for word, normalized exactly like verifyReviewQuotes.
+// Plain-string entries are pre-P16 briefs and stay loadable without verification.
+function verifyKnownDetails(p, parsed) {
+  const answers = current(p, 'answers')?.content.inputs.answers ?? null;
+  const scriptHay = [];
+  const collect = v => { if (typeof v === 'string') scriptHay.push(normalizeQuote(v)); else if (Array.isArray(v)) v.forEach(collect); else if (v && typeof v === 'object') Object.values(v).forEach(collect); };
+  collect(current(p, 'script')?.content);
+  for (const entry of parsed.knownDetails ?? []) {
+    if (typeof entry === 'string') continue;
+    const quote = normalizeQuote(entry.quote);
+    if (entry.source === 'answers') {
+      const dot = entry.field.indexOf('.'), record = dot < 0 ? null : answers?.[entry.field.slice(0, dot)]?.[entry.field.slice(dot + 1)];
+      if (!quote || typeof record !== 'string' || !normalizeQuote(record).includes(quote)) throw Object.assign(new Error(`KNOWN_DETAIL_UNSOURCED: "${entry.detail}" is not quoted word for word from locked answer field ${entry.field}.`), { knownFinished: true });
+    } else if (!quote || !scriptHay.some(h => h.includes(quote))) throw Object.assign(new Error(`KNOWN_DETAIL_UNSOURCED: "${entry.detail}" is not quoted word for word from the approved script.`), { knownFinished: true });
+  }
+}
 /** Pure content checks shared with the opt-in SQL producer. No workflow transition. */
 export function validateArtifactContent(p, content, author, previous=current(p)) {
   // Supervised Phase 2: Sam submits a staging patch; merge it into the locked
@@ -243,6 +261,7 @@ export function validateArtifactContent(p, content, author, previous=current(p))
     const allowed = p.step === 'backgroundAngleBrief' ? location(p).angles.find(a => a.id === p.angleId).sceneIds : location(p).scenes.map(s => s.id);
     if (new Set(parsed.sceneIds).size !== parsed.sceneIds.length || allowed.some(id => !parsed.sceneIds.includes(id)) || parsed.sceneIds.some(id => !allowed.includes(id))) throw new Error('Brief must cover exactly its immediate scenes.');
     if (parsed.references.some(f => !f.width || !f.height || f.durationSeconds)) throw new Error('Background references must be measured still images.');
+    verifyKnownDetails(p, parsed);
   }
   if (isPrompt(p)) {
     const brief = current(p, briefKey(p));
