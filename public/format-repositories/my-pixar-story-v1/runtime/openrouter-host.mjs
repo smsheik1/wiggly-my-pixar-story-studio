@@ -167,7 +167,9 @@ export class OpenRouterHost {
       try{
         const u=result?.usage??{};
         const usageMeta={input_tokens:Number(u.prompt_tokens)||0,output_tokens:Number(u.completion_tokens)||0,total_tokens:(Number(u.prompt_tokens)||0)+(Number(u.completion_tokens)||0),...(u.prompt_tokens_details?{input_token_details:{cached_tokens:Number(u.prompt_tokens_details.cached_tokens)||0}}:{}),output_token_details:{reasoning:Number(u.completion_tokens_details?.reasoning_tokens)||0}};
-        llmHandle?.end?.({outputs:{content:choice?.message?.content??null,tool_calls:choice?.message?.tool_calls??null,finish_reason:choice?.finish_reason??null,native_finish_reason:choice?.native_finish_reason??null,usage_metadata:usageMeta,costUsd:Number(u.cost)||0,generationId:result?.id??null,provider:result?.provider??null},durationMs:Date.now()-llmStart,model,metadata:{ls_provider:'openrouter',ls_model_name:model}});
+        // LangSmith reads token counts from outputs.usage_metadata (top level).
+        const costUsd=Number(u.cost)||0;
+        llmHandle?.end?.({content:choice?.message?.content??null,tool_calls:choice?.message?.tool_calls??null,finish_reason:choice?.finish_reason??null,native_finish_reason:choice?.native_finish_reason??null,usage_metadata:{...usageMeta,total_cost:costUsd},inputTokens:usageMeta.input_tokens,outputTokens:usageMeta.output_tokens,reasoningTokens:usageMeta.output_token_details.reasoning,costUsd,generationId:result?.id??null,provider:result?.provider??null,durationMs:Date.now()-llmStart,model});
       }catch{}
     };
     const endLlmFail=(err,status,text)=>{
@@ -271,12 +273,7 @@ export class OpenRouterHost {
       agentHandle=this.tracer?.agentCall?.(startFields);
     }
   }catch{agentHandle=null;}
-  const runWithinAgent=(fn)=>{
-    try{
-      if(agentHandle&&this.tracer?.within)return this.tracer.within(agentHandle,fn);
-    }catch{}
-    return fn();
-  };
+  const runWithinAgent=(fn)=>(agentHandle&&this.tracer?.within)?this.tracer.within(agentHandle,fn):fn();
   const turnStart=Date.now(),usage={requests:0,promptCount:0,completionCount:0,costUsd:0};
   const totals={requests:0,inputTokens:0,outputTokens:0,reasoningTokens:0,cachedTokens:0,costUsd:0};
   let turnEnded=false,validationRetries=0,agentEnded=false;
@@ -385,7 +382,8 @@ export class OpenRouterHost {
   // If we own the turn, the agent-call already nests via within(outerTurn) above,
   // but llm/tool need the agent context: run taskBody inside agent when possible.
   if(agentHandle&&this.tracer?.within){
-    try{return await this.tracer.within(agentHandle,taskBody);}catch(e){return await taskBody();}
+    // Never re-run the task on error: a tracer problem must not double a paid call.
+    return await this.tracer.within(agentHandle,taskBody);
   }
   return await taskBody();
  }

@@ -32,6 +32,13 @@ function contextFor(task){
  const simplify=value=>Array.isArray(value)?value.map(simplify):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([k])=>!['path','bytes','crew','worker','imageUrl'].includes(k)).map(([k,v])=>[k,simplify(v)])):value;
  return simplify({step:task.step,criteria:task.criteria,artifact:task.artifact,dependencies:task.dependencies,videoBinding:task.videoBinding,visualReferences:task.visualReferences});
 }
+// Token counts from a Gemini response (interactions `usage` or generateContent `usageMetadata`); null when absent.
+export function geminiUsage(response){
+ const u=response?.usage??response?.usageMetadata??null;
+ if(!u||typeof u!=='object')return null;
+ const n=v=>Number.isFinite(Number(v))?Number(v):0;
+ return {inputTokens:n(u.total_input_tokens??u.input_tokens??u.promptTokenCount),outputTokens:n(u.total_output_tokens??u.output_tokens??u.candidatesTokenCount),reasoningTokens:n(u.total_thought_tokens??u.thought_tokens??u.thoughtsTokenCount)};
+}
 export function createGeminiReviewTools({secretsPath,receiptDirectory,maxCalls=0,beforeRequest,afterResponse,fetcher=fetch,wait=ms=>new Promise(r=>setTimeout(r,ms))}={}){
  if(!secretsPath||!receiptDirectory)throw new Error('Gemini review needs the canonical secrets path and durable receipt directory.');
  if(!Number.isInteger(maxCalls)||maxCalls<0||maxCalls>32)throw new Error('Use a bounded --review-calls between 0 and 32.');
@@ -140,7 +147,7 @@ export function createGeminiReviewTools({secretsPath,receiptDirectory,maxCalls=0
    await startReceipt(join(dir,'started.json'),descriptor);
    const response=await (await request(base+'/v1beta/interactions',{method:'POST',headers:{'Content-Type':'application/json'},body:serialized},key)).json();
    await atomicJson(join(dir,'response.json'),{requestDigest,responseDigest:digest(response),response});
-   await afterResponse?.({requestDigest,media:bindings});
+   await afterResponse?.({requestDigest,media:bindings,usage:geminiUsage(response)});
    return await finish(response);
   }catch(error){if(error.stopDispatch)throw error;const message=error.code==='EEXIST'?`GEMINI_REVIEW_UNCERTAIN: inspect ${dir}; another process owns this request; no duplicate submitted.`:key?error.message.replaceAll(key,'[redacted]'):error.message;throw Object.assign(new Error(`${message}\n${remediation('gemini',secretsPath)}`),{stopDispatch:true});}
   };

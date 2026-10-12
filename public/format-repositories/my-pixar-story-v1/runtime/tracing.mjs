@@ -25,6 +25,11 @@ function isBase64Blob(s){
  return /^[A-Za-z0-9+/=_-]+$/.test(s.slice(0,2048))&&/^[A-Za-z0-9+/]+={0,2}$/.test(s.slice(0,512))&&s.length%4===0;
 }
 
+// Token-usage counters (input_tokens, reasoningTokens, promptTokenCount,
+// output_token_details, ...) are numbers, not credentials: keep them readable.
+export function isUsageCountKey(key){
+ return /tokens?(_?details|_?count)?$/i.test(key)&&/(input|output|total|reasoning|cached|cache_write|prompt|completion|candidates|thoughts?|max|audio|video|image)/i.test(key);
+}
 // Allowlist-style sanitizer: only digests/basenames for media, never bytes,
 // base64, data: URLs, private paths, or secret values. Ported from
 // scripts/studio-spike/tracing.ts redact() with stricter coverage.
@@ -63,7 +68,7 @@ export function sanitize(value,secrets=[]){
     return {...clean(metadata),data:{media_omitted:true,sha256:sha256Hex(bytes),bytes:bytes.length}};
    }
    return Object.fromEntries(Object.entries(input).map(([key,child])=>[
-    key,/key|token|secret|authorization|password|api[_-]?key|x-goog-api-key|xi-api-key/i.test(key)?'[REDACTED]':clean(child),
+    key,(!isUsageCountKey(key)&&/key|token|secret|authorization|password|api[_-]?key|x-goog-api-key|xi-api-key/i.test(key))?'[REDACTED]':clean(child),
    ]));
   }
   return input;
@@ -107,18 +112,16 @@ export function bound(value, limits={}){
   try{return rec(value,0,null);}catch{return {bound_failed:true};}
 }
 
+// Failure reason code: the first UPPER_SNAKE code in the message (CREW_PERMISSION_DENIED,
+// INVALID_WORKER_EVENT, OPENROUTER_REQUEST_FAILED, ...). Plain words like "HTTP" are not codes.
 export function reasonCode(messageOrError){
   try{
-    if(messageOrError&&typeof messageOrError==='object'){
-      if(messageOrError.usageLimitExceeded)return 'OPENROUTER_RATE_LIMITED';
-      const msg=String(messageOrError.message??'');
-      if(/credits exhausted/i.test(msg))return 'OPENROUTER_CREDITS_EXHAUSTED';
-      const m=msg.match(/[A-Z_]{4,}/);
-      return m?m[0]:null;
-    }
-    const msg=String(messageOrError??'');
+    const isObj=messageOrError&&typeof messageOrError==='object';
+    if(isObj&&messageOrError.usageLimitExceeded)return 'OPENROUTER_RATE_LIMITED';
+    const msg=String(isObj?(messageOrError.message??''):(messageOrError??''));
+    if(/OpenRouter usage limit reached|HTTP 429/i.test(msg))return 'OPENROUTER_RATE_LIMITED';
     if(/credits exhausted/i.test(msg))return 'OPENROUTER_CREDITS_EXHAUSTED';
-    const m=msg.match(/[A-Z_]{4,}/);
+    const m=msg.match(/\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/);
     return m?m[0]:null;
   }catch{return null;}
 }
@@ -228,6 +231,19 @@ export function paidJobTimer(tracer, base = {}) {
 }
 
 const SMALL_KEYS=new Set(['role','label','workerName','workerId','model','modelVersion','backend','taskId','step','gate','attempt','outcome','durationMs','error','reasonCode','reason','requests','inputTokens','outputTokens','reasoningTokens','cachedTokens','costUsd','input_tokens','output_tokens','name','toolName','tool','provider','jobId','estimatedCostUsd','actualCostUsd','actualCostSource','decision','artifactId','kind','id','parentId','status','operation','generationId','promptCount','completionCount','promptTokens','completionTokens','validationRetries','budgetExhausted','phase','ts','attempts','continuation','cached','tokens']);
+// Run metadata stays small: scalar ids/labels/costs only, plus an explicit
+// fields.metadata object (e.g. ls_provider/ls_model_name for llm runs).
+function metadataFor(base,fields){
+  const out={...base};
+  try{
+    for(const [k,v] of Object.entries(fields??{})){
+      if(k==='metadata'||k==='name'||k==='run_type')continue;
+      if(v===null||['string','number','boolean'].includes(typeof v)){if(typeof v==='string'&&v.length>300)continue;out[k]=v;}
+    }
+    if(fields?.metadata&&typeof fields.metadata==='object')Object.assign(out,fields.metadata);
+  }catch{}
+  return out;
+}
 function stripToSmall(fields){
   const out={};
   try{
@@ -307,9 +323,11 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
  };
  // ID space
  let seq=0;
- const nextId=()=>`${runId}-${++seq}`;
+ // Session prefix: several commands (drive, generate, collect) append to one run journal.
+ const session=randomUUID().slice(0,8);
+ const nextId=()=>`${session}-${++seq}`;
  // Root handle (no parent)
- const rootId='root';
+ const rootId=`root-${session}`;
  const open=new Set();
  let rootTree=null;
  let lsClient=null;
@@ -333,11 +351,15 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
    const {Client}=await import('langsmith');
    const {RunTree}=await import('langsmith/run_trees');
    lsClient=new Client({apiKey,callerOptions:{maxRetries:0},timeout_ms:10000,hideInputs:value=>safe(value),hideOutputs:value=>safe(value),hideMetadata:value=>safe(value),fetchImplementation:fetcher});
+   // The client forces 4 retries with exponential backoff on its internal callers, which kept a
+   // run's process alive ~70 s at exit when LangSmith was unreachable. Tracing must never slow a run.
+   for(const caller of [lsClient.caller,lsClient.batchIngestCaller])try{if(caller&&'maxRetries' in caller)caller.maxRetries=0;}catch{}
    rootTree=new RunTree({name:resolvedRootName,run_type:'chain',inputs:safe(baseMetadata),project_name:projectName,tags,metadata:safe(baseMetadata),client:lsClient});
    rootTree.postRun().catch(error=>warnOnce(error.message));
    useLive=true;
   }catch(error){warnOnce(error.message);useLive=false;rootTree=null;lsClient=null;}
  }
+ if(journalPath)appendJournal({ts:new Date().toISOString(),id:rootId,parentId:null,phase:'start',kind:'root',name:resolvedRootName,fields:safe({...baseMetadata,tags})});
  const rootHandle={id:rootId,parentId:null,kind:'root',name:resolvedRootName,run_type:'chain',ended:false,tree:rootTree,
    child:(kind,fields)=>makeChild(kind,fields,rootHandle),
    end:(outputs={},errorText)=>{/* root ends on flush */}};
@@ -358,7 +380,7 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
    }
    // Backend
    if(postFake){
-     try{postFake({phase:kind,id,parentId,kind,name:runName,run_type:runType,project_name:projectName,tags,metadata:safe({...baseMetadata,...effFields}),...effFields,...(stripped?{budgetExhausted:true}:{})});}catch(error){warnOnce(error.message);}
+     try{postFake({phase:kind,id,parentId,kind,name:runName,run_type:runType,project_name:projectName,tags,metadata:safe(metadataFor(baseMetadata,effFields)),...effFields,...(stripped?{budgetExhausted:true}:{})});}catch(error){warnOnce(error.message);}
    }else if(useLive&&lsClient){
      // live trees are created by caller with parent linkage; nothing extra here
    }
@@ -403,7 +425,7 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
        const parentTree=parent?.tree??rootTree;
        const s=safe({name:runName,run_type:runType,...fields});
        const {fields:treeFields}=maybeStrip(s);
-       tree=new RunTreeClass({name:runName,run_type:runType,parent_run:parentTree,inputs:treeFields,project_name:projectName,tags,metadata:safe({...baseMetadata,...treeFields}),client:lsClient});
+       tree=new RunTreeClass({name:runName,run_type:runType,parent_run:parentTree,inputs:treeFields,project_name:projectName,tags,metadata:safe(metadataFor(baseMetadata,treeFields)),client:lsClient});
        tree.postRun().catch(error=>warnOnce(error.message));
      }catch(error){warnOnce(error.message);tree=null;}
    }
@@ -420,10 +442,11 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
    return handle;
  }
  const within=(handle,fn)=>{
-   try{
-     if(!handle)return fn();
-     return als.run(handle,fn);
-   }catch{return fn();}
+   if(!handle)return fn();
+   // Never run fn twice: only fall back when als.run itself failed before fn started.
+   let started=false;
+   try{return als.run(handle,()=>{started=true;return fn();});}
+   catch(error){if(started)throw error;return fn();}
  };
  const current=()=>{
    try{return als.getStore()??null;}catch{return null;}

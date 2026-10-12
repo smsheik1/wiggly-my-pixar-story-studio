@@ -86,6 +86,17 @@ async function main() {
   if(command==='visual-tasks'){const cases=z.array(VisualCase).parse(await json(option('dataset'))),split=option('split','holdout');if(!['calibration','holdout'].includes(split))throw new Error('Invalid visual split.');print(cases.filter(c=>c.split===split).map(visualTask));return;}
   // Department evals (golden cases per crew department). Replay by default (free, offline);
   // --live --confirm-spend is the only paid mode, hard-capped in code. Exits 1 on regression.
+  // Text export of a run's trace journal (per step: agent, prompt, response, tool calls, cost).
+  if (command === 'trace-export') {
+    const { parseArgs } = await import('node:util');
+    const { values } = parseArgs({ args: rawProcessArgv.slice(3), options: { run: { type: 'string' }, out: { type: 'string' } }, allowPositionals: false });
+    const { traceExport } = await import('./runtime/trace-export.mjs');
+    try {
+      const r = await traceExport({ run: values.run ? resolve(values.run) : null, out: values.out ? resolve(values.out) : null });
+      if (values.out) process.stderr.write(`trace-export: wrote ${resolve(values.out)} from ${r.path}\n`); else process.stdout.write(r.markdown + '\n');
+    } catch (error) { if (!error.exitCode) throw error; process.stderr.write(error.message + '\n'); process.exitCode = error.exitCode; }
+    return;
+  }
   if (command === 'dept-eval') { const { cli } = await import('./evaluation/dept-evals.mjs'); process.exitCode = await cli(rawProcessArgv.slice(3)); return; }
   if (command === 'eval' || command === 'eval-tasks' || command === 'eval-export') {
     const { validateDataset, selectCases, taskForCase, runEvaluation, langsmithExamples } = await import('./evaluation/harness.mjs');
@@ -160,6 +171,8 @@ async function main() {
       const filesB = (await getDirFiles(dirB)).sort();
       const filter = (f) =>
         !f.startsWith('cassettes') &&
+        // Trace journal: timestamps/durations/ids differ per run by design.
+        !f.startsWith('trace/') &&
         f !== 'writer.lock' &&
         f !== 'secrets.env' &&
         !f.endsWith('-shm') &&
@@ -491,13 +504,15 @@ async function main() {
 
       // Optional live LangSmith tracing: enabled only with LANGSMITH_API_KEY in
       // the --secrets file; off when WIGGLY_TRACING=off or no key. Never breaks a run.
-      const fallbackTracer=()=>({enabled:false,turn:()=>({end(){}}),tool:()=>({end(){}}),review(){},paidJob(){},flush:async()=>{}});
+      const fallbackTracer=()=>({enabled:false,turn:()=>({end(){}}),tool:()=>({end(){}}),review(){},paidJob(){},within:(_h,fn)=>fn(),current:()=>null,flush:async()=>{}});
       let tracer=fallbackTracer();
       try{
         const tracing=await import('./runtime/tracing.mjs');
         const tracerOpts={
           secretsPath,
           runId:basename(runDir),
+          runDir,
+          rootName:command,
           ...(isRecord && cassetteId ? { tags: [`cassette:${cassetteId}`], metadata: { cassetteId } } : {}),
         };
         tracer=await tracing.createTracer(tracerOpts);
@@ -521,11 +536,12 @@ async function main() {
         budgetQueue=budgetQueue.then(async()=>{const latest=await workflow.status('project');if(latest.pending.taskId!==task.taskId)throw new Error('STALE_TASK: inference reservation belongs to an older task.');await workflow.respond('project',{taskId:task.taskId,actor:'runtime',action:'reserve-compute',reservation:{id:provider+':'+requestDigest,provider,estimatedCostUsd:amount}});});
         return budgetQueue;
       };
-      const afterResponse=async({requestDigest})=>{
+      const afterResponse=async({requestDigest,usage=null})=>{
         const timer = inFlightTimers.get(requestDigest);
         if (timer) {
           inFlightTimers.delete(requestDigest);
-          timer.ok();
+          // Gemini direct perception: token counts from the provider; cost stays the estimate.
+          timer.ok(usage?{usage}:{});
         }
       };
 
@@ -844,7 +860,7 @@ async function main() {
       let tracer=fallbackTracer();
       try{
         const tracing=await import('./runtime/tracing.mjs');
-        tracer=await tracing.createTracer({secretsPath,runId:basename(runDir)});
+        tracer=await tracing.createTracer({secretsPath,runId:basename(runDir),runDir,rootName:command});
       }catch{tracer=fallbackTracer();}
       try{
         try{
@@ -936,7 +952,7 @@ async function main() {
       let tracer=fallbackTracer();
       try{
         const tracing=await import('./runtime/tracing.mjs');
-        tracer=await tracing.createTracer({secretsPath,runId:basename(runDir)});
+        tracer=await tracing.createTracer({secretsPath,runId:basename(runDir),runDir,rootName:command});
       }catch{tracer=fallbackTracer();}
       try {
         const testFetcher = await testDecisionsFetcher();
