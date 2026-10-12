@@ -425,6 +425,8 @@ export class OpenRouterHost {
   this.verifiedModels.add(model);
  }
  async startCrew(model,config=loadStudio().config){
+  // The run's host-workspace exists only on the Codex path; create it here too.
+  await mkdir(this.cwd,{recursive:true,mode:0o700});
   const capabilityVersion=await this.profile(),path=join(this.cwd,'crew-startup-openrouter.json');
   const openRoles=Object.entries(config.agents).filter(([,a])=>(a.backend??'codex')==='openrouter');
   const models=Object.fromEntries(openRoles.map(([role,a])=>[role,model??a.model]));

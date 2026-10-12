@@ -14,7 +14,7 @@ import { studioSteps, studioDependencies, studioNext, validateStudioContent, vid
 import { requireVisualQualification } from '../evaluation/visual-qualification.mjs';
 import { shotFor, shotReferences, referenceBindings, planningReferences, validateShots, validateLocationRegistry, validateKeyframePrompt, mergeShotsPatch } from './shots.mjs';
 import { requestDescriptor,planningAccountGuide,generationEstimate,narrationGenerationTexts } from './providers.mjs';
-import {scriptQuoteChecks,transcriptDiff} from './evaluators.mjs';
+import {scriptQuoteChecks,transcriptDiff,reviewerVariantAccepted} from './evaluators.mjs';
 import {AudioEditReceipt,AUDIO_EDIT_PROFILE,validateAudioEdit,validateEditingInvestigation} from './audio-edit.mjs';
 import { VERSION, Inputs, Project, Content, Review, Event, BibleEvent, Plans, IntakeConfirmation, PhotoInventoryEntry, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
 
@@ -819,7 +819,11 @@ export function applyEvent(project, raw) {
       const m = r.measurements,basis=voiceBasis(p);
       if (!m || !m.speechToTextMethod || (!supervised(p)&&(!m.speakerSimilarityMethod || m.speakerSimilarity === undefined)) || !m.measurementNotes || basis.kind==='unavailable' || (basis.kind==='recorded-reference'&&m.referenceSha256!==basis.referenceSha256) || m.transcripts?.length !== a.content.files.length || m.speakingRateWpm?.length !== a.content.files.length || m.silenceSeconds?.length !== a.content.files.length) throw new Error('Audio review requires transcript, speaking-rate/silence measurements, notes and truthful identity evidence for the current voice basis.');
       const settled=(t,i)=>(a.transcriptSettlements??[]).some(s=>s.beat===i+1&&s.artifactId===a.id&&s.artifactDigest===a.digest&&s.transcript===t);
-      if (m.transcripts.some((t, i) => !settled(t,i)&&transcriptDiff(a.content.audioRegenerations?.find(x=>x.beat===i+1)?.spokenText??current(p, 'script').content.beats[i].narration,t).editDistance)) throw new Error('Speech-to-text differs from the locked script.');
+      // Transcript judging: join-aware word compare first; a remaining spelling or
+      // formatting variant passes only on the reviewer's evidenced call (the
+      // transcript check, or integrity for the audition, which has no transcript criterion).
+      const variantCheck=r.checks.find(c=>c.criterion==='transcript')??r.checks.find(c=>c.criterion==='integrity');
+      if (m.transcripts.some((t, i) => {const ref=a.content.audioRegenerations?.find(x=>x.beat===i+1)?.spokenText??current(p, 'script').content.beats[i].narration;return !settled(t,i)&&transcriptDiff(ref,t).editDistance&&!reviewerVariantAccepted(ref,t,variantCheck);})) throw new Error('Speech-to-text differs from the locked script.');
     }
     if(p.step==='film'){if(filmAudio){a.audioReview=structuredClone(r);a.audioReviewedBy=e.workerId;}else{a.visualReview=r;a.visualReviewedBy=e.workerId;if(reviewPassed(r)){if(p.debug?.enabled)p.debug.paused=true;p.sequence++;p.history.push({sequence:p.sequence,action:'review',actor:e.actor,...activity,message:'Visual film review passed; awaiting independent audio review.',at:new Date().toISOString()});return Project.parse(p);}}if(filmAudio&&reviewPassed(r)){r.perception='direct-audiovisual';r.checks=criteria.film.map(c=>r.checks.find(x=>x.criterion===c)??a.visualReview.checks.find(x=>x.criterion===c));}}
     if (ownerReview) a.ownerReview = r;
