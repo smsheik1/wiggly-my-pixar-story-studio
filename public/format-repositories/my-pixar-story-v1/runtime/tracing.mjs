@@ -177,7 +177,7 @@ function extractValue(source,name){
 function disabledTracer(){
  const noop={id:'noop',parentId:null,kind:'noop',name:'noop',ended:true,end(){},child(){return {id:'noop',parentId:null,ended:true,end(){},child(){return this;}};}};
  const noopFn=()=>noop;
- return {enabled:false,journaling:false,projectName:TRACING_PROJECT,runId:null,runDir:null,rootName:'disabled',turn:noopFn,agentCall:noopFn,llm:noopFn,tool:noopFn,review(){},paidJob(){},child:noopFn,within:(h,fn)=>fn(),flush:async()=>{},getRunUrl:async()=>null};
+ return {enabled:false,journaling:false,projectName:TRACING_PROJECT,runId:null,runDir:null,rootName:'disabled',turn:noopFn,agentCall:noopFn,llm:noopFn,tool:noopFn,review(){},paidJob(){},child:noopFn,within:(h,fn)=>fn(),current:()=>null,flush:async()=>{},getRunUrl:async()=>null};
 }
 
 let warned=false;
@@ -425,6 +425,9 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
      return als.run(handle,fn);
    }catch{return fn();}
  };
+ const current=()=>{
+   try{return als.getStore()??null;}catch{return null;}
+ };
  const childGeneric=(kind,fields)=>makeChild(kind,fields,null);
  let flushed=false;
  const flush=async(timeoutMs=5000)=>{
@@ -465,7 +468,7 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
    projectName,runId,runDir,rootName:resolvedRootName,tags,metadata:baseMetadata,
    journalPath,
    ...(captured?{captured}:{}),
-   within,child:childGeneric,
+   within,current,child:childGeneric,
    turn:(fields={})=>makeChild('crew-turn',{name:`crew-turn:${fields.role??'unknown'}`,run_type:'chain',...fields},rootHandle),
    agentCall:(fields={})=>makeChild('agent-call',{name:`agent-call:${fields.role??'unknown'}`,run_type:'chain',...fields},null),
    llm:(fields={})=>makeChild('llm',{name:`llm:${fields.model??fields.inputs?.model??'unknown'}`,run_type:'llm',...fields},null),
