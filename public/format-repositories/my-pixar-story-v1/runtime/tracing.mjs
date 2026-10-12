@@ -477,7 +477,7 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
  const getRunUrl=async()=>{
    try{
      if(useLive&&lsClient&&typeof lsClient.getRunUrl==='function'&&rootTree?.id){
-       return await lsClient.getRunUrl({runId:rootTree.id,projectName});
+       return await lsClient.getRunUrl({runId:rootTree.id,projectOpts:{projectName}});
      }
      if(useLive&&rootTree?.id)return `https://smith.langchain.com/projects/${encodeURIComponent(projectName)}/runs/${encodeURIComponent(rootTree.id)}`;
      return null;

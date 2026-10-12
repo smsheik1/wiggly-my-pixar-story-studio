@@ -545,7 +545,7 @@ export function scorecardMarkdown(s) {
     md += `| ${r.id} | ${r.dept} | ${ICON[r.status] ?? r.status} | ${r.decision ?? '-'} | ${r.selection ?? '-'} | ${cost} | ${r.wallMs ? Math.round(r.wallMs / 1000) + 's' : '-'} | ${String(failed).replace(/\|/g, '\\|').replace(/\n/g, ' ')} |\n`;
   }
   const traced = s.cases.filter(r => r.trace);
-  if (traced.length) { md += `\n## Traces\n\n`; for (const r of traced) md += `- ${r.id}: ${r.trace.url ?? '(LangSmith off: no LANGSMITH_API_KEY)'}; journal ${r.trace.journal ?? '-'}; export: node runner.mjs trace-export --run ${r.trace.journal ?? '<journal>'}\n`; }
+  if (traced.length) { md += `\n## Traces\n\n`; for (const r of traced) md += `- ${r.id}: ${r.trace.url ?? (r.trace.langsmith ? '(sent to LangSmith project wiggly-my-pixar-story; URL lookup failed)' : '(LangSmith off: no LANGSMITH_API_KEY)')}; journal ${r.trace.journal ?? '-'}; export: node runner.mjs trace-export --run ${r.trace.journal ?? '<journal>'}\n`; }
   if (s.regressions.length) { md += `\n## Regressions\n\n`; for (const g of s.regressions) md += `- ${g.id} (${g.dept}): lost ${g.lost.join(', ')}\n`; }
   return md;
 }
