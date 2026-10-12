@@ -17,12 +17,12 @@ Directing notes for narration. Our films are narrated memories, so these are pol
 - [S-NO-INVENTED-FACTS] (check: sage) Use only facts from the answers; never invent names, dates, ages, places, objects, motives, or outside facts, and this rule outranks every other craft rule.
 - [S-DIRECT] (check: sage) Direct, don't transcribe: choose, order, and emphasise only facts that exist in the answers, and cut the rest.
 - [S-ORDINARY-WORLD] (check: none) Open in an ordinary world before anything changes, so the contrast lands.
-- [S-THREES] (check: sage) Build the rule of three and any escalating repeat only from facts in the answers.
-- [S-PLANT-PAYOFF] (check: sage) Plant in beats 1-2 what pays off in beat 4.
+- [S-THREES] (check: none) Prefer building the rule of three and any escalating repeat only from facts in the answers.
+- [S-PLANT-PAYOFF] (check: none) Prefer planting in beats 1-2 what pays off in beat 4.
 - [S-BUSINESS] (check: sage) Business over statement: show a person doing something, not a claim about them.
 - [S-REACTION] (check: none) Decide whose face we cut to for each beat; the reaction is usually worth more than the action.
 - [S-STOCK-PHRASES] (check: sage) Never use stock phrases: "proud doesn't begin to cover it", "my whole world", "meant everything", "my greatest masterpiece", or any "Long before..." opener.
-- [S-LAST-IMAGE] (check: sage) The last line is one specific image, not a statement of feeling.
+- [S-LAST-IMAGE] (check: none) Prefer closing on one specific image rather than a statement of feeling.
 - [S-CLEAR-SUBJECT] (check: sage) Every sentence has a clear subject: no dangling modifiers and no two locations in one sentence.
 - [S-AGES-FORWARD] (check: sage) Ages and life stages only move forward, never backward.
 - [S-QUOTES-VERBATIM] (check: sage) Real spoken lines from the answers are kept word for word.
@@ -51,7 +51,7 @@ Prompts are built from fixed lines (same for every character, encoding how the h
 
 Short concrete prompts beat long ones: everything above earns its place, and long prompts get averaged.
 
-- [P-EMPTY-HANDS] (check: sage) Nothing in the character's hands; props get their own prompt.
+- [P-EMPTY-HANDS] (check: sage) Nothing in the character's hands on character design and sheet prompts; props get their own prompt. Story frames hold only what the locked shot's action names.
 - [P-NO-SKIN-MARKS] (check: sage) Never put ink, pen, or drawn marks on skin; a pen a character needs goes in a pocket, since marks render as tattoos.
 - [P-CHILD-ANATOMY] (check: sage) Avoid anatomy words that misfire on children: describe a child's torso as slim, straight, and flat, never "round belly" or "full cheeks".
 - [P-FULL-PROMPT] (check: sage) Always output the prompt in full, every variation and every edit; never truncate or write "same as above except".
@@ -68,7 +68,7 @@ Short concrete prompts beat long ones: everything above earns its place, and lon
 For real people, the photos win over any design instinct. This replaces the old variation advice: likeness never varies.
 
 - [C-IDENTITY] (check: vera, sage) Skin tone, hair colour, and face always match the person and their photos, and never vary.
-- [C-IDENTITY-OPTIONS] (check: sage) The 3 options per person vary only style strength, outfit, and pose or hair styling within what is true to the person.
+- [C-IDENTITY-OPTIONS] (check: vera) The 3 options come from one prompt. They may differ only in style strength, outfit, and pose or hair styling, never likeness.
 
 ## [character-sheet] Character sheet
 
