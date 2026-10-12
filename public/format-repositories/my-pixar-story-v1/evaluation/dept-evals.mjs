@@ -6,6 +6,7 @@
 //   node runner.mjs dept-eval --dept vera,sage           # replay a subset
 //   node runner.mjs dept-eval --all --run <r4 dir>       # full local replay: real host loop, cassette fetcher
 //   node runner.mjs dept-eval --all --live --confirm-spend --run <r4 dir> --secrets secrets.env [--max-usd 0.10]
+//   node runner.mjs dept-eval --case <id> --run <r4 dir> --trace [--secrets secrets.env]   # trace a replay (LangSmith if the key is set)
 //
 // Replay never touches the network. Live is the only paid mode; it needs --confirm-spend and is
 // hard-capped at DEPT_EVAL_HARD_CAP_USD in code (--max-usd can lower, never raise it).
@@ -24,6 +25,8 @@ export const GOLDEN_PATH = join(DEPT_EVAL_DIR, 'golden.json');
 export const RECORDINGS_DIR = join(DEPT_EVAL_DIR, 'recordings');
 export const BASELINE_PATH = join(DEPT_EVAL_DIR, 'baseline.json');
 export const CASSETTES_DIR = join(here, 'local', 'dept-evals', 'cassettes');
+// --trace journals (gitignored, like cassettes): <TRACES_DIR>/<runId>/trace/trace.jsonl
+export const TRACES_DIR = join(here, 'local', 'dept-evals', 'traces');
 export const DEPT_EVAL_HARD_CAP_USD = 0.10;
 export const CASE_TIMEOUT_MS = 15 * 60 * 1000;
 // Same per-request timeout the studio runner gives the OpenRouter crew (runner.mjs, 600000 ms).
@@ -311,7 +314,7 @@ async function loadStates(runDir) {
 }
 
 // Rebuild the task at the case's gate with the CURRENT studio snapshot and run the assigned role.
-export async function executeCase(caseDef, { states, studio, secretsPath, fetcher, cwd }) {
+export async function executeCase(caseDef, { states, studio, secretsPath, fetcher, cwd, tracer = null }) {
   const { findState } = await import('./r4-replay.mjs');
   const { taskFor, applyEvent } = await import('../runtime/workflow.mjs');
   const { runCrewTask, roleFor } = await import('../runtime/crew.mjs');
@@ -326,21 +329,52 @@ export async function executeCase(caseDef, { states, studio, secretsPath, fetche
   if (caseDef.source.workflowRevision) p.workflowRevision = caseDef.source.workflowRevision;
   if (roleFor(p) !== role) return { event: null, valid: false, gateAccepted: false, error: `ROLE_MISMATCH: gate belongs to ${roleFor(p)}, case says ${role}` };
   const agent = studio.config.agents[role];
-  const host = new OpenRouterHost({ cwd, secretsPath, model: agent.model, fetcher, timeoutMs: DEPT_EVAL_HOST_TIMEOUT_MS });
+  const host = new OpenRouterHost({ cwd, secretsPath, model: agent.model, fetcher, timeoutMs: DEPT_EVAL_HOST_TIMEOUT_MS, tracer });
   const capabilityVersion = await host.profile();
   p.crew = { workers: Object.entries(studio.config.agents).map(([r, a]) => r === role
     ? { workerId: `dept-eval:${role}`, name: a.name, role, modelVersion: a.model, capabilityVersion, execution: 'host', backend: 'openrouter' }
     : { workerId: `dummy:${r}`, name: a.name, role: r, modelVersion: 'dummy', capabilityVersion: 'dummy', execution: 'host' }) };
   let event = null;
+  // Optional tracing (--trace): one crew-turn per case; the host nests agent-call/llm/tool under it.
+  const task0 = taskFor(p), worker = p.crew.workers.find(w => w.role === role);
+  let turn = null;
+  try { turn = tracer?.turn?.({ role, label: `${agent.name}, ${role}`, workerName: agent.name, workerId: worker.workerId, model: agent.model, backend: 'openrouter', taskId: task0.taskId, step: task0.step, gate: task0.gate, attempt: 1, caseId: caseDef.id, studioSha256: studio.sha256 }); } catch { turn = null; }
+  const t0 = Date.now();
+  const endTurn = (fields) => { try { turn?.end?.({ durationMs: Date.now() - t0, ...(turn._childTotals ?? {}), ...fields }); } catch {} };
+  const traceReview = (ev) => {
+    try {
+      if (!ev?.review) return;
+      tracer?.within?.(turn, () => tracer?.review?.({ decision: ev.review.decision, artifactId: ev.artifactId, reviewer: { label: `${agent.name}, ${role}`, model: agent.model }, recommendation: ev.review.recommendation ?? null, selection: ev.review.recommendation?.selection ?? null, checks: (ev.review.checks ?? []).map(c => ({ criterion: c.criterion, status: c.status, evidence: c.evidence, repair: c.repair ?? '' })), summary: ev.review.summary ?? null, findings: ev.review.findings ?? null }));
+    } catch {}
+  };
   try {
-    event = await runCrewTask(p, taskFor(p), host);
+    event = turn && tracer?.within ? await tracer.within(turn, () => runCrewTask(p, task0, host)) : await runCrewTask(p, task0, host);
+    traceReview(event);
     const valid = Event.safeParse(event).success;
-    try { applyEvent(structuredClone(p), event); return { event, valid, gateAccepted: true, error: null, model: agent.model }; }
-    catch (e) { return { event, valid, gateAccepted: false, error: e.message, model: agent.model }; }
+    try { applyEvent(structuredClone(p), event); endTurn({ outcome: 'completed', decision: event?.review?.decision ?? null }); return { event, valid, gateAccepted: true, error: null, model: agent.model }; }
+    catch (e) { endTurn({ outcome: 'rejected', error: e.message }); return { event, valid, gateAccepted: false, error: e.message, model: agent.model }; }
   } catch (e) {
+    endTurn({ outcome: 'error', error: e.message });
     const finished = e.finishedResult && typeof e.finishedResult === 'object' ? e.finishedResult : null;
     return { event: finished, valid: false, gateAccepted: false, error: e.message, capReached: !!e.capReached, model: agent.model };
   }
+}
+
+// --trace: one tracer per case (journal under tracesDir; LangSmith only when the secrets file has
+// LANGSMITH_API_KEY). In replay the OpenRouter key stays the fake replay key; tracing reads only its own file.
+export async function tracedCase(c, mode, { trace, traceSecretsPath, traceClient, tracesDir }, run) {
+  if (!trace) return { outcome: await run(null), trace: null };
+  const runId = `dept-eval-${c.id}-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  const runDir = join(tracesDir, runId);
+  let tracer = null;
+  try {
+    const { createTracer } = await import('../runtime/tracing.mjs');
+    tracer = await createTracer({ secretsPath: traceSecretsPath, runId, runDir, rootName: 'dept-eval', tags: ['dept-eval', `case:${c.id}`, `mode:${mode}`], metadata: { caseId: c.id, mode }, client: traceClient });
+  } catch { tracer = null; }
+  const outcome = await run(tracer);
+  let url = null;
+  try { await tracer?.flush?.(10000); url = await tracer?.getRunUrl?.() ?? null; } catch {}
+  return { outcome, trace: { runId, journal: tracer?.journalPath ?? null, url, langsmith: !!tracer?.enabled } };
 }
 
 const withTimeout = (promise, ms, onTimeout) => {
@@ -360,7 +394,7 @@ export async function runDeptEvals({
   maxUsd = DEPT_EVAL_HARD_CAP_USD, concurrency = 3, goldenPath = GOLDEN_PATH, recordingsDir = RECORDINGS_DIR,
   baselinePath = BASELINE_PATH, cassettesDir = CASSETTES_DIR, updateBaseline = false, strict = false,
   realFetch = globalThis.fetch, studio = null, statesOverride = null, caseTimeoutMs = CASE_TIMEOUT_MS, log = () => {},
-  execute = executeCase, eventSchema = null,
+  execute = executeCase, eventSchema = null, trace = false, traceClient = null, tracesDir = TRACES_DIR,
 } = {}) {
   if (!['replay', 'live'].includes(mode)) throw new Error(`unknown mode ${mode}`);
   const golden = await loadGolden(goldenPath);
@@ -383,6 +417,7 @@ export async function runDeptEvals({
   const workDir = await mkdtemp(join(tmpdir(), 'dept-eval-'));
   if (fullReplay) { replaySecrets = join(workDir, 'replay-secrets.env'); await writeFile(replaySecrets, 'OPENROUTER_API_KEY=replay-only-not-a-key\n', { mode: 0o600 }); }
   const aliases = aliasesFor(runDir);
+  const traceOpts = { trace, traceSecretsPath: secretsPath, traceClient, tracesDir };
   const startedAt = new Date().toISOString();
 
   const results = await pool(cases, mode === 'live' ? concurrency : 4, async (c) => {
@@ -397,7 +432,7 @@ export async function runDeptEvals({
         const changed = Object.keys(fp.parts).filter(k => JSON.stringify(fp.parts[k]) !== JSON.stringify(rec.fingerprintParts?.[k]));
         return { ...base, status: 'stale', detail: `${role} changed since recording (${changed.join(', ') || 'fingerprint'}): re-run live`, recordedAt: rec.recordedAt };
       }
-      let outcome = rec.outcome;
+      let outcome = rec.outcome, traceInfo = null;
       let replayNote = 'offline: recorded outcome re-scored against current assertions';
       if (fullReplay) {
         const cassetteFile = join(cassettesDir, c.id, 'cassette.jsonl');
@@ -405,7 +440,8 @@ export async function runDeptEvals({
           const { Cassette, replayFetcher } = await import('../runtime/cassette.mjs');
           const cassette = await Cassette.open(join(cassettesDir, c.id), { secrets: [] });
           cassette.aliases = aliases;
-          outcome = await execute(c, { states, studio, secretsPath: replaySecrets, fetcher: replayFetcher(cassette, 'openrouter'), cwd: workDir });
+          const traced = await tracedCase(c, mode, traceOpts, (tracer) => execute(c, { states, studio, secretsPath: replaySecrets, fetcher: replayFetcher(cassette, 'openrouter'), cwd: workDir, tracer }));
+          outcome = traced.outcome; traceInfo = traced.trace;
           if (cassette.mismatchError) return { ...base, status: 'stale', detail: `request changed since recording: ${cassette.mismatchError.message.slice(0, 300)}` };
           replayNote = 'full: real host loop against the recorded cassette';
         } else replayNote = 'offline (no local cassette for full replay)';
@@ -415,7 +451,7 @@ export async function runDeptEvals({
         if (outcome?.event && outcome.valid && !schema.safeParse(outcome.event).success) outcome = { ...outcome, valid: false, error: 'recorded event no longer matches the current Event schema' };
       }
       const scored = scoreCase(c, outcome);
-      return { ...base, ...scored, decision: outcome?.event?.review?.decision ?? null, selection: outcome?.event?.review?.recommendation?.selection ?? null, costUsd: 0, recordedCostUsd: rec.costUsd ?? null, wallMs: rec.wallMs ?? null, requests: rec.requests?.length ?? null, recordedAt: rec.recordedAt, replay: replayNote, error: outcome?.error ?? null };
+      return { ...base, ...scored, decision: outcome?.event?.review?.decision ?? null, selection: outcome?.event?.review?.recommendation?.selection ?? null, costUsd: 0, recordedCostUsd: rec.costUsd ?? null, wallMs: rec.wallMs ?? null, requests: rec.requests?.length ?? null, recordedAt: rec.recordedAt, replay: replayNote, error: outcome?.error ?? null, ...(traceInfo ? { trace: traceInfo } : {}) };
     }
     // live
     const model = studio.config.agents[role].model;
@@ -431,7 +467,8 @@ export async function runDeptEvals({
     const fetcher = recorderFetcher(budget.wrap(recordingFetcher(cassette, 'openrouter', realFetch), model, { isAborted: () => aborted }), entries, { secrets, aliases });
     const t0 = Date.now();
     log(`start ${c.id} (${role}, ${model})`);
-    const outcome = await withTimeout(execute(c, { states, studio, secretsPath, fetcher, cwd: workDir }), caseTimeoutMs, () => { aborted = true; });
+    const traced = await tracedCase(c, mode, traceOpts, (tracer) => withTimeout(execute(c, { states, studio, secretsPath, fetcher, cwd: workDir, tracer }), caseTimeoutMs, () => { aborted = true; }));
+    const outcome = traced.outcome, traceInfo = traced.trace;
     const wallMs = Date.now() - t0;
     const costUsd = entries.reduce((s, e) => s + (e.usage ? actualUsd(e.usage, model) : 0), 0);
     // The host wraps fetch errors, so detect the cap by its code, not the error flag.
@@ -451,7 +488,7 @@ export async function runDeptEvals({
     await mkdir(recordingsDir, { recursive: true });
     await writeFile(recPath, JSON.stringify(recording, null, 1) + '\n');
     log(`done ${c.id}: ${scored.status} $${costUsd.toFixed(4)} ${Math.round(wallMs / 1000)}s (budget spent $${budget.spent.toFixed(4)}, case delta $${(budget.spent - spent0).toFixed(4)})`);
-    return { ...base, ...scored, decision: outcome.event?.review?.decision ?? null, selection: outcome.event?.review?.recommendation?.selection ?? null, costUsd, wallMs, requests: entries.length, error: outcome.error ?? null };
+    return { ...base, ...scored, decision: outcome.event?.review?.decision ?? null, selection: outcome.event?.review?.recommendation?.selection ?? null, costUsd, wallMs, requests: entries.length, error: outcome.error ?? null, ...(traceInfo ? { trace: traceInfo } : {}) };
   });
   await rm(workDir, { recursive: true, force: true });
   if (tempDir) await rm(tempDir, { recursive: true, force: true });
@@ -507,6 +544,8 @@ export function scorecardMarkdown(s) {
     const cost = r.costUsd ? `$${r.costUsd.toFixed(4)}` : (r.recordedCostUsd != null ? `($${Number(r.recordedCostUsd).toFixed(4)} rec.)` : '-');
     md += `| ${r.id} | ${r.dept} | ${ICON[r.status] ?? r.status} | ${r.decision ?? '-'} | ${r.selection ?? '-'} | ${cost} | ${r.wallMs ? Math.round(r.wallMs / 1000) + 's' : '-'} | ${String(failed).replace(/\|/g, '\\|').replace(/\n/g, ' ')} |\n`;
   }
+  const traced = s.cases.filter(r => r.trace);
+  if (traced.length) { md += `\n## Traces\n\n`; for (const r of traced) md += `- ${r.id}: ${r.trace.url ?? (r.trace.langsmith ? '(sent to LangSmith project wiggly-my-pixar-story; URL lookup failed)' : '(LangSmith off: no LANGSMITH_API_KEY)')}; journal ${r.trace.journal ?? '-'}; export: node runner.mjs trace-export --run ${r.trace.journal ?? '<journal>'}\n`; }
   if (s.regressions.length) { md += `\n## Regressions\n\n`; for (const g of s.regressions) md += `- ${g.id} (${g.dept}): lost ${g.lost.join(', ')}\n`; }
   return md;
 }
@@ -517,7 +556,7 @@ export async function cli(argv, { out = (s) => process.stdout.write(s), err = (s
     all: { type: 'boolean' }, dept: { type: 'string' }, case: { type: 'string' }, live: { type: 'boolean' }, replay: { type: 'boolean' },
     'confirm-spend': { type: 'boolean' }, run: { type: 'string' }, secrets: { type: 'string' }, 'max-usd': { type: 'string' },
     concurrency: { type: 'string' }, out: { type: 'string' }, 'update-baseline': { type: 'boolean' }, strict: { type: 'boolean' }, list: { type: 'boolean' },
-    golden: { type: 'string' }, recordings: { type: 'string' }, baseline: { type: 'string' }, json: { type: 'boolean' },
+    golden: { type: 'string' }, recordings: { type: 'string' }, baseline: { type: 'string' }, json: { type: 'boolean' }, trace: { type: 'boolean' },
   }, allowPositionals: false });
   const goldenPath = values.golden ? resolve(values.golden) : GOLDEN_PATH;
   if (values.list) {
@@ -535,7 +574,7 @@ export async function cli(argv, { out = (s) => process.stdout.write(s), err = (s
     confirmSpend: !!values['confirm-spend'], maxUsd: values['max-usd'] ? Number(values['max-usd']) : DEPT_EVAL_HARD_CAP_USD,
     concurrency: values.concurrency ? Number(values.concurrency) : 3, goldenPath,
     recordingsDir: values.recordings ? resolve(values.recordings) : RECORDINGS_DIR, baselinePath: values.baseline ? resolve(values.baseline) : BASELINE_PATH,
-    updateBaseline: !!values['update-baseline'], strict: !!values.strict, log: (m) => err(`[dept-eval ${new Date().toLocaleTimeString()}] ${m}\n`),
+    updateBaseline: !!values['update-baseline'], strict: !!values.strict, trace: !!values.trace, log: (m) => err(`[dept-eval ${new Date().toLocaleTimeString()}] ${m}\n`),
   });
   if (s.refused) { err(s.refused + '\n'); return s.exitCode; }
   const md = scorecardMarkdown(s);

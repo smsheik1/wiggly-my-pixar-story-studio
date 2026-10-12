@@ -9,6 +9,7 @@ import {applyEvent} from './workflow.mjs';
 import {bibleWaiting} from './bible.mjs';
 import {crewRoles,runCrewTask,taskAssets,buildWorkerPacket} from './crew.mjs';
 import {AudioEditPlan} from './audio-edit.mjs';
+import {labelFor as traceLabelFor,reasonCode as traceReasonCode} from './tracing.mjs';
 
 // Codex host default only. No crew agent is on Codex since the Muse swap; the host stays for
 // legacy pinned runs and any agent configured back to backend "codex".
@@ -132,17 +133,27 @@ export class CodexHost {
     active.resolve(active.output);
    }
  }
-  async toolCall(message){
-   const active=this.active,params=message.params;
-   try{
-    if(!active||params.threadId!==active.threadId||params.turnId!==active.turnId||params.tool!=='wiggly_tool')throw new Error('TOOL_SCOPE_DENIED');
-    const arguments_=z.object({name:z.string(),sha256:z.string(),referenceSha256:z.string().nullable(),edit:AudioEditPlan.nullable().optional(),region:z.object({x:z.number(),y:z.number(),width:z.number(),height:z.number()}).strict().nullable().optional()}).strict().parse(params.arguments);
-    let toolTrace=null;try{toolTrace=this.tracer?.tool?.({toolName:arguments_.name});}catch{toolTrace=null;}
-    const toolStart=Date.now(),endTool=outcome=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart});}catch{}};
-    let value;
-    try{value=await active.callTool(arguments_.name,{sha256:arguments_.sha256,...(arguments_.referenceSha256?{referenceSha256:arguments_.referenceSha256}:{}),...(arguments_.edit?{edit:arguments_.edit}:{}),...(arguments_.region?{region:arguments_.region}:{})});}
-    catch(error){endTool('failed');throw error;}
-    endTool('completed');
+   async toolCall(message){
+    const active=this.active,params=message.params;
+    try{
+     if(!active||params.threadId!==active.threadId||params.turnId!==active.turnId||params.tool!=='wiggly_tool')throw new Error('TOOL_SCOPE_DENIED');
+     let arguments_;
+     try{
+       arguments_=z.object({name:z.string(),sha256:z.string(),referenceSha256:z.string().nullable(),edit:AudioEditPlan.nullable().optional(),region:z.object({x:z.number(),y:z.number(),width:z.number(),height:z.number()}).strict().nullable().optional()}).strict().parse(params.arguments);
+     }catch(parseError){
+       let inv=null;try{inv=this.tracer?.tool?.({toolName:params?.arguments?.name??'unknown',args:params?.arguments??{}});}catch{inv=null;}
+       try{inv?.end?.({outcome:'invalid-args',durationMs:0,error:String(parseError?.message??'').slice(0,500)});}catch{}
+       throw parseError;
+     }
+     const toolArgs={sha256:arguments_.sha256,...(arguments_.referenceSha256?{referenceSha256:arguments_.referenceSha256}:{}),...(arguments_.edit?{edit:arguments_.edit}:{}),...(arguments_.region?{region:arguments_.region}:{})};
+     let toolTrace=null;try{toolTrace=this.tracer?.tool?.({toolName:arguments_.name,name:arguments_.name,args:toolArgs});}catch{toolTrace=null;}
+     const toolStart=Date.now(),endTool=(outcome,extra={})=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart,args:toolArgs,...extra});}catch{}};
+     let value;
+     try{value=await active.callTool(arguments_.name,{sha256:arguments_.sha256,...(arguments_.referenceSha256?{referenceSha256:arguments_.referenceSha256}:{}),...(arguments_.edit?{edit:arguments_.edit}:{}),...(arguments_.region?{region:arguments_.region}:{})});}
+     catch(error){endTool('failed',{error:String(error?.message??'').slice(0,500)});throw error;}
+     if(value&&typeof value==='object'&&typeof value.imageUrl==='string')endTool('completed',{output:{sha256:arguments_.sha256,attached:true}});
+     else if(value?.bytes)endTool('completed',{output:/\.(json|md|txt)$/i.test(value.file?.path??'')?{text:String(value.bytes.toString('utf8')).slice(0,8000)}:{file:value.file}});
+     else endTool('completed',{output:value});
     active.finishedTools??=[];active.finishedTools.push({type:'dynamicToolCall',status:'completed',tool:'wiggly_tool',arguments:{name:arguments_.name,sha256:arguments_.sha256,referenceSha256:arguments_.referenceSha256}});
     const contentItems=value.imageUrl?[{type:'inputText',text:JSON.stringify({fileSha256:arguments_.sha256,perception:value.perception})},{type:'inputImage',imageUrl:value.imageUrl}]:[{type:'inputText',text:JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value)}];
     this.send({id:message.id,result:{success:true,contentItems}});
@@ -366,36 +377,51 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
   if(!event){
    if(receipt)await saveJson(path,started);else await writeFile(path,JSON.stringify(started)+'\n',{flag:'wx',mode:0o600});
   }
-  let turnTrace=null;try{turnTrace=tracer?.turn?.({role:task.crewWorker?.role,workerName:task.crewWorker?.name,model:task.crewWorker?.modelVersion,taskId:task.taskId,step:task.step,gate:task.gate,attempt});}catch{turnTrace=null;}
+  let turnTrace=null;
+  try{
+    const w=task.crewWorker??{};
+    turnTrace=tracer?.turn?.({role:w.role,workerName:w.name,workerId:w.workerId,label:traceLabelFor(w),model:w.modelVersion,backend:w.backend??'codex',taskId:task.taskId,step:task.step,gate:task.gate,attempt,studioSha256:task.studioSha256??status.project.studio?.sha256??null});
+  }catch{turnTrace=null;}
   const turnStart=Date.now();
   let traceEnded=false;
-  const endTrace=outcome=>{if(traceEnded)return;traceEnded=true;try{turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart});}catch{}};
-  try{
+  const endTrace=(outcome,extra={})=>{
+    if(traceEnded)return;traceEnded=true;
+    try{
+      const childTotals=turnTrace?._childTotals??{};
+      const errMsg=extra.error??null;
+      const rc=errMsg?traceReasonCode(errMsg):(childTotals.reasonCode??null);
+      turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart,...childTotals,...extra,...(rc?{reasonCode:rc}:{})});
+    }catch{}
+  };
+  const runOneTask=async()=>{
    try{
     event=event?Event.parse(event):await runCrewTask(status.project,{...task,...(receipt?.status==='rejected'?{repairFeedback:{error:receipt.error,previousEvent:receipt.event,instruction:'Repair this evidenced validation error. Preserve current source facts and return the current gate Event.'}}:{})},host);
     applyEvent(status.project,event);
     // Validate actual referenced files before declaring a finished response reusable.
     // Recheck old completed receipts too; changed/missing bytes cannot trap repair.
     await verifySubmission(status,event);
-    if(event.action==='review'||event.action==='owner-review')try{tracer?.review?.({decision:event.review?.decision,artifactId:event.artifactId});}catch{}
+    if(event.action==='review'||event.action==='owner-review')try{
+      const w=task.crewWorker??{};
+      tracer?.review?.({decision:event.review?.decision,artifactId:event.artifactId,reviewer:{label:traceLabelFor(w),model:w.modelVersion},recommendation:event.review?.recommendation??null,selection:event.review?.recommendation?.selection??null,checks:(event.review?.checks??[]).map(c=>({criterion:c.criterion,status:c.status,evidence:c.evidence,repair:c.repair??''})),summary:event.review?.summary??null,findings:event.review?.findings??null});
+    }catch{}
    }catch(error){
      // A clean usage-limit failure defers without consuming a finished-worker
      // attempt and retries with normal framing. Other clean native failures
      // record as rejected. Anything else stays uncertain.
      if(!event&&error?.safeRetryWithoutOutput){
       if(error?.usageLimitExceeded){
-       endTrace('deferred-usage-limit');
+       endTrace('deferred-usage-limit',{error:error.message,reasonCode:traceReasonCode(error)});
        await saveJson(path,{...started,status:'deferred',reason:'usage-limit',retryAfter:error.retryAfter??null,error:error.message,event:{savedTools:error.savedTools??[]}});
        if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
        throw error;
       }
-      endTrace('rejected');
+      endTrace('rejected',{error:error.message,reasonCode:traceReasonCode(error)});
       await saveJson(path,{...started,status:'rejected',error:error.message,event:{savedTools:error.savedTools??[]}});
       if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
       throw error;
      }
-     if(!event&&!error.knownFinished){endTrace('error');if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});throw error;}
-    endTrace('error');
+     if(!event&&!error.knownFinished){endTrace('error',{error:error.message,reasonCode:traceReasonCode(error)});if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});throw error;}
+    endTrace('error',{error:error.message,reasonCode:traceReasonCode(error)});
     await saveJson(path,{...started,status:'rejected',event:event??error.finishedResult,error:error.message});
     if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
     throw new Error(`CODEX_RESULT_REJECTED: known finished worker result violates the contract: ${error.message}. Inspect ${path}; use --repair-invalid true for a bounded repair.`);
@@ -404,7 +430,11 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
    const updated=await workflow.respond(thread,event);completed++;
    endTrace('completed');
   if(event.action==='review'&&event.review?.decision==='rejected'){const notice=updated.pending.repairNotices.find(n=>n.artifactId===event.artifactId);if(notice)onProgress({type:'repair-notice',notice});}
-  }catch(e){endTrace('error');throw e;}finally{endTrace('error');}
+  };
+  try{
+    if(turnTrace&&tracer?.within)await tracer.within(turnTrace,runOneTask);
+    else await runOneTask();
+  }catch(e){endTrace('error',{error:e?.message??String(e)});throw e;}finally{endTrace('error');}
  }
  const status=await workflow.status(thread);
  return {completed,stop:status.project.debug?.enabled&&status.project.debug.paused?'debug-pause':'task-limit',status};

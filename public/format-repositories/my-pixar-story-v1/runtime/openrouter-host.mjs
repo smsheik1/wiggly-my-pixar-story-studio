@@ -1,11 +1,11 @@
 import {readFile,mkdir,writeFile,rename} from 'node:fs/promises';
-import {join,extname} from 'node:path';
-import {randomUUID} from 'node:crypto';
+import {join,extname,basename} from 'node:path';
+import {randomUUID,createHash} from 'node:crypto';
 import {z} from 'zod';
 import {Event,digest} from './contracts.mjs';
 import {buildWorkerPacket,wigglyToolDefinition,crewRoles,taskAssets} from './crew.mjs';
 import {loadStudio} from './instructions.mjs';
-import {sanitize} from './tracing.mjs';
+import {sanitize,promptSectionsFor,labelFor,reasonCode} from './tracing.mjs';
 import {AudioEditPlan} from './audio-edit.mjs';
 
 export const OPENROUTER_URL='https://openrouter.ai/api/v1/chat/completions';
@@ -52,6 +52,30 @@ export function modelTraits(model){
 // Safety net: never send data: base64 bytes as tool text.
 const viewKey=(sha256,region)=>`${sha256}:${region?JSON.stringify([region.x,region.y,region.width,region.height]):'full'}`;
 const sanitizeDataUrls=(text)=>String(text).replace(/data:([^;,\s]+)[^,]*?;base64,[A-Za-z0-9+/=]+/g,'[binary data omitted: $1]');
+const shaHex=(s)=>createHash('sha256').update(s,'utf8').digest('hex');
+function traceImageSha(url){
+  try{
+    const m=String(url).match(/^data:[^,]*;base64,(.*)$/s);
+    if(m){const bytes=Buffer.from(m[1].slice(0,8000),'base64');return shaHex(bytes);}
+    return shaHex(String(url));
+  }catch{return 'unknown';}
+}
+function messagesForTrace(messages){
+  try{
+    return (messages??[]).map(m=>{
+      const c=m?.content;
+      if(typeof c==='string')return {role:m.role,content:c};
+      if(Array.isArray(c))return {role:m.role,content:c.map(p=>{
+        if(p?.type==='image_url'&&typeof p?.image_url?.url==='string'){
+          const sha=traceImageSha(p.image_url.url);
+          return {type:'image_url',image_url:{url:`{image: ${sha}}`}};
+        }
+        return p;
+      })};
+      return {role:m?.role,content:typeof c==='string'?c:null};
+    });
+  }catch{return [];}
+}
 
 async function readJson(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;}}
 async function saveJson(path,value){await writeFile(path+'.tmp',JSON.stringify(value)+'\n',{mode:0o600});await rename(path+'.tmp',path);}
@@ -104,57 +128,80 @@ export class OpenRouterHost {
   const tool=wigglyToolDefinition();
   return [{type:'function',function:{name:tool.name,description:tool.description,parameters:tool.inputSchema}}];
  }
- async chat({model,messages,tools,toolChoice,usageSink,reasoning,maxTokens,verify=false}){
-  const key=await readOpenRouterKey(this.secretsPath);
-  const traits=modelTraits(model);
-  const forcingSpecificTool=toolChoice&&typeof toolChoice==='object';
-  let resolvedReasoning=reasoning;
-  if(traits.reasoning==='always-on'){
-   if(resolvedReasoning&&typeof resolvedReasoning==='object'&&resolvedReasoning.enabled===false){
-    resolvedReasoning={effort:this.effortFor(model)};
-   }else if(!resolvedReasoning){
-    resolvedReasoning={effort:this.effortFor(model)};
-   }
-  }else{
-   if(!resolvedReasoning){
-    resolvedReasoning=forcingSpecificTool?{enabled:false}:{effort:this.effortFor(model)};
-   }
-  }
-  const effectiveMaxTokens=maxTokens??this.maxTokensFor(model);
-  // continuation=true: a strict json_schema response_format would force the model to start a
-  // brand-new JSON object, so the remaining characters could never be stitched onto the partial.
-  // Continuation requests therefore drop response_format; the first request is unchanged.
-  const sendOnce=async(msgs,continuation=false)=>{
-   const body={model,messages:msgs,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokensFor(model)};
-   if(!verify&&!continuation){
-    body.response_format={type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}};
-   }
-   body.reasoning=resolvedReasoning;
-   let response;
-   try{
-    response=await this.fetcher(OPENROUTER_URL,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','X-Title':'Wiggly memoir studio'},body:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(this.timeoutMs)});
-   }catch(error){throw new Error(`OPENROUTER_REQUEST_FAILED: ${error.message}. No model/provider fallback was submitted.`);}
-   if(!response.ok){
-    const text=await response.text().catch(()=>'');
-    // Bind-time verification only: a task turn's 400/401 keeps the generic error below.
-    if(verify&&(response.status===401||response.status===403))throw new Error(`OPENROUTER_AUTH_FAILED: OpenRouter rejected the API key (HTTP ${response.status}). No worker was bound.`);
-    if(verify&&(response.status===400||response.status===404))throw new Error(`OPENROUTER_MODEL_UNAVAILABLE: ${model} was rejected by OpenRouter (HTTP ${response.status}). No worker was bound.${text?` ${text.slice(0,200).split(key).join('[REDACTED]')}`:''}`);
-    if(response.status===402)throw new Error('OpenRouter credits exhausted. Add credits before dispatch; no model/provider fallback was submitted.');
-    if(response.status===429){
-     const error=new Error(`OpenRouter usage limit reached (HTTP 429). No model/provider fallback was submitted.`);
-     error.safeRetryWithoutOutput=true;error.savedTools=[];error.usageLimitExceeded=true;error.retryAfter=response.headers?.get?.('retry-after')??null;
-     throw error;
+  async chat({model,messages,tools,toolChoice,usageSink,reasoning,maxTokens,verify=false}){
+   const key=await readOpenRouterKey(this.secretsPath);
+   const traits=modelTraits(model);
+   const forcingSpecificTool=toolChoice&&typeof toolChoice==='object';
+   let resolvedReasoning=reasoning;
+   if(traits.reasoning==='always-on'){
+    if(resolvedReasoning&&typeof resolvedReasoning==='object'&&resolvedReasoning.enabled===false){
+     resolvedReasoning={effort:this.effortFor(model)};
+    }else if(!resolvedReasoning){
+     resolvedReasoning={effort:this.effortFor(model)};
     }
-    if(response.status>=500)throw new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status}. No model/provider fallback was submitted.`);
-    throw new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status} ${text.slice(0,200)}. No model/provider fallback was submitted.`);
+   }else{
+    if(!resolvedReasoning){
+     resolvedReasoning=forcingSpecificTool?{enabled:false}:{effort:this.effortFor(model)};
+    }
    }
-   const result=await response.json();
-   if(result?.usage&&usageSink)usageSink(result.usage);
-   if(result?.model&&result.model!==model)throw new Error('OPENROUTER_MODEL_CHANGED: requested model must be used exactly.');
-   const choice=result?.choices?.[0];
-   if(!choice)throw new Error('OPENROUTER_REQUEST_FAILED: empty choices. No model/provider fallback was submitted.');
-   return choice;
-  };
+   const effectiveMaxTokens=maxTokens??this.maxTokensFor(model);
+   const effMaxTokens=maxTokens??this.maxTokensFor(model);
+   // continuation=true: a strict json_schema response_format would force the model to start a
+   // brand-new JSON object, so the remaining characters could never be stitched onto the partial.
+   // Continuation requests therefore drop response_format; the first request is unchanged.
+   let llmAttempt=0;
+   const sendOnce=async(msgs,continuation=false)=>{
+    const attempt=llmAttempt++;
+    const body={model,messages:msgs,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokensFor(model)};
+    if(!verify&&!continuation){
+     body.response_format={type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}};
+    }
+    body.reasoning=resolvedReasoning;
+    let llmHandle=null;
+    try{
+      const traced=messagesForTrace(msgs);
+      llmHandle=this.tracer?.llm?.({model,inputs:{model,messages:traced,max_tokens:effMaxTokens,reasoning:resolvedReasoning,continuation,attempt},metadata:{ls_provider:'openrouter',ls_model_name:model}});
+    }catch{llmHandle=null;}
+    const llmStart=Date.now();
+    const endLlmOk=(result,choice)=>{
+      try{
+        const u=result?.usage??{};
+        const usageMeta={input_tokens:Number(u.prompt_tokens)||0,output_tokens:Number(u.completion_tokens)||0,total_tokens:(Number(u.prompt_tokens)||0)+(Number(u.completion_tokens)||0),...(u.prompt_tokens_details?{input_token_details:{cached_tokens:Number(u.prompt_tokens_details.cached_tokens)||0}}:{}),output_token_details:{reasoning:Number(u.completion_tokens_details?.reasoning_tokens)||0}};
+        // LangSmith reads token counts from outputs.usage_metadata (top level).
+        const costUsd=Number(u.cost)||0;
+        llmHandle?.end?.({content:choice?.message?.content??null,tool_calls:choice?.message?.tool_calls??null,finish_reason:choice?.finish_reason??null,native_finish_reason:choice?.native_finish_reason??null,usage_metadata:{...usageMeta,total_cost:costUsd},inputTokens:usageMeta.input_tokens,outputTokens:usageMeta.output_tokens,reasoningTokens:usageMeta.output_token_details.reasoning,costUsd,generationId:result?.id??null,provider:result?.provider??null,durationMs:Date.now()-llmStart,model});
+      }catch{}
+    };
+    const endLlmFail=(err,status,text)=>{
+      try{llmHandle?.end?.({error:String(err?.message??err??'').slice(0,800),status:status??null,bodySnippet:String(text??'').slice(0,800),reasonCode:reasonCode(err),durationMs:Date.now()-llmStart,model},String(err?.message??err??'').slice(0,300));}catch{}
+    };
+    let response;
+    try{
+     response=await this.fetcher(OPENROUTER_URL,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','X-Title':'Wiggly memoir studio'},body:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(this.timeoutMs)});
+    }catch(error){const e=new Error(`OPENROUTER_REQUEST_FAILED: ${error.message}. No model/provider fallback was submitted.`);endLlmFail(e,null,null);throw e;}
+    if(!response.ok){
+     const text=await response.text().catch(()=> '');
+     // Bind-time verification only: a task turn's 400/401 keeps the generic error below.
+     if(verify&&(response.status===401||response.status===403)){const e=new Error(`OPENROUTER_AUTH_FAILED: OpenRouter rejected the API key (HTTP ${response.status}). No worker was bound.`);endLlmFail(e,response.status,text);throw e;}
+     if(verify&&(response.status===400||response.status===404)){const e=new Error(`OPENROUTER_MODEL_UNAVAILABLE: ${model} was rejected by OpenRouter (HTTP ${response.status}). No worker was bound.${text?` ${text.slice(0,200).split(key).join('[REDACTED]')}`:''}`);endLlmFail(e,response.status,text);throw e;}
+     if(response.status===402){const e=new Error('OpenRouter credits exhausted. Add credits before dispatch; no model/provider fallback was submitted.');endLlmFail(e,402,text);throw e;}
+     if(response.status===429){
+      const error=new Error(`OpenRouter usage limit reached (HTTP 429). No model/provider fallback was submitted.`);
+      error.safeRetryWithoutOutput=true;error.savedTools=[];error.usageLimitExceeded=true;error.retryAfter=response.headers?.get?.('retry-after')??null;
+      endLlmFail(error,429,text);
+      throw error;
+     }
+     if(response.status>=500){const e=new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status}. No model/provider fallback was submitted.`);endLlmFail(e,response.status,text);throw e;}
+     const e=new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status} ${text.slice(0,200)}. No model/provider fallback was submitted.`);endLlmFail(e,response.status,text);throw e;
+    }
+    const result=await response.json();
+    if(result?.usage&&usageSink)usageSink(result.usage);
+    if(result?.model&&result.model!==model){const e=new Error('OPENROUTER_MODEL_CHANGED: requested model must be used exactly.');endLlmFail(e,null,null);throw e;}
+    const choice=result?.choices?.[0];
+    if(!choice){const e=new Error('OPENROUTER_REQUEST_FAILED: empty choices. No model/provider fallback was submitted.');endLlmFail(e,null,null);throw e;}
+    endLlmOk(result,choice);
+    return choice;
+   };
   const cur=[...(messages??[])];
   const parts=[];
   let choice=await sendOnce(cur);
@@ -185,6 +232,7 @@ export class OpenRouterHost {
   async runTask(task,{worker,callTool}){
    await this.preflight(worker);
    const packet=buildWorkerPacket(task,worker);
+   const system=developerInstructions(worker);
    const media=[],attached=new Set();
    if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){
     if(!modelTraits(worker.modelVersion).inputs.includes('image')){
@@ -196,13 +244,62 @@ export class OpenRouterHost {
    }
   const tools=this.toolDefinition();
   const content=[{type:'text',text:packet},...media];
-  const messages=[{role:'system',content:developerInstructions(worker)},{role:'user',content}];
-  let turnTrace=null;try{turnTrace=this.tracer?.turn?.({role:worker.role,workerName:worker.name,model:worker.modelVersion,taskId:task.taskId,step:task.step,gate:task.gate,backend:'openrouter'});}catch{turnTrace=null;}
-  const turnStart=Date.now(),usage={requests:0,promptCount:0,completionCount:0,costUsd:0};let turnEnded=false,validationRetries=0;
-  const addUsage=u=>{usage.requests++;usage.promptCount+=Number(u?.prompt_tokens)||0;usage.completionCount+=Number(u?.completion_tokens)||0;usage.costUsd+=Number(u?.cost)||0;};
-  const endTurn=(outcome)=>{if(turnEnded)return;turnEnded=true;try{turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart,validationRetries,usage:sanitize(usage)});}catch{}};
-  let output=null,attempts=0;
+  const messages=[{role:'system',content:system},{role:'user',content}];
+  const label=labelFor(worker);
+  let promptSections=[];
+  try{promptSections=promptSectionsFor(task);}catch{promptSections=[];}
+  const packetSha256=shaHex(packet);
+  const attachedShas=[...attached].map(k=>String(k).split(':')[0]);
+  const studioSha256=task.studioSha256??task.studioConfig?.sha256??null;
+  // Nesting: if the caller (driveCrew/executeCase) already opened a crew-turn via
+  // tracer.within(), create only the agent-call under it; otherwise own the turn.
+  let outerTurn=null, ownsTurn=false, parentTurn=null;
   try{
+    const cur=this.tracer?.current?.();
+    if(cur&&cur.kind==='crew-turn'){parentTurn=cur;}
+    if(!(cur&&cur.kind==='crew-turn')){
+      outerTurn=this.tracer?.turn?.({role:worker.role,label,workerName:worker.name,workerId:worker.workerId,model:worker.modelVersion,backend:'openrouter',taskId:task.taskId,step:task.step,gate:task.gate,attempt:task.attempt??1,studioSha256});
+      ownsTurn=!!outerTurn;
+    }
+  }catch{outerTurn=null;ownsTurn=false;}
+  let agentHandle=null;
+  try{
+    const startFields={role:worker.role,label,workerName:worker.name,workerId:worker.workerId,model:worker.modelVersion,backend:'openrouter',taskId:task.taskId,step:task.step,gate:task.gate,studioSha256,system,packet,promptSections,packetSha256,packetChars:packet.length,attached:attachedShas};
+    if(outerTurn&&this.tracer?.within){
+      // Create the agent-call inside the owned turn so llm/tool nest under it.
+      agentHandle=this.tracer.within(outerTurn,()=>this.tracer?.agentCall?.(startFields));
+      if(!agentHandle)agentHandle=null;
+    }else{
+      agentHandle=this.tracer?.agentCall?.(startFields);
+    }
+  }catch{agentHandle=null;}
+  const runWithinAgent=(fn)=>(agentHandle&&this.tracer?.within)?this.tracer.within(agentHandle,fn):fn();
+  const turnStart=Date.now(),usage={requests:0,promptCount:0,completionCount:0,costUsd:0};
+  const totals={requests:0,inputTokens:0,outputTokens:0,reasoningTokens:0,cachedTokens:0,costUsd:0};
+  let turnEnded=false,validationRetries=0,agentEnded=false;
+  const addUsage=u=>{
+    usage.requests++;usage.promptCount+=Number(u?.prompt_tokens)||0;usage.completionCount+=Number(u?.completion_tokens)||0;usage.costUsd+=Number(u?.cost)||0;
+    totals.requests++;totals.inputTokens+=Number(u?.prompt_tokens)||0;totals.outputTokens+=Number(u?.completion_tokens)||0;
+    totals.reasoningTokens+=Number(u?.completion_tokens_details?.reasoning_tokens)||0;
+    totals.cachedTokens+=Number(u?.prompt_tokens_details?.cached_tokens)||0;
+    totals.costUsd+=Number(u?.cost)||0;
+  };
+  const endAgent=(fields={},errText)=>{
+    if(agentEnded)return;agentEnded=true;
+    try{agentHandle?.end?.(fields,errText);}catch{}
+  };
+  const endTurn=(outcome,extra={})=>{
+    if(turnEnded)return;turnEnded=true;
+    try{
+      const rc=extra.error?reasonCode(extra.error):null;
+      outerTurn?.end?.({outcome,durationMs:Date.now()-turnStart,validationRetries,usage:sanitize(usage),...totals,...extra,...(rc?{reasonCode:rc}:{})});
+    }catch{}
+  };
+  // When we own the turn, run the whole task inside it so llm/tool nest correctly.
+  const taskBody=async()=>{
+  let output=null,attempts=0,parsedEvent=null;
+  try{
+   const loopBody=async()=>{
    for(let round=0;round<this.maxToolRounds;round++){
     const message=await this.chat({model:worker.modelVersion,messages,tools,usageSink:addUsage});
     const calls=message?.tool_calls??[];
@@ -212,13 +309,19 @@ export class OpenRouterHost {
      for(const call of calls){
       let args=null;try{args=JSON.parse(call.function?.arguments||'{}');}catch{args=null;}
       const checked=call.function?.name==='wiggly_tool'?ToolArguments.safeParse(args):{success:false,error:{message:`unknown tool ${call.function?.name}`}};
-      if(!checked.success){messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(`TOOL_ARGUMENTS_INVALID: ${checked.error.message}`)});continue;}
+      if(!checked.success){
+        let invTrace=null;try{invTrace=this.tracer?.tool?.({toolName:args?.name??call.function?.name??'unknown',args:args??{raw:call.function?.arguments??''}});}catch{invTrace=null;}
+        const t0=Date.now();
+        try{invTrace?.end?.({outcome:'invalid-args',durationMs:Date.now()-t0,error:String(checked.error.message).slice(0,500)});}catch{}
+        messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(`TOOL_ARGUMENTS_INVALID: ${checked.error.message}`)});continue;
+      }
       const parsed=checked.data;
-      let toolTrace=null;try{toolTrace=this.tracer?.tool?.({toolName:parsed.name});}catch{toolTrace=null;}
-      const toolStart=Date.now(),endTool=(outcome)=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart});}catch{}};
+      const toolArgs={sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})};
+      let toolTrace=null;try{toolTrace=this.tracer?.tool?.({toolName:parsed.name,name:parsed.name,args:toolArgs});}catch{toolTrace=null;}
+      const toolStart=Date.now();
+      const endTool=(outcome,extra={})=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart,args:toolArgs,...extra});}catch{}};
       try{
        const value=await callTool(parsed.name,{sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})});
-       endTool('completed');
        if(value&&typeof value==='object'&&typeof value.imageUrl==='string'){
         if(!modelTraits(worker.modelVersion).inputs.includes('image')){
          const error=new Error(`OPENROUTER_VISION_UNSUPPORTED: ${worker.modelVersion} cannot take images; bind a vision model for ${worker.role}.`);
@@ -230,12 +333,17 @@ export class OpenRouterHost {
         const compact=already
          ?{perception:value.perception??'direct-image',sha256:parsed.sha256,alreadyAttached:true,note:`image sha256 ${parsed.sha256} already attached above; use the attached image`}
          :{perception:value.perception??'direct-image',sha256:parsed.sha256,attached:true,note:`image attached as image_url below for sha256 ${parsed.sha256}`};
+        endTool('completed',{output:{sha256:parsed.sha256,attached:!already}});
         messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(compact))});
         if(!already){attached.add(key);pending.push({sha256:parsed.sha256,region:parsed.region??null,url:value.imageUrl});}
         continue;
        }
+       const summary=value?.bytes
+         ?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8').slice(0,8000)}:{instruction:'Binary media: use your permitted perception tool.'})}
+         :value;
+       endTool('completed',{output:summary});
        messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value))});
-      }catch(error){endTool('failed');messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(error.message)});if(error.stopDispatch)throw error;}
+      }catch(error){endTool('failed',{error:String(error?.message??error??'').slice(0,500)});messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(error.message)});if(error.stopDispatch)throw error;}
      }
      if(pending.length){
       const parts=[];
@@ -244,18 +352,40 @@ export class OpenRouterHost {
      }
    }
    if(output==null)throw new Error(`OPENROUTER_TOOL_LIMIT: exceeded ${this.maxToolRounds} tool rounds without a final answer.`);
-   try{return Event.parse(JSON.parse(JSON.parse(output).eventJson));}
+   try{const ev=Event.parse(JSON.parse(JSON.parse(output).eventJson));parsedEvent=ev;return ev;}
    catch(error){
     attempts++;validationRetries=attempts;
-    if(attempts>1)throw Object.assign(new Error(`INVALID_WORKER_EVENT: ${error.message}`),{knownFinished:true,finishedResult:output});
+    if(attempts>1){const e=Object.assign(new Error(`INVALID_WORKER_EVENT: ${error.message}`),{knownFinished:true,finishedResult:output});e.validationRetries=validationRetries;throw e;}
     messages.push({role:'assistant',content:output});
     messages.push({role:'user',content:`Your last reply failed validation: ${error.message}. Return ONLY {"eventJson": "<serialized Event>"} with the corrected event.`});
     const retry=await this.chat({model:worker.modelVersion,messages,tools,toolChoice:'none',usageSink:addUsage});
     const retryText=typeof retry?.content==='string'?retry.content:JSON.stringify(retry?.content??'');
-    try{const event=Event.parse(JSON.parse(JSON.parse(retryText).eventJson));output=retryText;endTurn('completed');return event;}
-    catch(error2){throw Object.assign(new Error(`INVALID_WORKER_EVENT: ${error2.message}`),{knownFinished:true,finishedResult:retryText});}
+    try{const event=Event.parse(JSON.parse(JSON.parse(retryText).eventJson));output=retryText;parsedEvent=event;return event;}
+    catch(error2){const e=Object.assign(new Error(`INVALID_WORKER_EVENT: ${error2.message}`),{knownFinished:true,finishedResult:retryText});e.validationRetries=validationRetries;throw e;}
    }
-  }finally{endTurn(output?'completed':'error');}
+   };
+   // Ensure llm/tool records nest under the agent-call.
+   const event=await runWithinAgent(loopBody);
+   endAgent({output,event:parsedEvent,validationRetries,usage:sanitize(usage),...totals,durationMs:Date.now()-turnStart});
+   try{if(parentTurn)parentTurn._childTotals={...totals,validationRetries};}catch{}
+   if(ownsTurn)endTurn('completed',{validationRetries,usage:sanitize(usage),...totals});
+   return event;
+  }catch(error){
+    const rc=reasonCode(error);
+    const finished=error.finishedResult??(output??null);
+    endAgent({error:String(error?.message??error??'').slice(0,1000),reasonCode:rc,validationRetries,usage:sanitize(usage),...totals,durationMs:Date.now()-turnStart,...(finished?{finishedResult:finished}:{})},String(error?.message??'').slice(0,300));
+    try{if(parentTurn)parentTurn._childTotals={...totals,validationRetries,error:String(error?.message??'').slice(0,500),reasonCode:rc};}catch{}
+    if(ownsTurn)endTurn('error',{error:String(error?.message??error??'').slice(0,1000),reasonCode:rc,validationRetries,usage:sanitize(usage),...totals});
+    throw error;
+  }
+  };
+  // If we own the turn, the agent-call already nests via within(outerTurn) above,
+  // but llm/tool need the agent context: run taskBody inside agent when possible.
+  if(agentHandle&&this.tracer?.within){
+    // Never re-run the task on error: a tracer problem must not double a paid call.
+    return await this.tracer.within(agentHandle,taskBody);
+  }
+  return await taskBody();
  }
  // Cheap stateless connectivity/auth/model check, at most once per distinct
  // model per host instance. Only success binds; content is never inspected.
