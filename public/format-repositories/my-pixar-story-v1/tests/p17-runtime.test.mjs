@@ -150,3 +150,32 @@ test('P17 SPEC7: intake-photos is locked once the roster is approved', T, () => 
   assert.throws(() => send(p, 'intake-photos', { actor: 'human', photoInventory: [{ ...still(6), label: 'Alex' }], message: 'ISOLATED too late' }), /INTAKE_PHOTOS_LOCKED/);
 });
 
+// ---- SPEC 13: start-audio-edit refreshes Nora, audioHolds stays required ----
+
+test('P17 SPEC13: start-audio-edit refreshes nora plus ava and the audio rubric, not eli', T, () => {
+  let p = audioProject();
+  p.step = 'narration'; p.gate = 'review';
+  const a = current(p); delete a.approvedBy; delete a.review;
+  p = reviewed(p, 'rejected');
+  assert.equal(p.step, 'narration');
+  assert.ok(['author', 'escalate'].includes(p.gate));
+  const kit = loadStudio();
+  for (const path of ['crew/nora/SKILL.md', 'crew/eli/SKILL.md']) {
+    p.studio.documents[path] = { content: 'ISOLATED stale pinned skill', sha256: sha('ISOLATED stale pinned skill') };
+  }
+  p.studio.sha256 = digest({ config: p.studio.config, documents: p.studio.documents });
+  const enabled = applyEvent(p, event(p, 'start-audio-edit', { actor: 'human', message: 'ISOLATED enable the voice editor.' }));
+  assert.deepEqual(enabled.studio.documents['crew/nora/SKILL.md'], kit.documents['crew/nora/SKILL.md']);
+  assert.deepEqual(enabled.studio.documents['crew/ava/SKILL.md'], kit.documents['crew/ava/SKILL.md']);
+  assert.deepEqual(enabled.studio.documents['evaluation/rubrics/audio.md'], kit.documents['evaluation/rubrics/audio.md']);
+  assert.equal(enabled.studio.documents['crew/eli/SKILL.md'].content, 'ISOLATED stale pinned skill');
+  assert.ok(enabled.studio.config.agents['voice-director'].tools.includes('renderAudioEdit'));
+});
+
+test('P17 SPEC13: editPlan.audioHolds stays required and is documented as renderer-ignored review notes', T, () => {
+  const base = { clips: [0, 1, 2, 3].map(n => ({ clipId: `c${n}`, sourceOffsetSeconds: 0 })), narrationGainDb: 0, musicGainDb: -18, duckMusic: true, effectGainDb: 0, musicFadeInSeconds: 1, musicFadeOutSeconds: 2, audioHolds: ['score', 'effect', 'silence', 'score'] };
+  Content.editPlan.parse(base);
+  assert.throws(() => Content.editPlan.parse({ ...base, audioHolds: undefined }), /audioHolds/);
+  assert.match(Content.editPlan.shape.audioHolds.description, /per-beat review notes on what carries the time after the voice.*not read by the renderer/);
+});
+
