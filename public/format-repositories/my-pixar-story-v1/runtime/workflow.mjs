@@ -266,7 +266,7 @@ export function validateArtifactContent(p, content, author, previous=current(p))
   }
   if (isPrompt(p)) {
     const brief = current(p, briefKey(p));
-    if (!locked(p, brief.key) || author === brief.authoredBy || author === briefOwner(p, brief) || parsed.briefDigest !== brief.digest || parsed.recipeSha256 !== recipeFor(p,p.step,{sha256:backgroundRecipeSha256}).sha256) throw new Error('Prompter must be distinct from owner and bind the approved brief and packaged Pixar recipe.');
+    if (!locked(p, brief.key) || author === brief.authoredBy || author === briefOwner(p, brief) || parsed.briefDigest !== brief.digest || parsed.recipeSha256 !== recipeFor(p,p.step,{sha256:backgroundRecipeSha256}).sha256) throw new Error('Prompter must be distinct from owner and bind the approved brief and background recipe.');
   }
   if (['backgroundCandidates', 'backgroundAngle'].includes(p.step) && parsed.files.some(f => Math.abs(f.width / f.height - 16 / 9) > 0.03)) throw new Error('Background plates must be measured 16:9 widescreen.');
   if (['backgroundCandidates', 'backgroundAngle'].includes(p.step) && parsed.prompt !== current(p, promptKey(p)).content.prompt) throw new Error('Background must use the approved prompt exactly.');

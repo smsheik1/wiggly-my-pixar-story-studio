@@ -94,17 +94,17 @@ Short but always complete: an edit prompt is a whole prompt, not a fragment.
 
 Rooms are dressed from the story and empty of people only. A bland or empty-feeling room still fails: muted is not generic. Example spec block for a brief:
 
-Light: morning daylight through side windows, warm and soft, filling the room evenly. Bounce: cool bounce off pale walls. Practicals: no. Haze: no. Palette: muted warm woods and off-whites at roughly five to one. Accent: one saturated colour on story props. Film accent kept out: deep red.
+Light: morning daylight through side windows, warm and soft, filling the room evenly. Bounce: cool bounce off pale walls. Practicals: no. Haze: no. Palette: muted warm woods and off-whites at roughly five to one. Accent: one saturated colour on story props. Film accent kept out: <the bible's filmAccent colour>.
 
-- [L-DRESSED] (check: vera, sage) Empty of people only, never an empty set: dress every set from the story with specific lived-in props showing whose space it is and when (era, age, hobbies, dreams); forbid generic catalog rooms, plain unmarked objects, and blank walls.
+- [L-DRESSED] (check: vera, sage) Empty of people only, never an empty set (a writer rule, not prompt text): dress every set from the brief's known and proposed details with specific lived-in props showing whose space it is and when (era, age); neutral era-consistent dressing is fine, but a bland, generic catalog room still fails; forbid generic catalog rooms, plain unmarked objects, and blank walls.
 - [L-SET-PLATE] (check: sage) Use the set plate only for space, materials, colours, and light.
 - [L-LAYOUT-REF] (check: sage, beau) Set positions and camera from a separate layout reference written in words in the brief; ignore the faces in it.
-- [L-CAMERA-SIDE] (check: vera, beau) The camera stays on the same side as the layout reference for the whole location.
-- [L-LIGHT-SPEC] (check: sage, beau) Write one lighting and colour spec block per location in the brief and copy it whole into every prompt for that location: light source and time of day, bounce, practicals yes or no, haze yes or no, palette as a ratio, the one saturated accent, and the film accent colour kept out.
+- [L-CAMERA-SIDE] (check: vera, beau) The camera stays on the same side of the action line as the master for the whole location; turning within that half is fine.
+- [L-LIGHT-SPEC] (check: sage, beau) Write one lighting and colour spec block per location in the brief and copy it whole into every prompt for that location: light source and time of day, bounce, practicals yes or no, haze yes or no, palette as a ratio, the one saturated accent, and the production bible's `filmAccent` colour kept out.
 - [L-PALETTE] (check: vera, sage) Muted palette with one saturated accent; muted is not generic and a bland or empty-feeling room still fails.
-- [L-ACCENT-OUT] (check: vera, sage) Keep the film's signature accent colour out of the room entirely.
-- [L-SHOTS-FIRST] (check: beau) Build the room for the shots the script needs: list the scripted actions and positions in that space before writing.
-- [L-MIN-TEXT] (check: vera, sage) Keep text out of plates: prefer no signs or labels at all, and cut to at most 4 names if text must appear.
+- [L-ACCENT-OUT] (check: vera, sage) Keep the production bible's `filmAccent` colour out of the room entirely.
+- [L-SHOTS-FIRST] (check: beau, sage) Build the room for the shots the script needs: list the scripted actions and positions in that space before writing.
+- [L-MIN-TEXT] (check: vera, sage) No readable text in plates: no signs, labels, names, brands or watermarks rendered in the image.
 - [L-CHILD-DRAWINGS] (check: none) Draw children's drawings as a five-year-old hand works: heads bigger than bodies, arms straight out of the head, colour scribbled outside the lines, heavy uneven pressure, a floating blue strip for sky, a sun wedged in a corner, wobbly oversized letters running out of space, with ability varying across the wall.
 - [L-SETS-DEFAULT] (check: none) Lived-in, story-dressed sets in a muted palette with one saturated accent: empty of people, never an empty set.
 
