@@ -1,0 +1,7 @@
+{
+  "node_version": "22",
+  "graphs": {
+    "wiggly-my-pixar-story": "./runtime/studio-graph.mjs:graph"
+  },
+  "env": {}
+}

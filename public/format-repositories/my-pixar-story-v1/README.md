@@ -97,3 +97,23 @@ Record model calls during a live command, then replay that command later against
 - **Recording**: pass `--record` (or set `WIGGLY_RECORD=1`) to `crew-start`, `crew-refresh`, `drive-codex`, `work-codex`, or `dispatch-reconcile`. The runner snapshots the run directory before execution into `<run>/cassettes/<command>-<timestamp>/before/`, normalizes all network requests/responses and Codex JSON-RPC messages (redacting secret values, hashing binary/data URLs), and writes `<dir>/cassette.jsonl` with permissions `0o600`.
 - **Replay**: `node runner.mjs replay --cassette <dir>` or `node runner.mjs replay --run <run>`. Replay creates a temporary sandbox from `before/`, runs the command with network blocked (`REPLAY_NETWORK_BLOCKED`), and validates every call in strict order against recorded responses. If requests differ, replay halts at the first mismatch reporting `REPLAY_MISMATCH`, `REPLAY_EXHAUSTED`, or `REPLAY_INCOMPLETE`. When all recorded calls match, exit codes match, and run directory contents match, replay reports `ok: true`.
 
+
+## Watching the workflow in LangGraph Studio
+
+The runner's state machine is a LangGraph `StateGraph` (`runtime/workflow.mjs`,
+`workflowGraph()`). `langgraph.json` exposes the same graph, compiled without a
+checkpointer, as `wiggly-my-pixar-story` through `runtime/studio-graph.mjs`.
+
+```sh
+cd public/format-repositories/my-pixar-story-v1
+npx @langchain/langgraph-cli dev --no-browser --port 2024
+```
+
+Then open
+`https://smith.langchain.com/studio/?baseUrl=http://localhost:2024` (Safari users:
+add `--tunnel` and use the printed URL). Studio shows the graph, its nodes and
+interrupts. It is an in-memory development server: real runs still go through
+`runner.mjs` and their own `agent-runs/<run>/checkpoints.sqlite`, so Studio does
+not drive or change a live run. Live run traces stay in the LangSmith project
+`wiggly-my-pixar-story`. `env` in `langgraph.json` is empty on purpose; never point
+it at `secrets.env`.

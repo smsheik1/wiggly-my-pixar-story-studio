@@ -7,13 +7,36 @@ export const EVALUATOR_VERSION = 'local-rules-1';
 const check = (criterion, status, evidence, location, repair = '') => ({ criterion, status, evidence, location, repair });
 const unknown = (criterion, reason, location = 'whole artifact') => check(criterion, 'inconclusive', reason, location);
 export const words = text => text.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
-// ASR may write small spoken cardinal numbers as digits. Expand only 0–99;
-// changed values, ordinals, leading zeros and larger/ambiguous forms stay distinct.
+// Spoken-form normalizer, applied to BOTH the locked text and the transcript
+// before comparing, so formatting never counts as a different word. General
+// rules, no word lists: integers (with or without thousands commas) up to
+// 999,999,999,999, ordinals ("3rd" -> third), years ("1999" -> nineteen
+// ninety nine), "&" -> and, "%" -> percent, "$5" -> five dollars; hyphens and
+// other punctuation separate words and case is folded. Leading zeros ("007")
+// stay as written, so a changed value still differs.
 const smallNumbers='zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen'.split(' ');
 const tens='zero ten twenty thirty forty fifty sixty seventy eighty ninety'.split(' ');
-export const spokenWords = text => words(text).flatMap(word => {
-  if(!/^(?:0|[1-9]\d?)$/.test(word))return [word];
-  const n=Number(word);return n<20?[smallNumbers[n]]:[tens[Math.floor(n/10)],...(n%10?[smallNumbers[n%10]]:[])];
+const scales=[[1e9,'billion'],[1e6,'million'],[1e3,'thousand']];
+const under100=n=>n<20?[smallNumbers[n]]:[tens[Math.floor(n/10)],...(n%10?[smallNumbers[n%10]]:[])];
+const under1000=n=>n>=100?[smallNumbers[Math.floor(n/100)],'hundred',...(n%100?under100(n%100):[])]:under100(n);
+export const numberWords=n=>{if(n===0)return ['zero'];const out=[];for(const [v,name] of scales)if(n>=v){out.push(...under1000(Math.floor(n/v)),name);n%=v;}if(n)out.push(...under1000(n));return out;};
+// English ordinal of the last cardinal word, by spelling rule.
+const ordinalWord=w=>({one:'first',two:'second',three:'third',five:'fifth',eight:'eighth',nine:'ninth',twelve:'twelfth'})[w]??(w.endsWith('y')?w.slice(0,-1)+'ieth':w+'th');
+const ordinalWords=n=>{const w=numberWords(n);w[w.length-1]=ordinalWord(w.at(-1));return w;};
+// Four-digit years are spoken in pairs ("nineteen ninety nine", "twenty twenty six"),
+// except 2000-2009 ("two thousand five") and round hundreds ("nineteen hundred").
+const yearWords=n=>{if(n>=2000&&n<2010)return numberWords(n);const hi=Math.floor(n/100),lo=n%100;return [...under100(hi),...(lo===0?['hundred']:lo<10?['oh',smallNumbers[lo]]:under100(lo))];};
+const isYear=(n,raw)=>raw.length===4&&!raw.includes(',')&&n>=1100&&n<=2099;
+const L='[\\p{L}\\p{N}]';
+const normalizeSpoken=text=>text.normalize('NFKC')
+  .replace(/&/g,' and ')
+  .replace(/\$\s?(\d[\d,]*)/g,'$1 dollars')
+  .replace(/(\d)\s?%/g,'$1 percent')
+  .replace(new RegExp(`(?<!${L}|[.,]\\d)([1-9]\\d{0,2})((?:,\\d{3})+)(?!${L}|[.,]\\d)`,'gu'),(_,h,t)=>h+t.replaceAll(',',''));
+export const spokenWords = text => words(normalizeSpoken(text)).flatMap(word => {
+  const ord=/^(0|[1-9]\d{0,11})(st|nd|rd|th)$/.exec(word);if(ord)return ordinalWords(Number(ord[1]));
+  if(!/^(?:0|[1-9]\d{0,11})$/.test(word))return [word];
+  const n=Number(word);return isYear(n,word)?yearWords(n):numberWords(n);
 });
 // Join rule: a run of up to JOIN_MAX adjacent words on one side matches a run on
 // the other side at no cost when their concatenated letters are identical, so

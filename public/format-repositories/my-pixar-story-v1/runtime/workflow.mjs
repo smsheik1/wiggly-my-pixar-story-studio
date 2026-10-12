@@ -54,6 +54,13 @@ function briefOwner(p, brief) {
   const role = p.history.findLast(h => h.action === 'artifact' && h.artifactId === brief.id)?.worker?.role;
   return (role && p.crew.workers.find(w => w.role === role)?.workerId) ?? brief.authoredBy;
 }
+// Beats of the current narration whose stored review transcript still differs
+// from the locked text after the join/number-aware compare and any human settlement.
+const narrationUnsettledBeats=p=>{const a=current(p,'narration'),t=a?.review?.measurements?.transcripts;if(!a||!Array.isArray(t))return null;
+  return t.map((x,i)=>{const ref=a.content.audioRegenerations?.find(r=>r.beat===i+1)?.spokenText??current(p,'script').content.beats[i]?.narration;const settled=(a.transcriptSettlements??[]).some(s=>s.beat===i+1&&s.artifactId===a.id&&s.artifactDigest===a.digest&&s.transcript===x);return typeof ref==='string'&&!settled&&transcriptDiff(ref,x).editDistance?i+1:0;}).filter(Boolean);};
+// Only a transcript mismatch (nothing for the editor to cut) can be sent straight
+// back to the audio reviewer; any other failed criterion still needs the editor.
+const onlyTranscriptFailures=p=>{const r=current(p,'narration')?.review;return !!r&&r.checks.every(c=>c.status==='pass'||c.criterion==='transcript');};
 const audioEditingEnabled=p=>studioFor(p)?.config.agents['voice-director'].tools.includes('renderAudioEdit');
 export const pickOnly=p=>supervised(p)&&p.gatePolicy==='pick-only';
 export const gateConfig=p=>studioFor(p)?.config.gates;
@@ -641,10 +648,19 @@ export function applyEvent(project, raw) {
     a.transcriptSettlements=[...(a.transcriptSettlements??[]),{beat:e.beat,artifactId:a.id,artifactDigest:a.digest,transcript:stored,message:e.message,actor:e.actor,at:new Date().toISOString()}];
     p.feedback.push({key:'narration',message:e.message});
   }else if(e.action==='refresh-audio-instructions'){
-    requiredActor(e,'human');if(!e.message||!p.studio||!['voiceSample','clone','audition'].includes(p.step)||p.jobs.length||p.artifacts.some(a=>a.approvedBy&&['audition','narration'].includes(a.kind)))throw new Error('AUDIO_REFRESH_LOCKED: refresh voice-review instructions explicitly before provider work or audio approval.');
+    requiredActor(e,'human');
+    // Before audition approval: as before (no provider work yet). During narration:
+    // allowed while the current narration is unapproved and every job is reconciled.
+    const preAudition=['voiceSample','clone','audition'].includes(p.step)&&!p.jobs.length&&!p.artifacts.some(a=>a.approvedBy&&['audition','narration'].includes(a.kind));
+    const duringNarration=p.step==='narration'&&!current(p,'narration')?.approvedBy&&!p.jobs.some(j=>['submitting','submitted','uncertain','authorized'].includes(j.status));
+    if(!e.message||!p.studio||!(preAudition||duringNarration))throw new Error('AUDIO_REFRESH_LOCKED: refresh Ava (audio reviewer) instructions explicitly before audio approval: pre-provider, or during unapproved narration with reconciled jobs.');
+    if(duringNarration){const next=loadStudio(),documents={...p.studio.documents};for(const path of ['crew/ava/SKILL.md','evaluation/rubrics/audio.md']){if(!next.documents[path]||!p.studio.documents[path])throw new Error(`AUDIO_REFRESH_SCOPE: ${path} is not bound in this studio.`);documents[path]=next.documents[path];}
+      // Copy ONLY Ava's skill and the audio rubric; config, tools and every other document stay pinned.
+      p.studio={config:p.studio.config,documents,sha256:digest({config:p.studio.config,documents})};
+    }else{
     const next=loadStudio(),allowed=['crew/ava/SKILL.md','evaluation/rubrics/audio.md'];
     if(digest(next.config)!==digest(p.studio.config)||Object.keys(next.documents).length!==Object.keys(p.studio.documents).length||Object.keys(next.documents).some(path=>!allowed.includes(path)&&digest(next.documents[path])!==digest(p.studio.documents[path])))throw new Error('AUDIO_REFRESH_SCOPE: only Ava skill and audio rubric may change; all other bindings stay pinned.');
-    p.studio=next;
+    p.studio=next;}
   }else if(e.action==='refresh-visual-instructions'){
     requiredActor(e,'human');
     if(!e.message||!p.studio||!['candidates','sheet','backgroundCandidates','backgroundAngle','keyframe'].includes(p.step)||!['produce','review','human','escalate'].includes(p.gate)||p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status))||p.artifacts.some(a=>a.key===keyFor(p)&&a.approvedBy))throw new Error('VISUAL_REFRESH_LOCKED: refresh Vera instructions explicitly for the current unapproved image item with reconciled jobs.');
@@ -959,7 +975,8 @@ export function applyEvent(project, raw) {
     const resumeEditing=p.step==='narration'&&audioEditingEnabled(p)&&current(p)?.review?.decision==='rejected';
     if(resumeEditing&&p.reviewDisagreements>=limitsFor(p).reviewDisagreements)throw new Error('AUDIO_EDIT_ATTEMPT_LIMIT: exhausted review/repair loop; inspect the evidence before a scoped script change.');
     p.feedback.push({ key: keyFor(p), message: e.message,...(p.step==='answers'?{intent:'detail'}:{}) }); if(!resumePlanning&&!resumeEditing)p.reviewDisagreements = 0;
-    p.gate = resumeEditing?'author':isPrompt(p) && current(p)?.ownerReview?.decision === 'inconclusive' ? 'owner-review' : current(p)?.review?.decision === 'inconclusive' ? 'review' : (authorSteps.includes(p.step)||p.step==='music'&&current(p,'soundPlan').content.music.mode==='import'||p.step==='effect'&&effectFor(p).mode==='import') ? 'author' : 'produce';
+    const reReview=resumeEditing&&onlyTranscriptFailures(p)&&narrationUnsettledBeats(p)?.length===0;
+    p.gate = reReview?'review':resumeEditing?'author':isPrompt(p) && current(p)?.ownerReview?.decision === 'inconclusive' ? 'owner-review' : current(p)?.review?.decision === 'inconclusive' ? 'review' : (authorSteps.includes(p.step)||p.step==='music'&&current(p,'soundPlan').content.music.mode==='import'||p.step==='effect'&&effectFor(p).mode==='import') ? 'author' : 'produce';
     if(p.step==='film'&&p.gate==='produce'){const target=current(p)?.review?.repairArtifactId;const a=target?p.artifacts.find(a=>a.id===target&&a.valid):current(p,'editPlan');reopen(p,revisionRoot(p,a),e.message);}
     if ((['keyframe','video'].includes(p.step)||refinedWorkflow(p)&&p.step==='candidates'||miniProduction(p)&&imageSteps.includes(p.step)) && p.gate === 'produce'&&!resumePlanning) repairVisual(p, e.message);
   } else if (e.action === 'reconcile') {
@@ -974,13 +991,18 @@ export function applyEvent(project, raw) {
     if (!e.allowance || !e.message) throw new Error('Allowance requires explicit user limits and original message.');
     p.allowances.push({ ...e.allowance, id: `allowance-${p.allowances.length + 1}`, message: e.message, at: new Date().toISOString() });
   } else if(e.action==='planning-blocked'){
-    requiredActor(e,'agent');const authorBlocked=p.gate==='author'&&((['shotIntentions','shots'].includes(p.step)&&worker?.role==='shot-planner')||(p.step==='keyframePrompt'&&worker?.role==='composition-writer')||(p.step==='backgrounds'&&worker?.role==='background-product-owner'));if(!(p.gate==='produce'&&p.step!=='film'||p.step==='narration'&&p.gate==='author'||authorBlocked)||!e.message||e.plan)throw new Error('PLANNING_BLOCKER_SCOPE: only the assigned planner/editor may report an evidenced blocker; no plan or approval.');
+    requiredActor(e,'agent');let sendBackToReview=false;const authorBlocked=p.gate==='author'&&((['shotIntentions','shots'].includes(p.step)&&worker?.role==='shot-planner')||(p.step==='keyframePrompt'&&worker?.role==='composition-writer')||(p.step==='backgrounds'&&worker?.role==='background-product-owner'));if(!(p.gate==='produce'&&p.step!=='film'||p.step==='narration'&&p.gate==='author'||authorBlocked)||!e.message||e.plan)throw new Error('PLANNING_BLOCKER_SCOPE: only the assigned planner/editor may report an evidenced blocker; no plan or approval.');
     if(e.blocker?.kind==='editing-infeasible'&&!(p.step==='narration'&&p.gate==='author'))throw new Error('AUDIO_EDIT_SCOPE_DENIED');
     if(!e.blocker)throw new Error('PLANNING_HELP_REQUIRED: report the problem, solution and baby steps with the diagnostic.');
     if(p.step==='keyframePrompt'&&worker?.role==='composition-writer'&&e.blocker.kind!=='locked-change')throw new Error('PLANNING_BLOCKER_KIND: composition-writer reports only locked-change blockers against the conflicting locked shot and plate evidence.');
-    if(p.step==='narration'&&p.gate==='author'){if(e.blocker.kind!=='editing-infeasible')throw new Error('AUDIO_EDIT_INVESTIGATION_REQUIRED: editor refusals require investigated editing evidence; tool failures are not infeasibility.');validateEditingInvestigation(taskFor(p),e);}
+    if(p.step==='narration'&&p.gate==='author'){if(e.blocker.kind!=='editing-infeasible')throw new Error('AUDIO_EDIT_INVESTIGATION_REQUIRED: editor refusals require investigated editing evidence; tool failures are not infeasibility.');validateEditingInvestigation(taskFor(p),e);
+      // Nora (voice director) may not ask for settlements on beats that already match.
+      const open=narrationUnsettledBeats(p),files=current(p,'narration')?.content.files??[];
+      if(open&&onlyTranscriptFailures(p)){const keep=e.blocker.beats.filter(b=>open.includes(b)||files[b-1]?.durationSeconds>15);
+        if(!keep.length)sendBackToReview=true;else e.blocker={...e.blocker,beats:keep};}
+    }
     if(e.blocker.kind==='account-readiness'){const {kind,...help}=e.blocker;if(digest(help)!==digest(planningAccountGuide(p)))throw new Error('PLANNING_HELP_BINDING: use canonical account guidance; never invent payment requirements, URLs or account failures.');}
-    p.gate='escalate';p.feedback.push({key:keyFor(p),message:e.message});
+    if(sendBackToReview){p.gate='review';p.feedback.push({key:keyFor(p),message:'Every narration beat now matches its locked text (or is human-settled); returning the take to Ava (audio reviewer) for re-review.'});}else{p.gate='escalate';p.feedback.push({key:keyFor(p),message:e.message});}
   } else if (e.action === 'plan') {
     requiredActor(e, 'agent');
     if (p.gate !== 'produce') throw new Error('Generation planning is not allowed here.');
@@ -1046,13 +1068,16 @@ export function applyEvent(project, raw) {
   return Project.parse(p);
 }
 
-export function openWorkflow(databasePath) {
-  const saver = SqliteSaver.fromConnString(databasePath);
+export const WORKFLOW_NODES = ['author', 'owner-review', 'review', 'human', 'produce', 'authorize', 'collect', 'escalate', 'pending'];
+// The uncompiled workflow graph. openWorkflow compiles it with the run's SQLite
+// checkpointer; runtime/studio-graph.mjs compiles it bare so the LangGraph Agent
+// Server (`npx @langchain/langgraph-cli dev`) can show it in LangGraph Studio.
+export function workflowGraph() {
   const State = Annotation.Root({ project: Annotation({ reducer: (_old, value) => value }) });
-  const route = state => ['author', 'owner-review', 'review', 'human', 'produce', 'authorize', 'collect', 'escalate', 'pending'].includes(state.project.gate) ? state.project.gate : 'pending';
+  const route = state => WORKFLOW_NODES.includes(state.project?.gate) ? state.project.gate : 'pending';
   const builder = new StateGraph(State);
   // Nodes contain no external side effects. A resumed interrupt may replay this node safely.
-  for (const name of ['author', 'owner-review', 'review', 'human', 'produce', 'authorize', 'collect', 'escalate', 'pending']) {
+  for (const name of WORKFLOW_NODES) {
     builder.addNode(name, state => {
       const response = interrupt(taskFor(state.project));
       return { project: applyEvent(state.project, response) };
@@ -1060,7 +1085,12 @@ export function openWorkflow(databasePath) {
     builder.addConditionalEdges(name, route);
   }
   builder.addConditionalEdges(START, route);
-  const graph = builder.compile({ checkpointer: saver });
+  return builder;
+}
+
+export function openWorkflow(databasePath) {
+  const saver = SqliteSaver.fromConnString(databasePath);
+  const graph = workflowGraph().compile({ checkpointer: saver });
   const config = id => ({ configurable: { thread_id: id }, durability: 'sync' });
   return {
     async init(id, inputs, options = {}) {
