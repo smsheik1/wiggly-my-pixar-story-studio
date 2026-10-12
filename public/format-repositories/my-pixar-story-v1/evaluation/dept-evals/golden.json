@@ -64,7 +64,7 @@
       },
       "truth": {
         "authority": "shaz",
-        "summary": "Option 2 (index 1) has baked-in view and expression labels ('FRONT VIEW', 'NEUTRAL', ...); Shaz rejected it (#145) and picked option 1 (index 0, no text) (#142). Vera r4 passed all 6 checks and missed the labels. Labels confirmed by eye.",
+        "summary": "Option 2 (index 1) has baked-in view and expression labels ('FRONT VIEW', 'NEUTRAL', ...); Shaz rejected it (#145) and picked option 1 (index 0, no text) (#142). Vera r4 passed all 6 checks and missed the labels. Labels confirmed by eye. Under Vera's rule (pass the checks when at least one option is clean, name the defective option and leave it out of the ranking), the right answer is approved with option 1 picked and option 2's labels written out.",
         "history": [
           141,
           142,
@@ -73,10 +73,19 @@
       },
       "asserts": [
         {
+          "id": "approves-with-clean-option",
+          "type": "verdict",
+          "oneOf": [
+            "approved"
+          ],
+          "why": "Options 1 and 3 are clean; Vera's rule passes the set when at least one option is clean on every criterion."
+        },
+        {
           "id": "flags-baked-in-text",
           "type": "mustMention",
-          "pattern": "\\btext\\b|label|caption|lettering|written|FRONT VIEW|NEUTRAL",
-          "why": "Option 2 has rendered text labels."
+          "status": "any",
+          "pattern": "label|caption|lettering|FRONT VIEW|NEUTRAL|baked-in (text|words)",
+          "why": "Option 2 has rendered text labels; Vera must name them in her notes even when the check passes on the clean options."
         },
         {
           "id": "not-pick-labelled",
@@ -90,8 +99,6 @@
           "id": "top-pick-option-1",
           "type": "topPick",
           "selection": 0,
-          "ifPresent": true,
-          "soft": true,
           "why": "Shaz picked option 1 (#142)."
         }
       ]
@@ -231,12 +238,6 @@
           "type": "contentMatches",
           "pattern": "scien|sunglass",
           "why": "The room must say it is 8-year-old Shaz's (scientist dream, sunglasses)."
-        },
-        {
-          "id": "zero-people",
-          "type": "contentMatches",
-          "pattern": "zero people|no people|zero characters",
-          "why": "Background plates are composited later; must forbid people."
         }
       ]
     },

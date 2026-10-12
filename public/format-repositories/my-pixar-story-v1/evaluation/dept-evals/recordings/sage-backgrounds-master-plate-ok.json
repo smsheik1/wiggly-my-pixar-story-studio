@@ -1,9 +1,9 @@
 {
  "caseId": "sage-backgrounds-master-plate-ok",
- "recordedAt": "2026-10-11T20:53:18.672Z",
+ "recordedAt": "2026-10-12T03:07:48.910Z",
  "model": "meta/muse-spark-1.3-contributor",
  "mode": "live",
- "fingerprint": "b64e4f832fac3010738c4ecd97ee182c63b84be604fe63e14814f6237948ae94",
+ "fingerprint": "ad74088dc7188a079f96bcb4a8cbe930dd71d83fb174f386ea7a6d3defc34c93",
  "fingerprintParts": {
   "model": "meta/muse-spark-1.3-contributor",
   "backend": "openrouter",
@@ -13,26 +13,26 @@
   ],
   "skill": {
    "path": "crew/sage/SKILL.md",
-   "sha256": "7812b87353aa6ea1d55d6cf0d9410db1fa4baea6dda28c2d3f532e3f1af73cbc"
+   "sha256": "d1ca32c733a9f2d0605fc86b32092fd26329a63faccce219f1f578890a292603"
   },
   "rubric": {
    "path": "evaluation/rubrics/text.md",
-   "sha256": "3845150ebb23f77c599d0a24354b966a50587bcb3278f6f82c9f58beaf14807a"
+   "sha256": "3645807374fd626cd0cae8e681462119058efb78d03c8ce9aa5db7bfff54bee6"
   },
   "recipes": {
    "character-prompter.md": "235dadf0cb428eedf1edf2b782247f72cd6cd45aa4c7d27a9c6334a1256962af",
    "character-sheet-recipe.md": "caab53afd48de0b91e77b04da50a688da273aeeb5c86335aa807cf12d60ac143",
-   "background-prompter.md": "4a5f3ac96581dc854b3f184c8a6520196203989338c766919ad0d47a469247dc"
+   "background-prompter.md": "6982e45f3788959ffd378d94ec273e738d0083f858d8407f6f854aa36e77d837"
   },
   "craft": {
    "house-style": "b95494eb4b67a8aeb7f1459ada27e811283fd5eae1aa51054f8ade61305a2783",
-   "script-craft": "fed7726674482cfc50ae682c4c9f07bb058536c3cb1e0bc8b8d8c7f6403159f0",
+   "script-craft": "ffdae43b78537503e1e20b36cb72f52d30bf911fbb20a5271af7109e5303e951",
    "character-design": "4f211109b20406a51a788788981ad9f19fbbb4af22f43239c9dda3cd04c8adfd",
-   "prompt-rules": "695bcaf66bf660f9e50b132b3989a38607dbf3c306241da94106102c8844b7c5",
-   "identity": "d7b647fc5302672cb720c9bf05310ac1a9b3d64390ec77d2a98172756b07ec1c",
+   "prompt-rules": "39bd961afaa6c80ebccecbd0c0ef287504102405147feb89c6805ac605f2890a",
+   "identity": "86ab2775df9bbbb2dd7878b4c2c86134a620fef1dacf22985bff9a27c4dc826e",
    "character-sheet": "4e8f13843f2d47c138ad5fc2fc35e8034b2129b85df9f4032d6ca761da65a6ab",
    "edit-prompts": "fa03e26afdf3e19d4622a8038e60cb8a2491557a43f7f9bba8c19634e91934ec",
-   "locations": "4df46006322bee4704d544d0ba6bbb1f12611796e95d68055ee2a96cdfa323be",
+   "locations": "01112493be69994274b011081c3b0298a7110c5aad50792e2a397a546ca87282",
    "working-method": "1ea99fc7df46276f47d812b5918b878a625ac15c462c4c6699fab66b7416daa3"
   },
   "traits": {
@@ -45,25 +45,25 @@
    "productionEffort": "xhigh",
    "maxTokens": 32000
   },
-  "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
-  "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
+  "packetInstruction": "80fbfdb923416da67163962766e6e5b4c63919b17c2dbd17cdedfa7b4d2d3ea2",
+  "tool": "631c771e8b1aa20fbfb01b99aacc5a55f0c2a01b3215b54a0033dec5cd74e751"
  },
- "wallMs": 75877,
- "costUsd": 0.0097821,
+ "wallMs": 70862,
+ "costUsd": 0.0093268,
  "requests": [
   {
    "seq": 1,
-   "requestSha256": "fbf4e0924345bd0f52d3f2600907da44646351e3f8b333ea25ad9fd092eda8e1",
+   "requestSha256": "9ebb248baf2a4b1162a789b9b72cc1a22bd34ce3f12fc511586670677eb1b8fb",
    "status": 200,
-   "ms": 75576,
+   "ms": 70524,
    "message": {
-    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"2506cbc36e77e8a5680a505a777d93fa84a0feefad0d15438f8dfbfd34fcab88\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"backgrounds@1\\\",\\\"artifactDigest\\\":\\\"e91c9521d15a2e1bbdc0c530fe5f68175def7d11c42a8c42ec2c551e29516383\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"perception\\\":\\\"direct-text\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-coverage\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All five locations provide six scenes covering beats 1 through 4: childhood encouragement in beat 1, car ownership and first-job relief in beat 2, both ends of the long-distance connection in beat 3, and direct narrator address in beat 4. Every scene binds roster character IDs and source answers, matching the approved shot plan with no missing beat.\\\",\\\"location\\\":\\\"content.locations scenes: childhood-encouragement beat 1; teen-car-freedom and first-job-relief beat 2; dallas-connection and chicago-consistency beat 3; message-to-mia beat 4\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"childhood-encouragement\\\",\\\"teen-car-freedom\\\",\\\"first-job-relief\\\",\\\"dallas-connection\\\",\\\"message-to-mia\\\",\\\"chicago-consistency\\\"]},{\\\"criterion\\\":\\\"locations\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All five locations derive directly from the approved shots with matching IDs and names. Dallas and Chicago separation, the faded-paint Honda, and the first job are grounded in locked answers, while furnishings and parking details are explicitly marked as interpreted production choices, not remembered facts.\\\",\\\"location\\\":\\\"content.locations: childhood-room, honda-parking-space, engineering-desk, dallas-call-room, chicago-call-room\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Childhood conversation setting\\\",\\\"Parked Honda Accord Coupe\\\",\\\"First software engineering work setting\\\",\\\"Shaz's Dallas call setting and narrator framing\\\",\\\"Future wife's Chicago call setting\\\",\\\"she was all the way in Chicago when I was in Dallas\\\",\\\"my 2000 Honda Accord Coupe with the faded paint and no A/C\\\"]},{\\\"criterion\\\":\\\"angles\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All five locations declare empty secondary-angle registries and all seven approved shots bind null angles, so master-plate-only coverage is the exact required configuration. No alternate angle is referenced or missing.\\\",\\\"location\\\":\\\"content.locations angles; shotIntentions shots from shot-childhood-encouragement through shot-message-to-mia\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"childhood-room\\\",\\\"shot-childhood-encouragement\\\",\\\"shot-teen-car-freedom\\\",\\\"shot-first-job-relief\\\",\\\"shot-message-to-mia\\\"]},{\\\"criterion\\\":\\\"common-sense\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Staging is feasible and explicitly marked as interpreted production choice, not remembered fact. No new event, employer, landmark, dialogue, or participant is asserted. Separate rooms and solo views preserve physical distance, the car remains stationary, and phones remain supported.\\\",\\\"location\\\":\\\"content.locations scenes descriptions and actions; dallas-connection, message-to-mia and chicago-consistency staging\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Room furnishings are interpreted staging, not a documented remembered setting.\\\",\\\"The parking space and unspecified paint color are production choices.\\\",\\\"Desk architecture is interpreted; no specific employer or office is asserted.\\\",\\\"An uncluttered room and supported phone are interpreted staging for the documented calls.\\\",\\\"Interior details are interpreted and do not establish a particular residence.\\\",\\\"This is narrator framing, not a claim that Mia was present in Dallas or that the message occurred during a remembered call.\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\"}}\"}"
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"2506cbc36e77e8a5680a505a777d93fa84a0feefad0d15438f8dfbfd34fcab88\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:text-reviewer\\\",\\\"artifactId\\\":\\\"backgrounds@1\\\",\\\"artifactDigest\\\":\\\"e91c9521d15a2e1bbdc0c530fe5f68175def7d11c42a8c42ec2c551e29516383\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"repairTarget\\\":\\\"current\\\",\\\"perception\\\":\\\"direct-text\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"scene-coverage\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Artifact lists 6 scenes across 5 locations covering beats 1-4: childhood-encouragement beat 1, teen-car-freedom and first-job-relief beat 2, dallas-connection and chicago-consistency beat 3, message-to-mia beat 4. Character bindings shaz-child plus shaz-mother, shaz-late-teen, shaz-adult, shaz-wife match roster@2 and script beats 1-4 sourceAnswers. No beat missing and no roster-external character.\\\",\\\"location\\\":\\\"content.locations[*].scenes beats 1-4; roster@2 characters\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Eight-year-old Shaz shares his scientist ambition with his mother in a simple domestic interior.\\\",\\\"wanted to be a scientist\\\"]},{\\\"criterion\\\":\\\"locations\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Artifact location ids and names match shotIntentions@1 exactly: childhood-room, honda-parking-space, engineering-desk, dallas-call-room, chicago-call-room. Five is minimum: domestic interior, car exterior, desk interior, Dallas room shared for beats 3-4, separate Chicago room. No extra or missing location and no invented landmark.\\\",\\\"location\\\":\\\"content.locations[*].id and name; shotIntentions locations\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Childhood conversation setting\\\",\\\"Parked Honda Accord Coupe\\\"]},{\\\"criterion\\\":\\\"angles\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All seven approved shots in shotIntentions@1 bind angleId null, using the master view. Artifact sets angles empty for every location. Per step guide master-plate-only coverage passes; no approved shot binds a non-null angleId that lacks a matching angle.\\\",\\\"location\\\":\\\"content.locations[*].angles; shotIntentions shots angleId\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"shot-childhood-encouragement\\\",\\\"childhood-room\\\"]},{\\\"criterion\\\":\\\"common-sense\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Domestic interior for quiet talk, level parking space for stationary hand-on-door contact, ordinary workstation for typing relief, and separate Dallas and Chicago rooms with supported phones for solo FaceTime views are physically workable. Reuse of Dallas room for direct-to-camera narrator framing is explicitly marked as narrator framing, not a claim Mia was present, preserving distance and avoiding impossible presence.\\\",\\\"location\\\":\\\"content.locations teen-car-freedom action; dallas-call-room message-to-mia description\\\",\\\"repair\\\":\\\"\\\",\\\"quotes\\\":[\\\"Shaz rests a hand on his parked car and looks at it with quiet satisfaction.\\\",\\\"my 2000 Honda Accord Coupe with the faded paint and no A/C.\\\"]}],\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"ae56c66cb4677ddf4ac98bbf0ddbc074162931cf5842f80d0942f990b2ef5a32\\\"}}\"}"
    },
    "usage": {
-    "prompt_tokens": 76495,
-    "completion_tokens": 10663,
-    "reasoning_tokens": 9573,
-    "cost": 0.0097821
+    "prompt_tokens": 73384,
+    "completion_tokens": 9942,
+    "reasoning_tokens": 8942,
+    "cost": 0.0093268
    }
   }
  ],
@@ -83,66 +83,50 @@
      {
       "criterion": "scene-coverage",
       "status": "pass",
-      "evidence": "All five locations provide six scenes covering beats 1 through 4: childhood encouragement in beat 1, car ownership and first-job relief in beat 2, both ends of the long-distance connection in beat 3, and direct narrator address in beat 4. Every scene binds roster character IDs and source answers, matching the approved shot plan with no missing beat.",
-      "location": "content.locations scenes: childhood-encouragement beat 1; teen-car-freedom and first-job-relief beat 2; dallas-connection and chicago-consistency beat 3; message-to-mia beat 4",
+      "evidence": "Artifact lists 6 scenes across 5 locations covering beats 1-4: childhood-encouragement beat 1, teen-car-freedom and first-job-relief beat 2, dallas-connection and chicago-consistency beat 3, message-to-mia beat 4. Character bindings shaz-child plus shaz-mother, shaz-late-teen, shaz-adult, shaz-wife match roster@2 and script beats 1-4 sourceAnswers. No beat missing and no roster-external character.",
+      "location": "content.locations[*].scenes beats 1-4; roster@2 characters",
       "repair": "",
       "quotes": [
-       "childhood-encouragement",
-       "teen-car-freedom",
-       "first-job-relief",
-       "dallas-connection",
-       "message-to-mia",
-       "chicago-consistency"
+       "Eight-year-old Shaz shares his scientist ambition with his mother in a simple domestic interior.",
+       "wanted to be a scientist"
       ]
      },
      {
       "criterion": "locations",
       "status": "pass",
-      "evidence": "All five locations derive directly from the approved shots with matching IDs and names. Dallas and Chicago separation, the faded-paint Honda, and the first job are grounded in locked answers, while furnishings and parking details are explicitly marked as interpreted production choices, not remembered facts.",
-      "location": "content.locations: childhood-room, honda-parking-space, engineering-desk, dallas-call-room, chicago-call-room",
+      "evidence": "Artifact location ids and names match shotIntentions@1 exactly: childhood-room, honda-parking-space, engineering-desk, dallas-call-room, chicago-call-room. Five is minimum: domestic interior, car exterior, desk interior, Dallas room shared for beats 3-4, separate Chicago room. No extra or missing location and no invented landmark.",
+      "location": "content.locations[*].id and name; shotIntentions locations",
       "repair": "",
       "quotes": [
        "Childhood conversation setting",
-       "Parked Honda Accord Coupe",
-       "First software engineering work setting",
-       "Shaz's Dallas call setting and narrator framing",
-       "Future wife's Chicago call setting",
-       "she was all the way in Chicago when I was in Dallas",
-       "my 2000 Honda Accord Coupe with the faded paint and no A/C"
+       "Parked Honda Accord Coupe"
       ]
      },
      {
       "criterion": "angles",
       "status": "pass",
-      "evidence": "All five locations declare empty secondary-angle registries and all seven approved shots bind null angles, so master-plate-only coverage is the exact required configuration. No alternate angle is referenced or missing.",
-      "location": "content.locations angles; shotIntentions shots from shot-childhood-encouragement through shot-message-to-mia",
+      "evidence": "All seven approved shots in shotIntentions@1 bind angleId null, using the master view. Artifact sets angles empty for every location. Per step guide master-plate-only coverage passes; no approved shot binds a non-null angleId that lacks a matching angle.",
+      "location": "content.locations[*].angles; shotIntentions shots angleId",
       "repair": "",
       "quotes": [
-       "childhood-room",
        "shot-childhood-encouragement",
-       "shot-teen-car-freedom",
-       "shot-first-job-relief",
-       "shot-message-to-mia"
+       "childhood-room"
       ]
      },
      {
       "criterion": "common-sense",
       "status": "pass",
-      "evidence": "Staging is feasible and explicitly marked as interpreted production choice, not remembered fact. No new event, employer, landmark, dialogue, or participant is asserted. Separate rooms and solo views preserve physical distance, the car remains stationary, and phones remain supported.",
-      "location": "content.locations scenes descriptions and actions; dallas-connection, message-to-mia and chicago-consistency staging",
+      "evidence": "Domestic interior for quiet talk, level parking space for stationary hand-on-door contact, ordinary workstation for typing relief, and separate Dallas and Chicago rooms with supported phones for solo FaceTime views are physically workable. Reuse of Dallas room for direct-to-camera narrator framing is explicitly marked as narrator framing, not a claim Mia was present, preserving distance and avoiding impossible presence.",
+      "location": "content.locations teen-car-freedom action; dallas-call-room message-to-mia description",
       "repair": "",
       "quotes": [
-       "Room furnishings are interpreted staging, not a documented remembered setting.",
-       "The parking space and unspecified paint color are production choices.",
-       "Desk architecture is interpreted; no specific employer or office is asserted.",
-       "An uncluttered room and supported phone are interpreted staging for the documented calls.",
-       "Interior details are interpreted and do not establish a particular residence.",
-       "This is narrator framing, not a claim that Mia was present in Dallas or that the message occurred during a remembered call."
+       "Shaz rests a hand on his parked car and looks at it with quiet satisfaction.",
+       "my 2000 Honda Accord Coupe with the faded paint and no A/C."
       ]
      }
     ],
     "modelVersion": "meta/muse-spark-1.3-contributor",
-    "capabilityVersion": "bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e",
+    "capabilityVersion": "ae56c66cb4677ddf4ac98bbf0ddbc074162931cf5842f80d0942f990b2ef5a32",
     "toolEvidence": [
      {
       "tool": "viewImage",
