@@ -241,7 +241,7 @@ export async function runCrewTask(p,task,host){
  }
  try{
  const expected=task.gate==='review'?'review':task.gate==='owner-review'?'owner-review':task.gate==='produce'?'plan':'artifact';
- if(event.taskId!==task.taskId||event.actor!==task.actor||!(event.action===expected||(task.gate==='produce'||task.step==='narration'&&task.gate==='author')&&event.action==='planning-blocked'))throw new Error('CREW_PERMISSION_DENIED: worker may only submit its assigned deliverable; no human approvals, state writes or provider calls.');
+  if(event.taskId!==task.taskId||event.actor!==task.actor||!(event.action===expected||(task.gate==='produce'||task.step==='narration'&&task.gate==='author'||task.gate==='author'&&((['shotIntentions','shots'].includes(task.step)&&worker?.role==='shot-planner')||(task.step==='backgrounds'&&worker?.role==='background-product-owner')))&&event.action==='planning-blocked'))throw new Error('CREW_PERMISSION_DENIED: worker may only submit its assigned deliverable; no human approvals, state writes or provider calls.');
  assertCrewEvent(p,event);
  if(task.step==='narration'&&task.gate==='author'&&event.action==='planning-blocked'){
   if(event.blocker?.kind!=='editing-infeasible')throw new Error('AUDIO_EDIT_INVESTIGATION_REQUIRED: editor refusals require investigated editing evidence; unavailable tools must stop as tool errors.');

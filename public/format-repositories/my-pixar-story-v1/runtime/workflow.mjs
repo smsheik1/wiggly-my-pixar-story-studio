@@ -906,7 +906,7 @@ export function applyEvent(project, raw) {
     if (!e.allowance || !e.message) throw new Error('Allowance requires explicit user limits and original message.');
     p.allowances.push({ ...e.allowance, id: `allowance-${p.allowances.length + 1}`, message: e.message, at: new Date().toISOString() });
   } else if(e.action==='planning-blocked'){
-    requiredActor(e,'agent');if(!(p.gate==='produce'&&p.step!=='film'||p.step==='narration'&&p.gate==='author')||!e.message||e.plan)throw new Error('PLANNING_BLOCKER_SCOPE: only the assigned planner/editor may report an evidenced blocker; no plan or approval.');
+    requiredActor(e,'agent');const authorBlocked=p.gate==='author'&&((['shotIntentions','shots'].includes(p.step)&&worker?.role==='shot-planner')||(p.step==='backgrounds'&&worker?.role==='background-product-owner'));if(!(p.gate==='produce'&&p.step!=='film'||p.step==='narration'&&p.gate==='author'||authorBlocked)||!e.message||e.plan)throw new Error('PLANNING_BLOCKER_SCOPE: only the assigned planner/editor may report an evidenced blocker; no plan or approval.');
     if(e.blocker?.kind==='editing-infeasible'&&!(p.step==='narration'&&p.gate==='author'))throw new Error('AUDIO_EDIT_SCOPE_DENIED');
     if(!e.blocker)throw new Error('PLANNING_HELP_REQUIRED: report the problem, solution and baby steps with the diagnostic.');
     if(p.step==='narration'&&p.gate==='author'){if(e.blocker.kind!=='editing-infeasible')throw new Error('AUDIO_EDIT_INVESTIGATION_REQUIRED: editor refusals require investigated editing evidence; tool failures are not infeasibility.');validateEditingInvestigation(taskFor(p),e);}
