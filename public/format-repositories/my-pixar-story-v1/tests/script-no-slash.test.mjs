@@ -79,11 +79,11 @@ test('a crew script-writer script event whose narration contains "A/C" is reject
 
 test("Leo's skill file contains the no-slash rule", T, async () => {
   const leoSkill = await readFile(new URL('../crew/leo/SKILL.md', import.meta.url), 'utf8');
-  assert.match(leoSkill, /slash abbreviation/i);
+  assert.match(leoSkill, /no slashes/);
   assert.match(leoSkill, /A\/C/);
   assert.match(leoSkill, /air conditioning/);
   assert.match(leoSkill, /w\//);
-  assert.match(leoSkill, /TTS reads slashes aloud/i);
+  assert.match(leoSkill, /reads them aloud/);
 });
 
 test("Sage's skill + text rubric contain the lived-in/generic-room rule and the new evidence sources", T, async () => {
@@ -115,7 +115,7 @@ test("Sage's skill + text rubric contain the lived-in/generic-room rule and the 
   {
     const doc = textRubric;
     assert.match(doc, /lived-in/);
-    assert.match(doc, /Pixar/);
+    assert.match(doc, /house style/);
     assert.match(doc, /story-dressed/);
     assert.match(doc, /catalog/);
     assert.match(doc, /plain\/unmarked/);

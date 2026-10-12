@@ -23,16 +23,18 @@ test('June keyframe skill fails photoreal style and uses the quick-pass hand rul
  const kit=loadStudio();
  const june=kit.documents['crew/june/SKILL.md'].content,scene=kit.documents['evaluation/rubrics/scene.md'].content;
  for(const doc of [june,scene]){
-  assert.match(doc,/Pixar-like 3D/);
-  assert.match(doc,/photoreal\/3D hybrid/);
-  assert.match(doc,/fails? `style`/i);
-  assert.match(doc,/quick normal pass/);
+  assert.match(doc,/stylized animated feature/);
   assert.match(doc,/too small to count/);
  }
- assert.match(june,/Never pass photoreal style to protect likeness/);
- assert.match(june,/photographic skin texture/);
- assert.match(june,/real-human facial structure/);
- assert.match(june,/photographic lighting\/depth-of-field/);
+ assert.match(june,/Photoreal or hybrid/);
+ assert.match(june,/fails even when the likeness is strong/);
+ assert.match(june,/quick pass over the full image/);
+ assert.match(scene,/photoreal\/3D hybrid/);
+ assert.match(scene,/FAILS `style`/);
+ assert.match(scene,/quick normal pass/);
+ assert.match(june,/photographic skin/);
+ assert.match(june,/a real face with a CG gloss/);
+ assert.match(june,/a photographic lens look/);
  assert.match(scene,/Likeness never excuses realism/);
  assert.doesNotMatch(june,/5 fingers per hand/);
  assert.doesNotMatch(june,/Zero tolerance/);
