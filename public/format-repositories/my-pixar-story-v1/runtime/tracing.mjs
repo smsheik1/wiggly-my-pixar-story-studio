@@ -196,6 +196,27 @@ export function _resetWarnedForTests(){warned=false;}
 // Pass {client} to inject a fake backend (tests, no network). All methods are
 // sync fire-and-forget; only flush() is awaited with a bounded timeout and it
 // never throws into the runtime.
+
+// LangSmith only aggregates cost from usage_metadata.total_cost (any run type).
+// Paid jobs: billed amount ('provider') > official studio rate ('estimate') >
+// free (0 + note). No amount at all => no cost, cost_unknown. Never invents a rate.
+export function paidJobCost({outcome='ok',provider,model,estimatedCostUsd,actualCostUsd,actualCostSource}={}){
+  if(outcome!=='ok')return {cost_note:'failed request; no cost recorded'};
+  if(actualCostSource==='free')return {usage_metadata:{total_cost:0},cost_source:'free',cost_note:'free tier'};
+  const actual=Number(actualCostUsd),est=Number(estimatedCostUsd);
+  if(actualCostUsd!=null&&Number.isFinite(actual)&&actual>=0)return {usage_metadata:{total_cost:actual},cost_source:actualCostSource==='provider'?'billed':'rate-estimate'};
+  if(estimatedCostUsd!=null&&Number.isFinite(est)&&est>=0)return {usage_metadata:{total_cost:est},cost_source:'rate-estimate'};
+  return {cost_unknown:true,cost_note:`cost unknown for ${provider??'unknown'}/${model??'unknown'}`};
+}
+// Replays re-send recorded spend; that money was not spent now, so report 0.
+export function replayCost(outputs){
+  const u=outputs?.usage_metadata;
+  if(!u||typeof u!=='object')return outputs;
+  const recorded=Number(u.total_cost??((Number(u.input_cost)||0)+(Number(u.output_cost)||0)))||0;
+  const {input_cost,output_cost,input_cost_details,output_cost_details,...rest}=u;
+  return {...outputs,usage_metadata:{...rest,total_cost:0},recorded_cost_usd:recorded,cost_note:'replay; recorded cost not re-spent'};
+}
+
 export function paidJobTimer(tracer, base = {}) {
   const startAt = Date.now();
   return {
@@ -231,7 +252,7 @@ export function paidJobTimer(tracer, base = {}) {
   };
 }
 
-const SMALL_KEYS=new Set(['role','label','workerName','workerId','model','modelVersion','backend','taskId','step','gate','attempt','outcome','durationMs','error','reasonCode','reason','requests','inputTokens','outputTokens','reasoningTokens','cachedTokens','costUsd','input_tokens','output_tokens','name','toolName','tool','provider','jobId','estimatedCostUsd','actualCostUsd','actualCostSource','decision','artifactId','kind','id','parentId','status','operation','generationId','promptCount','completionCount','promptTokens','completionTokens','validationRetries','budgetExhausted','phase','ts','attempts','continuation','cached','tokens']);
+const SMALL_KEYS=new Set(['role','label','workerName','workerId','model','modelVersion','backend','taskId','step','gate','attempt','outcome','durationMs','error','reasonCode','reason','requests','inputTokens','outputTokens','reasoningTokens','cachedTokens','costUsd','input_tokens','output_tokens','name','toolName','tool','provider','jobId','estimatedCostUsd','actualCostUsd','actualCostSource','decision','artifactId','kind','id','parentId','status','operation','generationId','promptCount','completionCount','promptTokens','completionTokens','validationRetries','budgetExhausted','phase','ts','attempts','continuation','cached','tokens','cost_source','cost_note','cost_unknown','recorded_cost_usd']);
 // Run metadata stays small: scalar ids/labels/costs only, plus an explicit
 // fields.metadata object (e.g. ls_provider/ls_model_name for llm runs).
 function metadataFor(base,fields){
@@ -249,6 +270,8 @@ function stripToSmall(fields){
   const out={};
   try{
     for(const [k,v] of Object.entries(fields??{})){
+      // Cost must survive budget stripping, or LangSmith (and the cost alert) lose it.
+      if(k==='usage_metadata'&&v&&typeof v==='object'){const u={};for(const [uk,uv] of Object.entries(v))if(typeof uv==='number')u[uk]=uv;out[k]=u;continue;}
       if(!SMALL_KEYS.has(k))continue;
       if(typeof v==='string'&&v.length>1000)continue;
       if(v!==null&&typeof v==='object')continue;
@@ -569,6 +592,7 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
      attachImage:(opts)=>attachImage(handle,opts),
      end:(outputs={},errorText,endOpts={})=>{
        if(handle.ended)return;handle.ended=true;open.delete(handle);
+       if(baseMetadata.mode==='replay')outputs=replayCost(outputs);
        if(outputs?.attachments&&Array.isArray(outputs.attachments)){for(const att of outputs.attachments)attachImage(handle,att);}
        if(endOpts?.attachments&&Array.isArray(endOpts.attachments)){for(const att of endOpts.attachments)attachImage(handle,att);}
        emitEnd({id,parentId,kind:effKind,outputs,errorText});
@@ -649,7 +673,9 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
      if(attachments&&Array.isArray(attachments)){for(const att of attachments)attachImage(h,att);}
      try{
        const errorText=outcome!=='ok'?(error||'paid-job error'):undefined;
-       h.end({outcome,durationMs,jobId,provider,estimatedCostUsd,actualCostUsd,...rest,...(error?{error}:{})},errorText);
+       const cost=paidJobCost({outcome,provider,model:fields.model,estimatedCostUsd,actualCostUsd,actualCostSource:fields.actualCostSource});
+       if(cost.cost_unknown)warnOnce(cost.cost_note);
+       h.end({outcome,durationMs,jobId,provider,estimatedCostUsd,actualCostUsd,...rest,...(error?{error}:{}),...cost},errorText);
      }catch(error2){warnOnce(error2.message);}
      return h;
    },
