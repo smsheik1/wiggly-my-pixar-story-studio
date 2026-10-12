@@ -370,11 +370,12 @@ function previousVersionFor(p, a) {
 }
 export function taskFor(p) {
   const a = current(p), loaded=workerInstructions(p,roleFor(p));
+  const stepGuide=(()=>{const skillPath=loaded?.skill?.path;if(!skillPath)return {};const stepPath=skillPath.replace(/\/SKILL\.md$/,`/steps/${p.step}.md`);const doc=studioFor(p)?.documents[stepPath];return doc?{stepGuide:{path:stepPath,content:doc.content,sha256:doc.sha256}}:{};})();
   const shot = ['keyframePrompt', 'keyframe'].includes(p.step) ? shotFor(p) : ['videoPrompt','video'].includes(p.step)?videoBinding(p).shot:null;
   const sceneLocation = shot ? current(p, 'backgrounds').content.locations.find(l => l.id === shot.locationId) : location(p);
   const job = p.jobs.findLast(j => j.key === keyFor(p) && !['ready', 'failed'].includes(j.status));
   const voiceIdState = consentedVoiceIdentity(p, a);
-  return { ...loaded, communication:communicationFor(p),studioConfig:studioFor(p)?.config??null,taskId: digest({ id: p.id, sequence: p.sequence, step: p.step, gate: p.gate }), projectId: p.id,
+  return { ...loaded, ...stepGuide, communication:communicationFor(p),studioConfig:studioFor(p)?.config??null,taskId: digest({ id: p.id, sequence: p.sequence, step: p.step, gate: p.gate }), projectId: p.id,
     reviewPolicy:{mode:p.reviewMode,qualificationRequired:!supervised(p),humanMediaConfirmationRequired:supervised(p)&&!crewReviewEligible(p,a),speakerMeasurementRequired:!supervised(p),automaticVideoRepairAllowed:!supervised(p)&&!miniProduction(p)},
     lifecycle:p.lifecycle,budget:spendSummary(p),
     voiceIdentity: {basis: voiceBasis(p).kind==='recorded-reference'?'recorded-reference':voiceIdState.verified?'consented-voice-id':'human-recognition', verified: voiceIdState.verified, boundVoiceId: voiceIdState.boundVoiceId},

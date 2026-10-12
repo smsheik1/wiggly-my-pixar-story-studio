@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
 const checksum=v=>createHash('sha256').update(JSON.stringify(canonical(v))).digest('hex');
@@ -41,6 +41,18 @@ export function loadStudio(root=new URL('../',import.meta.url)){
   if(agent.backend===undefined||!agent.model)throw new Error(`STUDIO_BACKEND_MISSING: ${role} needs an explicit backend (codex|openrouter) and model.`);
  }
  for(const path of new Set([...Object.values(config.agents).map(a=>a.skill),...Object.values(config.reviewers),...Object.values(config.recipes),config.communication])){const content=readFileSync(new URL(path,root),'utf8');documents[path]={content,sha256:sha(content)};}
+ // Per-step guides: pin any crew/<name>/steps/<step>.md that exists, for any
+ // agent whose skill dir has a steps/ folder. Optional: old snapshots without
+ // these documents still load (the schema check above never requires them).
+ for(const agent of Object.values(config.agents)){
+  const dir=agent.skill.replace(/\/SKILL\.md$/,'');
+  let entries;try{entries=readdirSync(new URL(`${dir}/steps/`,root));}catch{continue;}
+  for(const file of entries.filter(f=>f.endsWith('.md')).sort()){
+   const path=`${dir}/steps/${file}`;
+   if(documents[path])continue;
+   const content=readFileSync(new URL(path,root),'utf8');documents[path]={content,sha256:sha(content)};
+  }
+ }
  if(config.craft){
   for(const role of Object.keys(config.craft.sections)){
    if(!config.agents[role])throw new Error(`CRAFT_UNKNOWN_ROLE: Role "${role}" in craft mapping is not in agents.`);
