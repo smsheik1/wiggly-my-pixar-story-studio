@@ -16,7 +16,7 @@ import { shotFor, shotReferences, referenceBindings, planningReferences, validat
 import { requestDescriptor,planningAccountGuide,generationEstimate,narrationGenerationTexts } from './providers.mjs';
 import {scriptQuoteChecks,transcriptDiff} from './evaluators.mjs';
 import {AudioEditReceipt,AUDIO_EDIT_PROFILE,validateAudioEdit,validateEditingInvestigation} from './audio-edit.mjs';
-import { VERSION, Inputs, Project, Content, Review, Event, BibleEvent, Plans, IntakeConfirmation, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
+import { VERSION, Inputs, Project, Content, Review, Event, BibleEvent, Plans, IntakeConfirmation, PhotoInventoryEntry, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
 
 import { keyFor, current, locked, audioLocked, assertAllowed, backgroundSteps, imageSteps, authorSteps, supervised, reviewPassed, refinedWorkflow, miniProduction, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact, sheetWorkflow } from './gates.mjs';
 export { keyFor, current, locked, audioLocked, assertAllowed, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact } from './gates.mjs';
@@ -368,6 +368,13 @@ function previousVersionFor(p, a) {
   return { previousVersion: { id: last.id, version: last.version, digest: last.digest, authoredBy: last.authoredBy ?? null, content: last.content, review: last.review ?? null,
     instruction: 'Your superseded previous version of this deliverable. Revise it according to feedback (latest entry last); if the latest feedback intent is redo, start fresh but avoid what the feedback rejected. Never resubmit it unchanged.' } };
 }
+// Roster photo source before approval: explicit maker records first, then the
+// rev<4 script intake inventory (character name is the maker's label), else none.
+function rosterPhotoInventory(p){
+ if(p.photoInventory?.length)return p.photoInventory;
+ if(p.workflowRevision<4){const intake=current(p,'script')?.intakeConfirmation;if(intake)return intake.characters.filter(c=>c.likeness!=='omit').flatMap(c=>c.references.map(file=>({...file,label:c.name})));}
+ return [];
+}
 export function taskFor(p) {
   const a = current(p), loaded=workerInstructions(p,roleFor(p));
   const stepGuide=(()=>{const skillPath=loaded?.skill?.path;if(!skillPath)return {};const stepPath=skillPath.replace(/\/SKILL\.md$/,`/steps/${p.step}.md`);const doc=studioFor(p)?.documents[stepPath];return doc?{stepGuide:{path:stepPath,content:doc.content,sha256:doc.sha256}}:{};})();
@@ -399,12 +406,16 @@ export function taskFor(p) {
     lockedAnswers:current(p,'answers')??null,
     ...(p.step==='answers'?{questionnaire,sourceInputs:p.inputs,sourceInputDigest:digest(p.inputs),originalInputsRequired:!p.feedback.some(f=>f.key==='answers'&&f.intent&&f.message)}:{}),
     ...(['characterPrompt','candidates','sheetPrompt','sheet'].includes(p.step)?{castEntry:current(p,'roster')?.content.characters.find(c=>c.id===p.characterId)}:{}),
+    ...(p.step==='characterPrompt'&&current(p,'roster')?.content.characters.some(c=>c.id===p.characterId)?{characterDigest:digest(current(p,'roster').content.characters.find(c=>c.id===p.characterId))}:{}),
+    ...(p.step==='roster'?{photoInventory:rosterPhotoInventory(p)}:{}),
     approvedScript: current(p, 'script') ?? null, inputPriority: ['characterPrompt','candidates','sheetPrompt','sheet'].includes(p.step)?['approvedScript','castEntry','castEntry.references','inputs.answers']:['immediateScenes', 'approvedScript', 'inputs.answers'],
     ...(p.step==='characterPrompt'?{recipe:sheetWorkflow(p)?recipeFor(p,'sheetPrompt',{content:characterRecipe,sha256:characterRecipeSha256}):recipeFor(p,'characterPrompt',{content:characterPromptRecipe,sha256:characterPromptRecipeSha256})}:{}),
     ...(p.step==='sheetPrompt'?{recipe:recipeFor(p,'sheetPrompt',{content:characterRecipe,sha256:characterRecipeSha256})}:{}),
     ...(isPrompt(p) ? { recipe: recipeFor(p,p.step,{content:backgroundRecipe,sha256:backgroundRecipeSha256}), ownerWorkerId: briefOwner(p, current(p, briefKey(p))) } : {}),
     ...(p.step==='videoPrompt'||p.step==='video'?{videoBinding:videoBinding(p)}:{}),
     ...(p.step==='music'?{soundDirection:current(p,'soundPlan').content.music}:p.step==='effect'?{soundDirection:effectFor(p)}:{}),
+    ...(['music','effect'].includes(p.step)?{importFile:p.soundImports?.[p.step==='music'?'music':`effect:${p.effectId}`]??null}:{}),
+    ...(p.step==='soundPlan'?{soundDefaults:{musicEnabledByDefault:studioFor(p)?.config.generation.music.enabledByDefault??false,effectsEnabledByDefault:studioFor(p)?.config.generation.effect.enabledByDefault??false}}:{}),
     actor: p.gate === 'review' ? 'reviewer' : ['human', 'authorize', 'escalate'].includes(p.gate) ? 'human' : 'agent',
     proposedCast:current(p,'script')?.content.proposedCast??null, intakeConfirmation:current(p,'roster')?.intakeConfirmation??current(p,'script')?.intakeConfirmation??current(p,'answers')?.intakeConfirmation??null, artifact: a ?? null, prescreen: current(p)?.prescreen ?? null, ...previousVersionFor(p, a), job: job ?? null, inputs: effectiveInputs(p),
     dependencies: dependencies(p).map(id => p.artifacts.find(a => a.id === id)),
@@ -568,6 +579,24 @@ export function applyEvent(project, raw) {
     for(const a of p.artifacts.filter(a=>a.valid&&['characterPrompt','candidates','sheetPrompt','sheet'].some(k=>a.key===`${k}:${characterId}`)))invalidate(p,a.id);
     p.characterId=characterId;p.step=refinedWorkflow(p)?'characterPrompt':'candidates';p.gate=refinedWorkflow(p)?'author':'produce';
     p.feedback.push({key:`characterPrompt:${characterId}`,message:e.message});
+  }else if(e.action==='intake-photos'){
+    requiredActor(e,'human');
+    if(!e.message)throw new Error('intake-photos needs --message "<maker note>" with measured stills and labels.');
+    if(current(p,'roster')?.approvedBy)throw new Error('INTAKE_PHOTOS_LOCKED: record maker intake photos before roster approval; use add-reference after approval.');
+    const photos=(e.photoInventory??[]).map(entry=>PhotoInventoryEntry.parse(entry));
+    if(!photos.length)throw new Error('intake-photos needs at least one measured still with a maker label.');
+    const seen=new Set((p.photoInventory??[]).map(f=>f.sha256));
+    for(const entry of photos){if(!entry.width||!entry.height||entry.durationSeconds||!entry.label.trim())throw new Error('intake-photos needs measured still images with maker labels.');if(seen.has(entry.sha256))throw new Error('INTAKE_PHOTO_DUPLICATE: this maker photo is already recorded.');seen.add(entry.sha256);}
+    p.photoInventory=[...(p.photoInventory??[]),...photos];
+    p.feedback.push({key:'roster',message:e.message});
+  }else if(e.action==='import-sound'){
+    requiredActor(e,'human');
+    if(!e.message||!e.importFile)throw new Error('import-sound needs --file and --message.');
+    const file=e.importFile;
+    if(!file||!file.path||!file.sha256||!file.durationSeconds||file.width||file.height)throw new Error('import-sound needs a measured audio-only file.');
+    if(p.step==='music'){const target=current(p,'soundPlan')?.content.music;if(!target||target.mode!=='import')throw new Error('SOUND_IMPORT_MODE: import-sound on music needs that entry in import mode.');p.soundImports={...(p.soundImports??{}),music:{file,message:e.message,at:new Date().toISOString()}};p.feedback.push({key:'music',message:e.message});}
+    else if(p.step==='effect'){const id=e.effectId??p.effectId;if(!id)throw new Error('import-sound needs --effect <id> matching the current effect.');if(p.effectId&&p.effectId!==id)throw new Error('SOUND_IMPORT_EFFECT: import-sound --effect must match the current effect.');const target=(current(p,'soundPlan')?.content.effects??[]).find(x=>x.id===id);if(!target||target.mode!=='import')throw new Error('SOUND_IMPORT_MODE: import-sound on effect needs that entry in import mode.');p.soundImports={...(p.soundImports??{}),[`effect:${id}`]:{file,message:e.message,at:new Date().toISOString()}};p.feedback.push({key:`effect:${id}`,message:e.message});}
+    else throw new Error('SOUND_IMPORT_STEP: import-sound only on the current music or effect step in import mode.');
   }else if(e.action==='refresh-writing-instructions'){
     requiredActor(e,'human');
     if(!e.message||p.step!=='script'||!p.studio||locked(p,'script')||p.jobs.length||p.artifacts.some(a=>a.approvedBy&&a.kind!=='answers'))throw new Error('WRITING_REFRESH_LOCKED: explicitly refresh only unapproved script work before media; approved answers and prior review evidence remain unchanged.');
@@ -596,8 +625,21 @@ export function applyEvent(project, raw) {
     if(!e.message||!p.studio||p.step!=='narration'||a?.review?.decision!=='rejected'||a.approvedBy||!locked(p,'script')||!locked(p,'audition')||p.jobs.some(j=>['submitting','submitted','uncertain'].includes(j.status))||!['author','escalate'].includes(p.gate)||p.reviewDisagreements>=limitsFor(p).reviewDisagreements)throw new Error('AUDIO_EDIT_START_DENIED: explicitly enable editing only for rejected, unlocked narration with reconciled jobs and remaining attempts.');
     const next=loadStudio(),config=structuredClone(p.studio.config),documents={...p.studio.documents};
     config.agents['voice-director'].tools=[...new Set([...config.agents['voice-director'].tools,'listenAudio','transcribe','inspectAudio','renderAudioEdit'])];
-    for(const path of ['crew/eli/SKILL.md','crew/ava/SKILL.md','evaluation/rubrics/audio.md'])documents[path]=next.documents[path];
+    for(const path of ['crew/nora/SKILL.md','crew/ava/SKILL.md','evaluation/rubrics/audio.md'])documents[path]=next.documents[path];
     p.studio={config,documents,sha256:digest({config,documents})};p.gate='author';if(p.debug?.enabled)p.debug.paused=true;
+  }else if(e.action==='settle-transcript'){
+    requiredActor(e,'human');
+    const a=current(p);
+    if(!e.message||e.beat===undefined)throw new Error('settle-transcript needs --beat <1-4> and --message "<what the human heard>".');
+    if(p.step!=='narration')throw new Error('TRANSCRIPT_SETTLEMENT_STEP: settle a speech-to-text mishearing only on narration.');
+    if(!a||a.approvedBy)throw new Error('TRANSCRIPT_SETTLEMENT_SCOPE: settle only the current unapproved narration artifact.');
+    const stored=a.review?.measurements?.transcripts?.[e.beat-1];
+    if(typeof stored!=='string')throw new Error('TRANSCRIPT_SETTLEMENT_SCOPE: the stored review has no measured transcript for that beat.');
+    const lockedText=a.content.audioRegenerations?.find(x=>x.beat===e.beat)?.spokenText??current(p,'script').content.beats[e.beat-1].narration;
+    if(!transcriptDiff(lockedText,stored).editDistance)throw new Error('TRANSCRIPT_SETTLEMENT_NOT_NEEDED: the stored transcript already matches the locked text.');
+    if((a.transcriptSettlements??[]).some(s=>s.beat===e.beat&&s.artifactId===a.id))throw new Error('TRANSCRIPT_ALREADY_SETTLED: this beat of this take already carries a human transcript settlement.');
+    a.transcriptSettlements=[...(a.transcriptSettlements??[]),{beat:e.beat,artifactId:a.id,artifactDigest:a.digest,transcript:stored,message:e.message,actor:e.actor,at:new Date().toISOString()}];
+    p.feedback.push({key:'narration',message:e.message});
   }else if(e.action==='refresh-audio-instructions'){
     requiredActor(e,'human');if(!e.message||!p.studio||!['voiceSample','clone','audition'].includes(p.step)||p.jobs.length||p.artifacts.some(a=>a.approvedBy&&['audition','narration'].includes(a.kind)))throw new Error('AUDIO_REFRESH_LOCKED: refresh voice-review instructions explicitly before provider work or audio approval.');
     const next=loadStudio(),allowed=['crew/ava/SKILL.md','evaluation/rubrics/audio.md'];
@@ -776,7 +818,8 @@ export function applyEvent(project, raw) {
       if (a.content.files.some(f => f.durationSeconds > 15)) throw new Error('Overlong narration cannot be approved; return the affected text to the writer, never accelerate it.');
       const m = r.measurements,basis=voiceBasis(p);
       if (!m || !m.speechToTextMethod || (!supervised(p)&&(!m.speakerSimilarityMethod || m.speakerSimilarity === undefined)) || !m.measurementNotes || basis.kind==='unavailable' || (basis.kind==='recorded-reference'&&m.referenceSha256!==basis.referenceSha256) || m.transcripts?.length !== a.content.files.length || m.speakingRateWpm?.length !== a.content.files.length || m.silenceSeconds?.length !== a.content.files.length) throw new Error('Audio review requires transcript, speaking-rate/silence measurements, notes and truthful identity evidence for the current voice basis.');
-      if (m.transcripts.some((t, i) => transcriptDiff(a.content.audioRegenerations?.find(x=>x.beat===i+1)?.spokenText??current(p, 'script').content.beats[i].narration,t).editDistance)) throw new Error('Speech-to-text differs from the locked script.');
+      const settled=(t,i)=>(a.transcriptSettlements??[]).some(s=>s.beat===i+1&&s.artifactId===a.id&&s.artifactDigest===a.digest&&s.transcript===t);
+      if (m.transcripts.some((t, i) => !settled(t,i)&&transcriptDiff(a.content.audioRegenerations?.find(x=>x.beat===i+1)?.spokenText??current(p, 'script').content.beats[i].narration,t).editDistance)) throw new Error('Speech-to-text differs from the locked script.');
     }
     if(p.step==='film'){if(filmAudio){a.audioReview=structuredClone(r);a.audioReviewedBy=e.workerId;}else{a.visualReview=r;a.visualReviewedBy=e.workerId;if(reviewPassed(r)){if(p.debug?.enabled)p.debug.paused=true;p.sequence++;p.history.push({sequence:p.sequence,action:'review',actor:e.actor,...activity,message:'Visual film review passed; awaiting independent audio review.',at:new Date().toISOString()});return Project.parse(p);}}if(filmAudio&&reviewPassed(r)){r.perception='direct-audiovisual';r.checks=criteria.film.map(c=>r.checks.find(x=>x.criterion===c)??a.visualReview.checks.find(x=>x.criterion===c));}}
     if (ownerReview) a.ownerReview = r;
@@ -927,9 +970,10 @@ export function applyEvent(project, raw) {
     if (!e.allowance || !e.message) throw new Error('Allowance requires explicit user limits and original message.');
     p.allowances.push({ ...e.allowance, id: `allowance-${p.allowances.length + 1}`, message: e.message, at: new Date().toISOString() });
   } else if(e.action==='planning-blocked'){
-    requiredActor(e,'agent');const authorBlocked=p.gate==='author'&&((['shotIntentions','shots'].includes(p.step)&&worker?.role==='shot-planner')||(p.step==='backgrounds'&&worker?.role==='background-product-owner'));if(!(p.gate==='produce'&&p.step!=='film'||p.step==='narration'&&p.gate==='author'||authorBlocked)||!e.message||e.plan)throw new Error('PLANNING_BLOCKER_SCOPE: only the assigned planner/editor may report an evidenced blocker; no plan or approval.');
+    requiredActor(e,'agent');const authorBlocked=p.gate==='author'&&((['shotIntentions','shots'].includes(p.step)&&worker?.role==='shot-planner')||(p.step==='keyframePrompt'&&worker?.role==='composition-writer')||(p.step==='backgrounds'&&worker?.role==='background-product-owner'));if(!(p.gate==='produce'&&p.step!=='film'||p.step==='narration'&&p.gate==='author'||authorBlocked)||!e.message||e.plan)throw new Error('PLANNING_BLOCKER_SCOPE: only the assigned planner/editor may report an evidenced blocker; no plan or approval.');
     if(e.blocker?.kind==='editing-infeasible'&&!(p.step==='narration'&&p.gate==='author'))throw new Error('AUDIO_EDIT_SCOPE_DENIED');
     if(!e.blocker)throw new Error('PLANNING_HELP_REQUIRED: report the problem, solution and baby steps with the diagnostic.');
+    if(p.step==='keyframePrompt'&&worker?.role==='composition-writer'&&e.blocker.kind!=='locked-change')throw new Error('PLANNING_BLOCKER_KIND: composition-writer reports only locked-change blockers against the conflicting locked shot and plate evidence.');
     if(p.step==='narration'&&p.gate==='author'){if(e.blocker.kind!=='editing-infeasible')throw new Error('AUDIO_EDIT_INVESTIGATION_REQUIRED: editor refusals require investigated editing evidence; tool failures are not infeasibility.');validateEditingInvestigation(taskFor(p),e);}
     if(e.blocker.kind==='account-readiness'){const {kind,...help}=e.blocker;if(digest(help)!==digest(planningAccountGuide(p)))throw new Error('PLANNING_HELP_BINDING: use canonical account guidance; never invent payment requirements, URLs or account failures.');}
     p.gate='escalate';p.feedback.push({key:keyFor(p),message:e.message});

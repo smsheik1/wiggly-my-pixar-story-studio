@@ -170,7 +170,7 @@ test('check 1: packet-content load detection across rev 5 and rev 4 workflow sta
     }
     pWalk = approved(reviewed(author(pWalk, videoPrompt(pWalk), 'video-engineer')));
     const res = videoResult(pWalk);
-    pWalk = send(pWalk, 'plan', { plan: { provider: 'replicate', operation: 'video', estimatedCostUsd: 0.05, parameters: { prompt: res.prompt } } });
+    pWalk = send(pWalk, 'plan', { plan: { provider: 'replicate', operation: 'video', estimatedCostUsd: 1, parameters: { prompt: res.prompt } } });
     const j = pWalk.jobs.at(-1);
     pWalk = send(pWalk, 'authorize', { jobId: j.id, artifactDigest: j.digest, message: 'ISOLATED human exact spending authorization' });
     pWalk = send(pWalk, 'begin', { jobId: j.id, artifactDigest: j.digest });

@@ -7,7 +7,9 @@ import {digest,File,text,AudioInvestigation} from './contracts.mjs';
 import {verifyFiles,importMedia,narrationWindow} from './media.mjs';
 const exec=promisify(execFile);
 export const AUDIO_EDIT_PROFILE='ffmpeg-narration-ranges-v1';
-export const AudioEditPlan=z.object({kind:z.enum(['pause-shortening','pronunciation-repair']),keepRanges:z.array(z.object({startSeconds:z.number().finite().nonnegative(),endSeconds:z.number().finite().positive()}).strict()).min(1).max(32),reason:text}).strict();
+// glitch-removal is cut-only: removes a stutter, doubled syllable or click inside speech; it cannot fix a misread word. pronunciation-repair stays accepted as a deprecated alias (Nora skill + stored receipts) and normalises to glitch-removal.
+const AudioEditKind=z.enum(['pause-shortening','glitch-removal']);
+export const AudioEditPlan=z.object({kind:z.preprocess(v=>v==='pronunciation-repair'?'glitch-removal':v,AudioEditKind),keepRanges:z.array(z.object({startSeconds:z.number().finite().nonnegative(),endSeconds:z.number().finite().positive()}).strict()).min(1).max(32),reason:text}).strict();
 export const AudioEditReceipt=z.object({beat:z.number().int().min(1).max(4),parentArtifactId:text,parentArtifactDigest:text,sourceFile:File,editedFile:File,outputFile:File,tailSilenceSeconds:z.number().nonnegative(),plan:AudioEditPlan,editDigest:text,receiptPath:text}).strict();
 export function validateEditingInvestigation(task,event){
  const beats=event.blocker?.beats,files=task.artifact?.content.files;
@@ -46,7 +48,7 @@ export function createAudioEditTools({runDir}){
   if(!removedRanges(file,plan).length)throw new Error('AUDIO_EDIT_NO_CHANGE');
   const inspection=await inspectAudio(file);
   if(plan.kind==='pause-shortening'&&removedRanges(file,plan).some(c=>!inspection.pauses.some(p=>c.startSeconds>=p.startSeconds-1e-5&&c.endSeconds<=p.endSeconds+1e-5)))throw new Error('AUDIO_EDIT_SPEECH_CUT_DENIED: pause-only edits must stay within detected low-energy intervals.');
-  if(plan.kind==='pronunciation-repair'&&!task.artifact.review.checks.some(c=>['transcript','delivery'].includes(c.criterion)&&c.status==='fail'))throw new Error('AUDIO_EDIT_PRONUNCIATION_EVIDENCE_REQUIRED');
+  if(plan.kind==='glitch-removal'&&!task.artifact.review.checks.some(c=>['transcript','delivery'].includes(c.criterion)&&c.status==='fail'))throw new Error('AUDIO_EDIT_PRONUNCIATION_EVIDENCE_REQUIRED');
   const descriptor={profile:AUDIO_EDIT_PROFILE,taskId:task.taskId,workerId:worker.workerId,artifactId:task.artifact.id,artifactDigest:task.artifact.digest,sourceSha256:file.sha256,plan};
   const editDigest=digest(descriptor),base=join(runDir,'audio-edits',task.taskId),dir=join(base,editDigest);await mkdir(base,{recursive:true,mode:0o700});await chmod(base,0o700);
   try{const cached=JSON.parse(await readFile(join(dir,'result.json'),'utf8'));if(cached.editDigest!==editDigest||cached.resultDigest!==digest(cached.result))throw new Error('AUDIO_EDIT_RECEIPT_CHANGED');await verifyFiles(cached.result);return AudioEditReceipt.parse(cached.result);}catch(e){if(e.code!=='ENOENT')throw e;}

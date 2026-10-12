@@ -13,13 +13,13 @@ test("Max SKILL.md Muse image estimate matches studio.json configured rate", () 
   const skillText = readFileSync(new URL('../crew/max/SKILL.md', import.meta.url), 'utf8');
   const configuredRate = studioJson.generation.image.metaMuseEstimatedUnitCostUsd ?? studioJson.generation.image.estimatedUnitCostUsd;
 
-  const match = skillText.match(/Meta Muse images[^\n]*\$([0-9.]+)/);
+  const match = skillText.match(/\$([0-9.]+) for meta-muse/);
   assert.ok(match, 'Meta Muse image dollar rate not found in Max SKILL.md');
   const skillRate = Number(match[1]);
   assert.equal(skillRate, configuredRate, `Muse rate in SKILL.md ($${skillRate}) differs from studio.json ($${configuredRate})`);
 
   assert.equal(studioJson.generation.image.agyEstimatedUnitCostUsd, 0, 'agy rate must be $0 in studio.json');
-  assert.match(skillText, /local agy images, cost is \$0\.00/, 'agy $0 rate not found in Max SKILL.md');
+  assert.match(skillText, /\$0 for agy/, 'agy $0 rate not found in Max SKILL.md');
 });
 
 test('agy images cost $0 end to end while meta-muse costs $0.01 per image', () => {
@@ -51,16 +51,10 @@ test("Max SKILL.md provider model ids match studio.json configured models", () =
   const studioJson = JSON.parse(readFileSync(new URL('../studio.json', import.meta.url), 'utf8'));
   const skillText = readFileSync(new URL('../crew/max/SKILL.md', import.meta.url), 'utf8');
 
-  // Verify Cartesia voice model bindings in Max's skill match studio.json
-  const cartesiaModelMatches = [...skillText.matchAll(/"model":\s*"([^"]+)"/g)].map(m => m[1]);
-  assert.ok(cartesiaModelMatches.length > 0, 'No model parameters found in Max SKILL.md');
-  for (const modelId of cartesiaModelMatches) {
-    assert.equal(
-      modelId,
-      studioJson.generation.voice.model,
-      `Provider model in SKILL.md ("${modelId}") differs from studio.json voice model ("${studioJson.generation.voice.model}")`
-    );
-  }
+  // The approved skill carries no model ids: model/cartesiaVersion must equal
+  // the studio's pinned values, so the planner leaves them out.
+  assert.doesNotMatch(skillText, /"model":\s*"/, 'Max SKILL.md must not pin provider model ids');
+  assert.match(skillText, /must equal the studio's pinned values, so leave them out/, 'Max SKILL.md must defer model ids to the studio pinned values');
 
   assert.equal(
     skillText.includes('sonic-preview'),

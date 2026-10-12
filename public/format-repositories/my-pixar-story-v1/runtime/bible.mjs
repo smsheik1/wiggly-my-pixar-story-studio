@@ -147,6 +147,9 @@ export function biblePacket(p, role, gate, artifact) {
 
 // A draft compiled from the project's locked material. Creative summaries that cannot be
 // derived mechanically are marked UNRESOLVED; signing refuses until they are written.
+// LEGACY-ONLY: frozen value for pre-craft snapshots. No new bible/draft path may use it:
+// craft-era snapshots resolve style from pinned craft sections (H-STYLE, L-SETS-DEFAULT)
+// via compileBible/defaultStyle, and a craft snapshot missing them is an error.
 export const LEGACY_DEFAULT_STYLE = {
   look: 'Pixar-style 3D animated feature film: appealing sculpted forms, expressive faces, warm cinematic lighting; never photoreal.',
   sets: 'Real Pixar feature-film sets: lived-in and story-dressed so each place is obviously this character\'s world. Never empty, generic, muted rooms.',

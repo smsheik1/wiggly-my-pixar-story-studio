@@ -16,7 +16,7 @@ function complete(){
  while(p.step!=='soundPlan'){
   p=approved(reviewed(author(p,videoPrompt(p),'video-engineer')));
   const result=videoResult(p);
-  p=send(p,'plan',{plan:{provider:'replicate',operation:'video',estimatedCostUsd:.05,parameters:{prompt:result.prompt}}});
+  p=send(p,'plan',{plan:{provider:'replicate',operation:'video',estimatedCostUsd:1,parameters:{prompt:result.prompt}}});
   assert.equal(p.gate,'authorize');const j=p.jobs.at(-1);
   p=send(p,'authorize',{jobId:j.id,artifactDigest:j.digest,message:'ISOLATED human exact spending authorization'});
   p=send(p,'begin',{jobId:j.id,artifactDigest:j.digest});p=send(p,'receipt',{jobId:j.id,artifactDigest:j.digest,result});
@@ -40,6 +40,6 @@ test('supervised studio reaches completion across every SQLite restart, without 
   assert.ok(s.project.jobs.filter(j=>j.plan.operation==='video').every(j=>j.authorization&&!j.allowanceId));
   assert.equal(current(s.project,'film').digest,current(project,'film').digest);
   assert.notEqual(current(s.project,'film').visualReviewedBy,current(s.project,'film').audioReviewedBy);
-  assert.ok(revisionImpact(s.project,current(s.project,'video:home-0-wide-0').id).remainValid.includes(current(s.project,'video:shop-1-wide-2').id));
+  assert.ok(revisionImpact(s.project,current(s.project,'video:home-0-wide-0').id).remainValid.includes(current(s.project,'video:shop-1-wide-0').id));
  }finally{w.close();await rm(dir,{recursive:true});}
 });

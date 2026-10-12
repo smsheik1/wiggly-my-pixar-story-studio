@@ -302,7 +302,15 @@
       "provider": "replicate",
       "profile": "seedance-mini-480p",
       "model": "seedance-2.0-mini",
-      "resolution": "480p"
+      "resolution": "480p",
+      "rates": {
+        "seedance-2.0-mini@480p": {
+          "usdPerSecond": 0.04,
+          "basis": "Replicate bytedance/seedance-2.0-mini, image-to-video (non_video_in), 480p, per second of output video",
+          "source": "https://replicate.com/bytedance/seedance-2.0-mini",
+          "verifiedAt": "2026-10-11"
+        }
+      }
     },
     "mediaReview": {
       "provider": "gemini",
@@ -312,12 +320,20 @@
     "music": {
       "provider": "elevenlabs",
       "model": "music_v2_5",
-      "enabledByDefault": false
+      "enabledByDefault": false,
+      "usdPerMinute": 0.15,
+      "source": "https://elevenlabs.io/pricing/api",
+      "verifiedAt": "2026-10-11",
+      "basis": "ElevenLabs API Music, $0.15 per minute of generated music; requests are fixed at music_length_ms 60000"
     },
     "effect": {
       "provider": "elevenlabs",
       "model": "eleven_text_to_sound_v2",
-      "enabledByDefault": false
+      "enabledByDefault": false,
+      "usdPerMinute": 0.12,
+      "source": "https://elevenlabs.io/pricing/api",
+      "verifiedAt": "2026-10-11",
+      "basis": "ElevenLabs API Sound Effects, $0.12 per minute of generated audio"
     }
   },
   "limits": {

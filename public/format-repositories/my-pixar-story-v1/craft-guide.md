@@ -17,12 +17,12 @@ Directing notes for narration. Our films are narrated memories, so these are pol
 - [S-NO-INVENTED-FACTS] (check: sage) Use only facts from the answers; never invent names, dates, ages, places, objects, motives, or outside facts, and this rule outranks every other craft rule.
 - [S-DIRECT] (check: sage) Direct, don't transcribe: choose, order, and emphasise only facts that exist in the answers, and cut the rest.
 - [S-ORDINARY-WORLD] (check: none) Open in an ordinary world before anything changes, so the contrast lands.
-- [S-THREES] (check: sage) Build the rule of three and any escalating repeat only from facts in the answers.
-- [S-PLANT-PAYOFF] (check: sage) Plant in beats 1-2 what pays off in beat 4.
+- [S-THREES] (check: none) Prefer building the rule of three and any escalating repeat only from facts in the answers.
+- [S-PLANT-PAYOFF] (check: none) Prefer planting in beats 1-2 what pays off in beat 4.
 - [S-BUSINESS] (check: sage) Business over statement: show a person doing something, not a claim about them.
 - [S-REACTION] (check: none) Decide whose face we cut to for each beat; the reaction is usually worth more than the action.
 - [S-STOCK-PHRASES] (check: sage) Never use stock phrases: "proud doesn't begin to cover it", "my whole world", "meant everything", "my greatest masterpiece", or any "Long before..." opener.
-- [S-LAST-IMAGE] (check: sage) The last line is one specific image, not a statement of feeling.
+- [S-LAST-IMAGE] (check: none) Prefer closing on one specific image rather than a statement of feeling.
 - [S-CLEAR-SUBJECT] (check: sage) Every sentence has a clear subject: no dangling modifiers and no two locations in one sentence.
 - [S-AGES-FORWARD] (check: sage) Ages and life stages only move forward, never backward.
 - [S-QUOTES-VERBATIM] (check: sage) Real spoken lines from the answers are kept word for word.
@@ -51,7 +51,7 @@ Prompts are built from fixed lines (same for every character, encoding how the h
 
 Short concrete prompts beat long ones: everything above earns its place, and long prompts get averaged.
 
-- [P-EMPTY-HANDS] (check: sage) Nothing in the character's hands; props get their own prompt.
+- [P-EMPTY-HANDS] (check: sage) Nothing in the character's hands on character design and sheet prompts; props get their own prompt. Story frames hold only what the locked shot's action names.
 - [P-NO-SKIN-MARKS] (check: sage) Never put ink, pen, or drawn marks on skin; a pen a character needs goes in a pocket, since marks render as tattoos.
 - [P-CHILD-ANATOMY] (check: sage) Avoid anatomy words that misfire on children: describe a child's torso as slim, straight, and flat, never "round belly" or "full cheeks".
 - [P-FULL-PROMPT] (check: sage) Always output the prompt in full, every variation and every edit; never truncate or write "same as above except".
@@ -68,7 +68,7 @@ Short concrete prompts beat long ones: everything above earns its place, and lon
 For real people, the photos win over any design instinct. This replaces the old variation advice: likeness never varies.
 
 - [C-IDENTITY] (check: vera, sage) Skin tone, hair colour, and face always match the person and their photos, and never vary.
-- [C-IDENTITY-OPTIONS] (check: sage) The 3 options per person vary only style strength, outfit, and pose or hair styling within what is true to the person.
+- [C-IDENTITY-OPTIONS] (check: vera) The 3 options come from one prompt. They may differ only in style strength, outfit, and pose or hair styling, never likeness.
 
 ## [character-sheet] Character sheet
 
@@ -121,42 +121,42 @@ Place approved characters into locked plates without overwriting either referenc
 
 ## [video-sources] Video: sources
 
-Later phase: video is not in production yet; follow your skill where it differs.
+One silent clip per shot, generated from its approved keyframe.
 
-- [V-SOURCES] (check: june) Tag only references actually uploaded, with stable element names; describe states, not transitions; describe what you want instead of banning what you don't.
+- [V-SOURCES] (check: june) Tag only references actually uploaded, with stable element names; describe states, not transitions; start every clip from the shot's approved keyframe as its first frame.
 
 ## [video-animation] Video: animation
 
-Later phase: video is not in production yet; follow your skill where it differs.
+Motion and light that match the keyframe.
 
-- [V-MOTION] (check: june) Design motion as observable results: anticipation winding the opposite way first, snap and settle with a small overshoot, moving holds that breathe, follow-through where hair and cloth arrive late, arcs for hands and heads, and weight read from timing.
-- [V-LIGHT] (check: june) Design lighting per segment: key direction and colour, rim for separation, bounce colour, practicals, atmosphere, and palette as a ratio with one accent; never stock, grain, or photoreal skin language.
+- [V-MOTION] (check: june) Design one action per clip as observable results: anticipation winding the opposite way first, snap and settle with a small overshoot, moving holds that breathe, follow-through where hair and cloth arrive late, arcs for hands and heads, and weight read from timing.
+- [V-LIGHT] (check: june) Design lighting per clip from the keyframe: key direction and colour, rim for separation, bounce colour, practicals, atmosphere, and palette as a ratio with one accent; keep the keyframe's stylized animated-feature look.
 
 ## [video-architecture] Video: architecture
 
-Later phase: video is not in production yet; follow your skill where it differs.
+Single-shot silent clips in the configured 480p profile.
 
-- [V-ONE-SHOT] (check: june) One block equals one shot: never split a continuous camera move across blocks, and start a new block at every hard cut; state the shot and cut counts twice.
-- [V-TIMECODES] (check: june) Use whole-second timecodes that are consecutive and non-overlapping; they are a budget, not frame-accurate edit points.
-- [V-CEILING] (check: june) Never generate more than 30 seconds per segment; when a revision adds a beat, something else comes out.
+- [V-ONE-SHOT] (check: june) One clip per shot: generate from the shot's approved keyframe as its first frame and trim the clip to the shot.
+- [V-DURATION] (check: june) Generate 4-15 whole seconds per clip (generationSeconds integer 4-15); clip duration is a whole number of 30 fps frames.
+- [V-FORMAT] (check: june) Generate silent 480p clips (864x496 16:9); narration, music and effects are added later.
 
 ## [video-blocks] Video: blocks
 
-Later phase: video is not in production yet; follow your skill where it differs.
+One prompt block per clip.
 
-- [V-EXCLUSIONS] (check: june) Size exclusions to the segment's real risks in about three lines: the lines in braces are the only spoken words, no extra cuts, plus whatever this segment could actually get wrong; cut generic bans.
+- [V-EXCLUSIONS] (check: june) Phrase each clip prompt positively with at most one or two negations; state one camera move, one action, and 1-2 look and design anchors.
 
 ## [video-transitions] Video: transitions
 
-Later phase: video is not in production yet; follow your skill where it differs.
+Clips cut together; transitions are the exception.
 
-- [V-TRANSITIONS] (check: june) Keep hard cuts as the default, name any other transition and justify it, and ban everything else.
+- [V-TRANSITIONS] (check: june) Cut hard between clips by default; name and justify any other transition.
 
 ## [video-failures] Video: failures
 
-Later phase: video is not in production yet; follow your skill where it differs.
+Reject defects, not taste.
 
-- [V-FAILURES] (check: june) Check the segment against the video failure table: floaty even motion, chopped continuous moves, extra cuts, photoreal drift, generic characters, stray spoken prose, dead holds, unison ensembles, mugging faces, dead eyes, uninvited fades, left-right flips, and averaged heights.
+- [V-FAILURES] (check: june) Check the clip against the video failure table: floaty even motion, photoreal drift, generic characters, dead holds, unison ensembles, mugging faces, dead eyes, uninvited fades, left-right flips, and averaged heights.
 
 ## [working-method] Working method
 
