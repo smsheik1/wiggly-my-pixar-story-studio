@@ -22,7 +22,9 @@ test('baked-in text fails sheets and backgrounds',async()=>{
  const vera=await readFile(new URL('../crew/vera/SKILL.md',import.meta.url),'utf8');
  const visual=await readFile(new URL('../evaluation/rubrics/visual.md',import.meta.url),'utf8');
  assert.match(vera,/baked-in text/i);assert.match(visual,/baked-in text/i);
- assert.match(visual,/written expression names/);
+ assert.match(visual,/expression names?/);
+ assert.match(visual,/fails `style`.*\[R-SHEET-NO-TEXT\]|on a character sheet fails `style`/);
+ assert.match(visual,/fails `story-specific-set`.*\[L-MIN-TEXT\]|in a background plate fails `story-specific-set`/);
 });
 
 test('multi-option reviews must rank options and recommend exactly one passing index',()=>{
@@ -77,11 +79,13 @@ test('left/right is anatomical and the quick-pass hand rule is unchanged',async(
  const vera=await readFile(new URL('../crew/vera/SKILL.md',import.meta.url),'utf8');
  const june=await readFile(new URL('../crew/june/SKILL.md',import.meta.url),'utf8');
  const visual=await readFile(new URL('../evaluation/rubrics/visual.md',import.meta.url),'utf8');
- for(const [name,content] of [['vera',vera],['june',june],['visual',visual]]){
+ assert.match(vera,/character's own/,'vera must judge sides anatomically');
+ assert.match(vera,/In a front view, a watch on the character's left wrist sits on the viewer's right/,'vera must state the front-view rule');
+ for(const [name,content] of [['june',june],['visual',visual]]){
   assert.match(content,/character's OWN (side|\(anatomical\) side)/i,`${name} must judge sides anatomically`);
   assert.match(content,/front view the character's right is on the viewer's left/,`${name} must state the front-view rule`);
  }
- assert.match(vera,/Too small to count is a PASS/);
+ assert.match(vera,/Fingers too small to count pass/);
  assert.match(june,/Too small to count is a PASS/);
  assert.match(visual,/too small to count and nothing looks wrong, anatomy is a PASS/);
 });

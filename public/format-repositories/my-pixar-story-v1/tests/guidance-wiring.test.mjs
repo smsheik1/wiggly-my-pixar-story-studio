@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -219,6 +220,17 @@ test('check 1: packet-content load detection across rev 5 and rev 4 workflow sta
 
   for (const entry of modelFiles) {
     if (readPaths.has(entry.path)) continue;
+
+    // Per-step reviewer guides (crew/<name>/steps/<step>.md) are pinned by
+    // the loader, not pasted into every packet: only the current step's guide
+    // rides along as task.stepGuide. Pinning is asserted here; per-step
+    // packet attachment is asserted in p16-step-guides.test.mjs.
+    if (/^crew\/[^/]+\/steps\/[^/]+\.md$/.test(entry.path)) {
+      const doc = studio.documents[entry.path];
+      assert.ok(doc, `step guide must be pinned for ${entry.path}`);
+      assert.equal(doc.sha256, createHash('sha256').update(doc.content).digest('hex'), `sha256 must match for ${entry.path}`);
+      continue;
+    }
 
     let content = '';
     if (entry.path.startsWith('craft-guide.md#')) {

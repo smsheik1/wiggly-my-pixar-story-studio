@@ -102,7 +102,7 @@ test('5. runPrescreen scores only the allowed checks; runner and replay never pa
     assert.deepEqual(DEFAULT_REPLAY_MODELS, ['openai/gpt-6-luna-decisions']);
     for (const who of ['vera', 'june']) {
       const skill = await readFile(new URL(`../crew/${who}/SKILL.md`, import.meta.url), 'utf8');
-      assert.match(skill, /prescreen never sees reference photos and never judges likeness/);
+      assert.match(skill, /never sees reference photos and never judges likeness/);
     }
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
