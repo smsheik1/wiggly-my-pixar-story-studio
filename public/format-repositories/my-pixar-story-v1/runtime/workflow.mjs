@@ -399,6 +399,7 @@ export function taskFor(p) {
     lockedAnswers:current(p,'answers')??null,
     ...(p.step==='answers'?{questionnaire,sourceInputs:p.inputs,sourceInputDigest:digest(p.inputs),originalInputsRequired:!p.feedback.some(f=>f.key==='answers'&&f.intent&&f.message)}:{}),
     ...(['characterPrompt','candidates','sheetPrompt','sheet'].includes(p.step)?{castEntry:current(p,'roster')?.content.characters.find(c=>c.id===p.characterId)}:{}),
+    ...(p.step==='characterPrompt'&&current(p,'roster')?.content.characters.some(c=>c.id===p.characterId)?{characterDigest:digest(current(p,'roster').content.characters.find(c=>c.id===p.characterId))}:{}),
     approvedScript: current(p, 'script') ?? null, inputPriority: ['characterPrompt','candidates','sheetPrompt','sheet'].includes(p.step)?['approvedScript','castEntry','castEntry.references','inputs.answers']:['immediateScenes', 'approvedScript', 'inputs.answers'],
     ...(p.step==='characterPrompt'?{recipe:sheetWorkflow(p)?recipeFor(p,'sheetPrompt',{content:characterRecipe,sha256:characterRecipeSha256}):recipeFor(p,'characterPrompt',{content:characterPromptRecipe,sha256:characterPromptRecipeSha256})}:{}),
     ...(p.step==='sheetPrompt'?{recipe:recipeFor(p,'sheetPrompt',{content:characterRecipe,sha256:characterRecipeSha256})}:{}),

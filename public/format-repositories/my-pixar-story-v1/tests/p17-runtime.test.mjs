@@ -76,3 +76,33 @@ test('P17 SPEC1: human resolve resumes keyframePrompt author with feedback', T, 
   assert.equal(p.feedback.at(-1).message, 'ISOLATED human confirms the window side.');
 });
 
+// ---- SPEC 5: characterDigest in the characterPrompt packet ----
+
+function characterPromptAuthor() {
+  let p = audioProject();
+  p.artifacts.push({ id: 'roster@1', key: 'roster', kind: 'roster', version: 1, digest: 'r', content: { characters: [{ id: 'alex', name: 'Alex', ageVariant: 'adult', important: true, references: [image(1)], notes: 'ISOLATED photo-bound persona' }] }, dependencies: [], valid: true, authoredBy: 'cast-owner' });
+  p.step = 'roster'; p.gate = 'review';
+  p = approved(reviewed(p));
+  p.step = 'characterPrompt'; p.gate = 'author'; p.characterId = 'alex';
+  return p;
+}
+
+test('P17 SPEC5: packet characterDigest equals the gate-accepted digest and passes binding', T, async () => {
+  const p = characterPromptAuthor();
+  const task = taskFor(p);
+  const cast = current(p, 'roster').content.characters.find(c => c.id === 'alex');
+  assert.equal(task.characterDigest, digest(cast));
+  await prepareCrewTask(p, task);
+  const content = { prompt: 'ISOLATED exact-copy sheet prompt', characterDigest: task.characterDigest, referenceHashes: cast.references.map(f => f.sha256), recipeSha256: task.recipe.sha256 };
+  const q = send(p, 'artifact', { workerId: 'cast-owner', content });
+  assert.equal(q.gate, 'review');
+});
+
+test('P17 SPEC5: a tampered characterDigest still fails CHARACTER_PROMPT_BINDING', T, () => {
+  const p = characterPromptAuthor();
+  const task = taskFor(p);
+  const cast = current(p, 'roster').content.characters.find(c => c.id === 'alex');
+  const content = { prompt: 'ISOLATED exact-copy sheet prompt', characterDigest: '0'.repeat(64), referenceHashes: cast.references.map(f => f.sha256), recipeSha256: task.recipe.sha256 };
+  assert.throws(() => send(p, 'artifact', { workerId: 'cast-owner', content }), /CHARACTER_PROMPT_BINDING_REQUIRED/);
+});
+
