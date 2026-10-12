@@ -137,6 +137,7 @@ export const Plans = z.object({ provider: z.enum(['cartesia', 'meta-muse', 'agy'
 const CreativeDirection=z.object({scope:z.enum(['script','cast']),direction:text,sourceMessages:z.array(text).min(1)}).strict();
 export const AudioInvestigation=z.object({beat:z.number().int().min(1).max(4),sha256:text,inspection:z.object({durationSeconds:z.number().positive(),method:text,pauses:z.array(z.object({startSeconds:z.number().nonnegative(),endSeconds:z.number().nonnegative()}))}),transcription:z.object({transcript:text,method:text,words:z.array(z.object({word:text,start:z.number().nonnegative(),end:z.number().nonnegative()}))})}).strict();
 export const PlanningBlocker=z.object({kind:z.enum(['account-readiness','missing-input','editing-infeasible','plate-conflict','locked-change']),problem:text.max(180),solution:text.max(240),steps:z.array(text.max(240)).min(1).max(5),beats:z.array(z.number().int().min(1).max(4)).min(1).max(4).optional()}).strict();
+export const TranscriptSettlement=z.object({beat:z.number().int().min(1).max(4),artifactId:text,artifactDigest:text,transcript:text,message:text,actor:text,at:text}).strict();
 export const Prescreen=z.object({provider:z.literal('openrouter-decisions'),model:text,servedModel:text,verdict:z.enum(['pass','fail','uncertain']),
  files:z.array(z.object({index:z.number().int().nonnegative(),sha256:text.regex(/^[a-f0-9]{64}$/),verdict:z.enum(['pass','fail','uncertain']),
   checks:z.array(z.object({criterion:text,question:text,probability:z.number().min(0).max(1),status:z.enum(['pass','fail','inconclusive'])})).min(1)})).min(1),
@@ -176,6 +177,7 @@ export const Project = z.object({
   characterId: z.string().nullable(), locationId: z.string().nullable().default(null), angleId: z.string().nullable().default(null), shotId: z.string().nullable().default(null), clipId:z.string().nullable().default(null), effectId:z.string().nullable().default(null), sequence: z.number().int().nonnegative(),
   artifacts: z.array(z.object({ id: text, key: text, kind: text, version: z.number().int().positive(), digest: text,
     content: z.unknown(), dependencies: z.array(text), valid: z.boolean(), authoredBy: text,
+    transcriptSettlement:TranscriptSettlement.optional(),
     resolvedFindings:z.array(z.object({findingDigest:text,resolution:text})).optional(), intakeConfirmation:IntakeConfirmation.optional(), humanReview:Review.optional(), visualReview:Review.optional(),audioReview:Review.optional(),visualReviewedBy:text.optional(),audioReviewedBy:text.optional(), ownerReview: Review.optional(), review: Review.optional(), reviewSequence:z.number().int().optional(), approvedBy: z.object({ message: text, at: text }).optional(), selection: z.number().int().optional(), prescreen: Prescreen.optional(),
     bible: z.object({ version: z.number().int().positive(), hash: text }).strict().optional(),
   })),

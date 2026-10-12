@@ -179,3 +179,88 @@ test('P17 SPEC13: editPlan.audioHolds stays required and is documented as render
   assert.match(Content.editPlan.shape.audioHolds.description, /per-beat review notes on what carries the time after the voice.*not read by the renderer/);
 });
 
+// ---- SPEC 15: settle-transcript for STT mishearings ----
+
+const misheard = beat => (beat === 4 ? 'Nia, now I hold your bicycle steady. Falling is okay. We can try again together.' : script.beats[beat - 1].narration);
+
+function measurementsWith(transcripts) {
+  return { transcripts, speechToTextMethod: 'ISOLATED TEST STT', referenceSha256: file().sha256, speakerSimilarity: 0.9, speakerSimilarityMethod: 'ISOLATED TEST embedding model', speakingRateWpm: [80, 80, 80, 80], silenceSeconds: [0, 0, 0, 0], measurementNotes: 'ISOLATED TEST ONLY: no audio-quality claim.' };
+}
+
+function narrationReview(p, transcripts, decision) {
+  return event(p, 'review', { workerId: 'audio-reviewer', artifactId: current(p).id, artifactDigest: current(p).digest,
+    review: { decision, perception: 'direct-audio',
+      checks: criteria.narration.map(criterion => ({ criterion, status: decision === 'approved' ? 'pass' : criterion === 'transcript' ? 'inconclusive' : 'pass', evidence: 'ISOLATED STT misheard the rare name; operator adjudication pending.', location: 'beat 4', repair: '' })),
+      measurements: measurementsWith(transcripts), modelVersion: 'ISOLATED-audio-v1', capabilityVersion: 'ISOLATED-tools-v1',
+      coverage: { artifactSha256: current(p).content.files[0].sha256, audioFiles: current(p).content.files.map(f => ({ sha256: f.sha256, seconds: f.durationSeconds })) } } });
+}
+
+function narrationAtReview() {
+  let p = audioProject();
+  const a = current(p, 'narration');
+  delete a.approvedBy; delete a.review;
+  return { ...p, step: 'narration', gate: 'review' };
+}
+
+test('P17 SPEC15: a misheard take is stored inconclusive but cannot be approved without settlement', T, () => {
+  const p = narrationAtReview();
+  const stored = applyEvent(p, narrationReview(p, [1, 2, 3, 4].map(misheard), 'inconclusive'));
+  assert.equal(stored.gate, 'escalate');
+  assert.throws(() => applyEvent(p, narrationReview(p, [1, 2, 3, 4].map(misheard), 'approved')), /Speech-to-text differs from the locked script/);
+});
+
+test('P17 SPEC15: settle-transcript records the beat, artifact binding, exact STT text and human message', T, () => {
+  const base = narrationAtReview();
+  const p = applyEvent(base, narrationReview(base, [1, 2, 3, 4].map(misheard), 'inconclusive'));
+  const a = current(p);
+  const settled = applyEvent(p, event(p, 'settle-transcript', { actor: 'human', beat: 4, message: 'ISOLATED operator heard Mia on the stem.' }));
+  assert.deepEqual(current(settled).transcriptSettlement, { beat: 4, artifactId: a.id, artifactDigest: a.digest, transcript: misheard(4), message: 'ISOLATED operator heard Mia on the stem.', actor: 'human', at: current(settled).transcriptSettlement.at });
+  assert.equal(settled.history.at(-1).action, 'settle-transcript');
+  assert.equal(settled.history.at(-1).message, 'ISOLATED operator heard Mia on the stem.');
+});
+
+test('P17 SPEC15: after settlement the same take is re-reviewed, human-approved and locked', T, () => {
+  const base = narrationAtReview();
+  let p = applyEvent(base, narrationReview(base, [1, 2, 3, 4].map(misheard), 'inconclusive'));
+  p = applyEvent(p, event(p, 'settle-transcript', { actor: 'human', beat: 4, message: 'ISOLATED operator heard Mia on the stem.' }));
+  p = applyEvent(p, event(p, 'resolve', { actor: 'human', message: 'ISOLATED accept the settled take for re-review.' }));
+  assert.equal(p.gate, 'review');
+  p = applyEvent(p, narrationReview(p, [1, 2, 3, 4].map(misheard), 'approved'));
+  assert.equal(p.gate, 'human');
+  const a = current(p);
+  p = applyEvent(p, event(p, 'approve', { actor: 'human', artifactId: a.id, artifactDigest: a.digest, message: 'ISOLATED human confirms the settled narration.' }));
+  assert.ok(current(p, 'narration').approvedBy);
+});
+
+test('P17 SPEC15: settlement does not carry to a new artifact', T, () => {
+  let p = narrationAtReview();
+  p = applyEvent(p, narrationReview(p, [1, 2, 3, 4].map(misheard), 'inconclusive'));
+  p = applyEvent(p, event(p, 'settle-transcript', { actor: 'human', beat: 4, message: 'ISOLATED operator heard Mia.' }));
+  let q = narrationAtReview();
+  q.artifacts.find(x => x.key === 'narration').content.files[3] = file(14);
+  q.artifacts.find(x => x.key === 'narration').digest = digest(q.artifacts.find(x => x.key === 'narration').content);
+  assert.notEqual(current(q, 'narration').digest, current(p, 'narration').digest);
+  assert.throws(() => applyEvent(q, narrationReview(q, [1, 2, 3, 4].map(misheard), 'approved')), /Speech-to-text differs from the locked script/);
+});
+
+test('P17 SPEC15: settlement does not cover a different transcript text on the same artifact', T, () => {
+  const base = narrationAtReview();
+  let p = applyEvent(base, narrationReview(base, [1, 2, 3, 4].map(misheard), 'inconclusive'));
+  p = applyEvent(p, event(p, 'settle-transcript', { actor: 'human', beat: 4, message: 'ISOLATED operator heard Mia.' }));
+  p = applyEvent(p, event(p, 'resolve', { actor: 'human', message: 'ISOLATED re-review with fresh STT.' }));
+  const other = [1, 2, 3].map(misheard).concat(['Mia, now I hold your bicycle. Falling is okay. We can try again together.']);
+  assert.throws(() => applyEvent(p, narrationReview(p, other, 'approved')), /Speech-to-text differs from the locked script/);
+});
+
+test('P17 SPEC15: settle-transcript rejects non-human actors, wrong steps, missing messages and matching transcripts', T, () => {
+  const base = narrationAtReview();
+  const p = applyEvent(base, narrationReview(base, [1, 2, 3, 4].map(misheard), 'inconclusive'));
+  assert.throws(() => applyEvent(p, event(p, 'settle-transcript', { beat: 4, message: 'ISOLATED agent attempt.' })), /authority/);
+  const elsewhere = { ...p, step: 'script' };
+  assert.throws(() => applyEvent(elsewhere, event(elsewhere, 'settle-transcript', { actor: 'human', beat: 4, message: 'ISOLATED wrong step.' })), /TRANSCRIPT_SETTLEMENT_STEP/);
+  assert.throws(() => applyEvent(p, event(p, 'settle-transcript', { actor: 'human', beat: 4 })), /--beat/);
+  const fresh = narrationAtReview();
+  assert.throws(() => applyEvent(fresh, event(fresh, 'settle-transcript', { actor: 'human', beat: 1, message: 'ISOLATED no stored review.' })), /TRANSCRIPT_SETTLEMENT_SCOPE/);
+  const matched = applyEvent(fresh, narrationReview(fresh, script.beats.map(b => b.narration), 'inconclusive'));
+  assert.throws(() => applyEvent(matched, event(matched, 'settle-transcript', { actor: 'human', beat: 1, message: 'ISOLATED already matches.' })), /TRANSCRIPT_SETTLEMENT_NOT_NEEDED/);
+});

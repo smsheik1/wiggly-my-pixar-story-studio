@@ -617,6 +617,19 @@ export function applyEvent(project, raw) {
     config.agents['voice-director'].tools=[...new Set([...config.agents['voice-director'].tools,'listenAudio','transcribe','inspectAudio','renderAudioEdit'])];
     for(const path of ['crew/nora/SKILL.md','crew/ava/SKILL.md','evaluation/rubrics/audio.md'])documents[path]=next.documents[path];
     p.studio={config,documents,sha256:digest({config,documents})};p.gate='author';if(p.debug?.enabled)p.debug.paused=true;
+  }else if(e.action==='settle-transcript'){
+    requiredActor(e,'human');
+    const a=current(p);
+    if(!e.message||e.beat===undefined)throw new Error('settle-transcript needs --beat <1-4> and --message "<what the human heard>".');
+    if(p.step!=='narration')throw new Error('TRANSCRIPT_SETTLEMENT_STEP: settle a speech-to-text mishearing only on narration.');
+    if(!a||a.approvedBy)throw new Error('TRANSCRIPT_SETTLEMENT_SCOPE: settle only the current unapproved narration artifact.');
+    const stored=a.review?.measurements?.transcripts?.[e.beat-1];
+    if(typeof stored!=='string')throw new Error('TRANSCRIPT_SETTLEMENT_SCOPE: the stored review has no measured transcript for that beat.');
+    const lockedText=a.content.audioRegenerations?.find(x=>x.beat===e.beat)?.spokenText??current(p,'script').content.beats[e.beat-1].narration;
+    if(!transcriptDiff(lockedText,stored).editDistance)throw new Error('TRANSCRIPT_SETTLEMENT_NOT_NEEDED: the stored transcript already matches the locked text.');
+    if(a.transcriptSettlement?.artifactId===a.id)throw new Error('TRANSCRIPT_ALREADY_SETTLED: this take already carries a human transcript settlement.');
+    a.transcriptSettlement={beat:e.beat,artifactId:a.id,artifactDigest:a.digest,transcript:stored,message:e.message,actor:e.actor,at:new Date().toISOString()};
+    p.feedback.push({key:'narration',message:e.message});
   }else if(e.action==='refresh-audio-instructions'){
     requiredActor(e,'human');if(!e.message||!p.studio||!['voiceSample','clone','audition'].includes(p.step)||p.jobs.length||p.artifacts.some(a=>a.approvedBy&&['audition','narration'].includes(a.kind)))throw new Error('AUDIO_REFRESH_LOCKED: refresh voice-review instructions explicitly before provider work or audio approval.');
     const next=loadStudio(),allowed=['crew/ava/SKILL.md','evaluation/rubrics/audio.md'];
@@ -795,7 +808,8 @@ export function applyEvent(project, raw) {
       if (a.content.files.some(f => f.durationSeconds > 15)) throw new Error('Overlong narration cannot be approved; return the affected text to the writer, never accelerate it.');
       const m = r.measurements,basis=voiceBasis(p);
       if (!m || !m.speechToTextMethod || (!supervised(p)&&(!m.speakerSimilarityMethod || m.speakerSimilarity === undefined)) || !m.measurementNotes || basis.kind==='unavailable' || (basis.kind==='recorded-reference'&&m.referenceSha256!==basis.referenceSha256) || m.transcripts?.length !== a.content.files.length || m.speakingRateWpm?.length !== a.content.files.length || m.silenceSeconds?.length !== a.content.files.length) throw new Error('Audio review requires transcript, speaking-rate/silence measurements, notes and truthful identity evidence for the current voice basis.');
-      if (m.transcripts.some((t, i) => transcriptDiff(a.content.audioRegenerations?.find(x=>x.beat===i+1)?.spokenText??current(p, 'script').content.beats[i].narration,t).editDistance)) throw new Error('Speech-to-text differs from the locked script.');
+      const settled=(t,i)=>{const s=a.transcriptSettlement;return s&&s.beat===i+1&&s.artifactId===a.id&&s.artifactDigest===a.digest&&s.transcript===t;};
+      if (m.transcripts.some((t, i) => !settled(t,i)&&transcriptDiff(a.content.audioRegenerations?.find(x=>x.beat===i+1)?.spokenText??current(p, 'script').content.beats[i].narration,t).editDistance)) throw new Error('Speech-to-text differs from the locked script.');
     }
     if(p.step==='film'){if(filmAudio){a.audioReview=structuredClone(r);a.audioReviewedBy=e.workerId;}else{a.visualReview=r;a.visualReviewedBy=e.workerId;if(reviewPassed(r)){if(p.debug?.enabled)p.debug.paused=true;p.sequence++;p.history.push({sequence:p.sequence,action:'review',actor:e.actor,...activity,message:'Visual film review passed; awaiting independent audio review.',at:new Date().toISOString()});return Project.parse(p);}}if(filmAudio&&reviewPassed(r)){r.perception='direct-audiovisual';r.checks=criteria.film.map(c=>r.checks.find(x=>x.criterion===c)??a.visualReview.checks.find(x=>x.criterion===c));}}
     if (ownerReview) a.ownerReview = r;
