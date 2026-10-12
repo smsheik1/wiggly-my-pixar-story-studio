@@ -214,7 +214,7 @@ test('P17 SPEC15: settle-transcript records the beat, artifact binding, exact ST
   const p = applyEvent(base, narrationReview(base, [1, 2, 3, 4].map(misheard), 'inconclusive'));
   const a = current(p);
   const settled = applyEvent(p, event(p, 'settle-transcript', { actor: 'human', beat: 4, message: 'ISOLATED operator heard Mia on the stem.' }));
-  assert.deepEqual(current(settled).transcriptSettlement, { beat: 4, artifactId: a.id, artifactDigest: a.digest, transcript: misheard(4), message: 'ISOLATED operator heard Mia on the stem.', actor: 'human', at: current(settled).transcriptSettlement.at });
+  assert.deepEqual(current(settled).transcriptSettlements, [{ beat: 4, artifactId: a.id, artifactDigest: a.digest, transcript: misheard(4), message: 'ISOLATED operator heard Mia on the stem.', actor: 'human', at: current(settled).transcriptSettlements[0].at }]);
   assert.equal(settled.history.at(-1).action, 'settle-transcript');
   assert.equal(settled.history.at(-1).message, 'ISOLATED operator heard Mia on the stem.');
 });
@@ -263,4 +263,19 @@ test('P17 SPEC15: settle-transcript rejects non-human actors, wrong steps, missi
   assert.throws(() => applyEvent(fresh, event(fresh, 'settle-transcript', { actor: 'human', beat: 1, message: 'ISOLATED no stored review.' })), /TRANSCRIPT_SETTLEMENT_SCOPE/);
   const matched = applyEvent(fresh, narrationReview(fresh, script.beats.map(b => b.narration), 'inconclusive'));
   assert.throws(() => applyEvent(matched, event(matched, 'settle-transcript', { actor: 'human', beat: 1, message: 'ISOLATED already matches.' })), /TRANSCRIPT_SETTLEMENT_NOT_NEEDED/);
+});
+
+test('P17 SPEC15: two misheard beats on one take can each be settled once, and both must be settled to pass', T, () => {
+  const heard = beat => (beat === 1 ? script.beats[0].narration.replace(/\b\w+\b/, 'Zzyzx') : misheard(beat));
+  const base = narrationAtReview();
+  let p = applyEvent(base, narrationReview(base, [1, 2, 3, 4].map(heard), 'inconclusive'));
+  p = applyEvent(p, event(p, 'settle-transcript', { actor: 'human', beat: 4, message: 'ISOLATED operator heard Mia on beat 4.' }));
+  assert.throws(() => applyEvent(p, event(p, 'settle-transcript', { actor: 'human', beat: 4, message: 'ISOLATED again.' })), /TRANSCRIPT_ALREADY_SETTLED/);
+  let one = applyEvent(p, event(p, 'resolve', { actor: 'human', message: 'ISOLATED re-review.' }));
+  assert.throws(() => applyEvent(one, narrationReview(one, [1, 2, 3, 4].map(heard), 'approved')), /Speech-to-text differs from the locked script/);
+  p = applyEvent(p, event(p, 'settle-transcript', { actor: 'human', beat: 1, message: 'ISOLATED operator heard the first word correctly on beat 1.' }));
+  assert.deepEqual(current(p).transcriptSettlements.map(s => s.beat), [4, 1]);
+  p = applyEvent(p, event(p, 'resolve', { actor: 'human', message: 'ISOLATED re-review both settled.' }));
+  p = applyEvent(p, narrationReview(p, [1, 2, 3, 4].map(heard), 'approved'));
+  assert.equal(p.gate, 'human');
 });
