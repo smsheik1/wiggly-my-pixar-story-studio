@@ -20,7 +20,7 @@ test('unqualified visual reviewer blocks video; reports cannot be self-certified
  assert.throws(()=>requireVisualQualification({...qualification,metrics:qualification.metrics.map(m=>({...m,errors:1}))},'video'),/Incomplete/);
 });
 test('video plan covers 60s with short clips; binds actual approved frame and positive spending estimate',()=>{
- let p=planLocked();const a=current(p,'videoPlan');assert.equal(a.content.clips.length,12);
+ let p=planLocked();const a=current(p,'videoPlan');assert.equal(a.content.clips.length,4);
  assert.throws(()=>author(p,{...videoPrompt(p),keyframeSha256:'wrong'}),/exact approved/);
  p=videoReady(p);const f=videoResult(p);
  assert.throws(()=>send(p,'plan',{plan:{provider:'replicate',operation:'video',estimatedCostUsd:0,parameters:{prompt:f.prompt}}}),/positive cost/);
@@ -38,10 +38,10 @@ test('qualified reviewer must see entire video; extra hand returns to prompt eng
 test('automatic video repairs require bounded user allowance and real technical rejection; creative changes cannot use it',()=>{
  let p=videoReady();p=send(p,'allowance',{allowance:{operations:['video'],repairOf:`video:${p.clipId}`,maxRequests:1,maxCostUsd:1},message:'ISOLATED allow one evidenced repair'});
  p=produce(p,videoResult(p));p=videoReady(reviewed(p,'rejected'),true);
- p=send(p,'plan',{plan:{provider:'replicate',operation:'video',estimatedCostUsd:.5,parameters:{prompt:videoResult(p).prompt}}});assert.equal(p.gate,'collect');assert.equal(p.jobs.at(-1).allowanceId,'allowance-1');
+ p=send(p,'plan',{plan:{provider:'replicate',operation:'video',estimatedCostUsd:1,parameters:{prompt:videoResult(p).prompt}}});assert.equal(p.gate,'collect');assert.equal(p.jobs.at(-1).allowanceId,'allowance-1');
  let other=videoReady();other=send(other,'allowance',{allowance:{operations:['video'],repairOf:`video:${other.clipId}`,maxRequests:2,maxCostUsd:10},message:'ISOLATED allow repairs'});
  other=approved(reviewed(produce(other,videoResult(other))));const first=current(other,'video:home-0-wide-0');other=send(other,'changes',{artifactId:first.id,artifactDigest:first.digest,message:'Make this a different camera move.'});
- other=videoReady(other,true);other=send(other,'plan',{plan:{provider:'replicate',operation:'video',estimatedCostUsd:.5,parameters:{prompt:videoResult(other).prompt}}});assert.equal(other.gate,'authorize');
+ other=videoReady(other,true);other=send(other,'plan',{plan:{provider:'replicate',operation:'video',estimatedCostUsd:1,parameters:{prompt:videoResult(other).prompt}}});assert.equal(other.gate,'authorize');
 });
 test('repeated video defects escalate and generation cap survives prompt revisions',()=>{
  let p=reviewed(produce(videoReady(),videoResult(videoReady())),'rejected');p=videoReady(p,true);p=reviewed(produce(p,videoResult(p)),'rejected');assert.equal(p.gate,'escalate');
@@ -51,12 +51,12 @@ test('repeated video defects escalate and generation cap survives prompt revisio
 test('sound stages review imports, require provenance, and preserve unrelated assets on a clip change',()=>{
  const p=soundLocked();assert.equal(p.step,'editPlan');assertAllowed(p,'editPlan');
  const clip=current(p,'video:home-0-wide-0'),impact=revisionImpact(p,clip.id);
- assert.ok(impact.remainValid.includes(current(p,'music').id));assert.ok(impact.remainValid.includes(current(p,'effect:bell').id));assert.ok(impact.remainValid.includes(current(p,'reviewerQualification').id));assert.ok(impact.remainValid.includes(current(p,'video:shop-1-wide-2').id));
+ assert.ok(impact.remainValid.includes(current(p,'music').id));assert.ok(impact.remainValid.includes(current(p,'effect:bell').id));assert.ok(impact.remainValid.includes(current(p,'reviewerQualification').id));assert.ok(impact.remainValid.includes(current(p,'video:shop-1-wide-0').id));
  const changed=send(p,'changes',{artifactId:current(p,'music').id,artifactDigest:current(p,'music').digest,message:'Use a different licensed score.'});assert.equal(changed.step,'music');assert.equal(changed.gate,'author');
 });
 test('assembly preserves four natural-rate stems, trims clips, ducks piano and records all assets',()=>{
  const p=renderReady(),m=assemblyManifest(p),args=audioMixArgs(m,'/isolated/film.mp4'),f=args[args.indexOf('-filter_complex')+1];
- assert.equal(m.clips.length,12);assert.deepEqual(m.narration.map(a=>a.durationSeconds),[12,12,12,12]);
+ assert.equal(m.clips.length,4);assert.deepEqual(m.narration.map(a=>a.durationSeconds),[12,12,12,12]);
  for(const delay of [0,15000,30000,45000])assert.ok(f.includes(`adelay=${delay}|${delay}`));assert.ok(f.includes('sidechaincompress'));assert.ok(f.includes('loudnorm=I=-16'));
  assert.doesNotMatch(f,/atempo|rubberband/);assert.doesNotMatch(f,/concat=|\[video\]|fps=|scale=/);assertFilmInspection({...inspection,freezeSeconds:8});
  for(const bad of [{durationSeconds:59},{integratedLufs:-5},{truePeakDb:0},{hasAudio:false},{blackSeconds:5}])assert.throws(()=>assertFilmInspection({...inspection,...bad}),/FINAL_TECHNICAL_GATE/);
@@ -80,8 +80,8 @@ test('generated sound receipts traverse the graph with exact saved prompt and va
  assert.equal(p.step,'effect');p=approved(reviewed(produce(p,{files:[audio('b',1)],prompt:plan.effects[0].prompt,provenance:plan.effects[0].provenance})));assert.equal(p.step,'editPlan');
 });
 test('a film mix rejection reopens edit with evidence; a source defect reopens only its own video prompt',()=>{
- let p=rendered(),film=current(p),edit=current(p,'editPlan');p=reviewed(p,'rejected');assert.equal(p.step,'editPlan');assert.equal(p.gate,'author');assert.equal(current(p,'film'),undefined);assert.equal(current(p,'editPlan'),undefined);assert.ok(taskFor(p).feedback[0].message.includes('repair'));assert.ok(current(p,'video:shop-1-wide-2'));
- p=rendered();const video=current(p,'video:home-0-wide-0');p=reviewed(p,'rejected',{repairArtifactId:video.id});assert.equal(p.step,'videoPrompt');assert.equal(p.clipId,'home-0-wide-0');assert.equal(current(p,'video:home-0-wide-0'),undefined);assert.ok(current(p,'video:shop-1-wide-2'));assert.ok(current(p,'music'));
+ let p=rendered(),film=current(p),edit=current(p,'editPlan');p=reviewed(p,'rejected');assert.equal(p.step,'editPlan');assert.equal(p.gate,'author');assert.equal(current(p,'film'),undefined);assert.equal(current(p,'editPlan'),undefined);assert.ok(taskFor(p).feedback[0].message.includes('repair'));assert.ok(current(p,'video:shop-1-wide-0'));
+ p=rendered();const video=current(p,'video:home-0-wide-0');p=reviewed(p,'rejected',{repairArtifactId:video.id});assert.equal(p.step,'videoPrompt');assert.equal(p.clipId,'home-0-wide-0');assert.equal(current(p,'video:home-0-wide-0'),undefined);assert.ok(current(p,'video:shop-1-wide-0'));assert.ok(current(p,'music'));
  const broken=rendered();assert.throws(()=>reviewed(broken,'rejected',{repairArtifactId:current(broken,'reviewerQualification').id}),/current component/);
 });
 test('an imported sound defect returns to import author, never the generated-sound provider',()=>{
@@ -90,7 +90,7 @@ test('an imported sound defect returns to import author, never the generated-sou
 
 test('human film feedback reopens its editor; narration-source repair pauses for broad dependency impact',()=>{
  let p=approved(reviewed(rendered()));const film=current(p,'film');p=send(p,'changes',{artifactId:film.id,artifactDigest:film.digest,message:'Lower the piano in this final film.'});assert.equal(p.step,'editPlan');assert.equal(p.gate,'author');assert.equal(current(p,'film'),undefined);
- p=rendered();const narration=current(p,'narration');p=reviewed(p,'rejected',{repairArtifactId:narration.id});assert.equal(p.step,'film');assert.equal(p.gate,'escalate');assert.ok(current(p,'video:shop-1-wide-2'));assert.ok(taskFor(p).feedback.some(f=>f.message.includes('downstream')));p=send(p,'resolve',{message:'ISOLATED confirm source narration repair and its dependency impact.'});assert.equal(p.step,'narration');assert.equal(p.gate,'produce');assert.ok(current(p,'script'));assert.ok(current(p,'clone'));
+ p=rendered();const narration=current(p,'narration');p=reviewed(p,'rejected',{repairArtifactId:narration.id});assert.equal(p.step,'film');assert.equal(p.gate,'escalate');assert.ok(current(p,'video:shop-1-wide-0'));assert.ok(taskFor(p).feedback.some(f=>f.message.includes('downstream')));p=send(p,'resolve',{message:'ISOLATED confirm source narration repair and its dependency impact.'});assert.equal(p.step,'narration');assert.equal(p.gate,'produce');assert.ok(current(p,'script'));assert.ok(current(p,'clone'));
 });
 
 test('film approval binds concrete renderer inventory; older renderer manifests cannot advance',()=>{
