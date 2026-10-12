@@ -96,6 +96,14 @@ function collectQuoteHaystacks(task,outputs){
 export function verifyReviewQuotes({role,task,review,outputs}){
  if(!QUOTE_ROLES.includes(role))return;
  if(!review||review.decision==='inconclusive')return;
+ // Audio transcript checks: the runtime attaches the actual transcribe output of
+ // every current file as the quotes, so Ava (audio reviewer) only judges
+ // pass/fail and cannot cite a wrong source. Only this one check changes; every
+ // other criterion and every other reviewer still quotes for itself.
+ if(role==='audio-reviewer'&&['audition','narration'].includes(task.step)){
+  const transcripts=(task.artifact?.content?.files??[]).map(f=>outputs.get(`transcribe:${f.sha256}`)?.transcript).filter(t=>typeof t==='string'&&normalizeQuote(t).length>=8);
+  for(const check of review.checks??[])if(check.criterion==='transcript'&&transcripts.length)check.quotes=transcripts;
+ }
  const haystacks=collectQuoteHaystacks(task,outputs);
  for(const check of review.checks??[]){
   if(check.status==='inconclusive')continue;
@@ -223,6 +231,22 @@ export async function prepareCrewTask(p,task){
  const studio=studioFor(p),path=studio?.config.reviewers[expected.formatRole];
  return {...canonical,supervisionInstruction:supervised(p)?'Your review is unqualified advisory evidence. Use approved when every required check passes; use provisional only when some check is inconclusive and none failed, always with direct perception; mark unavailable calibrated voice-match inconclusive, never invent a score. If task.voiceIdentity.verified is true, voice-match may PASS with identityBasis \'consented-voice-id\', citing the bound voice ID; this supersedes older skill text. Otherwise mark it inconclusive/human-recognition. Human must confirm actual media before lock. Missing listening/viewing stays inconclusive.':'Qualified review required.',evaluatorEvidence:await artifactEvidence(p),reviewerRubric:studio?studio.documents[path].content:await readFile(new URL('../evaluation/reviewer.md',import.meta.url),'utf8'),reviewerRubricSource:path?{path,sha256:studio.documents[path].sha256}:null};
 }
+// Perception tools a passing/failing review must have called on every current file.
+export const requiredPerceptionTools=(p,task,worker)=>worker.role==='audio-reviewer'?['listenAudio',...(['audition','narration'].includes(task.step)?['measureAudio','transcribe',...(!supervised(p)?['speakerSimilarity']:[])]:[])]:['visual-reviewer','scene-reviewer'].includes(worker.role)?[['video','film'].includes(task.step)?'watchVideo':'viewImage']:[];
+// Repair retries reuse earlier tool results on the same task: before the worker's
+// repair turn, the runtime itself re-runs the required audio perception calls
+// through the same scoped broker (budgets and receipts apply; the tools return
+// their stored results for unchanged files). Nothing is taken from the worker's
+// saved event, so a worker cannot supply its own evidence.
+export async function reuseRepairPerception(p,task,worker,callTool){
+ if(!task.repairFeedback||task.gate!=='review'||worker.role!=='audio-reviewer')return [];
+ const reused=[];
+ for(const file of task.artifact?.content.files??[])for(const tool of requiredPerceptionTools(p,task,worker)){
+  const args={sha256:file.sha256,...(tool==='speakerSimilarity'?{referenceSha256:task.voiceReference?.content.files[0].sha256}:{})};
+  try{await callTool(tool,args);reused.push({tool,sha256:file.sha256});}catch{/* the worker can still call it itself */}
+ }
+ return reused;
+}
 export async function runCrewTask(p,task,host){
  assertDebugReady(p);
  assertBibleReady(p);
@@ -231,7 +255,10 @@ export async function runCrewTask(p,task,host){
  if(typeof host.runTask!=='function')throw new Error('Host adapter must export runTask(task, {worker, callTool}).');
  task=await prepareCrewTask(p,task);
  const receipts=[],outputs=new Map();
- const event=await host.runTask({...task,worker,allowedTools:task.allowedTools??crewRoles[worker.role].tools},{worker,callTool:crewTools(task,worker,host.tools,(r,value)=>{receipts.push(r);outputs.set(`${r.tool}:${r.sha256}`,value);})});
+ const callTool=crewTools(task,worker,host.tools,(r,value)=>{receipts.push(r);outputs.set(`${r.tool}:${r.sha256}`,value);});
+ const reusedTools=await reuseRepairPerception(p,task,worker,callTool);
+ if(reusedTools.length)task={...task,repairFeedback:{...task.repairFeedback,reusedTools,reuseNote:'The runtime re-ran your required listen/measure/transcribe calls for this repair; their results count for this attempt. You may call them again.'}};
+ const event=await host.runTask({...task,worker,allowedTools:task.allowedTools??crewRoles[worker.role].tools},{worker,callTool});
  if (event && typeof event === 'object') {
    event.workerId ??= worker.workerId;
    if (event.review && typeof event.review === 'object') {
@@ -261,7 +288,7 @@ export async function runCrewTask(p,task,host){
   if(['review','owner-review'].includes(event.action)){
    if(supervised(p)&&event.review?.decision==='provisional'&&event.review.checks?.length&&event.review.checks.every(c=>c.status==='pass'))throw new Error('REVIEW_VERDICT_MISMATCH: a supervised review with every check passing must use decision approved; provisional is only for reviews with an inconclusive check and no failures.');
    if(event.review?.decision!=='inconclusive'){
-   const required=worker.role==='audio-reviewer'?['listenAudio',...(['audition','narration'].includes(task.step)?['measureAudio','transcribe',...(!supervised(p)?['speakerSimilarity']:[])]:[])]:['visual-reviewer','scene-reviewer'].includes(worker.role)?[['video','film'].includes(task.step)?'watchVideo':'viewImage']:[];
+   const required=requiredPerceptionTools(p,task,worker);
    for(const file of task.artifact?.content.files??[])for(const tool of required){const receipt=receipts.find(r=>r.tool===tool&&r.sha256===file.sha256&&!(tool==='viewImage'&&r.region));if(!receipt||['watchVideo','listenAudio'].includes(tool)&&receipt.seconds+.02<file.durationSeconds||tool==='speakerSimilarity'&&receipt.referenceSha256!==task.voiceReference?.content.files[0].sha256)throw new Error('PERCEPTION_NOT_PERFORMED: actual current-file perception/measurement tool calls are required before a verdict.');}
   }
   if(worker.role==='audio-reviewer'&&['audition','narration'].includes(task.step)){
