@@ -46,7 +46,7 @@ test('Codex bridge uses the explicitly selected model, real role threads and sco
   const payload=JSON.parse(mock.requests.findLast(r=>r.method==='turn/start').params.input[0].text);
   const quotes=payload.contentSchema.properties.beats.items.properties.directQuotes;assert.equal(quotes.type,'array');assert.ok(quotes.items.properties.sourceAnswer.enum.includes('scene1Childhood'));assert.ok(quotes.items.properties.sourceField);
   assert.match(payload.instruction,/savedTools describe HISTORICAL attempts/);assert.match(payload.instruction,/Never return runtime provider-error events/);assert.match(payload.instruction,/Allowed action is review/);assert.match(payload.instruction,/exact saved plan/);assert.match(payload.instruction,/does not create another draft/);
-  assert.equal(payload.task.studioConfig.writingPolicy,'grounded-v1');assert.match(payload.task.skill.content,/Direct quotations keep the selected source words exactly/);
+  assert.equal(payload.task.studioConfig.writingPolicy,'grounded-v1');assert.match(payload.task.skill.content,/has one `directQuotes` entry/);
   const start=mock.requests.find(r=>r.method==='thread/start');assert.equal(start.params.allowProviderModelFallback,false);assert.equal(start.params.sandbox,'read-only');assert.equal(start.params.dynamicTools[0].name,'wiggly_tool');
   const editSchema=start.params.dynamicTools[0].inputSchema.properties.edit.anyOf[0];assert.equal(editSchema.properties.keepRanges.items.properties.startSeconds.type,'number');assert.equal(editSchema.additionalProperties,false);
   const flags=mock.launches[0].args;
@@ -165,7 +165,7 @@ test('driver dispatches Max to plan an existing-clone audition and stops before 
  const dir=await mkdtemp(join(tmpdir(),'memoir-planner-drive-'));let p=existingClonePlanFixture(),calls=0;
  const workflow={status:async()=>({project:p,pending:taskFor(p)}),respond:async(_id,e)=>{p=applyEvent(p,e);return workflow.status();}};
  const host={runTask:async(task,{worker,callTool})=>{calls++;assert.equal(worker.role,'generation-planner');assert.equal(task.voiceBasis.kind,'existing-clone');assert.equal(task.voiceReference,null);
-  assert.ok(task.generationEstimate.estimatedCostUsd>0);assert.equal(task.generationEstimate.source,'https://cartesia.ai/pricing');assert.match(task.instruction,/zero project budget do not block PLANNING/);assert.match(task.skill.content,/Unknown account credits.*not planning blockers/);
+   assert.ok(task.generationEstimate.estimatedCostUsd>0);assert.equal(task.generationEstimate.source,'https://cartesia.ai/pricing');assert.match(task.instruction,/zero project budget do not block PLANNING/);assert.match(task.skill.content,/never stop you from returning a plan/);
   await assert.rejects(callTool('generateAudio',{}),/TOOL_PERMISSION_DENIED/);
   return {taskId:task.taskId,actor:'agent',workerId:worker.workerId,action:'plan',plan:{provider:'cartesia',operation:'audition',estimatedCostUsd:.05,parameters:{}}};}};
  try{

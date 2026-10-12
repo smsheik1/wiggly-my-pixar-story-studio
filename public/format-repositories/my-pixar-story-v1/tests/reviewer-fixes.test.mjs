@@ -79,13 +79,13 @@ test('left/right is anatomical and the quick-pass hand rule is unchanged',async(
  const vera=await readFile(new URL('../crew/vera/SKILL.md',import.meta.url),'utf8');
  const june=await readFile(new URL('../crew/june/SKILL.md',import.meta.url),'utf8');
  const visual=await readFile(new URL('../evaluation/rubrics/visual.md',import.meta.url),'utf8');
- assert.match(vera,/character's own/,'vera must judge sides anatomically');
- assert.match(vera,/In a front view, a watch on the character's left wrist sits on the viewer's right/,'vera must state the front-view rule');
- for(const [name,content] of [['june',june],['visual',visual]]){
-  assert.match(content,/character's OWN (side|\(anatomical\) side)/i,`${name} must judge sides anatomically`);
-  assert.match(content,/front view the character's right is on the viewer's left/,`${name} must state the front-view rule`);
- }
- assert.match(vera,/Fingers too small to count pass/);
- assert.match(june,/Too small to count is a PASS/);
- assert.match(visual,/too small to count and nothing looks wrong, anatomy is a PASS/);
+  assert.match(vera,/character's own/,'vera must judge sides anatomically');
+  assert.match(vera,/In a front view, a watch on the character's left wrist sits on the viewer's right/,'vera must state the front-view rule');
+  assert.match(visual,/character's OWN \(anatomical\) side/,'visual must judge sides anatomically');
+  assert.match(visual,/front view the character's right is on the viewer's left/,'visual must state the front-view rule');
+  assert.match(june,/Left and right are the character's own/,'june must judge sides anatomically');
+  assert.match(june,/the character's left is on the viewer's right/,'june must state the front-view rule');
+  assert.match(vera,/Fingers too small to count pass/);
+  assert.match(june,/Fingers too small to count pass/);
+  assert.match(visual,/too small to count and nothing looks wrong, anatomy is a PASS/);
 });
