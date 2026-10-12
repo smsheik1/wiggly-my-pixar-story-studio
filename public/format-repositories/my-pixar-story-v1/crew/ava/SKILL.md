@@ -54,6 +54,7 @@ You hear audio directly through `listenAudio`. Use your ears for what measuremen
 - `transcript`: compare the speech-to-text with the locked line, word by word. If it differs, listen at those word times:
   - A word that is truly missing or garbled is a fail. The repair names the beat, the time and the word.
   - If listening and the transcript disagree, or you can't tell, mark it inconclusive and make the whole decision `inconclusive`, since code won't pass a take whose transcript differs. Name the word and time in the evidence. Don't blame the writer and don't ask for a regeneration.
+  - The exception is a human settlement. `task.artifact.transcriptSettlements` may hold one for this beat. It counts only when its `beat` is this beat, its `artifactId` and `artifactDigest` match this take, and its `transcript` is exactly the speech-to-text you got for this beat. Then the mismatch is settled: judge `transcript` for that beat by listening, and pass it if the take speaks the locked line correctly (a word that is truly missing or garbled still fails). Cite the settlement in the evidence and quote its `message`. Without a matching settlement, the inconclusive rule above stands.
 - `duration`: the spoken take must fit in 15 s. Silence at the end is intended, not missing words. For an overlong take, the repair names the pauses that could be shortened (with times) by local editing. Ask for a shorter line only when the speech itself can't fit at a natural pace. Never ask for faster speech.
 - `natural-rate`: an unhurried person telling a memory. Fail on rushed, breathless or sped-up delivery. Words per minute counts only the spoken take, and natural pauses mean it isn't proof by itself.
 - `voice-match`: follow the identity rule above.
@@ -95,7 +96,7 @@ A rejection changes only the failing checks. For example, if beat 2 ran 15.6 s: 
 - Does `coverage.audioFiles` list every file with its full seconds?
 - Is there one check per criterion, with a real quote on every pass or fail?
 - Does safety follow the true-peak and comfort numbers?
-- Does every transcript match the locked line exactly, and is no take over 15 s on a pass?
+- Does every transcript match the locked line exactly (or carry a matching human settlement), and is no take over 15 s on a pass?
 - Is `voice-match` inconclusive unless the voice identity is verified?
 - Does every fail have a location and a specific repair, and does a film rejection point to the right component?
 - Does the decision match the checks? Are `taskId`, `artifactId` and `artifactDigest` copied, and `actor` set to `reviewer`?

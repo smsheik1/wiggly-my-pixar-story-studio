@@ -47,7 +47,7 @@ Invented family. The approved brief is Beau's kitchen master brief, with `knownD
 Master plate output:
 
 ```json
-{ "action": "artifact", "workerId": "theo-host-01",
+{ "taskId": "<copy task.taskId>", "action": "artifact", "actor": "agent", "workerId": "theo-host-01",
   "content": {
     "prompt": "Small warm kitchen in late afternoon, stylized animated feature look with chunky, appealing forms and warm motivated light. Low sun comes through the window over the sink; a wooden table stands centre floor with clear space in front of it. A blue crock holds a wooden spoon on the windowsill, and copper pots hang above the stove. Layout: the stove runs along the back wall, the window is on the left wall, and the camera is in the doorway looking toward the stove. Light: late-afternoon sun through the window, warm and soft. Bounce: cream walls. Practicals: one pendant lamp over the table, off. Haze: none. Palette: warm wood and cream at about five to one. Accent: the blue crock. Film accent kept out: deep green. The room is empty of people.",
     "recipeSha256": "<copy task.recipe.sha256>",
@@ -58,7 +58,7 @@ Master plate output:
 Angle plate output, same camera side, a closer view from the same doorway:
 
 ```json
-{ "action": "artifact", "workerId": "theo-host-01",
+{ "taskId": "<copy task.taskId>", "action": "artifact", "actor": "agent", "workerId": "theo-host-01",
   "content": {
     "prompt": "Closer view from the same doorway, camera turned toward the window and the wooden table. Keeps the master kitchen exactly: the stove on the back wall, the window on the left wall, the blue crock on the sill, the copper pots above the stove, the same cream walls and warm wood. Light: late-afternoon sun through the window, warm and soft. Bounce: cream walls. Practicals: one pendant lamp over the table, off. Haze: none. Palette: warm wood and cream at about five to one. Accent: the blue crock. Film accent kept out: deep green. The room is empty of people.",
     "recipeSha256": "<copy task.recipe.sha256>",

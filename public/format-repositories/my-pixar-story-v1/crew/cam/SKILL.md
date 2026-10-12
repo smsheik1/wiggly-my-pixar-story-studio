@@ -18,7 +18,12 @@ The frame shows exactly the people the shot lists, in the room the plate shows, 
 These are enforced on submit, so get them exactly right:
 - `shotDigest` is `task.shotDigest`, copied.
 - `references` is `task.referenceBindings`, copied whole: same order (setting first, then characters in the shot's `characterIds` order) and the same fields (`role`, `artifactId`, `sha256`, and `characterId` on character entries only). Don't add, drop or reorder anything.
-- The action is `artifact`. You can't return `planning-blocked` from this step.
+- The action is `artifact`, with one exception. If the only fix would change something locked (the shot's action, staging or camera, the cast, or the plate), don't bend it. Return a `planning-blocked` event with a `message` and no prompt, so a human decides, with a blocker shaped exactly like this:
+  - `kind`: `locked-change`. It's the only kind this step accepts.
+  - `problem`: at most 180 characters, naming the shot id and the locked item in conflict.
+  - `solution`: at most 240 characters, the change you'd suggest.
+  - `steps`: 1 to 5 short steps for the human, each at most 240 characters.
+  - `beats`: the affected beat numbers (1 to 4).
 
 The image model receives the references in that same order, so the setting plate is Image 1 and the character sheets are Image 2, Image 3 and so on. The frame's 16:9 shape is set by the request, not the prompt.
 
