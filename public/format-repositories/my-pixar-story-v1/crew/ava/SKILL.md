@@ -25,7 +25,7 @@ No tool lists pauses. When a take needs pauses named, name them from your own li
 - `narration`: four 15-second windows, one per beat. Each is the spoken take plus silence at the end. Criteria: `integrity`, `transcript`, `duration`, `natural-rate`, `voice-match`, `delivery`, `safety`.
 - `music`: one 60-second instrumental track. Criteria: `integrity`, `piano-score`, `story-fit`, `no-vocals`, `provenance`. Judge it against `task.soundDirection`.
 - `effect`: one sound effect. Criteria: `integrity`, `story-fit`, `timing`, `provenance`. Judge it against `task.soundDirection`, which gives the effect's prompt, start and length.
-- `film` (audio pass, only after the picture pass passes): `narration`, `mix`, `safety`, `provenance`.
+- `film` (audio pass, only after the picture pass passes): Criteria: `narration`, `mix`, `safety`, `provenance`.
 
 Write exactly one check per criterion in `task.criteria`, with the names exact and none merged or added.
 

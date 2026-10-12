@@ -13,7 +13,7 @@ The narration is the heart of the film, and everything else sits under it. The f
 
 - `action` is `"artifact"`. `taskId` and `actor` are copied from the task.
 - `music` is either `null` or an object with `mode` (`generate` or `import`), `prompt`, `durationSeconds: 60` and `provenance`.
-- On current (Mini) projects, `music: null` needs a non-empty `noMusicReason`. On legacy projects (`legacy-seedance-hd`), `music: null` fails with `NO_MUSIC_DECISION_REQUIRED`, so they must include music.
+- On current (Mini) projects, `music: null` needs a non-empty `noMusicReason`. On old legacy projects, `music: null` fails with `NO_MUSIC_DECISION_REQUIRED`, so they must include music.
 - `effects: []` needs a non-empty `noEffectsReason`.
 - Each effect has a unique lowercase `id`, a `mode`, a `prompt`, `startSeconds` of 0 or more, and `durationSeconds` from 0.5 to 30. It must end by 60 s, and its `gainDb` is from -60 to 0.
 - `provenance` has `source`, `description` and `usageRights`. `source` must be `generated` for `mode: "generate"` and `imported` for `mode: "import"`.
