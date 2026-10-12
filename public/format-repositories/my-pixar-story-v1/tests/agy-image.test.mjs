@@ -33,6 +33,7 @@ const imageName = nameMatch ? nameMatch[1] : 'out';
 const brainDir = process.env.WIGGLY_AGY_BRAIN_DIR || '';
 const dims = mode === 'wrong-aspect' ? (aspect === '4:3' ? '1600x900' : '1200x900') : (aspect === '4:3' ? '1200x900' : '1600x900');
 if (mode === 'no-image') process.exit(0);
+if (mode === 'refused') { console.log(JSON.stringify({conversation_id:'conv-123',status:'SUCCESS',response:"The prompt could not be submitted. The prompt contains sensitive words that violate Google's Generative AI Prohibited Use policy."})); process.exit(0); }
 const mk = (dest) => { execFileSync('ffmpeg', ['-hide_banner','-loglevel','error','-y','-f','lavfi','-i','color=c=blue:s='+dims,'-frames:v','1',dest]); };
 if (mode === 'brain-only') {
   const dest = brainDir + '/fake-uuid-' + Date.now() + '-' + imageName + '.png';
@@ -132,8 +133,11 @@ test('agy rejects wrong aspect, missing image, non-zero exit and timeout without
     await withEnv({ WIGGLY_AGY_BIN: bin, WIGGLY_AGY_BRAIN_DIR: brain, FAKE_AGY_MODE: 'no-image' }, async () => {
       await assert.rejects(generateAgyImage({ prompt: 'p', aspectRatio: '4:3', imageName: 'x', imagePaths: [], outputPath: join(dir, 'b.png') }), /no image/);
     });
+    await withEnv({ WIGGLY_AGY_BIN: bin, WIGGLY_AGY_BRAIN_DIR: brain, FAKE_AGY_MODE: 'refused' }, async () => {
+      await assert.rejects(generateAgyImage({ prompt: 'p', aspectRatio: '4:3', imageName: 'x', imagePaths: [], outputPath: join(dir, 'r.png') }), e => /^AGY_POLICY_REFUSED/.test(e.message) && /conv-123/.test(e.message) && e.agyDiagnostics.conversationId === 'conv-123' && /Prohibited Use/.test(e.agyDiagnostics.response) && e.agyDiagnostics.exitCode === 0);
+    });
     await withEnv({ WIGGLY_AGY_BIN: bin, WIGGLY_AGY_BRAIN_DIR: brain, FAKE_AGY_MODE: 'nonzero' }, async () => {
-      await assert.rejects(generateAgyImage({ prompt: 'p', aspectRatio: '4:3', imageName: 'x', imagePaths: [], outputPath: join(dir, 'c.png') }), /exited 1.*fake agy failure tail/);
+      await assert.rejects(generateAgyImage({ prompt: 'p', aspectRatio: '4:3', imageName: 'x', imagePaths: [], outputPath: join(dir, 'c.png') }), e => /exited 1.*fake agy failure tail/.test(e.message) && /fake agy failure tail/.test(e.agyDiagnostics.stderrTail));
     });
     await withEnv({ WIGGLY_AGY_BIN: bin, WIGGLY_AGY_BRAIN_DIR: brain, FAKE_AGY_MODE: 'hang', WIGGLY_AGY_TIMEOUT_MS: '400' }, async () => {
       await assert.rejects(generateAgyImage({ prompt: 'p', aspectRatio: '4:3', imageName: 'x', imagePaths: [], outputPath: join(dir, 'd.png'), timeoutMs: 400 }), /timed out/);

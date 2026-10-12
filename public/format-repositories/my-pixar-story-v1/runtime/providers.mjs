@@ -342,7 +342,8 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
           files[i] = file; providers[i] = { index: i, provider: 'agy', costUsd: 0 };
           agyTimer.ok({ files: [{ sha256: file.sha256, bytes: file.bytes }] });
         } catch (e) {
-          agyTimer.fail(e);
+          agyTimer.fail(e, e.agyDiagnostics ? { agy: e.agyDiagnostics } : {});
+          if (e.agyDiagnostics) { try { await atomicJson(join(dir, `${i}.agy-failure.json`), { error: String(e.message ?? e).slice(0, 2000), ...e.agyDiagnostics, at: new Date().toISOString() }); } catch {} }
           if (!isAgyQuotaError(e.message)) throw e;
           const reset = parseAgyQuotaReset(e.message);
           const diagnostic = String(e.message ?? e).slice(0, 800);
