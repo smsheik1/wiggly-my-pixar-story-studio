@@ -77,5 +77,5 @@ test('LangGraph Studio entry exports the runner graph and langgraph.json points 
  const {readFile}=await import('node:fs/promises');
  const cfg=JSON.parse(await readFile(new URL('../langgraph.json',import.meta.url)));
  assert.equal(cfg.graphs['wiggly-my-pixar-story'],'./runtime/studio-graph.mjs:graph');
- assert.deepEqual(cfg.env,{});
+ assert.equal(cfg.env,'./secrets.env');
 });

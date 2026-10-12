@@ -115,5 +115,6 @@ add `--tunnel` and use the printed URL). Studio shows the graph, its nodes and
 interrupts. It is an in-memory development server: real runs still go through
 `runner.mjs` and their own `agent-runs/<run>/checkpoints.sqlite`, so Studio does
 not drive or change a live run. Live run traces stay in the LangSmith project
-`wiggly-my-pixar-story`. `env` in `langgraph.json` is empty on purpose; never point
-it at `secrets.env`.
+`wiggly-my-pixar-story`. `env` in `langgraph.json` points at the gitignored
+`secrets.env` link so the dev server gets `LANGSMITH_API_KEY` (Studio's tracing
+warnings go away); the file is never committed or printed.

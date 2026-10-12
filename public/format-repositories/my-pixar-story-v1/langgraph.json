@@ -3,5 +3,5 @@
   "graphs": {
     "wiggly-my-pixar-story": "./runtime/studio-graph.mjs:graph"
   },
-  "env": {}
+  "env": "./secrets.env"
 }
