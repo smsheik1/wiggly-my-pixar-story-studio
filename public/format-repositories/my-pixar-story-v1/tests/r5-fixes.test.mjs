@@ -65,3 +65,20 @@ test('LangSmith project: WIGGLY_LANGSMITH_PROJECT, then LANGSMITH_PROJECT, then 
   if(saved.l===undefined)delete process.env.LANGSMITH_PROJECT;else process.env.LANGSMITH_PROJECT=saved.l;
  }
 });
+
+test('Gemini bind ping keeps reasoning on (low effort), never disabled',{timeout:10000},async()=>{
+ const bodies=[];
+ const fetcher=async(url,init)=>{bodies.push(JSON.parse(init.body));return new Response(JSON.stringify({id:'g1',choices:[{message:{content:'pong'},finish_reason:'stop'}],usage:{prompt_tokens:1,completion_tokens:1,cost:0}}),{status:200,headers:{'content-type':'application/json'}});};
+ const {mkdtemp,writeFile}=await import('node:fs/promises');
+ const dir=await mkdtemp(join(tmpdir(),'r5-gem-'));const secretsPath=join(dir,'secrets.env');await writeFile(secretsPath,'OPENROUTER_API_KEY=sk-or-test-key-123456\n');
+ try{
+  const host=new OpenRouterHost({cwd:dir,secretsPath,model:'google/gemini-3.8-flash',fetcher});
+  await host.verifyModel('google/gemini-3.8-flash');
+  assert.equal(bodies.length,1);
+  assert.deepEqual(bodies[0].reasoning,{effort:'low'});
+  assert.notEqual(bodies[0].reasoning?.enabled,false);
+  assert.deepEqual(bodies[0].provider.max_price,{prompt:1,completion:5});
+  assert.equal(host.requestSettings('google/gemini-3.8-flash').reasoning.effort,'medium');
+  assert.equal(OPENROUTER_MODEL_TRAITS['google/gemini-3.8-flash'].reasoning,'always-on');
+ }finally{await rm(dir,{recursive:true});}
+});

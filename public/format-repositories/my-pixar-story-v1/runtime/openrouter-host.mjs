@@ -38,7 +38,9 @@ export const OPENROUTER_MODEL_TRAITS={
  'meta/muse-spark-1.3-contributor': { reasoning:'always-on', inputs:['text','image','video'], productionEffort:'xhigh', maxTokens:MUSE_MAX_TOKENS },
  // Ava (audio-reviewer): Gemini takes audio input; it runs at the host-wide
  // medium effort with the default 16K cap, never Muse's xhigh/32K overrides.
- 'google/gemini-3.8-flash': { reasoning:'optional', inputs:['text','image','video','file','audio'], maxPrice:{prompt:1,completion:5} },
+ // OpenRouter makes reasoning mandatory for it, so it is always-on (the bind
+ // ping sends effort low, never reasoning disabled).
+ 'google/gemini-3.8-flash': { reasoning:'always-on', inputs:['text','image','video','file','audio'], maxPrice:{prompt:1,completion:5} },
 };
 // Offline audio-capability allowlist: Ava's configured model must be listed here.
 // listenAudio bytes go to the mediaReview Gemini provider (gemini-review.mjs);
