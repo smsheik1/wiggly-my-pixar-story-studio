@@ -38,7 +38,7 @@ export const OPENROUTER_MODEL_TRAITS={
  'meta/muse-spark-1.3-contributor': { reasoning:'always-on', inputs:['text','image','video'], productionEffort:'xhigh', maxTokens:MUSE_MAX_TOKENS },
  // Ava (audio-reviewer): Gemini takes audio input; it runs at the host-wide
  // medium effort with the default 16K cap, never Muse's xhigh/32K overrides.
- 'google/gemini-3.8-flash': { reasoning:'optional', inputs:['text','image','video','file','audio'] },
+ 'google/gemini-3.8-flash': { reasoning:'optional', inputs:['text','image','video','file','audio'], maxPrice:{prompt:1,completion:5} },
 };
 // Offline audio-capability allowlist: Ava's configured model must be listed here.
 // listenAudio bytes go to the mediaReview Gemini provider (gemini-review.mjs);
@@ -47,6 +47,17 @@ export const AUDIO_CAPABLE_OPENROUTER_MODELS=['google/gemini-3.8-flash'];
 
 export function modelTraits(model){
  return OPENROUTER_MODEL_TRAITS[model] ?? { reasoning:'optional', inputs:['text'] };
+}
+
+// Per-model price ceiling (USD per million tokens). A model whose traits carry
+// maxPrice gets that finite ceiling (Gemini costs $0.75/$3.75, above the
+// default); every other model keeps the default. A ceiling is never removed:
+// a missing, non-finite or non-positive value throws instead of going unlimited.
+export function providerPolicyFor(model){
+ const custom=modelTraits(model).maxPrice;
+ if(custom==null)return OPENROUTER_PROVIDER_POLICY;
+ for(const k of ['prompt','completion'])if(!Number.isFinite(custom[k])||custom[k]<=0)throw new Error(`OPENROUTER_MAX_PRICE_INVALID: ${model} needs a finite positive maxPrice.${k}.`);
+ return {...OPENROUTER_PROVIDER_POLICY,max_price:{prompt:custom.prompt,completion:custom.completion}};
 }
 
 // Safety net: never send data: base64 bytes as tool text.
@@ -112,13 +123,13 @@ export class OpenRouterHost {
   return this.maxTokensExplicit?this.maxTokens:(modelTraits(model).maxTokens??this.maxTokens);
  }
  requestSettings(model=this.model){
-  return {model,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.effortFor(model)},max_tokens:this.maxTokensFor(model)};
+  return {model,provider:providerPolicyFor(model),reasoning:{effort:this.effortFor(model)},max_tokens:this.maxTokensFor(model)};
  }
  async profile(){
   if(typeof this.profileOverride==='string')return this.profileOverride;
   const tool=wigglyToolDefinition();
   const traits=modelTraits(this.model);
-  return digest({model:this.model,traits,provider:OPENROUTER_PROVIDER_POLICY,reasoning:{effort:this.reasoningEffort},maxTokens:this.maxTokens,modelOverrides:OPENROUTER_MODEL_TRAITS,maxToolRounds:this.maxToolRounds,tool:tool.inputSchema,perception:this.perceptionProfile,instruction:'openrouter-crew-v1'});
+  return digest({model:this.model,traits,provider:providerPolicyFor(this.model),reasoning:{effort:this.reasoningEffort},maxTokens:this.maxTokens,modelOverrides:OPENROUTER_MODEL_TRAITS,maxToolRounds:this.maxToolRounds,tool:tool.inputSchema,perception:this.perceptionProfile,instruction:'openrouter-crew-v1'});
  }
  async preflight(worker){
   if(worker.capabilityVersion!==await this.profile())throw new Error('OPENROUTER_PROFILE_CHANGED: host/tool version differs from the bound crew. Stop for explicit reconfiguration/qualification.');
@@ -152,7 +163,7 @@ export class OpenRouterHost {
    let llmAttempt=0;
    const sendOnce=async(msgs,continuation=false)=>{
     const attempt=llmAttempt++;
-    const body={model,messages:msgs,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:OPENROUTER_PROVIDER_POLICY,max_tokens:maxTokens??this.maxTokensFor(model)};
+    const body={model,messages:msgs,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:providerPolicyFor(model),max_tokens:maxTokens??this.maxTokensFor(model)};
     if(!verify&&!continuation){
      body.response_format={type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}};
     }

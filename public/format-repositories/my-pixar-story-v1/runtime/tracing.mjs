@@ -4,6 +4,12 @@ import {basename, join} from 'node:path';
 import {AsyncLocalStorage} from 'node:async_hooks';
 
 export const TRACING_PROJECT='wiggly-my-pixar-story';
+// Project override: WIGGLY_LANGSMITH_PROJECT, then LANGSMITH_PROJECT, then the
+// default (the auto-keep rules watch the default project).
+export function tracingProjectName(env=process.env){
+ for(const v of [env.WIGGLY_LANGSMITH_PROJECT,env.LANGSMITH_PROJECT]){if(typeof v==='string'&&v.trim())return v.trim();}
+ return TRACING_PROJECT;
+}
 
 export const DEFAULT_LIMITS={
   maxStringChars:64_000,
@@ -181,7 +187,7 @@ function extractValue(source,name){
 function disabledTracer(){
  const noop={id:'noop',parentId:null,kind:'noop',name:'noop',ended:true,end(){},attachImage:async()=>({attachment_skipped:true,reason:'disabled'}),child(){return {id:'noop',parentId:null,ended:true,end(){},attachImage:async()=>({attachment_skipped:true,reason:'disabled'}),child(){return this;}};}};
  const noopFn=()=>noop;
- return {enabled:false,journaling:false,projectName:TRACING_PROJECT,runId:null,runDir:null,rootName:'disabled',turn:noopFn,agentCall:noopFn,llm:noopFn,tool:noopFn,review(){},paidJob(){},child:noopFn,within:(h,fn)=>fn(),current:()=>null,flush:async()=>{},getRunUrl:async()=>null,attachImage:async()=>({attachment_skipped:true,reason:'disabled'}),get byteUsed(){return 0;},get journalBytes(){return 0;},rootHandle:noop};
+ return {enabled:false,journaling:false,projectName:tracingProjectName(),runId:null,runDir:null,rootName:'disabled',fail(){},turn:noopFn,agentCall:noopFn,llm:noopFn,tool:noopFn,review(){},paidJob(){},child:noopFn,within:(h,fn)=>fn(),current:()=>null,flush:async()=>{},getRunUrl:async()=>null,attachImage:async()=>({attachment_skipped:true,reason:'disabled'}),get byteUsed(){return 0;},get journalBytes(){return 0;},rootHandle:noop};
 }
 
 let warned=false;
@@ -282,7 +288,7 @@ function stripToSmall(fields){
   return out;
 }
 
-export async function createTracer({secretsPath,runId='local',runDir=null,rootName=null,name=null,projectName=TRACING_PROJECT,client=null,fetcher=fetch,tags:extraTags=[],metadata:extraMetadata={},limits={}}={}){
+export async function createTracer({secretsPath,runId='local',runDir=null,rootName=null,name=null,projectName=tracingProjectName(),client=null,fetcher=fetch,tags:extraTags=[],metadata:extraMetadata={},limits={}}={}){
  if(process.env.WIGGLY_TRACING==='off')return disabledTracer();
  const effLimits={...DEFAULT_LIMITS,...(limits||{})};
  const envBytes=process.env.WIGGLY_TRACE_MAX_BYTES?Number(process.env.WIGGLY_TRACE_MAX_BYTES):null;
@@ -617,6 +623,16 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
    try{return als.getStore()??null;}catch{return null;}
  };
  const childGeneric=(kind,fields)=>makeChild(kind,fields,null);
+ // A failed command ends its root trace as error (not success).
+ let rootError=null;
+ const fail=(error)=>{
+   try{
+     const message=String(error?.message??error??'command failed');
+     rootError=safe({error:`${reasonCode(error)??"COMMAND_FAILED"}: ${message}`}).error;
+     postFake?.({phase:'root-error',id:rootId,parentId:null,kind:'root',name:resolvedRootName,outcome:'error',error:rootError});
+     appendJournal({phase:'root-error',id:rootId,kind:'root',name:resolvedRootName,outcome:'error',error:rootError,ts:new Date().toISOString()});
+   }catch(e){warnOnce(e.message);}
+ };
  let flushed=false;
  const flush=async(timeoutMs=5000)=>{
    if(flushed&&useLive)return;
@@ -632,7 +648,7 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
          try{await attachQueue;}catch(error){warnOnce(error.message);}
          try{await journalQueue;}catch(error){warnOnce(error.message);}
          if(useLive&&lsClient&&rootTree){
-           try{await rootTree.end(safe({runId}));await rootTree.patchRun();await lsClient.awaitPendingTraceBatches();}catch(error){warnOnce(error.message);}
+           try{await rootTree.end(safe({runId,...(rootError?{outcome:'error'}:{})}),rootError??undefined);await rootTree.patchRun();await lsClient.awaitPendingTraceBatches();}catch(error){warnOnce(error.message);}
          }
        })(),
        new Promise(resolve=>{timer=setTimeout(resolve,timeoutMs);timer.unref?.();}),
@@ -662,6 +678,8 @@ export async function createTracer({secretsPath,runId='local',runDir=null,rootNa
    get byteUsed(){return byteUsed;},
    get journalBytes(){return journalBytes;},
    rootHandle,
+   fail,
+   get failed(){return rootError;},
    turn:(fields={})=>makeChild('crew-turn',{name:`crew-turn:${fields.role??'unknown'}`,run_type:'chain',...fields},rootHandle),
    agentCall:(fields={})=>makeChild('agent-call',{name:`agent-call:${fields.role??'unknown'}`,run_type:'chain',...fields},null),
    llm:(fields={})=>makeChild('llm',{name:`llm:${fields.model??fields.inputs?.model??'unknown'}`,run_type:'llm',...fields},null),
