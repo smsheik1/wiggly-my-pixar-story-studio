@@ -22,8 +22,8 @@ export function mergeShotsPatch(p, content) {
     const keys = Object.keys(entry ?? {}).sort().join(',');
     if (keys !== 'continuityNotes,id,staging') throw new Error('SHOTS_PATCH_EXTRA_FIELD: supervised shots entries carry only id, staging and continuityNotes.');
   }
+  if (raw.length !== intents.length) throw new Error(`SHOTS_PATCH_COUNT: patch has ${raw.length} shots but the locked intentions have ${intents.length}.`);
   const parsed = ShotsPatch.parse(content);
-  if (parsed.shots.length !== intents.length) throw new Error(`SHOTS_PATCH_COUNT: patch has ${parsed.shots.length} shots but the locked intentions have ${intents.length}.`);
   const ids = new Set(intents.map(s => s.id));
   for (const entry of parsed.shots) if (!ids.has(entry.id)) throw new Error(`SHOTS_PATCH_UNKNOWN_ID: ${entry.id} is not a locked shot id.`);
   if (parsed.shots.some((entry, i) => entry.id !== intents[i].id)) throw new Error('SHOTS_PATCH_ORDER: patch shots must keep the locked intentions order and ids one-to-one.');
