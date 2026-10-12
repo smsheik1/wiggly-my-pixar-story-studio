@@ -2,7 +2,7 @@ import {loadStudio,limitsFor} from './instructions.mjs';
 import {spawn,execFileSync} from 'node:child_process';
 import {createInterface} from 'node:readline';
 import {readFile,mkdir,writeFile,rename} from 'node:fs/promises';
-import {join,extname} from 'node:path';
+import {join,extname,basename} from 'node:path';
 import {z} from 'zod';
 import {Content,Event,digest} from './contracts.mjs';
 import {applyEvent} from './workflow.mjs';
@@ -381,6 +381,15 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
   try{
     const w=task.crewWorker??{};
     turnTrace=tracer?.turn?.({role:w.role,workerName:w.name,workerId:w.workerId,label:traceLabelFor(w),model:w.modelVersion,backend:w.backend??'codex',taskId:task.taskId,step:task.step,gate:task.gate,attempt,studioSha256:task.studioSha256??status.project.studio?.sha256??null});
+    if(turnTrace&&['visual-reviewer','scene-reviewer'].includes(w.role)){
+      const files=task.artifact?.content?.files??(task.artifact?.content?.file?[task.artifact.content.file]:[]);
+      if(Array.isArray(files)){
+        for(const [idx,f] of files.entries()){
+          const name=files.length===1?(f.path?basename(f.path):'image.png'):`option-${idx}-${f.path?basename(f.path):'image.png'}`;
+          tracer?.attachImage?.(turnTrace,{name,path:f.path,sha256:f.sha256});
+        }
+      }
+    }
   }catch{turnTrace=null;}
   const turnStart=Date.now();
   let traceEnded=false;

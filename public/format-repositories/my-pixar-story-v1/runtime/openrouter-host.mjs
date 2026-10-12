@@ -272,6 +272,18 @@ export class OpenRouterHost {
     }else{
       agentHandle=this.tracer?.agentCall?.(startFields);
     }
+    if(['visual-reviewer','scene-reviewer'].includes(worker.role)){
+      const files=task.artifact?.content?.files??(task.artifact?.content?.file?[task.artifact.content.file]:[]);
+      if(Array.isArray(files)){
+        const targetRun=parentTurn??outerTurn??agentHandle;
+        if(targetRun){
+          for(const [idx,f] of files.entries()){
+            const name=files.length===1?(f.path?basename(f.path):'image.png'):`option-${idx}-${f.path?basename(f.path):'image.png'}`;
+            this.tracer?.attachImage?.(targetRun,{name,path:f.path,sha256:f.sha256});
+          }
+        }
+      }
+    }
   }catch{agentHandle=null;}
   const runWithinAgent=(fn)=>(agentHandle&&this.tracer?.within)?this.tracer.within(agentHandle,fn):fn();
   const turnStart=Date.now(),usage={requests:0,promptCount:0,completionCount:0,costUsd:0};

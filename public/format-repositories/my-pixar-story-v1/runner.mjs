@@ -504,7 +504,7 @@ async function main() {
 
       // Optional live LangSmith tracing: enabled only with LANGSMITH_API_KEY in
       // the --secrets file; off when WIGGLY_TRACING=off or no key. Never breaks a run.
-      const fallbackTracer=()=>({enabled:false,turn:()=>({end(){}}),tool:()=>({end(){}}),review(){},paidJob(){},within:(_h,fn)=>fn(),current:()=>null,flush:async()=>{}});
+      const fallbackTracer=()=>({enabled:false,turn:()=>({end(){},attachImage(){}}),tool:()=>({end(){}}),review(){},paidJob(){},within:(_h,fn)=>fn(),current:()=>null,flush:async()=>{},attachImage(){}});
       let tracer=fallbackTracer();
       try{
         const tracing=await import('./runtime/tracing.mjs');
@@ -856,7 +856,7 @@ async function main() {
         try{key=await loadKey(job.plan.provider,secretsPath);}catch(e){throw new Error(`${e.message}\n${remediation(job.plan.provider,secretsPath)}`);}
       }
       if(command==='generate')await runtimeEvent('begin');
-      const fallbackTracer=()=>({enabled:false,paidJob(){},flush:async()=>{}});
+      const fallbackTracer=()=>({enabled:false,paidJob(){},flush:async()=>{},attachImage(){}});
       let tracer=fallbackTracer();
       try{
         const tracing=await import('./runtime/tracing.mjs');
@@ -869,6 +869,12 @@ async function main() {
           const result=await executeJob(latest,latest.jobs.find(j=>j.id===job.id),runDir,key,needsStub?()=>{throw new Error('Collection cannot resubmit synchronous providers.');}:fetch,command==='collect',onJobId,{tracer});
           if(result.pending){print({...presentation(await workflow.status('project')),collection:result});return;}
           await verifyFiles(result);
+          if(['sheet','backgroundCandidates','backgroundAngle','keyframe','candidates'].includes(job.plan.operation)&&Array.isArray(result?.files)){
+            for(const [idx,f] of result.files.entries()){
+              const name=result.files.length===1?(f.path?basename(f.path):'image.png'):`option-${idx}-${f.path?basename(f.path):'image.png'}`;
+              try{tracer.attachImage?.({name,path:f.path,sha256:f.sha256});}catch{}
+            }
+          }
           const receiptStatus = await runtimeEvent('receipt',{result});
           // Opt-in prescreen auto call: at the end of collect, if new status is gate 'review'
           if (command === 'collect' && receiptStatus.pending?.gate === 'review') {
@@ -948,7 +954,7 @@ async function main() {
         print({ plannedRequests: planned.length, imageCount: art.content.files.length, estimatedCostUsd: estCost });
         return;
       }
-      const fallbackTracer=()=>({enabled:false,paidJob(){},flush:async()=>{}});
+      const fallbackTracer=()=>({enabled:false,paidJob(){},flush:async()=>{},attachImage(){}});
       let tracer=fallbackTracer();
       try{
         const tracing=await import('./runtime/tracing.mjs');
