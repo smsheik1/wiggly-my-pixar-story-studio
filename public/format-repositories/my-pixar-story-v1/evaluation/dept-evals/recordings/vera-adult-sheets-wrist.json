@@ -1,9 +1,9 @@
 {
  "caseId": "vera-adult-sheets-wrist",
- "recordedAt": "2026-10-11T20:46:19.783Z",
+ "recordedAt": "2026-10-12T02:59:39.826Z",
  "model": "meta/muse-spark-1.3-contributor",
  "mode": "live",
- "fingerprint": "a842a6ab709ba138e27672e9d2dc5a72c3753fdf9f8e542fe1c0c260277933ee",
+ "fingerprint": "fde2a803b415ef3438b1cb05e24a7c9a90f462fb25e836cbc7840dfe62893258",
  "fingerprintParts": {
   "model": "meta/muse-spark-1.3-contributor",
   "backend": "openrouter",
@@ -14,19 +14,19 @@
   ],
   "skill": {
    "path": "crew/vera/SKILL.md",
-   "sha256": "183d527e631370858a41c7c04102538a1f25d94642c1516dbd7480393da2f714"
+   "sha256": "6c6334c4e54ea21a13e68642e89f704f1bbb7f1d60ba71b952fc3088ae61d847"
   },
   "rubric": {
    "path": "evaluation/rubrics/visual.md",
-   "sha256": "2a6994a595c1e064d9fafe19f11828034e892ecf198b9be668cbf8bb16d96138"
+   "sha256": "e7e46dcb9dc9adb85ca5d10a1b3faba48d87d8aa5cf322e88bb1009eb9784d36"
   },
   "recipes": {},
   "craft": {
    "house-style": "b95494eb4b67a8aeb7f1459ada27e811283fd5eae1aa51054f8ade61305a2783",
    "character-design": "4f211109b20406a51a788788981ad9f19fbbb4af22f43239c9dda3cd04c8adfd",
-   "identity": "d7b647fc5302672cb720c9bf05310ac1a9b3d64390ec77d2a98172756b07ec1c",
+   "identity": "86ab2775df9bbbb2dd7878b4c2c86134a620fef1dacf22985bff9a27c4dc826e",
    "character-sheet": "4e8f13843f2d47c138ad5fc2fc35e8034b2129b85df9f4032d6ca761da65a6ab",
-   "locations": "4df46006322bee4704d544d0ba6bbb1f12611796e95d68055ee2a96cdfa323be"
+   "locations": "01112493be69994274b011081c3b0298a7110c5aad50792e2a397a546ca87282"
   },
   "traits": {
    "reasoning": "always-on",
@@ -38,129 +38,182 @@
    "productionEffort": "xhigh",
    "maxTokens": 32000
   },
-  "packetInstruction": "0caad9492a5fe6375d831f0b94ab05843e7b12da85f55bf2808f2c61f2eb130d",
-  "tool": "476d45f50aa20c7efc4ad831572bc961fe552c7beaaa0a3029677cfe52267d67"
+  "packetInstruction": "80fbfdb923416da67163962766e6e5b4c63919b17c2dbd17cdedfa7b4d2d3ea2",
+  "tool": "631c771e8b1aa20fbfb01b99aacc5a55f0c2a01b3215b54a0033dec5cd74e751"
  },
- "wallMs": 262603,
- "costUsd": 0.017504312,
+ "wallMs": 400038,
+ "costUsd": 0.025094935999999998,
  "requests": [
   {
    "seq": 1,
-   "requestSha256": "51670046b796c81e1418482ebaccdde00027da6f2149b9a420f103cb159f0bca",
+   "requestSha256": "be7d175a2a6225818d400aa9f87117fac0342d43179d2388df9aece55cf74670",
    "status": 200,
-   "ms": 26237,
+   "ms": 61153,
    "message": {
-    "content": "Vera review in progress – inspecting adult Shaz candidates for style and likeness.",
+    "content": "Vera reviewing the adult sheets — inspecting every candidate against the reference.",
     "tool_calls": [
      {
       "type": "function",
       "index": 0,
-      "id": "call_01a12cb3cb79749aa6205b15e0411f37",
+      "id": "call_01a12e0803e4771d9d85c97ee81979d7",
       "function": {
        "name": "wiggly_tool",
-       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"93fd7554ff4dfbd14b3987ea4b275781d56574c5caa90366d9a812ee14fd9133\",\"referenceSha256\":\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\"}"
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"93fd7554ff4dfbd14b3987ea4b275781d56574c5caa90366d9a812ee14fd9133\",\"referenceSha256\":\"null\",\"region\":\"null\",\"edit\":\"null\"}"
+      }
+     },
+     {
+      "type": "function",
+      "index": 1,
+      "id": "call_01a12e08053777fa809b0ddc8fe9d028",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"ac1a75382280711ddf1dedebcae053e72c1ef139ed9d50c4bf1a6c8efdcecb20\",\"referenceSha256\":\"null\",\"region\":\"null\",\"edit\":\"null\"}"
+      }
+     },
+     {
+      "type": "function",
+      "index": 2,
+      "id": "call_01a12e080676761cbcce98310b42cf28",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"b9a6fa43fc72101f8989275b8c123c753a596e784de424c439f0579bb3c29fd6\",\"referenceSha256\":\"null\",\"region\":\"null\",\"edit\":\"null\"}"
+      }
+     },
+     {
+      "type": "function",
+      "index": 3,
+      "id": "call_01a12e0807ca70eab543d66e5787a8ed",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\",\"referenceSha256\":\"null\",\"region\":\"null\",\"edit\":\"null\"}"
       }
      }
     ]
    },
    "usage": {
-    "prompt_tokens": 37337,
-    "completion_tokens": 2944,
-    "reasoning_tokens": 2683,
-    "cost": 0.0043225
+    "prompt_tokens": 36501,
+    "completion_tokens": 7224,
+    "reasoning_tokens": 6388,
+    "cost": 0.0050949
    }
   },
   {
    "seq": 2,
-   "requestSha256": "0bca7405778ce2160b3a6ee5d1e3e6038ebcef19260d94e17e63737223510241",
+   "requestSha256": "3b57f2c447e023eab06df1a5bda3b550bb6828f679a09399d94c3340d624ded1",
    "status": 200,
-   "ms": 46663,
+   "ms": 31784,
    "message": {
-    "content": "I’ve inspected one candidate — now checking the remaining options and reference for finishing the full review.",
+    "content": "I need to inspect the sheets directly — correcting the viewer invocation.",
     "tool_calls": [
      {
       "type": "function",
       "index": 0,
-      "id": "call_01a12cb481c5757e9d46bb9822da0f10",
+      "id": "call_01a12e08830b73819106bec5467d2d02",
       "function": {
        "name": "wiggly_tool",
-       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"ac1a75382280711ddf1dedebcae053e72c1ef139ed9d50c4bf1a6c8efdcecb20\",\"referenceSha256\":\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\"}"
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"93fd7554ff4dfbd14b3987ea4b275781d56574c5caa90366d9a812ee14fd9133\",\"referenceSha256\":\"93fd7554ff4dfbd14b3987ea4b275781d56574c5caa90366d9a812ee14fd9133\"}"
       }
      }
     ]
    },
    "usage": {
-    "prompt_tokens": 37636,
-    "completion_tokens": 5208,
-    "reasoning_tokens": 4871,
-    "cost": 0.0048052
+    "prompt_tokens": 37582,
+    "completion_tokens": 2249,
+    "reasoning_tokens": 2016,
+    "cost": 0.003381566
    }
   },
   {
    "seq": 3,
-   "requestSha256": "60d5cdb45057bdc29f7fabd8282845f57a8a06dd8f2b6f63951dc581fd7a360a",
+   "requestSha256": "42a1e0b734101ee7aee25274a06b6ea866ef736e9ba9811f4ca20a946b18d468",
    "status": 200,
-   "ms": 49323,
+   "ms": 11700,
    "message": {
-    "content": "Vera review in progress – inspecting adult Shaz candidates for style and likeness.",
+    "content": "Vera is inspecting the adult sheets against the photo reference, checking likeness and the required turnaround views.",
     "tool_calls": [
      {
       "type": "function",
       "index": 0,
-      "id": "call_01a12cb54325715d9236ab6da78c7f42",
+      "id": "call_01a12e08b0bc72e5964a708ccb9d9de2",
       "function": {
        "name": "wiggly_tool",
-       "arguments": "{\"name\":\"viewImage\",\"referenceSha256\":\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\",\"sha256\":\"b9a6fa43fc72101f8989275b8c123c753a596e784de424c439f0579bb3c29fd6\"}"
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"ac1a75382280711ddf1dedebcae053e72c1ef139ed9d50c4bf1a6c8efdcecb20\",\"referenceSha256\":\"ac1a75382280711ddf1dedebcae053e72c1ef139ed9d50c4bf1a6c8efdcecb20\"}"
       }
      }
     ]
    },
    "usage": {
-    "prompt_tokens": 37945,
-    "completion_tokens": 5232,
-    "reasoning_tokens": 4901,
-    "cost": 0.0048409
+    "prompt_tokens": 37873,
+    "completion_tokens": 840,
+    "reasoning_tokens": 606,
+    "cost": 0.0039553
    }
   },
   {
    "seq": 4,
-   "requestSha256": "d9fe7e4cdd948659e35a5cb06c5a581cdba75bfa97585afa18c3d629dd7ca396",
+   "requestSha256": "b987e40b3b56591642bdaae35fa22760e1683d68855d60fd06da2154dd7b7e92",
    "status": 200,
-   "ms": 44552,
+   "ms": 68527,
    "message": {
-    "content": "Vera review in progress — inspecting adult Shaz candidates for style and likeness.",
+    "content": "Vera has the sheets in view — now verifying the final details for the review.",
     "tool_calls": [
      {
       "type": "function",
       "index": 0,
-      "id": "call_01a12cb5f1527798bbd6747e2b6747e2",
+      "id": "call_01a12e09bcd272648885aae0a5eab006",
       "function": {
        "name": "wiggly_tool",
-       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\",\"referenceSha256\":\"null\"}"
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"b9a6fa43fc72101f8989275b8c123c753a596e784de424c439f0579bb3c29fd6\",\"referenceSha256\":\"b9a6fa43fc72101f8989275b8c123c753a596e784de424c439f0579bb3c29fd6\"}"
       }
      }
     ]
    },
    "usage": {
-    "prompt_tokens": 38249,
-    "completion_tokens": 4671,
-    "reasoning_tokens": 4382,
-    "cost": 0.001110266
+    "prompt_tokens": 38183,
+    "completion_tokens": 5702,
+    "reasoning_tokens": 5343,
+    "cost": 0.0049587
    }
   },
   {
    "seq": 5,
-   "requestSha256": "da465eb87c5e7261425d7b9043133ecde0a99148aada778638b4988a03f1073e",
+   "requestSha256": "373ec8f6a0dd3b440fa1982d8560ea29202a25d610ed6b670d84b61f9593ad94",
    "status": 200,
-   "ms": 95276,
+   "ms": 12564,
    "message": {
-    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"7f596116478b18f77162f97f2c22d3c46c897dd94ce3029257c01922128e6de3\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:visual-reviewer\\\",\\\"artifactId\\\":\\\"candidates:shaz-adult@1\\\",\\\"artifactDigest\\\":\\\"26bee6bf408f889364dc412b96629c684ea37407b9aeb3f1e4215225ae49d4b3\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"likeness\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Directly inspected files 0-2 full sheets and adult reference ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807. Reference shows warm medium complexion, short black hair with close faded sides and raised swept-back top, thick dark eyebrows, rounded nose, softly full lips, connected trimmed beard/moustache, rust-red textured sweater, silver chain, dark watch. All three candidates preserve these as simplified sculpted geometry with matching complexion, hair colour/style, beard shape, face shape and signature sweater/chain/watch; no skin-tone, hair-colour or face mismatch under [C-IDENTITY].\\\",\\\"location\\\":\\\"All 12 depictions per file vs adult reference portrait\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Stylized feature-quality 3D animated film: simplified appealing shapes, broad soft facial planes, sculpted hair clumps and beard as coherent matte masses with soft shading, smooth matte skin with no photographic pores, stubble or forehead wrinkles, soft cinematic three-point light on neutral grey. Adult build ~6-7 heads tall with broad shoulders, not child-like enlarged head [C-CHILD-RIDER]; no grey/dead skin [C-SKIN-ZONING]; no photoreal/hybrid, 2D, anime, clay or sketch; no baked-in text, labels or watermarks [R-SHEET-NO-TEXT].\\\",\\\"location\\\":\\\"Full sheets files 0-2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"anatomy\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Quick full-view pass of every figure: two arms, two legs, normally aligned eyes, clean mouth interiors, no extra or missing limbs, fused or extra fingers, broken joints, floating extremities or warping. Hands show blunt digits where countable; small fingers with nothing looking wrong treated as pass; full views look normal so no region crop required.\\\",\\\"location\\\":\\\"Hands, limbs and faces in top-row turnarounds and portrait faces files 0-2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"turnaround\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each file shows exactly four equal-scale neutral full-body figures on common baseline in order front, three-quarter at ~45deg, profile at 90deg, back at 180deg, arms relaxed slightly away, empty open hands, feet flat parallel, complete heads, both hands, legs and footwear with margins above hair and below soles; rust sweater continues coherently over back; no duplicates, intermediates, crops, props, scenery or overlapping figures [R-SHEET-NEUTRAL][R-SHEET-VIEWS].\\\",\\\"location\\\":\\\"Top row of files 0-2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"expressions\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each file shows exactly eight distinct head-and-shoulder portraits in two rows of four: neutral closed-lip, warm smile with lifted cheeks, broad joyful smile, focused concentration, firm resolve, raised-brow surprise with parted lips, pinched inner-brow concern, one-brow mischief with asymmetrical smile; brows, eyelids, eyes, cheeks and mouth coordinated for readable acting; no duplicate neutral/surprise or extra columns.\\\",\\\"location\\\":\\\"Middle and bottom portrait rows files 0-2\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"consistency\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Within each file rust-red knit sweater, dark straight trousers, dark low-top sneakers with pale soles, silver chain placement, dark watch, short black swept-back hair, trimmed beard, warm medium complexion and adult proportions remain identical across 4 turnarounds and 8 portraits; four views same height and scale; no olive/burgundy swap, stripe change or age drift.\\\",\\\"location\\\":\\\"Full 12-cell grids files 0-2\\\",\\\"repair\\\":\\\"\\\"}],\\\"recommendation\\\":{\\\"selection\\\":1,\\\"ranking\\\":[1,0,2],\\\"reason\\\":\\\"File 1 preserves chain visibly in turnaround and all portraits with clean uncropped equal-scale views and most readable eight expressions while matching likeness; files 0 and 2 match likeness/style but show less distinct chain in portraits.\\\"},\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e\\\",\\\"toolEvidence\\\":[{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"93fd7554ff4dfbd14b3987ea4b275781d56574c5caa90366d9a812ee14fd9133\\\",\\\"referenceSha256\\\":\\\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"ac1a75382280711ddf1dedebcae053e72c1ef139ed9d50c4bf1a6c8efdcecb20\\\",\\\"referenceSha256\\\":\\\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"b9a6fa43fc72101f8989275b8c123c753a596e784de424c439f0579bb3c29fd6\\\",\\\"referenceSha256\\\":\\\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\\\"},{\\\"tool\\\":\\\"viewImage\\\",\\\"sha256\\\":\\\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\\\"}]}}\"}"
+    "content": "Vera has the options in view — now checking the adult reference for likeness.",
+    "tool_calls": [
+     {
+      "type": "function",
+      "index": 0,
+      "id": "call_01a12e09ed8475bbb4847826fc59d8a7",
+      "function": {
+       "name": "wiggly_tool",
+       "arguments": "{\"name\":\"viewImage\",\"sha256\":\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\",\"referenceSha256\":\"ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807\"}"
+      }
+     }
+    ]
    },
    "usage": {
-    "prompt_tokens": 38522,
-    "completion_tokens": 11424,
-    "reasoning_tokens": 9801,
-    "cost": 0.002425446
+    "prompt_tokens": 38485,
+    "completion_tokens": 784,
+    "reasoning_tokens": 552,
+    "cost": 0.0040053
+   }
+  },
+  {
+   "seq": 6,
+   "requestSha256": "75a7047d778b5e9c9d364cabe4d0360a62cd5d386e495ac7dd2b911a9b21d9f8",
+   "status": 200,
+   "ms": 213755,
+   "message": {
+    "content": "{\"eventJson\": \"{\\\"taskId\\\":\\\"7f596116478b18f77162f97f2c22d3c46c897dd94ce3029257c01922128e6de3\\\",\\\"action\\\":\\\"review\\\",\\\"actor\\\":\\\"reviewer\\\",\\\"workerId\\\":\\\"dept-eval:visual-reviewer\\\",\\\"artifactId\\\":\\\"candidates:shaz-adult@1\\\",\\\"artifactDigest\\\":\\\"26bee6bf408f889364dc412b96629c684ea37407b9aeb3f1e4215225ae49d4b3\\\",\\\"review\\\":{\\\"decision\\\":\\\"approved\\\",\\\"perception\\\":\\\"direct-image\\\",\\\"checks\\\":[{\\\"criterion\\\":\\\"likeness\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"All three options match the adult reference ea8cf733: warm medium complexion, gently angular oval face, defined jaw, rounded chin, dark-brown eyes, thick dark eyebrows, rounded nose, softly full lips, short black hair with close sides and raised swept-back top, neatly trimmed dark beard connected to moustache, face unobstructed without glasses. Options differ only in style strength, chain thickness, shoe tone and slight pose or hair styling. No lightened skin or different hair colour.\\\",\\\"location\\\":\\\"Close-up rows and reference ea8cf733, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"style\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Stylized animated-feature 3D in all three, not photoreal and not photo face on 3D body, not 2D, anime, clay or sketch. Adult build with broad shoulders approximately seven heads tall, no child-like oversized head, smooth matte skin with broad tonal transitions and no grey or dead skin, no photographic pores or etched wrinkles. Hair as sculpted clumps, beard and moustache as coherent sculpted masses with soft shading and no individual stubble hairs. No text of any kind in any cell: no labels, view names, expression names, captions, titles, numbers or watermarks.\\\",\\\"location\\\":\\\"Full sheet, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"anatomy\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Quick normal pass over each full sheet: normal limbs and natural joints, arms relaxed slightly away from torso, complete hands and feet, five digits where countable, full-body fingers small but normal with nothing fused, extra, missing or mangled, no extra or missing limbs, no broken joints, no melted faces or mouths.\\\",\\\"location\\\":\\\"Turnaround row, full pass, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"turnaround\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each option top row has exactly four equal-scale neutral standing figures front, three-quarter at about 45 degrees, profile at 90 degrees, back at 180 degrees on one shared baseline, evenly spaced and clear of edges, with margins above hairstyle and below soles. Heads, both hands, legs and complete footwear uncropped, closed-lip neutral, hands open and empty, no props held, rust-red sweater continued coherently over back, necklace and watch on the same anatomical wrist across views with no switching after applying front-mirrored versus back-matched rule.\\\",\\\"location\\\":\\\"Top row, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"expressions\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Each option has exactly eight head-and-shoulders portraits facing camera in two rows of four in prompt order: neutral with relaxed closed lips, warm smile lifting cheeks, pure joy with broad delighted smile, thoughtful concentration with focused eyes and slightly drawn brows, determined resolve with firm lips and focused brows, gentle surprise with raised brows and slightly parted lips, tender concern with gently pinched inner brows, playful mischief with one raised brow and asymmetrical smile. All eight distinct and readable with coordinated brows, eyelids, eyes, cheeks and mouth, no duplicates or intermediate views. Option 1 reads strongest, especially joy and surprise.\\\",\\\"location\\\":\\\"Middle and bottom rows, every option\\\",\\\"repair\\\":\\\"\\\"},{\\\"criterion\\\":\\\"consistency\\\",\\\"status\\\":\\\"pass\\\",\\\"evidence\\\":\\\"Same adult face, complexion, hairstyle, beard, proportions, rust-red textured sweater with sleeves pushed to forearms, silver chain, dark watch, dark trousers and dark low-top sneakers with pale soles hold across all twelve depictions within each option. What separates options is finish: Option 1 shows thick silver chain clearly in turnarounds and all eight portraits with navy shoes; Option 0 shows thin chain in turnarounds with brown shoes; Option 2 shows thin chain in turnarounds with black shoes. Identity and outfit hold within each option.\\\",\\\"location\\\":\\\"Full sheet twelve cells, every option\\\",\\\"repair\\\":\\\"\\\"}],\\\"recommendation\\\":{\\\"selection\\\":1,\\\"ranking\\\":[1,0,2],\\\"reason\\\":\\\"Closest face and accessory match to the photo with the clearest expressions.\\\"},\\\"modelVersion\\\":\\\"meta/muse-spark-1.3-contributor\\\",\\\"capabilityVersion\\\":\\\"ae56c66cb4677ddf4ac98bbf0ddbc074162931cf5842f80d0942f990b2ef5a32\\\"}}\"}"
+   },
+   "usage": {
+    "prompt_tokens": 38795,
+    "completion_tokens": 17907,
+    "reasoning_tokens": 16639,
+    "cost": 0.00369917
    }
   }
  ],
@@ -180,43 +233,43 @@
      {
       "criterion": "likeness",
       "status": "pass",
-      "evidence": "Directly inspected files 0-2 full sheets and adult reference ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807. Reference shows warm medium complexion, short black hair with close faded sides and raised swept-back top, thick dark eyebrows, rounded nose, softly full lips, connected trimmed beard/moustache, rust-red textured sweater, silver chain, dark watch. All three candidates preserve these as simplified sculpted geometry with matching complexion, hair colour/style, beard shape, face shape and signature sweater/chain/watch; no skin-tone, hair-colour or face mismatch under [C-IDENTITY].",
-      "location": "All 12 depictions per file vs adult reference portrait",
+      "evidence": "All three options match the adult reference ea8cf733: warm medium complexion, gently angular oval face, defined jaw, rounded chin, dark-brown eyes, thick dark eyebrows, rounded nose, softly full lips, short black hair with close sides and raised swept-back top, neatly trimmed dark beard connected to moustache, face unobstructed without glasses. Options differ only in style strength, chain thickness, shoe tone and slight pose or hair styling. No lightened skin or different hair colour.",
+      "location": "Close-up rows and reference ea8cf733, every option",
       "repair": ""
      },
      {
       "criterion": "style",
       "status": "pass",
-      "evidence": "Stylized feature-quality 3D animated film: simplified appealing shapes, broad soft facial planes, sculpted hair clumps and beard as coherent matte masses with soft shading, smooth matte skin with no photographic pores, stubble or forehead wrinkles, soft cinematic three-point light on neutral grey. Adult build ~6-7 heads tall with broad shoulders, not child-like enlarged head [C-CHILD-RIDER]; no grey/dead skin [C-SKIN-ZONING]; no photoreal/hybrid, 2D, anime, clay or sketch; no baked-in text, labels or watermarks [R-SHEET-NO-TEXT].",
-      "location": "Full sheets files 0-2",
+      "evidence": "Stylized animated-feature 3D in all three, not photoreal and not photo face on 3D body, not 2D, anime, clay or sketch. Adult build with broad shoulders approximately seven heads tall, no child-like oversized head, smooth matte skin with broad tonal transitions and no grey or dead skin, no photographic pores or etched wrinkles. Hair as sculpted clumps, beard and moustache as coherent sculpted masses with soft shading and no individual stubble hairs. No text of any kind in any cell: no labels, view names, expression names, captions, titles, numbers or watermarks.",
+      "location": "Full sheet, every option",
       "repair": ""
      },
      {
       "criterion": "anatomy",
       "status": "pass",
-      "evidence": "Quick full-view pass of every figure: two arms, two legs, normally aligned eyes, clean mouth interiors, no extra or missing limbs, fused or extra fingers, broken joints, floating extremities or warping. Hands show blunt digits where countable; small fingers with nothing looking wrong treated as pass; full views look normal so no region crop required.",
-      "location": "Hands, limbs and faces in top-row turnarounds and portrait faces files 0-2",
+      "evidence": "Quick normal pass over each full sheet: normal limbs and natural joints, arms relaxed slightly away from torso, complete hands and feet, five digits where countable, full-body fingers small but normal with nothing fused, extra, missing or mangled, no extra or missing limbs, no broken joints, no melted faces or mouths.",
+      "location": "Turnaround row, full pass, every option",
       "repair": ""
      },
      {
       "criterion": "turnaround",
       "status": "pass",
-      "evidence": "Each file shows exactly four equal-scale neutral full-body figures on common baseline in order front, three-quarter at ~45deg, profile at 90deg, back at 180deg, arms relaxed slightly away, empty open hands, feet flat parallel, complete heads, both hands, legs and footwear with margins above hair and below soles; rust sweater continues coherently over back; no duplicates, intermediates, crops, props, scenery or overlapping figures [R-SHEET-NEUTRAL][R-SHEET-VIEWS].",
-      "location": "Top row of files 0-2",
+      "evidence": "Each option top row has exactly four equal-scale neutral standing figures front, three-quarter at about 45 degrees, profile at 90 degrees, back at 180 degrees on one shared baseline, evenly spaced and clear of edges, with margins above hairstyle and below soles. Heads, both hands, legs and complete footwear uncropped, closed-lip neutral, hands open and empty, no props held, rust-red sweater continued coherently over back, necklace and watch on the same anatomical wrist across views with no switching after applying front-mirrored versus back-matched rule.",
+      "location": "Top row, every option",
       "repair": ""
      },
      {
       "criterion": "expressions",
       "status": "pass",
-      "evidence": "Each file shows exactly eight distinct head-and-shoulder portraits in two rows of four: neutral closed-lip, warm smile with lifted cheeks, broad joyful smile, focused concentration, firm resolve, raised-brow surprise with parted lips, pinched inner-brow concern, one-brow mischief with asymmetrical smile; brows, eyelids, eyes, cheeks and mouth coordinated for readable acting; no duplicate neutral/surprise or extra columns.",
-      "location": "Middle and bottom portrait rows files 0-2",
+      "evidence": "Each option has exactly eight head-and-shoulders portraits facing camera in two rows of four in prompt order: neutral with relaxed closed lips, warm smile lifting cheeks, pure joy with broad delighted smile, thoughtful concentration with focused eyes and slightly drawn brows, determined resolve with firm lips and focused brows, gentle surprise with raised brows and slightly parted lips, tender concern with gently pinched inner brows, playful mischief with one raised brow and asymmetrical smile. All eight distinct and readable with coordinated brows, eyelids, eyes, cheeks and mouth, no duplicates or intermediate views. Option 1 reads strongest, especially joy and surprise.",
+      "location": "Middle and bottom rows, every option",
       "repair": ""
      },
      {
       "criterion": "consistency",
       "status": "pass",
-      "evidence": "Within each file rust-red knit sweater, dark straight trousers, dark low-top sneakers with pale soles, silver chain placement, dark watch, short black swept-back hair, trimmed beard, warm medium complexion and adult proportions remain identical across 4 turnarounds and 8 portraits; four views same height and scale; no olive/burgundy swap, stripe change or age drift.",
-      "location": "Full 12-cell grids files 0-2",
+      "evidence": "Same adult face, complexion, hairstyle, beard, proportions, rust-red textured sweater with sleeves pushed to forearms, silver chain, dark watch, dark trousers and dark low-top sneakers with pale soles hold across all twelve depictions within each option. What separates options is finish: Option 1 shows thick silver chain clearly in turnarounds and all eight portraits with navy shoes; Option 0 shows thin chain in turnarounds with brown shoes; Option 2 shows thin chain in turnarounds with black shoes. Identity and outfit hold within each option.",
+      "location": "Full sheet twelve cells, every option",
       "repair": ""
      }
     ],
@@ -227,10 +280,10 @@
       0,
       2
      ],
-     "reason": "File 1 preserves chain visibly in turnaround and all portraits with clean uncropped equal-scale views and most readable eight expressions while matching likeness; files 0 and 2 match likeness/style but show less distinct chain in portraits."
+     "reason": "Closest face and accessory match to the photo with the clearest expressions."
     },
     "modelVersion": "meta/muse-spark-1.3-contributor",
-    "capabilityVersion": "bc71b365597e1bd7e3e1a9eb48a27923c95704a0d8e6fca6c0b3a604d7fe695e",
+    "capabilityVersion": "ae56c66cb4677ddf4ac98bbf0ddbc074162931cf5842f80d0942f990b2ef5a32",
     "toolEvidence": [
      {
       "tool": "viewImage",
@@ -259,22 +312,22 @@
      {
       "tool": "viewImage",
       "sha256": "93fd7554ff4dfbd14b3987ea4b275781d56574c5caa90366d9a812ee14fd9133",
-      "referenceSha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
+      "referenceSha256": "93fd7554ff4dfbd14b3987ea4b275781d56574c5caa90366d9a812ee14fd9133"
      },
      {
       "tool": "viewImage",
       "sha256": "ac1a75382280711ddf1dedebcae053e72c1ef139ed9d50c4bf1a6c8efdcecb20",
-      "referenceSha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
+      "referenceSha256": "ac1a75382280711ddf1dedebcae053e72c1ef139ed9d50c4bf1a6c8efdcecb20"
      },
      {
       "tool": "viewImage",
       "sha256": "b9a6fa43fc72101f8989275b8c123c753a596e784de424c439f0579bb3c29fd6",
-      "referenceSha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
+      "referenceSha256": "b9a6fa43fc72101f8989275b8c123c753a596e784de424c439f0579bb3c29fd6"
      },
      {
       "tool": "viewImage",
       "sha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807",
-      "referenceSha256": "null"
+      "referenceSha256": "ea8cf7335aedd484a3f9260e1f0da4e9217a9d5cad03e015c5289787948c4807"
      }
     ]
    }
