@@ -36,7 +36,14 @@ export const MUSE_MAX_TOKENS=32000;
 export const OPENROUTER_MODEL_TRAITS={
  'deepseek/deepseek-v4.1-flash': { reasoning:'optional', inputs:['text','image'] },
  'meta/muse-spark-1.3-contributor': { reasoning:'always-on', inputs:['text','image','video'], productionEffort:'xhigh', maxTokens:MUSE_MAX_TOKENS },
+ // Ava (audio-reviewer): Gemini takes audio input; it runs at the host-wide
+ // medium effort with the default 16K cap, never Muse's xhigh/32K overrides.
+ 'google/gemini-3.8-flash': { reasoning:'optional', inputs:['text','image','video','file','audio'] },
 };
+// Offline audio-capability allowlist: Ava's configured model must be listed here.
+// listenAudio bytes go to the mediaReview Gemini provider (gemini-review.mjs);
+// Ava's own model only reads its report, but the binding must still hear audio.
+export const AUDIO_CAPABLE_OPENROUTER_MODELS=['google/gemini-3.8-flash'];
 
 export function modelTraits(model){
  return OPENROUTER_MODEL_TRAITS[model] ?? { reasoning:'optional', inputs:['text'] };
