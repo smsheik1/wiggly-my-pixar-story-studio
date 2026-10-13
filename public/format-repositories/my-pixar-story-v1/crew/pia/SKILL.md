@@ -30,8 +30,8 @@ Follow `task.recipe` and the rule text in `task.craft`. The rules are authoritat
 
 1. **Look first.** View every photo. Note skin tone, hair colour and texture, face shape, eye colour, eyebrows, build, clothing and any distinguishing marks. If a photo shows several people, say which one is this character by what you can see (position, clothing). Use the photos only for appearance.
 2. **Likeness.** Skin tone, hair colour and the face must match the photos. Write them concretely and early. The style can push shapes, but never lighten skin, change hair colour or change the face.
-3. **Age and proportions.** Draw the cast entry's age, from `ageVariant` and the script's `proposedCast` entry. Apply `C-HEADS-TALL` for that age, as the rule text in `task.craft` gives it. Apply `C-CHILD-RIDER` only to children. Its child proportions never carry over to an adult. If the photos show a different age, keep the face, skin and hair true, draw the entry's age, and say so in `message`.
-4. **Template.** Open with one line naming the stylized animated feature look. Then give one line each to subject, face, eyes, eyebrows, skin, hair, silhouette and wardrobe. Pick one eyebrow setting and one skin zoning. Deep skin always gets deep zoning. For tight coils, name the three hair scales.
+3. **Age and proportions.** Draw the cast entry's age, from `ageVariant` and the script's `proposedCast` entry. Apply `C-HEADS-TALL` for that age, as the rule text in `task.craft` gives it, in natural build wording: for a child "slim child build, slightly enlarged expressive head, approximately five heads tall, narrow child shoulders and natural limbs"; for a teen "approximately six-head-tall youthful proportions, slim-to-average build". Apply `C-CHILD-RIDER` only to children. Its child proportions never carry over to an adult. If the photos show a different age, keep the face, skin and hair true, draw the entry's age, and say so in `message`.
+4. **Template.** Open with one line naming the stylized animated feature look. Then give one line each to subject, face, eyes, eyebrows, skin, hair, silhouette and wardrobe. Pick one eyebrow setting. Write skin as `C-SKIN-NATURAL`: the photo's exact tone, even natural colour, no colour words for nose, ears or cheeks; dark skin stays rich, never grey. For tight coils, name the three hair scales.
 5. **Sheet layout.** Follow the character-sheet rules. The top row is four full-body views (front, three-quarter, profile, back) in one identical neutral pose, at one height on one baseline. Below that come eight head-and-shoulders close-ups in two rows of four, in the fixed order. Every figure is neutral, hands open and empty. Nothing is held.
 6. **Background.** Flat #B5B5B5 across the whole canvas, written as the hex. Don't add lighting or grade lines for the grey backdrop.
 7. **Close.** One essential negation: "no text, labels, captions, expression names or watermarks anywhere in the image." The expression names appear in the order list, named for the model and never rendered as text. Don't add an avoid list.
@@ -43,7 +43,7 @@ Advice, not checked by code:
 - One prompt makes all three options. Write one sheet, and don't number options or ask for variants.
 - Keep it short. Around 250 words is enough, and long prompts get averaged.
 
-Put your design calls (zoning, eyebrows, the pushed feature, the outfit) in the Event `message`. On a revision, open `message` with what the note said and what you changed.
+Put your design calls (eyebrows, the pushed feature, the outfit) in the Event `message`. On a revision, open `message` with what the note said and what you changed.
 
 ## Fixing a rejection
 
@@ -53,12 +53,12 @@ Prompt review:
 - `cast-fit`: match the roster entry and the script's cast entry (age look, minor, story purpose). Remove anything the story doesn't give.
 - `reference-grounding`: replace generic or wrong traits with what the photos show.
 - `style`: restate the house look plainly. Remove brand, studio, tool or renderer names, and push values further.
-- `anatomy`: fix the height rule (`C-HEADS-TALL`) and the child rider (`C-CHILD-RIDER`, children only), and fix skin zoning.
+- `anatomy`: fix the height rule (`C-HEADS-TALL`) and the child rider (`C-CHILD-RIDER`, children only) in natural build wording, and remove any nose, ear or cheek colour words.
 - `composition`: fix the views, the eight in order, the hex background or the no-text line.
 
 Sheet review:
 - `likeness`: move skin tone, hair colour and face shapes to the front in more concrete words, and ease off any push on the mismatched feature.
-- `style`: for text on the sheet, remove words that invite lettering (names, "labelled", "chart") and keep the no-text line. For an oversized head on an adult, restate the adult height rule. For grey dark skin, write deep zoning.
+- `style`: for text on the sheet, remove words that invite lettering (names, "labelled", "chart") and keep the no-text line. For an oversized head on an adult, restate the adult height rule. For grey dark skin, restate the photo's rich deep tone (`C-SKIN-NATURAL`). For a red or pink nose, ear rims or cheek blush, remove any colour words there and restate even natural colour.
 - `anatomy`: describe hands as a few large rounded forms with blunt fingertips. For children, describe the torso as slim, straight and flat.
 - `turnaround`: restate four views at the same height on one baseline, hands open and empty, and remove anything that reads as a prop.
 - `expressions`: keep the order. Add a few words to any expression that didn't read, for example "surprised: brows high, mouth a small open oval".
@@ -78,9 +78,9 @@ Invented family: Papa, an adult with two reference photos. The photos show a mus
   "action": "artifact",
   "actor": "agent",
   "characterId": "papa",
-  "message": "Design calls: outfit navy work shirt with sleeves rolled, brown trousers, leather shoes (the photos show only the mustard vest); deep skin zoning; graphic eyebrows; jaw pushed broad, eyes and mouth kept small.",
+  "message": "Design calls: outfit navy work shirt with sleeves rolled, brown trousers, leather shoes (the photos show only the mustard vest); graphic eyebrows; jaw pushed broad, eyes and mouth kept small.",
   "content": {
-    "prompt": "Stylized animated feature character sheet, production CG with chunky appealing forms. The man in the attached photos, at an adult age: broad shoulders, solid grounded build. Face: planes built broad and square, jaw wide and strong, eyes and mouth small and close-set, nose wide. Eyes: dark brown, deep-set. Eyebrows: graphic, thick, dark grey, soft-edged. Skin: deep brown exactly as in the photos, with deep zoning: deep red-orange at the nose tip and ear rims, plum-red cheek flush. Hair: short grey-black tight coils built at three scales, matte; trimmed grey moustache. Wardrobe: navy work shirt with sleeves rolled to the elbow, mustard knit vest, brown trousers, leather shoes. Pose: closed-lip, head level, eyes to camera, arms relaxed, hands open and empty. Top row: four full-body views, front, three-quarter, profile and back, in one identical neutral pose at one height on one baseline. Below: eight head-and-shoulders close-ups in two rows of four, facing camera, in this order: neutral, happy, delighted, sad, surprised, confused, angry, talking. Same face, hair and outfit in every figure. Background: flat #B5B5B5 across the whole canvas. No text, labels, captions, expression names or watermarks anywhere in the image.",
+    "prompt": "Stylized animated feature character sheet, production CG with chunky appealing forms. The man in the attached photos, at an adult age: broad shoulders, solid grounded build. Face: planes built broad and square, jaw wide and strong, eyes and mouth small and close-set, nose wide. Eyes: dark brown, deep-set. Eyebrows: graphic, thick, dark grey, soft-edged. Skin: rich deep brown exactly as in the photos, even natural colour. Hair: short grey-black tight coils built at three scales, matte; trimmed grey moustache. Wardrobe: navy work shirt with sleeves rolled to the elbow, mustard knit vest, brown trousers, leather shoes. Pose: closed-lip, head level, eyes to camera, arms relaxed, hands open and empty. Top row: four full-body views, front, three-quarter, profile and back, in one identical neutral pose at one height on one baseline. Below: eight head-and-shoulders close-ups in two rows of four, facing camera, in this order: neutral, happy, delighted, sad, surprised, confused, angry, talking. Same face, hair and outfit in every figure. Background: flat #B5B5B5 across the whole canvas. No text, labels, captions, expression names or watermarks anywhere in the image.",
     "characterDigest": "<copy the characterDigest from the packet>",
     "referenceHashes": ["<copy task.castEntry.references[0].sha256>", "<copy task.castEntry.references[1].sha256>"],
     "recipeSha256": "<copy task.recipe.sha256>"
