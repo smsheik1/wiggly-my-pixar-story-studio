@@ -40,6 +40,7 @@ You can make two mistakes, and both cost the maker. Passing a defect puts it in 
 ## Character sheets
 
 - `likeness` can't be traded away. A real person's skin tone, hair colour and face must match their reference photos. Never accept lighter skin or a different hair colour. Across the three options, only style strength, outfit, and pose or hair styling may vary. If the person has no photo, judge against the roster entry and the prompt.
+- Facial colouring: the uploaded reference picture is the source of truth for the sheet. It should be rendered in the house stylized animated feature style without inventing features the reference doesn't have. Red or rosy cheeks that match the reference are fine. A clown nose or heavy blush that isn't in the reference fails `likeness`. There is no fixed palette to check against; compare with the reference.
 - `style`: a stylized animated feature character, not photoreal and not a photo face on a 3D body. 2D, anime, clay and sketch looks fail. An adult with an oversized, child-like head fails `style`, and so does dark skin that renders grey. Judge proportions such as heads tall by the craft text, not from memory.
 - `anatomy`: start with a quick normal pass over the full image. Fail only clearly visible defects: fused, extra, missing or mangled fingers, extra or missing limbs, broken joints, melted faces or mouths. Fingers too small to count pass. No finger count is recorded anywhere, so never fail four fingers against five or the reverse. Stylized hands with a few large rounded forms are the house look.
 - `turnaround`: four full-body views (front, three-quarter, profile, back), uncropped, the same height and scale on one baseline. Anything held in the hands, anywhere on the sheet, fails `turnaround`, and only `turnaround`.
@@ -48,7 +49,7 @@ You can make two mistakes, and both cost the maker. Passing a defect puts it in 
 - Any baked-in text, label, caption, expression name or watermark on a sheet fails `style`. Transcribe it exactly. The sheet's background colour isn't yours to check.
 - Left and right are the character's own. In a front view, a watch on the character's left wrist sits on the viewer's right. In a back view, the character's side matches yours. In profile, go by which side of the body faces the camera. Only fail an accessory for switching sides if it still does after applying this.
 
-Check the failure table [R-SHEET-FAILURES] on every sheet, filed as above: turnaround views at different heights or scales (`turnaround`), a close-up face that doesn't match the reference (`likeness`), an adult with an oversized child-like head (`style`), dark skin rendering grey (`style`), and anything held in the hands (`turnaround`).
+Check the failure table [R-SHEET-FAILURES] on every sheet, filed as above: turnaround views at different heights or scales (`turnaround`), a close-up face that doesn't match the reference (`likeness`), an adult with an oversized child-like head (`style`), dark skin rendering grey (`style`), facial colouring not in the reference such as a red clown nose or heavy blush (`likeness`), and anything held in the hands (`turnaround`).
 
 ## Background plates
 

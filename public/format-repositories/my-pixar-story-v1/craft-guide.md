@@ -80,7 +80,7 @@ Format B (turnaround plus expressions) is the only sheet format. For people with
 - [R-SHEET-HEX] (check: sage) Background is flat #B5B5B5 across the whole canvas, written as the hex in every prompt.
 - [R-SHEET-NO-TEXT] (check: vera, sage) No text or labels on the sheet.
 - [R-SHEET-PROPS] (check: none) Props and non-humanoid subjects use the props variant: front, back, and a detail close-up on the identifying feature, with neutral framing.
-- [R-SHEET-FAILURES] (check: vera) Check the sheet against the failure table: the four turnaround views not the same height and scale; the close-up face not matching the reference; an adult with an oversized child-like head; dark skin rendering grey; anything held in the hands on the sheet.
+- [R-SHEET-FAILURES] (check: vera) Check the sheet against the failure table: the four turnaround views not the same height and scale; the close-up face not matching the reference; an adult with an oversized child-like head; dark skin rendering grey; facial colouring not in the reference, such as a red clown nose or heavy blush (the uploaded reference picture is the source of truth: render it in the house stylized animated feature style without inventing features it doesn't have, so red or rosy cheeks that match the reference are fine, and there is no fixed palette); anything held in the hands on the sheet.
 - [R-SHEET-PHOTO-REF] (check: sage) For people with photos, the photos are the reference and there is no master render; where a kept render and the prompt disagree, describe the render.
 - [R-SHEET-NO-PHOTO] (check: none) PENDING (later PR, not wired anywhere): a person with no photo gets one approved full-body render first, then the sheet is built from it.
 
