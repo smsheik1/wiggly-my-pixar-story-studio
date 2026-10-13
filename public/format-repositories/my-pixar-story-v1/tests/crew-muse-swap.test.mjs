@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {loadStudio} from '../runtime/instructions.mjs';
 import {CrewHost} from '../runtime/crew-host.mjs';
-import {OpenRouterHost,OPENROUTER_MAX_TOKENS,MUSE_MAX_TOKENS,modelTraits,AUDIO_CAPABLE_OPENROUTER_MODELS} from '../runtime/openrouter-host.mjs';
+import {OpenRouterHost,OPENROUTER_MAX_TOKENS,MUSE_MAX_TOKENS,AVA_MAX_TOKENS,modelTraits,AUDIO_CAPABLE_OPENROUTER_MODELS} from '../runtime/openrouter-host.mjs';
 
 const MUSE='meta/muse-spark-1.3-contributor';
 const AVA='google/gemini-3.8-flash';
@@ -77,8 +77,8 @@ test('5. production effort/output: Muse xhigh + 32K, DeepSeek medium + 16K, Gemi
   await host.chat({model:AVA,messages:[{role:'user',content:'x'}],verify:true});
   assert.deepEqual(bodies[0].reasoning,{effort:'xhigh'});assert.equal(bodies[0].max_tokens,MUSE_MAX_TOKENS);assert.equal(MUSE_MAX_TOKENS,32000);
   assert.deepEqual(bodies[1].reasoning,{effort:'medium'});assert.equal(bodies[1].max_tokens,OPENROUTER_MAX_TOKENS);
-  assert.deepEqual(bodies[2].reasoning,{effort:'medium'});assert.equal(bodies[2].max_tokens,OPENROUTER_MAX_TOKENS);
-  assert.equal(host.effortFor(AVA),'medium');assert.equal(host.maxTokensFor(AVA),OPENROUTER_MAX_TOKENS);
+  assert.deepEqual(bodies[2].reasoning,{effort:'medium'});assert.equal(bodies[2].max_tokens,AVA_MAX_TOKENS);
+  assert.equal(host.effortFor(AVA),'medium');assert.equal(host.maxTokensFor(AVA),AVA_MAX_TOKENS);
   // 9,739 completion tokens in one head-to-head Muse request: it must fit with room to spare.
   assert.ok(MUSE_MAX_TOKENS>=3*9739);
   for(const reasoningEffort of ['xhigh','max'])assert.throws(()=>new OpenRouterHost({cwd:dir,reasoningEffort}),/OPENROUTER_REASONING_LIMIT/);

@@ -6,7 +6,7 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadStudio } from '../runtime/instructions.mjs';
-import { OpenRouterHost, OPENROUTER_MAX_TOKENS, MUSE_MAX_TOKENS, modelTraits, AUDIO_CAPABLE_OPENROUTER_MODELS } from '../runtime/openrouter-host.mjs';
+import { OpenRouterHost, OPENROUTER_MAX_TOKENS, MUSE_MAX_TOKENS, AVA_MAX_TOKENS, modelTraits, AUDIO_CAPABLE_OPENROUTER_MODELS } from '../runtime/openrouter-host.mjs';
 
 // Hard safety: network calls prohibited
 globalThis.fetch = () => { throw new Error('FETCH_PROHIBITED: Network calls are forbidden in p16-ava-audio.test.mjs.'); };
@@ -23,11 +23,11 @@ test("Ava's configured model is in the committed audio-capable allowlist", T, ()
 
 test('Ava model never inherits Muse-only production overrides', T, () => {
   assert.equal(modelTraits(AVA_MODEL).productionEffort, undefined);
-  assert.equal(modelTraits(AVA_MODEL).maxTokens, undefined);
+  assert.equal(modelTraits(AVA_MODEL).maxTokens, AVA_MAX_TOKENS);
   const host = new OpenRouterHost({ cwd: '/tmp', fetcher: async () => { throw new Error('no network'); } });
   assert.equal(host.effortFor(AVA_MODEL), 'medium');
-  assert.equal(host.maxTokensFor(AVA_MODEL), OPENROUTER_MAX_TOKENS);
-  assert.ok(host.maxTokensFor(AVA_MODEL) < MUSE_MAX_TOKENS);
+  assert.equal(host.maxTokensFor(AVA_MODEL), AVA_MAX_TOKENS);
+  assert.ok(host.maxTokensFor(AVA_MODEL) <= MUSE_MAX_TOKENS);
 });
 
 test('Ava request body is sane: medium effort, default cap, exact model', T, async () => {
@@ -39,7 +39,7 @@ test('Ava request body is sane: medium effort, default cap, exact model', T, asy
     const host = new OpenRouterHost({ cwd: dir, secretsPath, fetcher: async (url, init) => { bodies.push(JSON.parse(init.body)); return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ model: AVA_MODEL, choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: 'pong' } }] }) }; } });
     await host.chat({ model: AVA_MODEL, messages: [{ role: 'user', content: 'ping' }], verify: true });
     assert.equal(bodies[0].model, AVA_MODEL);
-    assert.ok(bodies[0].max_tokens <= 16 * 1024);
+    assert.equal(bodies[0].max_tokens, AVA_MAX_TOKENS);
     assert.ok(!bodies[0].reasoning || bodies[0].reasoning.effort !== 'xhigh');
   } finally { await rm(dir, { recursive: true }); }
 });
