@@ -32,6 +32,17 @@ import { VisualCase, visualTask, qualifyVisual, requireVisualQualification } fro
 import { Cassette, recordingFetcher, replayFetcher, recordingSpawn, replaySpawn, normalizeForCassette } from './runtime/cassette.mjs';
 import { bibleSummary, renderBibleMarkdown, parseBible, unresolvedPaths } from './runtime/bible.mjs';
 import { createInterface } from 'node:readline/promises';
+import { requireSpendHeadroom } from './runtime/spend-preflight.mjs';
+import { endOfRunCheck } from './runtime/end-of-run.mjs';
+// r5 spend preflight: skipped for replays and when explicitly disabled; a missing
+// OpenRouter key is not a blocker here (the paid call reports it itself).
+async function spendPreflight(runDir, step, estimatedCostUsd) {
+  if (process.env.WIGGLY_REPLAY_CASSETTE || process.env.WIGGLY_SPEND_PREFLIGHT === 'off') return null;
+  try { await readFile(secretsPath, 'utf8'); } catch { return null; }
+  if (!/^\s*(?:export\s+)?OPENROUTER_API_KEY\s*=\s*\S/m.test(await readFile(secretsPath, 'utf8'))) return null;
+  try { return await requireSpendHeadroom({ runDir, secretsPath, step, estimatedCostUsd }); }
+  catch (e) { if (e.code !== 'SPEND_PREFLIGHT_BLOCKED') throw e; process.stdout.write(JSON.stringify({ paused: true, blocker: e.blocker }, null, 2) + '\n'); process.exitCode = 3; return { paused: true }; }
+}
 const root = dirname(fileURLToPath(import.meta.url));
 const rawProcessArgv = [...process.argv];
 // Run-dir paths differ between a recording and its replay sandbox; both sides
@@ -618,6 +629,7 @@ async function main() {
         cassette.header.profiles = { codex: codexProf, openrouter: orProf };
       }
 
+      if(openrouterHost&&command!=='dispatch-reconcile'){const pre=await spendPreflight(runDir,`crew:${command}`,0);if(pre?.paused)return;}
       const host=new CrewHost({codex:codexHost,openrouter:openrouterHost,config:studioConfig});
       let commandExitCode = 0, commandStdout = null, commandError = null;
       try{
@@ -747,8 +759,10 @@ async function main() {
       if(film.content.manifestDigest!==digest(assemblyManifest(p))||film.content.editPlanDigest!==current(p,'editPlan').digest)throw new Error('STALE_FILM: current assets differ from approved film.');
       const inspection=await inspectFilm(film.content.files[0]);assertFilmInspection(inspection);
       const result={formatVersion:VERSION,projectId:p.id,film:film.content.files[0],artifactId:film.id,artifactDigest:film.digest,approvedBy:film.approvedBy,review:film.review,inspection,manifest:assemblyManifest(p),provenance:film.content.provenance,published:false};
-      const path=join(runDir,'finalized.json');await writeFile(path,JSON.stringify(result,null,2)+'\n',{mode:0o600});print({path,film:result.film.path,published:false});return;
+      result.endOfRun=await endOfRunCheck({runDir,close:true});
+      const path=join(runDir,'finalized.json');await writeFile(path,JSON.stringify(result,null,2)+'\n',{mode:0o600});print({path,film:result.film.path,published:false,endOfRun:result.endOfRun});return;
     }
+    if(command==='end-of-run-check'){if(args.length)throw new Error('Unknown end-of-run-check arguments.');const done=status.project.step==='complete';print({step:status.project.step,...await endOfRunCheck({runDir,close:done&&option('flag-only','false')!=='true'})});return;}
     if(command==='present'){print(await presentDeliverable(status));return;}
     if (command === 'status' || command === 'inspect') { print({...presentation(status),...(command==='inspect'&&current(status.project,'film')?{filmMeasurements:await inspectFilm(current(status.project,'film').content.files[0])}:{})}); return; }
     if (command === 'impact') { print(revisionImpact(status.project, args[0])); return; }
@@ -879,6 +893,7 @@ async function main() {
       }else if((command==='generate'||job.plan.provider==='replicate')&&job.plan.provider!=='agy'){
         try{key=await loadKey(job.plan.provider,secretsPath);}catch(e){throw new Error(`${e.message}\n${remediation(job.plan.provider,secretsPath)}`);}
       }
+      if(command==='generate'){const pre=await spendPreflight(runDir,`generate:${job.plan.operation}`,job.plan.estimatedCostUsd);if(pre?.paused)return;}
       if(command==='generate')await runtimeEvent('begin');
       const fallbackTracer=()=>({enabled:false,paidJob(){},flush:async()=>{},attachImage(){}});
       let tracer=fallbackTracer();

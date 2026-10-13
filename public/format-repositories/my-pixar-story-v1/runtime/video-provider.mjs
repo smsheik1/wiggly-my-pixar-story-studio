@@ -1,6 +1,20 @@
 import { readFile, writeFile, rename } from 'node:fs/promises';
 import { join, extname } from 'node:path';
 import { importMedia } from './media.mjs';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const exec=promisify(execFile);
+// r5: video providers (H3) rejected webp keyframes. Convert webp/png to a
+// high-quality jpg (ffmpeg -q:v 3, roughly JPEG quality 90-92) before upload.
+export const KEYFRAME_JPEG_QSCALE='3';
+export async function keyframeForVideo(path,dir){
+ const ext=extname(path).toLowerCase();
+ if(ext==='.jpg'||ext==='.jpeg')return {path,mime:'image/jpeg',converted:false};
+ if(ext!=='.webp'&&ext!=='.png')throw new Error(`Unsupported keyframe format ${ext}; use jpg, png or webp.`);
+ const out=join(dir,'keyframe-upload.jpg');
+ await exec('ffmpeg',['-v','error','-y','-i',path,'-frames:v','1','-q:v',KEYFRAME_JPEG_QSCALE,'-pix_fmt','yuvj444p',out]);
+ return {path:out,mime:'image/jpeg',converted:true,source:path};
+}
 async function save(path,value){const tmp=`${path}.tmp`;await writeFile(tmp,JSON.stringify(value,null,2),{mode:0o600});await rename(tmp,path);}
 async function read(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(e){if(e.code==='ENOENT')return null;throw e;}}
 export async function executeVideo(job,dir,key,fetcher,collectOnly,onJobId){
@@ -9,7 +23,7 @@ export async function executeVideo(job,dir,key,fetcher,collectOnly,onJobId){
  if(!prediction){
   if(collectOnly)throw new Error('UNCERTAIN_SUBREQUEST: no recorded prediction; collection never resubmits.');
   try{await writeFile(join(dir,'video.started'),JSON.stringify({digest:job.digest}),{flag:'wx',mode:0o600});}catch(e){if(e.code==='EEXIST')throw new Error('UNCERTAIN_SUBREQUEST: reconcile the existing video request.');throw e;}
-  const bytes=await readFile(job.request.frame.path);const image=`data:image/${extname(job.request.frame.path).slice(1)};base64,${bytes.toString('base64')}`;
+  const upload=await keyframeForVideo(job.request.frame.path,dir);const bytes=await readFile(upload.path);const image=`data:${upload.mime};base64,${bytes.toString('base64')}`;
   const response=await fetcher(job.request.endpoint,{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({input:{...job.request.input,image}}),signal:AbortSignal.timeout(60000)});
   if(!response.ok)throw new Error(`HTTP ${response.status}: ${(await response.text()).replaceAll(key,'[redacted]').slice(0,800)}`);
   prediction=await response.json();if(!/^[a-z0-9-]+$/i.test(prediction.id??''))throw new Error('Video provider response lacks a valid prediction ID.');
@@ -25,5 +39,5 @@ export async function executeVideo(job,dir,key,fetcher,collectOnly,onJobId){
  if(new URL(url).protocol!=='https:'||!(host==='replicate.delivery'||host.endsWith('.replicate.delivery')))throw new Error('Unexpected video output host; no credential forwarding.');
  const response=await fetcher(url,{headers:{Authorization:`Bearer ${key}`},signal:AbortSignal.timeout(60000)});if(!response.ok)throw new Error(`Video download HTTP ${response.status}`);
  const path=join(dir,'output.mp4');await writeFile(path,Buffer.from(await response.arrayBuffer()),{mode:0o600});
- return {files:[await importMedia(path,job.request.runDir)],prompt:job.request.input.prompt,keyframeSha256:job.request.frame.sha256,providerJobId:prediction.id};
+ return {files:[await importMedia(path,job.request.runDir)],prompt:job.request.prompt??job.request.input.prompt,keyframeSha256:job.request.frame.sha256,providerJobId:prediction.id};
 }

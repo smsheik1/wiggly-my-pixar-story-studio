@@ -14,44 +14,36 @@ The film is a person telling someone they love who they really were. The shots e
 1. Give each beat one feeling, taken from the script, and ask what carries it: whose face, which object, which gesture. If `task.craft` states a rule for this (such as `[S-REACTION]`, whose face we cut to), follow it.
 2. Picture and narration do different work. Don't film the sentence. Show what it leaves unsaid: a hand, an object, a reaction. If the narration says "he was still cheering," show his face, not the road.
 3. The people the narration talks about must be on screen where it matters. If the script says "he pulled the tarp off" or "we spent three weeks," that person is in the shot doing it. Never swap the narrator in to do someone else's action. Every beat that is about a person shows that person.
-4. Hold on the emotional line. Use the locked narration timing to land the visual payoff on the line that carries the beat, and keep what comes before it quieter. Move the camera only when the move means something, such as a slow push toward a face or a pull-back that reveals. Stillness often lands harder than motion.
-5. Each shot becomes one video generation. Plan one action and one camera move, few characters, and no crowds, readable text or fast action. Prefer shots of 4 to 15 seconds, the video model's clip range; the shell doesn't enforce the 4-second floor. A cut inside a beat has to earn its place; one held shot per beat is a normal plan.
-6. If an object or place appears early in the script and returns later, show it both times, only when the script supports both. Never plant a return the script doesn't have.
-7. End on the image the last line earns, held: a face or an object, the quietest shot in the film.
+4. Nobody speaks lines. The narrator tells the story by voice-over, and the clips are silent. When a beat is about a conversation (dinner talk, a parent explaining something), you may stage it as a silent conversation seen under the narration: write "talking together" in the action, never quoted lines. The motion director marks those shots MOS. Otherwise, stage faces at rest.
+5. Hold on the emotional line. Use the locked narration timing to land the visual payoff on the line that carries the beat, and keep what comes before it quieter. Move the camera only when the move means something, such as a slow push toward a face or a pull-back that reveals. Stillness often lands harder than motion.
+6. The film is exactly four shots: one shot per beat, each exactly 15 seconds, and each becomes one 15-second video generation. Never split a beat into more than one shot. Plan one action and one camera move, few characters, and no crowds, readable text or fast action. Choose the single image that carries the beat and hold it.
+7. If an object or place appears early in the script and returns later, show it both times, only when the script supports both. Never plant a return the script doesn't have.
+8. End on the image the last line earns, held: a face or an object, the quietest shot in the film.
 8. Keep locations to the minimum. Each one is a background to generate and keep consistent. Reuse a location through angles and add an angle only when a reverse or wide view is needed.
 
 Illustration from an invented family (never reuse their names, objects or lines):
 - Script, beat 3: "Papa wiped his hands on his apron and said, 'Taste it, Rosa.' I did. It was the best soup in the world."
 - Weak: one wide shot of Rosa at the table eating soup, camera tracking around her. It illustrates the sentence and the feeling is lost.
-- Stronger: two contiguous shots. First, Papa's hands offering the spoon, held still (0 to 8 s). Then Papa's face as Rosa tastes, a slow push-in landing on "best soup in the world" (8 to 15 s). Rosa is seen in the first shot and her taste is heard, not shown.
+- Stronger: one held 15-second shot on Papa at the stove, offering the spoon toward Rosa at the frame edge, with a very slow push-in that lands on his face softening as "best soup in the world" is spoken. Rosa's taste is heard, not shown.
 
 Worked example, same invented family. These are the real field names; keep them exactly.
 ```json
 { "locations": [
     { "id": "kitchen", "name": "Papa's Kitchen",
       "scenes": [
-        { "id": "kitchen-spoon", "beat": 3, "description": "Papa offers Rosa the spoon at the stove.",
-          "action": "Papa wipes his hands on his apron and holds out the spoon.",
-          "characterIds": ["rosa", "papa"], "sourceAnswers": ["soupMemory"] },
-        { "id": "kitchen-papa-face", "beat": 3, "description": "Papa watches Rosa taste.",
-          "action": "Papa waits, then smiles.",
-          "characterIds": ["papa"], "sourceAnswers": ["soupMemory"] } ],
+        { "id": "kitchen-spoon", "beat": 3, "description": "Papa offers Rosa the spoon at the stove and watches her taste.",
+          "action": "Papa wipes his hands on his apron, holds out the spoon, then smiles.",
+          "characterIds": ["rosa", "papa"], "sourceAnswers": ["soupMemory"] } ],
       "angles": [] } ],
   "shots": [
-    { "id": "shot-03a-spoon", "sceneId": "kitchen-spoon", "locationId": "kitchen", "angleId": null,
-      "beat": 3, "startSeconds": 0, "durationSeconds": 8.0, "characterIds": ["rosa", "papa"],
-      "camera": "Medium shot on Papa's hands, held still.",
-      "action": "Papa wipes his hands on his apron and offers the spoon; Rosa leans in.",
-      "staging": "Hands and spoon centre-frame, Rosa small at the lower left.",
-      "continuityNotes": "Apron and warm light from the left carry into the next shot." },
-    { "id": "shot-03b-papa-face", "sceneId": "kitchen-papa-face", "locationId": "kitchen", "angleId": null,
-      "beat": 3, "startSeconds": 8.0, "durationSeconds": 7.0, "characterIds": ["papa"],
-      "camera": "Close-up on Papa's face, very slow push-in.",
-      "action": "Papa watches off-screen, waiting; his face softens into a smile.",
-      "staging": "Papa centre-frame, apron at the bottom edge, stove blurred behind him.",
-      "continuityNotes": "Same apron and light as the previous shot." } ] }
+    { "id": "shot-03-spoon", "sceneId": "kitchen-spoon", "locationId": "kitchen", "angleId": null,
+      "beat": 3, "startSeconds": 0, "durationSeconds": 15, "characterIds": ["rosa", "papa"],
+      "camera": "Medium shot on Papa at the stove, very slow push-in toward his face.",
+      "action": "Papa wipes his hands on his apron and offers the spoon; Rosa leans in from the lower left; his face softens into a smile.",
+      "staging": "Papa centre-frame, spoon held toward Rosa at the lower left, stove behind him.",
+      "continuityNotes": "Apron and warm light from the left." } ] }
 ```
-This shows beat 3 only; a real artifact covers all four beats. The shots cover 0.0 to 8.0 s and 8.0 to 15.0 s, so beat 3 totals exactly 15.0 s. Each shot shows exactly the people its scene lists, so the close-up on Papa is its own scene with Papa alone, in the same location and beat.
+This shows beat 3 only; a real artifact has exactly four shots, one per beat, each starting at 0 and lasting exactly 15 s.
 
 ## Grounding
 
@@ -60,8 +52,8 @@ Hard rule: do not invent facts about the maker's life: no new people, pets, gift
 ## Constraints the shell checks
 
 Know these so the plan doesn't bounce:
-- Four beats of exactly 15.0 s each. Within a beat, shots are contiguous: the first starts at 0, there are no gaps or overlaps, and durations sum to exactly 15.0. No shot is longer than 15.0 s.
-- Every scene has at least one shot, every beat is covered, and each shot's beat equals its scene's beat.
+- Exactly four shots, one per beat, in beat order 1 to 4. Each shot has `startSeconds` 0 and `durationSeconds` exactly 15. Any other count or duration is rejected.
+- Every scene has a shot, so register exactly one scene per beat; each shot's beat equals its scene's beat.
 - A shot's `characterIds` are exactly the same set as its scene's: nothing missing, nothing extra, no duplicates, all from the approved roster, ids as lowercase slugs. To show one person alone, give that moment its own scene listing only that person.
 - `angleId` is null for the master plate view. Otherwise the angle exists in that location's `angles` and lists the shot's `sceneId`.
 
@@ -90,4 +82,4 @@ Use the same event and fields during a repair in two cases. If the fix would cha
 
 Reviewer verdicts are independent. Read `task.feedback`, fix only the failing shots and criteria, and keep shot ids stable. Anything that would need a locked change goes through "When you're blocked."
 
-Before you submit, check: every beat totals exactly 15.0 s; every person the narration talks about is seen doing what the script says; whichever face or object carries each beat is the one on screen; nothing in the plan contradicts the script; the last shot is the quietest.
+Before you submit, check: there are exactly four shots, one per beat, each 15 s; every person the narration talks about is seen doing what the script says; whichever face or object carries each beat is the one on screen; nothing in the plan contradicts the script; the last shot is the quietest.

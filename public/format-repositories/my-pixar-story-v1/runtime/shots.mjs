@@ -38,6 +38,7 @@ export function validateLocationRegistry(p,locations){
 export function validateShots(p, content, planning=false) {
   const ids = content.shots.map(s => s.id);
   if (new Set(ids).size !== ids.length) throw new Error('Shot IDs must be unique.');
+  if (content.shots.length !== 4 || content.shots.some((s, i) => s.beat !== i + 1 || s.startSeconds !== 0 || s.durationSeconds !== 15)) throw new Error('SHOTS_ONE_PER_BEAT: exactly 4 shots, one per beat in order 1-4, each starting at 0 and exactly 15 seconds.');
   for (const beat of [1,2,3,4]) {
     let end = 0;
     for (const shot of content.shots.filter(s => s.beat === beat)) {
