@@ -94,3 +94,18 @@ test('Flow refusal without a bound fallback stops; non-Flow errors never fall ba
     assert.equal(calls.length, 0);
   } finally { await rm(b.dir, { recursive: true }); }
 });
+
+test('flow:login launches plain system Chrome: only the profile and the Flow URL', async () => {
+  const { loginArgs, FLOW_URL } = await import('../runtime/flow-image.mjs');
+  const args = loginArgs('/tmp/prof');
+  assert.deepEqual(args, ['--user-data-dir=/tmp/prof', FLOW_URL]);
+  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(pkg.scripts['flow:login'], 'node runtime/flow-image.mjs login');
+});
+
+test('generation Chrome args carry no automation or sandbox flags', async () => {
+  const { generationArgs } = await import('../runtime/flow-image.mjs');
+  const args = generationArgs('/tmp/prof', 9333);
+  assert.ok(args.includes('--user-data-dir=/tmp/prof') && args.includes('--remote-debugging-port=9333'));
+  for (const bad of ['--no-sandbox', '--enable-automation', '--headless', '--disable-blink-features']) assert.ok(!args.some(a => a.startsWith(bad)), bad);
+});

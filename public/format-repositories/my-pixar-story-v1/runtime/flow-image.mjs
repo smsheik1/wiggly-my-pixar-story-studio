@@ -9,6 +9,9 @@
 import { mkdir, writeFile, rename, readFile } from 'node:fs/promises';
 import { dirname, join, extname } from 'node:path';
 import { homedir } from 'node:os';
+import { spawn, spawnSync } from 'node:child_process';
+import { createServer } from 'node:net';
+import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { verifyAgyImage } from './agy-image.mjs';
 
@@ -37,25 +40,61 @@ export function classifyFlowMessage(text, phase = 'generate') {
   return 'FLOW_UI_ERROR';
 }
 
+export const chromeBinary = () => process.env.WIGGLY_FLOW_CHROME_BIN || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+
+// Google blocks sign-in from automation-launched browsers ("This browser or app may not be
+// secure"). Sign-in therefore uses the real system Chrome with ONLY the profile and the URL:
+// no Playwright, no --no-sandbox, no --enable-automation, no remote debugging.
+export const loginArgs = (profileDir = flowProfileDir()) => [`--user-data-dir=${profileDir}`, FLOW_URL];
+// Generation launches the same real Chrome + profile with a local CDP port and connects to it;
+// Playwright never launches the browser, so none of its automation flags are added.
+export const generationArgs = (profileDir = flowProfileDir(), port) => [`--user-data-dir=${profileDir}`, `--remote-debugging-port=${port}`, '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', 'about:blank'];
+
+// PIDs of Chrome main processes already using the profile (Chrome allows one per profile).
+export function chromePidsForProfile(profileDir = flowProfileDir()) {
+  const out = spawnSync('ps', ['-axo', 'pid=,command='], { encoding: 'utf8' }).stdout || '';
+  return out.split('\n').filter(l => l.includes(`--user-data-dir=${profileDir}`) && !l.includes('--type=')).map(l => Number(l.trim().split(/\s+/)[0])).filter(Boolean);
+}
+
 async function loadChromium() {
   try { return (await import('playwright-core')).chromium; }
   catch (e) { throw new FlowError('FLOW_UI_ERROR', `playwright-core is not installed (${e.message.slice(0, 120)}). Run npm install in the kit.`); }
 }
 
-export async function openFlowContext({ profileDir = flowProfileDir(), headless = false } = {}) {
+const freePort = () => new Promise((res, rej) => { const srv = createServer(); srv.listen(0, '127.0.0.1', () => { const { port } = srv.address(); srv.close(() => res(port)); }); srv.on('error', rej); });
+
+export async function openFlowContext({ profileDir = flowProfileDir(), bin = chromeBinary(), startupMs = 30000 } = {}) {
+  const running = chromePidsForProfile(profileDir);
+  if (running.length) throw new FlowError('FLOW_UI_ERROR', `Chrome is already open on the Flow profile (PID ${running.join(', ')}); close that window first.`);
   const chromium = await loadChromium();
   await mkdir(profileDir, { recursive: true, mode: 0o700 });
-  try { return await chromium.launchPersistentContext(profileDir, { channel: 'chrome', headless, acceptDownloads: true, viewport: { width: 1440, height: 960 } }); }
-  catch (e) { throw new FlowError('FLOW_UI_ERROR', `could not launch Chrome with the Flow profile: ${String(e.message).split('\n')[0].slice(0, 200)}`); }
+  const port = await freePort();
+  const child = spawn(bin, generationArgs(profileDir, port), { stdio: 'ignore' });
+  const spawnErr = new Promise((_, rej) => child.once('error', e => rej(new FlowError('FLOW_UI_ERROR', `could not start Chrome at ${bin}: ${e.message}`))));
+  const kill = () => { if (child.exitCode === null && child.pid) { try { process.kill(child.pid); } catch {} } };
+  try {
+    const deadline = Date.now() + startupMs; let browser = null;
+    while (!browser) {
+      if (Date.now() > deadline) throw new FlowError('FLOW_UI_ERROR', 'Chrome did not open its local debugging port in time.');
+      try { browser = await Promise.race([chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 5000 }), spawnErr]); }
+      catch (e) { if (e instanceof FlowError) throw e; await new Promise(r => setTimeout(r, 500)); }
+    }
+    const ctx = browser.contexts()[0];
+    if (!ctx) throw new FlowError('FLOW_UI_ERROR', 'Chrome exposed no default context for the Flow profile.');
+    // Closing disconnects CDP and then ends exactly the Chrome process we spawned.
+    ctx.close = async () => { try { await browser.close(); } catch {} kill(); };
+    return ctx;
+  } catch (e) { kill(); throw e; }
 }
 
-// One-time sign-in: opens the dedicated profile at Flow and waits until the window is closed.
-export async function flowLogin(opts = {}) {
-  const ctx = await openFlowContext({ ...opts, headless: false });
-  const page = ctx.pages()[0] ?? await ctx.newPage();
-  await page.goto(FLOW_URL);
-  console.log(`Sign in to Google in this Chrome window (profile ${opts.profileDir ?? flowProfileDir()}), open Flow once, then close the window.`);
-  await new Promise(r => ctx.on('close', r));
+// One-time sign-in: plain system Chrome on the dedicated profile, no automation at all.
+export function flowLogin({ profileDir = flowProfileDir(), bin = chromeBinary() } = {}) {
+  const running = chromePidsForProfile(profileDir);
+  if (running.length) throw new Error(`Chrome is already open on the Flow profile (PID ${running.join(', ')}); close that window first.`);
+  mkdirSync(profileDir, { recursive: true, mode: 0o700 });
+  const child = spawn(bin, loginArgs(profileDir), { stdio: 'ignore', detached: true });
+  child.unref();
+  console.log(`Opened Chrome on ${profileDir}. Sign in to Google, open Flow once, then quit that Chrome window (Cmd+Q).`);
 }
 
 const clickText = async (page, re, timeout = 5000) => {
@@ -77,11 +116,11 @@ async function configure(page, aspectRatio) {
   await page.keyboard.press('Escape').catch(() => {});
 }
 
-export async function generateFlowImage({ prompt, aspectRatio = '4:3', imagePaths = [], outputPath, profileDir, headless = process.env.WIGGLY_FLOW_HEADLESS === '1', timeoutMs = flowTimeoutMs() }) {
+export async function generateFlowImage({ prompt, aspectRatio = '4:3', imagePaths = [], outputPath, profileDir, timeoutMs = flowTimeoutMs() }) {
   if (!outputPath) throw new FlowError('FLOW_UI_ERROR', 'outputPath is required');
-  const ctx = await openFlowContext({ profileDir, headless });
+  const ctx = await openFlowContext({ profileDir });
   try {
-    const page = ctx.pages()[0] ?? await ctx.newPage();
+    const page = await ctx.newPage();
     page.setDefaultTimeout(20000);
     await page.goto(FLOW_URL, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(e => { throw new FlowError('FLOW_UI_ERROR', `could not open Flow: ${String(e.message).split('\n')[0]}`); });
     if (/accounts\.google\.com/.test(page.url())) throw new FlowError('FLOW_UI_ERROR', 'the Flow Chrome profile is not signed in; run `npm run flow:login` once.');
@@ -138,5 +177,5 @@ export async function generateFlowImage({ prompt, aspectRatio = '4:3', imagePath
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1] && process.argv[2] === 'login') {
-  flowLogin().then(() => process.exit(0), e => { console.error(e.message); process.exit(1); });
+  try { flowLogin(); } catch (e) { console.error(e.message); process.exit(1); }
 }
