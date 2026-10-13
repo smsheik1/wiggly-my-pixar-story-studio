@@ -84,7 +84,7 @@ async function walkImages(dir, out = []) {
 
 export const agyNameStem = name => String(name).replace(/[^A-Za-z0-9]+/g, '_').toLowerCase();
 
-// Quota/capacity failures are the only agy errors eligible for the meta-muse fallback.
+// Quota/capacity failures and policy refusals (AGY_POLICY_REFUSED) are eligible for the meta-muse fallback.
 export function isAgyQuotaError(text) {
   // A bare 429 is not enough: agy logs unrelated MCP/OAuth 429s (Cloudflare 1015) on normal runs.
   return /resource_exhausted|exhausted your capacity|quota will reset/i.test(String(text ?? ''));
