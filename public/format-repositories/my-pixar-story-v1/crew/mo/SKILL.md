@@ -35,7 +35,10 @@ How your plan is used:
 If a locked shot can't be animated as written, plan the closest valid clip and say in the Event `message` which locked item can't be met (camera, action, framing or length) and what the shot or keyframe would need. Never change a shot's fields to make it fit.
 
 Advice:
-- The narration is voice-over and the clips are silent. Keep mouths closed or still unless the locked shot says someone speaks, because moving lips read as talking with no sound.
+- Set `talk` on every clip from its beat. The story is told by voice-over narration, never dialogue, and the clips are silent, so nobody's lines are ever heard.
+  - `"none"` (the default): nobody on screen talks. The runtime adds "Mouths stay closed; no talking, no lip movement." to the video prompt.
+  - `"mos"`: use only when the locked shot or beat shows people in conversation, such as a couple chatting over dinner or a parent explaining something to a child. The runtime adds a silent-conversation line: loose, natural, unsynced mouth movement and gestures, with no lip-sync to any words. This is MOS dialogue, a conversation you see but don't hear, as in the "Married Life" montage in *Up*. Never use it to have a character speak a narration line.
+  - When in doubt, use `"none"`. Mouths that look like they're syncing to real words, with no sound, read as broken.
 - Keep left and right as the keyframe shows them. People shouldn't cross or swap sides within a clip.
 - One person moves at a time where you can. Two people doing the same motion in unison looks mechanical.
 - Use the narration only to judge the mood and pace of each beat. Never add story from it that the shot doesn't show.
@@ -66,12 +69,14 @@ Invented family. This excerpt shows the clips for the beat 3 and beat 4 shots. A
         "camera": "Very slow push-in toward Papa's face.",
         "action": "Papa wipes his hands on his apron, offers the spoon toward Rosa, who leans in; his face softens into a closed-mouth smile.",
         "anchors": "Papa's right hand holds the spoon by its handle.",
-        "atmosphere": "Steam rises gently from the pot behind him." },
+        "atmosphere": "Steam rises gently from the pot behind him.",
+        "talk": "none" },
       { "id": "clip-04-window", "shotId": "shot-04-window", "startSeconds": 0, "durationSeconds": 15, "generationSeconds": 15,
         "camera": "Slow pan left, toward the window.",
         "action": "Grown Rosa stirs the pot by the window, lips closed.",
         "anchors": "Rosa's right hand holds the spoon.",
-        "atmosphere": "Light from the window shifts slightly across the pot." }
+        "atmosphere": "Light from the window shifts slightly across the pot.",
+        "talk": "none" }
     ]
   }
 }
@@ -83,5 +88,6 @@ Invented family. This excerpt shows the clips for the beat 3 and beat 4 shots. A
 - Is there exactly one clip per approved shot, in shot order, starting at 0 and lasting exactly the shot's length?
 - Are there exactly four clips, each with `durationSeconds` 15 and `generationSeconds` 15?
 - Is `resolution` `"480p"`?
+- Does every clip have `talk` set: `"none"` unless the beat shows a silent conversation (`"mos"`)?
 - Does each clip have one camera move matching the shot, the locked action in its own words, one or two anchors the frame shows, and quiet atmosphere?
 - Are `taskId` and `actor` copied, with any locked-item conflict in `message`?

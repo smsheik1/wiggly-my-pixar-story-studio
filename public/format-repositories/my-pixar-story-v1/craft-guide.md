@@ -131,6 +131,7 @@ Motion and light that match the keyframe.
 
 - [V-MOTION] (check: june) Design one action per clip as observable results: anticipation winding the opposite way first, snap and settle with a small overshoot, moving holds that breathe, follow-through where hair and cloth arrive late, arcs for hands and heads, and weight read from timing.
 - [V-LIGHT] (check: june) Design lighting per clip from the keyframe: key direction and colour, rim for separation, bounce colour, practicals, atmosphere, and palette as a ratio with one accent; keep the keyframe's stylized animated-feature look.
+- [V-TALK] (check: june) Narration, not dialogue: the story is told by voice-over (after Sarah Kozloff's *Invisible Storytellers*), clips are silent and no lines are ever heard, but a conversation may be seen without being heard (MOS dialogue, like the "Married Life" montage in *Up*). Every clip sets `talk`: `none` (default) keeps mouths closed with no talking; `mos` shows a silent conversation with loose, unsynced mouth movement and gestures. Never lip-sync to words or mouth specific lines, and never show speech text.
 
 ## [video-architecture] Video: architecture
 

@@ -6,9 +6,13 @@ import { requireVisualQualification } from '../evaluation/visual-qualification.m
 export const studioSteps=['reviewerQualification','videoPlan','videoPrompt','video','soundPlan','music','effect','editPlan','film'];
 export const clipFor=p=>current(p,'videoPlan')?.content.clips.find(c=>c.id===p.clipId);
 export const effectFor=p=>current(p,'soundPlan')?.content.effects.find(c=>c.id===p.effectId);
-// r5: clips are silent and narration is voice-over, so any mouth motion reads as fake lip-sync.
-export const MOUTHS_CLOSED_CLAUSE='Mouths stay closed; no talking, no lip movement.';
-export const withMouthsClosed=prompt=>{const t=String(prompt??'').trimEnd();return t.endsWith(MOUTHS_CLOSED_CLAUSE)?t:`${t}${t?'\n':''}${MOUTHS_CLOSED_CLAUSE}`;};
+// r5: clips are silent and the story is told by voice-over narration, never dialogue. Per clip, Mo picks
+// talk 'none' (nobody talks) or 'mos' (a silent conversation seen under narration, loose and unsynced; Kozloff, Invisible Storytellers).
+export const TALK_CLAUSES=Object.freeze({none:'Mouths stay closed; no talking, no lip movement.',mos:'Characters converse silently under narration: loose, natural, unsynced mouth movement and gestures, no lip-sync to any words, no visible speech text.'});
+export const MOUTHS_CLOSED_CLAUSE=TALK_CLAUSES.none;
+export const talkMode=clip=>clip?.talk==='mos'?'mos':'none';
+export const withTalkClause=(prompt,talk='none')=>{const clause=TALK_CLAUSES[talk==='mos'?'mos':'none'],t=String(prompt??'').trimEnd();return t.endsWith(clause)?t:`${t}${t?'\n':''}${clause}`;};
+export const withMouthsClosed=prompt=>withTalkClause(prompt,'none');
 export const motionPrompt=c=>`Camera: ${c.camera}\nAction: ${c.action}\nPhysical anchors: ${c.anchors}\nAtmosphere: ${c.atmosphere}`;
 export function videoBinding(p){const clip=clipFor(p),frame=current(p,`keyframe:${clip.shotId}`);const shot=current(p,'shots').content.shots.find(s=>s.id===clip.shotId);return {clip,frame,shot,references:shotReferences(p,shot),clipDigest:digest(clip),keyframeId:frame.id,keyframeSha256:frame.content.files[0].sha256,prompt:motionPrompt(clip)};}
 export function validateVideoPlan(p,plan){

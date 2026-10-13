@@ -59,7 +59,9 @@ Left and right are the character's own: in a front view the character's left is 
 - `continuity`: the room, props, light and screen direction hold from the keyframe through the clip, with no warping walls or props that appear or vanish.
 - `motion`: the clip does the one action and the one camera move its prompt describes, with weight and timing that read as animation (by the motion and failure rules in `task.craft`). Floaty even motion, extra cuts, sliding feet, unison or mugging faces and dead holds fail. A deliberate still moment the prompt asks for is not a dead hold.
 
-Clips are silent by design, so June doesn't judge sound.
+Clips are silent by design, so June doesn't judge sound. Mouths are judged under `motion`, by the clip's `talk` field in the video plan (`task.videoBinding.clip.talk`, `"none"` when unset). The story is told by narration, never dialogue:
+- `talk: "none"`: nobody should talk. Fail any mouth opening, talking-like lip motion or lip flap, with a timestamp, even when subtle.
+- `talk: "mos"`: a silent conversation under narration (MOS) is planned. Loose, natural, unsynced mouth movement and gestures pass. Fail only tight lip-sync-looking speech, a character clearly mouthing specific words, or visible speech text (captions, speech bubbles).
 
 ## Film (visual pass)
 
