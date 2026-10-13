@@ -4,6 +4,7 @@ import { join, extname, resolve, basename } from 'node:path';
 import {legacyGeneration,studioFor,imageUnitCostFor,imageAspectFor,metaMuseSizeFor} from './instructions.mjs';
 import { generateAgyImage, agyBrainDir, agyBinary, agyTimeoutMs, isAgyQuotaError, parseAgyQuotaReset } from './agy-image.mjs';
 export { isAgyQuotaError, parseAgyQuotaReset };
+import { generateFlowImage, isFlowFallbackError, FLOW_MODEL } from './flow-image.mjs';
 import { videoBinding, effectFor } from './studio.mjs';
 import { executeVideo } from './video-provider.mjs';
 import { shotReferences } from './shots.mjs';
@@ -61,14 +62,14 @@ export function requestDescriptor(p, plan) {
   }
   const aspectRatio = imageAspectFor(plan.operation);
   const provider = plan.provider;
-  if (!['agy', 'meta-muse'].includes(provider)) throw new Error('Image provider must be agy or meta-muse.');
+  if (!['google-flow', 'agy', 'meta-muse'].includes(provider)) throw new Error('Image provider must be google-flow, agy or meta-muse.');
   const unitCost = imageUnitCostFor(p, provider);
-  if (plan.estimatedCostUsd + 1e-9 < n * unitCost) throw new Error(provider === 'agy' ? 'agy estimate must account for every requested image ($0 each).' : 'Muse estimate must account for every requested image ($0.01 each).');
-  if (provider === 'agy') {
-    const base = { provider: 'agy', prompt: plan.parameters.prompt, images, n, aspectRatio, estimatedUnitCostUsd: 0 };
+  if (plan.estimatedCostUsd + 1e-9 < n * unitCost) throw new Error(provider !== 'meta-muse' ? `${provider} estimate must account for every requested image ($0 each).` : 'Muse estimate must account for every requested image ($0.01 each).');
+  if (provider === 'agy' || provider === 'google-flow') {
+    const base = { provider, ...(provider === 'google-flow' ? { model: FLOW_MODEL } : {}), prompt: plan.parameters.prompt, images, n, aspectRatio, estimatedUnitCostUsd: 0 };
     if (plan.fallbackEstimatedCostUsd === undefined) return base;
     const museUnit = imageUnitCostFor(p, 'meta-muse');
-    if (plan.fallbackEstimatedCostUsd + 1e-9 < n * museUnit) throw new Error(`agy fallback estimate must reserve at least ${n} x $${museUnit} Muse images.`);
+    if (plan.fallbackEstimatedCostUsd + 1e-9 < n * museUnit) throw new Error(`${provider} fallback estimate must reserve at least ${n} x $${museUnit} Muse images.`);
     return { ...base, fallback: { provider: 'meta-muse', endpoint: `https://api.meta.ai/v1/images/${images.length ? 'edits' : 'generations'}`, model: generation.image.model, size: metaMuseSizeFor(aspectRatio), aspectRatio, response_format: 'b64_json', output_format: 'webp', tool_enablement: { enable_web_search: false, enable_image_search: false, enable_shell: false }, unitCostUsd: museUnit } };
   }
   return { endpoint: `https://api.meta.ai/v1/images/${images.length ? 'edits' : 'generations'}`, model: generation.image.model, prompt: plan.parameters.prompt, images, n, size: metaMuseSizeFor(aspectRatio), aspectRatio, response_format: 'b64_json', output_format: 'webp',
@@ -158,7 +159,7 @@ export async function executeJob(p, job, runDir, apiKey, fetcher = fetch, collec
 }
 // Trusted transport boundary. The caller must authorize and persist the exact request
 // before entry; workers never receive this function or provider credentials.
-export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, collectOnly = false, onJobId, { tracer = null } = {}) {
+export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, collectOnly = false, onJobId, { tracer = null, flowGenerator = generateFlowImage } = {}) {
   const request = job.request; await verifyFiles(request);
   const dir = join(runDir, 'receipts', job.id); await mkdir(dir, { recursive: true });
   if(job.plan.provider==='replicate'){const cached=join(dir,'result.json');try{return JSON.parse(await readFile(cached,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}const result=await executeVideo({...job,request:{...job.request,runDir}},dir,apiKey,fetcher,collectOnly,onJobId);if(!result.pending)await atomicJson(cached,result);return result;}
@@ -222,18 +223,21 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
       const edits=result.audioEdits?.filter(e=>e.beat!==scope.beat);if(edits?.length)result.audioEdits=edits;else delete result.audioEdits;
       result.audioRegenerations=[...(result.audioRegenerations??[]).filter(e=>e.beat!==scope.beat),{beat:scope.beat,spokenText:scope.spokenText,parentArtifactId:scope.artifactId,parentArtifactDigest:scope.artifactDigest,jobId:job.id,requestDigest:job.digest}];
     }
-  } else if (job.plan.provider === 'agy') {
+  } else if (job.plan.provider === 'agy' || job.plan.provider === 'google-flow') {
+    // google-flow (sheet default) and agy (older projects) share the durable per-index
+    // receipts and the bound Muse fallback; only the generator and refusal rules differ.
+    const prim = job.plan.provider;
     const fallback = request.fallback ?? null;
     const readJsonOrNull = async path => { try { return JSON.parse(await readFile(path, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; return null; } };
     const files = Array(request.n).fill(null);
     const providers = Array(request.n).fill(null);
     for (let i = 0; i < request.n; i++) {
       const r = await readJsonOrNull(join(dir, `${i}.json`));
-      if (r?.file) { files[i] = r.file; providers[i] = { index: i, provider: r.provider ?? 'agy', costUsd: r.costUsd ?? (r.provider === 'meta-muse' ? (fallback?.unitCostUsd ?? 0.01) : 0) }; }
+      if (r?.file) { files[i] = r.file; providers[i] = { index: i, provider: r.provider ?? prim, costUsd: r.costUsd ?? (r.provider === 'meta-muse' ? (fallback?.unitCostUsd ?? 0.01) : 0) }; }
     }
     const missingIndices = () => files.map((f, i) => f ? null : i).filter(v => v !== null);
     const finishResult = () => {
-      const kind = providers.every(p => p?.provider === 'agy') ? 'agy' : providers.every(p => p?.provider === 'meta-muse') ? 'meta-muse' : 'mixed';
+      const kind = providers.every(p => p?.provider === prim) ? prim : providers.every(p => p?.provider === 'meta-muse') ? 'meta-muse' : 'mixed';
       return { files: [...files], prompt: request.prompt, provider: kind, imageProviders: [...providers] };
     };
     const runMuseFallback = async indices => {
@@ -260,7 +264,7 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
         estimatedCostUsd: museEstimate,
         actualCostUsd: museEstimate,
         actualCostSource: 'estimate',
-        fallbackFrom: 'agy',
+        fallbackFrom: prim,
       });
       let response;
       try { response = await fetcher(fallback.endpoint, { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(180000) }); }
@@ -325,7 +329,7 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
           break;
         }
         const agyTimer = paidJobTimer(tracer, {
-          provider: 'agy',
+          provider: prim,
           jobId: job.id,
           operation: job.plan.operation,
           step: job.plan.operation,
@@ -335,22 +339,28 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
         });
         try {
           const outPath = join(dir, `${i}.png`);
-          const { outputPath } = await generateAgyImage({ prompt: request.prompt, aspectRatio: request.aspectRatio, imageName: `${job.id}-${i}`, imagePaths: request.images.map(f => f.path), outputPath: outPath, brainDir: process.env.WIGGLY_AGY_BRAIN_DIR ? resolve(process.env.WIGGLY_AGY_BRAIN_DIR) : undefined, bin: process.env.WIGGLY_AGY_BIN || undefined, timeoutMs: process.env.WIGGLY_AGY_TIMEOUT_MS ? Number(process.env.WIGGLY_AGY_TIMEOUT_MS) : undefined });
+          const { outputPath } = prim === 'google-flow'
+            ? await flowGenerator({ prompt: request.prompt, aspectRatio: request.aspectRatio, imagePaths: request.images.map(f => f.path), outputPath: outPath })
+            : await generateAgyImage({ prompt: request.prompt, aspectRatio: request.aspectRatio, imageName: `${job.id}-${i}`, imagePaths: request.images.map(f => f.path), outputPath: outPath, brainDir: process.env.WIGGLY_AGY_BRAIN_DIR ? resolve(process.env.WIGGLY_AGY_BRAIN_DIR) : undefined, bin: process.env.WIGGLY_AGY_BIN || undefined, timeoutMs: process.env.WIGGLY_AGY_TIMEOUT_MS ? Number(process.env.WIGGLY_AGY_TIMEOUT_MS) : undefined });
           const file = await importMedia(outputPath, runDir);
-          const recorded = { file, provider: 'agy', costUsd: 0 };
+          const recorded = { file, provider: prim, ...(prim === 'google-flow' ? { model: FLOW_MODEL } : {}), costUsd: 0 };
           await atomicJson(join(dir, `${i}.json`), recorded);
-          files[i] = file; providers[i] = { index: i, provider: 'agy', costUsd: 0 };
+          files[i] = file; providers[i] = { index: i, provider: prim, costUsd: 0 };
           agyTimer.ok({ files: [{ sha256: file.sha256, bytes: file.bytes }] });
         } catch (e) {
           agyTimer.fail(e, e.agyDiagnostics ? { agy: e.agyDiagnostics } : {});
           if (e.agyDiagnostics) { try { await atomicJson(join(dir, `${i}.agy-failure.json`), { error: String(e.message ?? e).slice(0, 2000), ...e.agyDiagnostics, at: new Date().toISOString() }); } catch {} }
           // A policy refusal falls back to Muse automatically, like a quota failure (Shaz's rule).
-          const refused = /AGY_POLICY_REFUSED/.test(String(e.message ?? ''));
+          const flowCode = prim === 'google-flow' && isFlowFallbackError(e) ? (e.code ?? String(e.message).split(':')[0]) : null;
+          if (prim === 'google-flow' && !flowCode) throw e;
+          const refused = Boolean(flowCode) || /AGY_POLICY_REFUSED/.test(String(e.message ?? ''));
           if (!isAgyQuotaError(e.message) && !refused) throw e;
           const reset = refused ? null : parseAgyQuotaReset(e.message);
           const diagnostic = String(e.message ?? e).slice(0, 800);
-          await atomicJson(join(dir, `${i}.quota.json`), { diagnostic, reset, ...(refused ? { reason: 'policy-refusal' } : {}), at: new Date().toISOString() });
+          await atomicJson(join(dir, `${i}.quota.json`), { diagnostic, reset, ...(flowCode ? { reason: flowCode } : refused ? { reason: 'policy-refusal' } : {}), at: new Date().toISOString() });
           const miss = missingIndices();
+          if (!fallback && flowCode) throw new Error(`${diagnostic.slice(0, 300)}; no Muse fallback bound to this job.`);
+          if (!apiKey && flowCode) throw new Error(`${flowCode}: Google Flow could not make the image; no META_API_KEY for the Muse fallback.`);
           if (!fallback) throw new Error(refused ? `AGY_POLICY_REFUSED: agy refused the prompt; no Muse fallback bound to this job.` : `AGY_QUOTA_EXHAUSTED: agy image quota is used up${reset ? ` (resets ${reset})` : ''}; no fallback bound to this job.`);
           if (!apiKey) throw new Error(`AGY_QUOTA_EXHAUSTED: agy image quota is used up${reset ? ` (resets ${reset})` : ''}; no META_API_KEY for the Muse fallback.`);
           await runMuseFallback(miss);

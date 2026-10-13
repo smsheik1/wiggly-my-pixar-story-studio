@@ -14,13 +14,13 @@ Planning isn't spending. The runtime checks your plan against the budget, and th
 - `taskId` and `actor` are copied from the task, and `plan.operation` is the current step.
 - `plan` has exactly `provider`, `operation`, `estimatedCostUsd`, optionally `fallbackEstimatedCostUsd`, and `parameters` (only `model`, `prompt` or `cartesiaVersion`).
 - Each step has a fixed provider:
-  - Images (`candidates`, `backgroundCandidates`, `backgroundAngle`, `keyframe`, and `sheet` on older projects): `agy` or `meta-muse`. If `task.imageProviderPreference` is present, use exactly that provider. A plan for any other provider fails with `IMAGE_PROVIDER_PREFERENCE`.
+  - Images (`candidates`, `backgroundCandidates`, `backgroundAngle`, `keyframe`, and `sheet` on older projects): `google-flow`, `meta-muse`, or `agy` (older projects only). If `task.imageProviderPreference` is present, use exactly that provider. A plan for any other provider fails with `IMAGE_PROVIDER_PREFERENCE`.
   - `video`: `replicate`.
   - `music` and `effect`: `elevenlabs`.
   - `clone`, `audition` and `narration`: `cartesia`.
 - Image, video, music and effect plans need `parameters.prompt`, copied character for character from the approved prompt: the character prompt for candidates, the background or angle prompt, the keyframe prompt, the clip's video prompt, or the sound plan's music or effect prompt. Audition and narration plans carry no `parameters.prompt`.
-- Image cost: `candidates` and `backgroundCandidates` make 3 images. `backgroundAngle`, `keyframe` and `sheet` make 1. The studio config sets the unit rates: $0 for agy and $0.01 for meta-muse, per image. `estimatedCostUsd` must be at least images × the provider's rate, or the plan is rejected.
-- Fallback reserve: optional. If `fallbackEstimatedCostUsd` is set on an agy plan, it must cover the image count × $0.01, the meta-muse rate.
+- Image cost: `candidates` and `backgroundCandidates` make 3 images. `backgroundAngle`, `keyframe` and `sheet` make 1. The studio config sets the unit rates: $0 for google-flow, $0 for agy and $0.01 for meta-muse, per image. `estimatedCostUsd` must be at least images × the provider's rate, or the plan is rejected.
+- Fallback reserve: optional. If `fallbackEstimatedCostUsd` is set on a google-flow or agy plan, it must cover the image count × $0.01, the meta-muse rate.
 - Sourced estimates: at the produce gate, `task.generationEstimate` carries the sourced estimate for video, music, effects and narration. A plan below it fails with `VIDEO_ESTIMATE_REQUIRED` or `AUDIO_ESTIMATE_REQUIRED`. Audio plans for audition and narration copy it. Video, music and effect plans need a positive `estimatedCostUsd`.
 - Audio (`audition`, `narration`): `estimatedCostUsd` must be at least `task.generationEstimate.estimatedCostUsd`. If you set `model` or `cartesiaVersion`, they must equal the studio's pinned values, so leave them out.
 - Video, music and effect: no `model`.
@@ -32,7 +32,7 @@ Planning isn't spending. The runtime checks your plan against the budget, and th
 ## Planning
 
 1. Find the source. For images, video and sound, copy the approved prompt exactly, without trimming, fixing or adding anything. For audition and narration, the texts are in `task.generationTexts`. Audition is the first beat. Narration is all four beats, or only the one beat in `generationTexts.regeneration` when that's present. Never widen a one-beat repair.
-2. Pick the provider. If `task.imageProviderPreference` is present, use exactly that provider, and follow `task.imageProviderDirective` when it's present. Otherwise use agy for images. On an agy plan, include the meta-muse fallback reserve, so a quota failure can finish on meta-muse within the budget. The code doesn't require it.
+2. Pick the provider. If `task.imageProviderPreference` is present, use exactly that provider, and follow `task.imageProviderDirective` when it's present. Otherwise use google-flow for images. On a google-flow plan, always include the meta-muse fallback reserve: when Flow rejects an upload (for example a childhood photo), refuses the prompt, or its UI fails, the runtime finishes that image on meta-muse, and without the reserve it stops instead.
 3. Estimate:
    - Images: the unit rates above.
    - Audio: copy `task.generationEstimate.estimatedCostUsd`. It's a sourced, conservative character-based reservation. Never plan below it.
@@ -46,15 +46,15 @@ Put a one-line rationale in `message` on every plan: provider, image count or ch
 
 ## Examples
 
-Invented family. Candidates for Papa, on agy with the fallback reserve:
+Invented family. Candidates for Papa, on google-flow with the fallback reserve:
 
 ```json
 {
   "taskId": "<copy task.taskId>",
   "action": "plan",
   "actor": "agent",
-  "message": "3 sheet options on agy at $0; meta-muse fallback reserved at 3 × $0.01.",
-  "plan": { "provider": "agy", "operation": "candidates", "estimatedCostUsd": 0, "fallbackEstimatedCostUsd": 0.03,
+  "message": "3 sheet options on google-flow at $0; meta-muse fallback reserved at 3 × $0.01.",
+  "plan": { "provider": "google-flow", "operation": "candidates", "estimatedCostUsd": 0, "fallbackEstimatedCostUsd": 0.03,
     "parameters": { "prompt": "<copy the approved characterPrompt for papa, exactly>" } }
 }
 ```

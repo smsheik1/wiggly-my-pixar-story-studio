@@ -293,10 +293,11 @@
       "apiVersion": "2026-08-14"
     },
     "image": {
-      "provider": "agy",
+      "provider": "google-flow",
       "model": "muse-image-1.0",
       "metaMuseEstimatedUnitCostUsd": 0.01,
-      "agyEstimatedUnitCostUsd": 0
+      "agyEstimatedUnitCostUsd": 0,
+      "flowEstimatedUnitCostUsd": 0
     },
     "video": {
       "provider": "replicate",

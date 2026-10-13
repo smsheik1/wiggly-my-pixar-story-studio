@@ -826,7 +826,7 @@ async function main() {
     }
     if (command === 'prefer-image-provider') {
       const provider = option('provider'); const message = option('message');
-      if (!['meta-muse','agy'].includes(provider) || !message || args.length) throw new Error('prefer-image-provider needs --provider meta-muse|agy --message "<text>" --run <run>.');
+      if (!['google-flow','meta-muse','agy'].includes(provider) || !message || args.length) throw new Error('prefer-image-provider needs --provider google-flow|meta-muse|agy --message "<text>" --run <run>.');
       print(presentation(await workflow.respond('project', { taskId: status.pending.taskId, actor: 'human', action: 'prefer-image-provider', provider, message }))); return;
     }
     if (command === 'refresh-visual-instructions') {
@@ -874,9 +874,9 @@ async function main() {
       if(command==='collect'&&job.status==='authorized')throw new Error('NOT_SUBMITTED: collection cannot start a paid request.');
       await verifyFiles(job.request);
       let key='';
-      if(job.plan.provider==='agy'&&job.request.fallback){
+      if(['agy','google-flow'].includes(job.plan.provider)&&job.request.fallback){
         try{key=await loadKey('meta-muse',secretsPath);}catch{key='';}
-      }else if((command==='generate'||job.plan.provider==='replicate')&&job.plan.provider!=='agy'){
+      }else if((command==='generate'||job.plan.provider==='replicate')&&!['agy','google-flow'].includes(job.plan.provider)){
         try{key=await loadKey(job.plan.provider,secretsPath);}catch(e){throw new Error(`${e.message}\n${remediation(job.plan.provider,secretsPath)}`);}
       }
       if(command==='generate')await runtimeEvent('begin');
@@ -889,7 +889,7 @@ async function main() {
       try{
         try{
           const latest=(await workflow.status('project')).project;
-          const needsStub=command==='collect'&&job.plan.provider!=='replicate'&&!(job.plan.provider==='agy'&&job.request.fallback);
+          const needsStub=command==='collect'&&job.plan.provider!=='replicate'&&!(['agy','google-flow'].includes(job.plan.provider)&&job.request.fallback);
           const result=await executeJob(latest,latest.jobs.find(j=>j.id===job.id),runDir,key,needsStub?()=>{throw new Error('Collection cannot resubmit synchronous providers.');}:fetch,command==='collect',onJobId,{tracer});
           if(result.pending){print({...presentation(await workflow.status('project')),collection:result});return;}
           await verifyFiles(result);

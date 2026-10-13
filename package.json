@@ -4,6 +4,7 @@
   "type": "module",
   "engines": { "node": ">=24" },
   "scripts": {
+    "flow:login": "npm --prefix public/format-repositories/my-pixar-story-v1 run flow:login",
     "setup": "npm --prefix scripts/studio-spike ci && npm --prefix scripts/studio-spike run phase6:setup",
     "test": "npm run test:studio && npm run check && npm run test:kit",
     "test:studio": "npm --prefix scripts/studio-spike test",
