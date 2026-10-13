@@ -6,7 +6,7 @@ import {text,File,digest,Content,Event,ShotsPatch} from './contracts.mjs';
 import {loadStudio,studioFor,maximumTools,backendForAgent} from './instructions.mjs';
 import {taskFor} from './workflow.mjs';
 import {assertAllowed,keyFor,current,sheetKeyFor} from './gates.mjs';
-import {verifyFiles,measureAudio,probe} from './media.mjs';
+import {verifyFiles,measureAudio,probe,measurePalette,assertBackgroundPalette} from './media.mjs';
 import {supervised,reviewPassed} from './gates.mjs';
 import {artifactEvidence} from './evaluators.mjs';
 import {validateEditingInvestigation,AudioEditPlan} from './audio-edit.mjs';
@@ -304,6 +304,12 @@ export async function runCrewTask(p,task,host){
      if (safetyCheck.status !== expected) throw new Error('SAFETY_EVIDENCE_MISMATCH');
    }
   }
+   if(worker.role==='visual-reviewer'&&['backgroundCandidates','backgroundAngle'].includes(task.step)&&['approved','provisional'].includes(event.review?.decision)){
+    // Image-based background review: the runtime measures every plate's palette itself.
+    const files=task.artifact.content.files,saturation=(await Promise.all(files.map(f=>measurePalette(f)))).map(m=>m.saturation);
+    event.review.measurements={...event.review.measurements,paletteSaturation:saturation};
+    assertBackgroundPalette({step:task.step,review:event.review,files,saturation});
+   }
    event.review.toolEvidence=receipts;
    verifyReviewQuotes({role:worker.role,task,review:event.review,outputs});
    verifyReviewRecommendation({task,review:event.review});

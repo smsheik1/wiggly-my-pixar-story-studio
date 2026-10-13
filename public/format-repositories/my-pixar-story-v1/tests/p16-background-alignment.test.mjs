@@ -44,11 +44,11 @@ test('safety self-check: no forbidden process, network or host imports in source
 
 test('craft locations: bible filmAccent example, camera side, shots-first tag, dressed and no-text rules', { timeout: 20000 }, async () => {
   const guide = await read('../craft-guide.md');
-  assert.match(guide, /Film accent kept out: <the bible's filmAccent colour>/);
+  assert.match(guide, /Film accent kept out: <the bible's filmAccent colour, a prop colour, never a light>/);
   assert.doesNotMatch(guide, /Film accent kept out: deep red/);
   assert.match(guide, /\[L-CAMERA-SIDE\] \(check: vera, beau\) The camera stays on the same side of the action line as the master for the whole location; turning within that half is fine\./);
   assert.match(guide, /\[L-SHOTS-FIRST\] \(check: beau, sage\)/);
-  assert.match(guide, /\[L-ACCENT-OUT\] \(check: vera, sage\) Keep the production bible's `filmAccent` colour out of the room entirely\./);
+  assert.match(guide, /\[L-ACCENT-OUT\] \(check: vera, sage\) Keep the production bible's `filmAccent` colour off the room's props and surfaces\. The film accent is always a prop colour, never a light/);
   assert.match(guide, /production bible's `filmAccent` colour kept out/);
   const dressed = guide.split('\n').find(l => l.startsWith('- [L-DRESSED]'));
   assert.match(dressed, /Empty of people only, never an empty set \(a writer rule, not prompt text\)/);

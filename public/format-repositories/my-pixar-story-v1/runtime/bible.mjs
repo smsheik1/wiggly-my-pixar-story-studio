@@ -13,6 +13,7 @@ import { text, digest } from './contracts.mjs';
 import { current, locked, sheetKeyFor } from './gates.mjs';
 import { studioFor } from './instructions.mjs';
 
+export const FILM_ACCENT_LIGHT = /\b(light|lights|lighting|lamplight|lamp|lamps|glow|glowing|sun|sunlight|sunshine|daylight|moonlight|candle|candlelight|firelight|backlight|lit)\b/i;
 export const BIBLE_SCHEMA = 'wiggly-production-bible/v1';
 export const UNRESOLVED = 'UNRESOLVED';
 // Departments after the script/cast stage. They consume the bible; everything before it
@@ -66,7 +67,8 @@ export const BibleContent = z.object({
   // Per-story film accent: the colour plus the key story prop it comes from. Beau keeps
   // it out of rooms, Theo copies the spec block whole. Optional on read so historical
   // bibles without it still load; compileBible drafts it UNRESOLVED for signing.
-  filmAccent: z.object({ colour: text, keyProp: text }).strict().optional(),
+  // The accent is a prop colour, never a light: r5's "warm amber lamplight" kept warm light out of every room.
+  filmAccent: z.object({ colour: text.refine(c => !FILM_ACCENT_LIGHT.test(c), { message: 'FILM_ACCENT_IS_LIGHT: the film accent is a prop colour (e.g. "cobalt blue"), never a light, lamp, glow or time of day; warm motivated light is always allowed in rooms.' }), keyProp: text }).strict().optional(),
   openQuestions: z.array(text).default([]),
 }).strict().superRefine((b, ctx) => {
   const ids = b.cast.map(c => c.id);
@@ -295,7 +297,7 @@ export function renderBibleMarkdown(entry, { runDir = null, superseded = false }
     out.push('- **Continuity (every shot):**', ...c.continuity.map(x => `  - ${x}`), '');
   }
   out.push('## Style', '', `**Look:** ${b.style.look}`, '', `**Sets:** ${b.style.sets}`, '', list(b.style.rules), '');
-  if (b.filmAccent) out.push(`**Film accent:** ${b.filmAccent.colour} (from ${b.filmAccent.keyProp}). Kept out of rooms; named in every brief spec block as "Film accent kept out: <colour>".`, '');
+  if (b.filmAccent) out.push(`**Film accent:** ${b.filmAccent.colour} (from ${b.filmAccent.keyProp}). Kept off room props and surfaces (never a light); named in every brief spec block as "Film accent kept out: <colour>".`, '');
   out.push('## Scene digest', '');
   for (const s of b.scenes) {
     out.push(`### Beat ${s.beat}: ${s.location} (\`${s.id}\`)`, '');

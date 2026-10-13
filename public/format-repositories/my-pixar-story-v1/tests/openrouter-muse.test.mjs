@@ -225,7 +225,7 @@ test('4. Vera on OpenRouter: CrewHost routes Vera to OpenRouterHost, backgroundC
     const raw0 = join(dir, 'raw0.png');
     const raw1 = join(dir, 'raw1.png');
     const raw2 = join(dir, 'raw2.png');
-    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=black:s=1920x1080:d=1', '-frames:v', '1', raw0], { timeout: 20000, killSignal: 'SIGKILL' });
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=green:s=1920x1080:d=1', '-frames:v', '1', raw0], { timeout: 20000, killSignal: 'SIGKILL' });
     execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=1920x1080:d=1', '-frames:v', '1', raw1], { timeout: 20000, killSignal: 'SIGKILL' });
     execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=blue:s=1920x1080:d=1', '-frames:v', '1', raw2], { timeout: 20000, killSignal: 'SIGKILL' });
     const file0 = await importMedia(raw0, dir);
@@ -290,6 +290,9 @@ test('4. Vera on OpenRouter: CrewHost routes Vera to OpenRouterHost, backgroundC
     const event = await runCrewTask(projectState, taskObj, crewHost);
     assert.equal(event.action, 'review');
     assert.equal(event.review?.decision, 'approved');
+    // r5 #2: the runtime measured every plate's palette from the image itself.
+    assert.equal(event.review.measurements?.paletteSaturation?.length, 3);
+    assert.ok(event.review.measurements.paletteSaturation[0] > 12);
 
     // Check request bodies had 3 image_url parts
     const taskTurn = bodies[0];

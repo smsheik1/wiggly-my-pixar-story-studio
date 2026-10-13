@@ -158,7 +158,9 @@ test('check 7: vendor-free writer packets: instruction parts contain no forbidde
   const studio = loadStudio();
   const allowlist = manifest.allowlist ?? [];
 
-  const forbiddenPattern = /\b(?:pixar|seedance|gpt[- ]image|higgsfield|dankieft|renderman|octane|unreal engine|nano banana|ratatouille|toy story|inside out|incredibles)\b/i;
+  // r5 #2 (Shaz): the Pixar target look may be named in packets; it stays out of image
+  // and video prompts (runtime PROMPT_BRAND_TERMS). Every other vendor term stays forbidden.
+  const forbiddenPattern = /\b(?:seedance|gpt[- ]image|higgsfield|dankieft|renderman|octane|unreal engine|nano banana|ratatouille|toy story|inside out|incredibles)\b/i;
 
   const writerRoles = [
     'script-writer', 'cast-designer', 'sheet-prompter', 'background-product-owner',

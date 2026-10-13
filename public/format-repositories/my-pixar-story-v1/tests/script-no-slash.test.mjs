@@ -101,10 +101,11 @@ test("Sage's skill + text rubric contain the lived-in/generic-room rule and the 
     assert.match(doc, /story-dressed/);
   }
   for (const doc of [briefGuide, promptGuide, angleBriefGuide, anglePromptGuide]) {
-    assert.match(doc, /stylized animated feature set/);
+    assert.match(doc, /Pixar feature-film set/);
     assert.match(doc, /catalog/);
     assert.match(doc, /"plain" or "unmarked" props/);
-    assert.match(doc, /muted palette with one saturated accent/);
+    assert.match(doc, /rich,? saturated colour with one hero accent/); // r5 #2: never muted
+    assert.doesNotMatch(doc, /muted palette with one saturated accent/);
     assert.doesNotMatch(doc, /ivory\/oatmeal\/neutral\/restrained/);
     assert.match(doc, /"blank" or "calm" walls/);
     assert.match(doc, /Empty of people/);
@@ -119,7 +120,7 @@ test("Sage's skill + text rubric contain the lived-in/generic-room rule and the 
     assert.match(doc, /story-dressed/);
     assert.match(doc, /catalog/);
     assert.match(doc, /plain\/unmarked/);
-    assert.match(doc, /\[L-PALETTE\]/); // P14: muted + one accent is the rule; never fail a room for being muted
+    assert.match(doc, /\[L-PALETTE\]/); // r5 #2: rich saturated palette, one hero accent; muted fails
     assert.doesNotMatch(doc, /ivory\/oatmeal\/neutral\/restrained/);
     assert.match(doc, /blank\/calm walls/);
     assert.match(doc, /empty of people/i);

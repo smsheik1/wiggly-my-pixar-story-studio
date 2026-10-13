@@ -6,9 +6,9 @@ House craft for every writer. Each section opens with `## [section-id] Title` an
 
 One look everywhere. Push values further than you want, because generators drift back to defaults.
 
-- [H-STYLE] (check: sage, vera, june) Feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon.
+- [H-STYLE] (check: sage, vera, june) Pixar-style 3D animated feature film: appealing sculpted forms, expressive faces, warm cinematic lighting and rich, saturated colour; production CG, never photoreal, never flat cartoon, never muted.
 - [H-OVERSHOOT] (check: sage) Overshoot values: write "deeply worn", not "slightly worn"; generators drift back to defaults, so push further than you want.
-- [H-NO-BRANDS] (check: sage, vera, june) No brand, vendor, model, renderer, tool, or film names in any prompt or brief.
+- [H-NO-BRANDS] (check: sage, vera, june) No brand, vendor, model, renderer, tool, studio or film names in any image or video prompt: prompts describe the house look in words (sculpted forms, warm cinematic light, rich saturated colour). Briefs, the bible and reviews may name the Pixar target look.
 
 ## [script-craft] Script craft
 
@@ -92,21 +92,21 @@ Short but always complete: an edit prompt is a whole prompt, not a fragment.
 
 ## [locations] Locations
 
-Rooms are dressed from the story and empty of people only. A bland or empty-feeling room still fails: muted is not generic. Example spec block for a brief:
+Rooms look like sets from a Pixar feature film: dressed from the story, empty of people only, in rich, saturated colour with warm cinematic light. A bland, muted or empty-feeling room fails. Example spec block for a brief:
 
-Light: morning daylight through side windows, warm and soft, filling the room evenly. Bounce: cool bounce off pale walls. Practicals: no. Haze: no. Palette: muted warm woods and off-whites at roughly five to one. Accent: one saturated colour on story props. Film accent kept out: <the bible's filmAccent colour>.
+Light: morning daylight through side windows, warm and soft, filling the room evenly. Bounce: cool bounce off pale walls. Practicals: no. Haze: no. Palette: rich honey woods, deep teal and warm mustard at roughly three to one. Accent: one hero colour on a story prop. Film accent kept out: <the bible's filmAccent colour, a prop colour, never a light>.
 
 - [L-DRESSED] (check: vera, sage) Empty of people only, never an empty set (a writer rule, not prompt text): dress every set from the brief's known and proposed details with specific lived-in props showing whose space it is and when (era, age); neutral era-consistent dressing is fine, but a bland, generic catalog room still fails; forbid generic catalog rooms, plain unmarked objects, and blank walls.
 - [L-SET-PLATE] (check: sage) Use the set plate only for space, materials, colours, and light.
 - [L-LAYOUT-REF] (check: sage, beau) Set positions and camera from a separate layout reference written in words in the brief; ignore the faces in it.
 - [L-CAMERA-SIDE] (check: vera, beau) The camera stays on the same side of the action line as the master for the whole location; turning within that half is fine.
-- [L-LIGHT-SPEC] (check: sage, beau) Write one lighting and colour spec block per location in the brief and copy it whole into every prompt for that location: light source and time of day, bounce, practicals yes or no, haze yes or no, palette as a ratio, the one saturated accent, and the production bible's `filmAccent` colour kept out.
-- [L-PALETTE] (check: vera, sage) Muted palette with one saturated accent; muted is not generic and a bland or empty-feeling room still fails.
-- [L-ACCENT-OUT] (check: vera, sage) Keep the production bible's `filmAccent` colour out of the room entirely.
+- [L-LIGHT-SPEC] (check: sage, beau) Write one lighting and colour spec block per location in the brief and copy it whole into every prompt for that location: light source and time of day, bounce, practicals yes or no, haze yes or no, palette as a ratio, the one hero accent, and the production bible's `filmAccent` colour kept out.
+- [L-PALETTE] (check: vera, sage) Rich, saturated feature-film palette with one hero accent on a story prop; a muted, washed-out or desaturated room fails, and so does a bland or empty-feeling one.
+- [L-ACCENT-OUT] (check: vera, sage) Keep the production bible's `filmAccent` colour off the room's props and surfaces. The film accent is always a prop colour, never a light, so warm motivated light (lamplight, sunlight) is always allowed.
 - [L-SHOTS-FIRST] (check: beau, sage) Build the room for the shots the script needs: list the scripted actions and positions in that space before writing.
 - [L-MIN-TEXT] (check: vera, sage) No readable text in plates: no signs, labels, names, brands or watermarks rendered in the image.
 - [L-CHILD-DRAWINGS] (check: none) Draw children's drawings as a five-year-old hand works: heads bigger than bodies, arms straight out of the head, colour scribbled outside the lines, heavy uneven pressure, a floating blue strip for sky, a sun wedged in a corner, wobbly oversized letters running out of space, with ability varying across the wall.
-- [L-SETS-DEFAULT] (check: none) Lived-in, story-dressed sets in a muted palette with one saturated accent: empty of people, never an empty set.
+- [L-SETS-DEFAULT] (check: none) Real Pixar feature-film sets: lived-in, story-dressed, rich saturated colour with one hero accent and warm cinematic light; empty of people, never an empty set, never muted.
 
 ## [composition] Composition
 
