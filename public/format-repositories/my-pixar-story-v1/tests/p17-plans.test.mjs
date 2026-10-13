@@ -35,15 +35,15 @@ test('P17 SPEC9: one clip per shot passes; two clips for one shot rejected', T, 
   const dup = structuredClone(plan);
   const first = dup.clips[0];
   dup.clips.push({ ...first, id: `${first.shotId}-extra`, startSeconds: first.durationSeconds, durationSeconds: first.durationSeconds });
-  assert.throws(() => validateVideoPlan(p, dup), /VIDEO_PLAN_ONE_CLIP_PER_SHOT/);
+  assert.throws(() => validateVideoPlan(p, dup), /VIDEO_PLAN_ONE_CLIP_PER_SHOT|VIDEO_PLAN_4X15/);
 });
 
 test('P17 SPEC9: nonzero start or short duration rejected with one-clip code', T, () => {
   const p = planLocked();
   const base = videoPlan(p);
-  assert.throws(() => validateVideoPlan(p, { ...base, clips: base.clips.map((c, i) => i ? c : { ...c, startSeconds: 1 }) }), /VIDEO_PLAN_ONE_CLIP_PER_SHOT/);
-  assert.throws(() => validateVideoPlan(p, { ...base, clips: base.clips.map((c, i) => i ? c : { ...c, durationSeconds: c.durationSeconds - 1 }) }), /VIDEO_PLAN_ONE_CLIP_PER_SHOT/);
-  assert.throws(() => validateVideoPlan(p, { ...base, clips: base.clips.slice(1) }), /VIDEO_PLAN_ONE_CLIP_PER_SHOT/);
+  assert.throws(() => validateVideoPlan(p, { ...base, clips: base.clips.map((c, i) => i ? c : { ...c, startSeconds: 1 }) }), /VIDEO_PLAN_ONE_CLIP_PER_SHOT|VIDEO_PLAN_4X15/);
+  assert.throws(() => validateVideoPlan(p, { ...base, clips: base.clips.map((c, i) => i ? c : { ...c, durationSeconds: c.durationSeconds - 1 }) }), /VIDEO_PLAN_ONE_CLIP_PER_SHOT|VIDEO_PLAN_4X15/);
+  assert.throws(() => validateVideoPlan(p, { ...base, clips: base.clips.slice(1) }), /VIDEO_PLAN_ONE_CLIP_PER_SHOT|VIDEO_PLAN_4X15/);
 });
 
 test('P17 SPEC9: authoring a two-clip plan is rejected at the gate', T, () => {
@@ -54,7 +54,7 @@ test('P17 SPEC9: authoring a two-clip plan is rejected at the gate', T, () => {
   const plan = videoPlan(p);
   const dup = structuredClone(plan);
   dup.clips.push({ ...dup.clips[0], id: `${dup.clips[0].shotId}-extra`, startSeconds: dup.clips[0].durationSeconds });
-  assert.throws(() => author(p, dup, 'motion-director'), /VIDEO_PLAN_ONE_CLIP_PER_SHOT/);
+  assert.throws(() => author(p, dup, 'motion-director'), /VIDEO_PLAN_ONE_CLIP_PER_SHOT|VIDEO_PLAN_4X15/);
 });
 
 // ---- SPEC 9b: shot frame alignment ----
@@ -70,16 +70,26 @@ function splitBeatOne(p, d1, d2) {
   return { shots };
 }
 
-test('P17 SPEC9: non-frame shot durations rejected with SHOT_FRAME_ALIGNMENT', T, () => {
+test('P17 SPEC9 (r5): a split beat is rejected; every beat is one 15 s shot', T, () => {
   const p = shotsProject();
-  assert.throws(() => author(p, splitBeatOne(p, 7.51, 7.49), 'shot-planner'), /SHOT_FRAME_ALIGNMENT/);
-  assert.throws(() => author(p, { shots: shotPlan.shots.map(s => ({ ...s, durationSeconds: 3.75 })) }, 'shot-planner'), /SHOT_FRAME_ALIGNMENT|Each beat requires/);
+  assert.throws(() => author(p, splitBeatOne(p, 7.51, 7.49), 'shot-planner'), /SHOTS_ONE_PER_BEAT/);
+  assert.throws(() => author(p, splitBeatOne(p, 7.5, 7.5), 'shot-planner'), /SHOTS_ONE_PER_BEAT/);
+  assert.throws(() => author(p, { shots: shotPlan.shots.map(s => ({ ...s, durationSeconds: 3.75 })) }, 'shot-planner'), /SHOTS_ONE_PER_BEAT/);
 });
 
-test('P17 SPEC9: frame-aligned split beat passes the new check', T, () => {
-  const p = shotsProject();
-  const q = author(p, splitBeatOne(p, 7.5, 7.5), 'shot-planner');
-  assert.equal(current(q, 'shots').content.shots.filter(s => s.beat === 1).length, 2);
+test('r5 4x15: shots contract and video plan accept exactly 4 x 15 s and nothing else', T, () => {
+  const ok = { shots: shotPlan.shots };
+  assert.equal(ok.shots.length, 4);
+  assert.doesNotThrow(() => Content.shots.parse(ok));
+  assert.throws(() => Content.shots.parse({ shots: [...ok.shots, { ...ok.shots[3], id: 'extra' }] }));
+  assert.throws(() => Content.shots.parse({ shots: ok.shots.map((s, i) => i ? s : { ...s, durationSeconds: 7.5 }) }), /exactly 15/);
+  assert.throws(() => Content.shots.parse({ shots: [ok.shots[1], ok.shots[0], ok.shots[2], ok.shots[3]] }), /SHOTS_ONE_PER_BEAT/);
+  const p = planLocked();
+  const plan = videoPlan(p);
+  assert.ok(plan.clips.every(c => c.generationSeconds === 15));
+  assert.doesNotThrow(() => Content.videoPlan.parse(plan));
+  assert.throws(() => Content.videoPlan.parse({ ...plan, clips: plan.clips.map((c, i) => i ? c : { ...c, generationSeconds: 10 }) }), /VIDEO_PLAN_4X15/);
+  assert.throws(() => Content.videoPlan.parse({ ...plan, clips: [...plan.clips, { ...plan.clips[0], id: 'extra' }] }));
 });
 
 test('P17 SPEC9: old stored shots artifacts still parse without re-validation', T, () => {
