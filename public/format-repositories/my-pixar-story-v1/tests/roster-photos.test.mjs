@@ -65,7 +65,11 @@ test('add-reference binds one photo and invalidates only that character',()=>{
  assert.equal(current(p,'characterPrompt:bob'),undefined);
  assert.equal(p.characterId,'bob');assert.equal(p.step,'characterPrompt');assert.equal(p.gate,'author');
  // Regression (r5): the new roster version must stay locked, or every character prompt fails CHARACTER_PROMPT_BINDING_REQUIRED.
- assert.ok(locked(p,'roster'),'roster stays locked after add-reference');
+ assert.ok(locked(p,'roster'),'roster stays locked after add-reference'); // A run already carrying an unreviewed add-reference version recovers on the next add-reference.
+ delete current(p,'roster').review;
+ assert.ok(!locked(p,'roster'));
+ p=send(p,'add-reference',{actor:'human',characterId:'bob',importFile:photo(10),message:'ISOLATED human adds second Bob photo'});
+ assert.ok(locked(p,'roster'),'recovered lock from last reviewed roster');
 });
 
 test('the producer asks the human directly with names and both choices',async()=>{
