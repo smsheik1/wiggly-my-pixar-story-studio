@@ -267,7 +267,18 @@ export class OpenRouterHost {
     const viewed=await callTool('viewImage',{sha256:file.sha256});media.push({type:'text',text:`Reference image sha256: ${file.sha256}`},{type:'image_url',image_url:{url:viewed.imageUrl}});attached.add(viewKey(file.sha256));
    }
   const tools=this.toolDefinition();
-  const content=[{type:'text',text:packet},...media];
+  // Ava (audio reviewer) on audition/narration: transcribe (Cartesia) and measure every take once, up front,
+  // in parallel, and put the outputs in her starting packet. Gemini then only listens for delivery; a repeat
+  // transcribe/measure call on the same take returns the precomputed output without another provider call.
+  const precomputed=new Map();
+  if(worker.role==='audio-reviewer'&&['audition','narration'].includes(task.step)&&task.gate==='review'){
+   const takes=(task.artifact?.content?.files??[]).filter(f=>f?.sha256&&f.durationSeconds);
+   await Promise.all(takes.flatMap(f=>['transcribe','measureAudio'].map(async name=>{
+    try{precomputed.set(`${name}:${f.sha256}`,await callTool(name,{sha256:f.sha256}));}catch(error){precomputed.set(`${name}:${f.sha256}`,{error:String(error?.message??error)});}
+   })));
+  }
+  const preText=precomputed.size?`\n\nPrecomputed tool outputs (already run once per take; do not call transcribe or measureAudio again, use listenAudio for delivery):\n${sanitizeDataUrls(JSON.stringify(Object.fromEntries(precomputed)))}`:'';
+  const content=[{type:'text',text:packet+preText},...media];
   const messages=[{role:'system',content:system},{role:'user',content}];
   const label=labelFor(worker);
   let promptSections=[];
@@ -359,7 +370,8 @@ export class OpenRouterHost {
       const toolStart=Date.now();
       const endTool=(outcome,extra={})=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart,args:toolArgs,...extra});}catch{}};
       try{
-       const value=await callTool(parsed.name,{sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})});
+       const pre=['transcribe','measureAudio'].includes(parsed.name)?precomputed.get(`${parsed.name}:${parsed.sha256}`):undefined;
+       const value=pre&&!pre.error?pre:await callTool(parsed.name,{sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})});
        if(value&&typeof value==='object'&&typeof value.imageUrl==='string'){
         if(!modelTraits(worker.modelVersion).inputs.includes('image')){
          const error=new Error(`OPENROUTER_VISION_UNSUPPORTED: ${worker.modelVersion} cannot take images; bind a vision model for ${worker.role}.`);
