@@ -342,14 +342,16 @@ export class OpenRouterHost {
     if(!calls.length){output=typeof message?.content==='string'?message.content:JSON.stringify(message?.content??'');break;}
      messages.push({role:'assistant',content:message.content??'',tool_calls:calls});
      const pending=[];
-     for(const call of calls){
+     // Run one round's tool calls concurrently (e.g. Ava's per-take listen/measure/transcribe), then
+     // append the results in call order so the transcript stays deterministic.
+     const runCall=async(call,out,pend)=>{
       let args=null;try{args=JSON.parse(call.function?.arguments||'{}');}catch{args=null;}
       const checked=call.function?.name==='wiggly_tool'?ToolArguments.safeParse(args):{success:false,error:{message:`unknown tool ${call.function?.name}`}};
       if(!checked.success){
         let invTrace=null;try{invTrace=this.tracer?.tool?.({toolName:args?.name??call.function?.name??'unknown',args:args??{raw:call.function?.arguments??''}});}catch{invTrace=null;}
         const t0=Date.now();
         try{invTrace?.end?.({outcome:'invalid-args',durationMs:Date.now()-t0,error:String(checked.error.message).slice(0,500)});}catch{}
-        messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(`TOOL_ARGUMENTS_INVALID: ${checked.error.message}`)});continue;
+        out.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(`TOOL_ARGUMENTS_INVALID: ${checked.error.message}`)});return;
       }
       const parsed=checked.data;
       const toolArgs={sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})};
@@ -370,17 +372,19 @@ export class OpenRouterHost {
          ?{perception:value.perception??'direct-image',sha256:parsed.sha256,alreadyAttached:true,note:`image sha256 ${parsed.sha256} already attached above; use the attached image`}
          :{perception:value.perception??'direct-image',sha256:parsed.sha256,attached:true,note:`image attached as image_url below for sha256 ${parsed.sha256}`};
         endTool('completed',{output:{sha256:parsed.sha256,attached:!already}});
-        messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(compact))});
-        if(!already){attached.add(key);pending.push({sha256:parsed.sha256,region:parsed.region??null,url:value.imageUrl});}
-        continue;
+        out.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(compact))});
+        if(!already){attached.add(key);pend.push({sha256:parsed.sha256,region:parsed.region??null,url:value.imageUrl});}
+        return;
        }
        const summary=value?.bytes
          ?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8').slice(0,8000)}:{instruction:'Binary media: use your permitted perception tool.'})}
          :value;
        endTool('completed',{output:summary});
-       messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value))});
-      }catch(error){endTool('failed',{error:String(error?.message??error??'').slice(0,500)});messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(error.message)});if(error.stopDispatch)throw error;}
-     }
+       out.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value))});
+      }catch(error){endTool('failed',{error:String(error?.message??error??'').slice(0,500)});out.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(error.message)});if(error.stopDispatch)throw error;}
+     };
+     const results=await Promise.all(calls.map(async call=>{const out=[],pend=[];await runCall(call,out,pend);return {out,pend};}));
+     for(const r of results){messages.push(...r.out);pending.push(...r.pend);}
      if(pending.length){
       const parts=[];
       for(const p of pending)parts.push({type:'text',text:`viewImage result for sha256 ${p.sha256}${p.region?` region ${JSON.stringify(p.region)}`:''}`},{type:'image_url',image_url:{url:p.url}});

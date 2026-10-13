@@ -360,6 +360,11 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
     if(receipt?.status==='started')throw new Error(`CODEX_DISPATCH_UNCERTAIN: inspect ${path} and the saved worker turn before reconciling. No automatic rerun.`);
     const attempt=(receipt?.status==='deferred'||receipt?.status==='not-dispatched')?(receipt.attempt||1):((receipt?.attempt??0)+(receipt?.status==='rejected'?1:0)||1);
     let event=receipt?.status==='completed'?receipt.event:null;
+    // Ava (audio reviewer): an unchanged audio artifact (same content digest, criteria and worker) reuses the
+    // earlier verdict instead of paying for a second identical review.
+    const reviewCacheKey=task.gate==='review'&&task.crewWorker?.role==='audio-reviewer'&&task.artifact?.content?digest({content:task.artifact.content,criteria:task.criteria??null,worker:norm(task.crewWorker)}):null;
+    const reviewCachePath=reviewCacheKey?join(receiptDirectory,'..','review-cache',reviewCacheKey+'.json'):null;
+    if(!event&&reviewCachePath){const cached=await readJson(reviewCachePath);if(cached?.event)event={...cached.event,taskId:task.taskId,...(task.artifact?.id?{artifactId:task.artifact.id}:{})};}
     // Preflight before any receipt write so a refused dispatch leaves no
     // stranded started receipt and never changes an existing receipt.
     if(!event&&typeof host.preflight==='function')await host.preflight(task.crewWorker);
@@ -443,6 +448,7 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
     throw new Error(`CODEX_RESULT_REJECTED: known finished worker result violates the contract: ${error.message}. Inspect ${path}; use --repair-invalid true for a bounded repair.`);
    }
    await saveJson(path,{...started,status:'completed',event});
+   if(reviewCachePath){await mkdir(join(receiptDirectory,'..','review-cache'),{recursive:true});await saveJson(reviewCachePath,{event,at:new Date().toISOString()});}
    const updated=await workflow.respond(thread,event);completed++;
    endTrace('completed');
   if(event.action==='review'&&event.review?.decision==='rejected'){const notice=updated.pending.repairNotices.find(n=>n.artifactId===event.artifactId);if(notice)onProgress({type:'repair-notice',notice});}
