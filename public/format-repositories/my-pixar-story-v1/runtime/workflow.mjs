@@ -579,7 +579,8 @@ export function applyEvent(project, raw) {
     // to the new roster version instead of being reopened.
     for(const a of p.artifacts.filter(a=>a.key==='roster'&&a.valid))a.valid=false;
     const version=p.artifacts.filter(a=>a.key==='roster').length+1;
-    const next={id:`roster@${version}`,key:'roster',kind:'roster',version,digest:digest(parsed),content:parsed,dependencies:roster.dependencies,valid:true,authoredBy:'human',approvedBy:{message:e.message,at:new Date().toISOString()}};
+    const next={id:`roster@${version}`,key:'roster',kind:'roster',version,digest:digest(parsed),content:parsed,dependencies:roster.dependencies,valid:true,authoredBy:'human',...(roster.review?{review:roster.review}:{}),...(roster.reviewSequence!=null?{reviewSequence:roster.reviewSequence}:{}),...(roster.humanReview?{humanReview:roster.humanReview}:{}),approvedBy:{message:e.message,at:new Date().toISOString()}};
+    // Keep the roster locked: carry the prior crew/human review forward (only a reference was appended).
     if(roster.intakeConfirmation)next.intakeConfirmation={...roster.intakeConfirmation,characters:roster.intakeConfirmation.characters.map(c=>c.id===characterId?{...c,references:[...c.references,file],likeness:'reference'}:c)};
     p.artifacts.push(next);
     for(const a of p.artifacts)if(a.id!==next.id&&a.dependencies.includes(roster.id))a.dependencies=a.dependencies.map(d=>d===roster.id?next.id:d);

@@ -4,6 +4,7 @@ import {initialProject,taskFor,current} from '../runtime/workflow.mjs';
 import {inputs,send,reviewed,file,audioProject} from './helpers.mjs';
 import {image} from './background-helpers.mjs';
 import {digest} from '../runtime/contracts.mjs';
+import {locked} from '../runtime/gates.mjs';
 
 const proposed=[
  {id:'alex',name:'Alex',ageVariant:'adult',minor:false,storyPurpose:'Leads the memoir.'},
@@ -63,6 +64,8 @@ test('add-reference binds one photo and invalidates only that character',()=>{
  assert.equal(current(p,'characterPrompt:alex').approvedBy.message,'m');
  assert.equal(current(p,'characterPrompt:bob'),undefined);
  assert.equal(p.characterId,'bob');assert.equal(p.step,'characterPrompt');assert.equal(p.gate,'author');
+ // Regression (r5): the new roster version must stay locked, or every character prompt fails CHARACTER_PROMPT_BINDING_REQUIRED.
+ assert.ok(locked(p,'roster'),'roster stays locked after add-reference');
 });
 
 test('the producer asks the human directly with names and both choices',async()=>{
