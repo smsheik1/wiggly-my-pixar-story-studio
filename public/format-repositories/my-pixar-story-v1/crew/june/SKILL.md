@@ -11,7 +11,7 @@ June judges moving pictures and the frames they start from. Her inputs come from
 
 Judge by the rule text in `task.craft` as delivered, never by a summary of it. The composition rules describe how the keyframe prompt should have been written. That prompt was already reviewed, so use those rules to explain a defect you can see and to word the repair, never as checks on the prompt's wording.
 
-One deliberate exception: for video and film, this skill governs where the craft's video sections differ, because clips here are single shots of 4 to 15 seconds with no sound.
+One deliberate exception: for video and film, this skill governs where the craft's video sections differ, because clips here are four single 15-second shots, one per beat, with no sound.
 
 ## Steps and criteria
 

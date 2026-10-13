@@ -6,12 +6,16 @@ import { requireVisualQualification } from '../evaluation/visual-qualification.m
 export const studioSteps=['reviewerQualification','videoPlan','videoPrompt','video','soundPlan','music','effect','editPlan','film'];
 export const clipFor=p=>current(p,'videoPlan')?.content.clips.find(c=>c.id===p.clipId);
 export const effectFor=p=>current(p,'soundPlan')?.content.effects.find(c=>c.id===p.effectId);
+// r5: clips are silent and narration is voice-over, so any mouth motion reads as fake lip-sync.
+export const MOUTHS_CLOSED_CLAUSE='Mouths stay closed; no talking, no lip movement.';
+export const withMouthsClosed=prompt=>{const t=String(prompt??'').trimEnd();return t.endsWith(MOUTHS_CLOSED_CLAUSE)?t:`${t}${t?'\n':''}${MOUTHS_CLOSED_CLAUSE}`;};
 export const motionPrompt=c=>`Camera: ${c.camera}\nAction: ${c.action}\nPhysical anchors: ${c.anchors}\nAtmosphere: ${c.atmosphere}`;
 export function videoBinding(p){const clip=clipFor(p),frame=current(p,`keyframe:${clip.shotId}`);const shot=current(p,'shots').content.shots.find(s=>s.id===clip.shotId);return {clip,frame,shot,references:shotReferences(p,shot),clipDigest:digest(clip),keyframeId:frame.id,keyframeSha256:frame.content.files[0].sha256,prompt:motionPrompt(clip)};}
 export function validateVideoPlan(p,plan){
  if(new Set(plan.clips.map(c=>c.id)).size!==plan.clips.length)throw new Error('Unique video clip IDs required.');
  if(plan.resolution!==(miniProduction(p)?'480p':'1080p'))throw new Error('VIDEO_PROFILE_MISMATCH: use the project productionProfile resolution; do not silently change old runs.');
  const shots=current(p,'shots').content.shots;
+ if(plan.clips.length!==4||plan.clips.some(c=>c.generationSeconds!==15||c.durationSeconds!==15))throw new Error('VIDEO_PLAN_4X15: exactly 4 clips, each generationSeconds 15 covering a 15-second shot.');
  for(const shot of shots){const cs=plan.clips.filter(c=>c.shotId===shot.id);if(cs.length!==1)throw new Error('VIDEO_PLAN_ONE_CLIP_PER_SHOT: every shot needs exactly one clip starting at 0 covering the shot duration.');const c=cs[0];if(Math.abs(c.startSeconds)>1e-6||Math.abs(c.durationSeconds-shot.durationSeconds)>1e-6||c.durationSeconds>c.generationSeconds||Math.abs(c.durationSeconds*30-Math.round(c.durationSeconds*30))>1e-6)throw new Error('VIDEO_PLAN_ONE_CLIP_PER_SHOT: one clip per shot from 0 covering the shot duration in 30fps order without time stretching.');}
  if(plan.clips.some(c=>!shots.some(s=>s.id===c.shotId)))throw new Error('Unknown video shot.');
  const order=plan.clips.map(c=>shots.findIndex(s=>s.id===c.shotId));if(order.some((n,i)=>i&&n<order[i-1]))throw new Error('Video clips must follow shot order.');
