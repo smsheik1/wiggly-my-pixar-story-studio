@@ -34,8 +34,8 @@ Prompts are built from fixed lines (same for every character, encoding how the h
 - [C-FIXED-SWAP] (check: none) Separate fixed template lines from swap slots; fill the slots from evidence and state the design calls you made, asking at most one clarifying question.
 - [C-SHAPE] (check: sage) Give every character one dominant shape with strong contrast between body regions, describable in three words and readable in pure black silhouette.
 - [C-EXAGGERATION] (check: sage) Push one feature well past life size and push its neighbours the opposite way; an exaggeration stated alone gets averaged back.
-- [C-HEADS-TALL] (check: vera) Height in heads: toddler 4, child 5, teen 6-6.5, adult 7.
-- [C-CHILD-RIDER] (check: sage, vera) Child proportions are for children only: long torso, short legs, low centre of gravity, enlarged head, narrow shoulders; never carry this rider onto adults.
+- [C-HEADS-TALL] (check: vera) Height in heads: toddler 4, child 5, teen 6-6.5, adult 7. Write it as natural build wording, e.g. child: "slim child build, slightly enlarged expressive head, approximately five heads tall, narrow child shoulders and natural limbs"; teen: "approximately six-head-tall youthful proportions, slim-to-average build". Never draw a child or teen chunkier or bigger-headed than this.
+- [C-CHILD-RIDER] (check: sage, vera) Child proportions are for children only: slim child build, slightly enlarged expressive head, narrow child shoulders, natural limbs; never carry this rider onto adults.
 - [C-TODDLER-TORSO] (check: none) Writing tip: describe a toddler's torso as slim and flat; "round belly" or "full cheeks" comes back as a paunch.
 - [C-SIGNATURE] (check: sage, vera) Give each character one signature element that is worn or attached, never held, and carries the only saturated colour in an otherwise muted palette.
 - [C-WEAR] (check: none) Wear tells a story: grime where hands touch, pale worn edges, one thing undone or broken.
@@ -44,7 +44,7 @@ Prompts are built from fixed lines (same for every character, encoding how the h
 - [C-CAST-CONTRAST] (check: none) Design each new character against the existing cast so no two read as the same person.
 - [C-TEMPLATE] (check: sage) Fill the full character template: labelled lines for eyes, eyebrows, face, subject, skin, silhouette, hair, wardrobe, pose, camera, and background, opening with the house look.
 - [C-EYEBROWS] (check: sage) Pick one eyebrow setting: groomed (soft, hair-coloured, individual hairs), graphic (thick, dark, soft-edged), or sparse (fine, pale, barely visible).
-- [C-SKIN-ZONING] (check: sage, vera) Pick one skin zoning: light (faint pink at the nose tip, translucent ear tips, a soft natural warmth in the cheeks, cool under-eyes) or deep (a slight warm deepening of the skin's own tone at the nose tip and ear rims, a barely visible warm cheek tone, grey-violet under-eyes). Zoning is subtle: never a red nose, red ear rims or red or painted cheeks, which read as clown makeup; always use deep for dark skin, since light on dark skin renders grey and dead.
+- [C-SKIN-NATURAL] (check: sage, vera) Skin matches the photos exactly: even natural colour, no added redness on nose, ears or cheeks; dark skin stays rich, never grey. Write no nose, ear or cheek colour words in a prompt.
 - [C-HAIR] (check: sage, vera) Build hair as volume at three scales at once with a dark occluded core and a matte finish; write thin hair as thin volume, and name the three scales explicitly for tight coils.
 
 ## [prompt-rules] Prompt rules

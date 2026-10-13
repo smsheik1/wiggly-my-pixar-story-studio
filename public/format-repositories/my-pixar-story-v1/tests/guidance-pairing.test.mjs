@@ -268,3 +268,21 @@ test('check 8: duplication ratchet: shared sentences across model docs must not 
     `duplication count ${dupCount} exceeds baseline ${manifest.duplicationBaseline}`
   );
 });
+
+test('sheet skin: no zoning in craft, Pia, Vera or golden; r4 build wording restored (Shaz 2026-10-13)', async () => {
+  const read = (p) => readFile(resolve(kitDir, p), 'utf8');
+  const craft = await read('craft-guide.md');
+  assert.ok(!/C-SKIN-ZONING|skin zoning/i.test(craft), 'craft guide must not carry skin zoning');
+  assert.match(craft, /\[C-SKIN-NATURAL\][^\n]*no added redness on nose, ears or cheeks; dark skin stays rich, never grey/);
+  assert.ok(!/long torso|short legs|low centre of gravity/i.test(craft), 'child rider must not say long torso / short legs');
+  assert.match(craft, /approximately five heads tall/);
+  for (const p of ['crew/pia/SKILL.md', 'crew/vera/SKILL.md', 'evaluation/rubrics/visual.md']) {
+    assert.ok(!/zoning|plum-red|red-orange/i.test(await read(p)), `${p} must not mention zoning`);
+  }
+  const vera = await read('crew/vera/SKILL.md');
+  assert.match(vera, /A clown nose or heavy blush that isn't in the reference fails `likeness`/); // #67: reference is the source of truth
+  assert.match(vera, /chunkier or bigger-headed than its heads-tall rule/);
+  const golden = await read('evaluation/dept-evals/golden.json');
+  assert.ok(!golden.includes('names-skin-zoning'));
+  assert.ok(golden.includes('"id": "no-zoning-colour-words"'));
+});

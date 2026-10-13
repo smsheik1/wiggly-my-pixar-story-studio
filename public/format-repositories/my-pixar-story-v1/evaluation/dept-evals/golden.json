@@ -563,12 +563,11 @@
           "why": "Decision 4 and spec 1e: no studio, renderer, T-pose or three-point lighting words."
         },
         {
-          "id": "names-skin-zoning",
-          "type": "contentMatches",
+          "id": "no-zoning-colour-words",
+          "type": "contentNotMatches",
           "field": "prompt",
-          "pattern": "(light|deep)[^.]{0,40}(skin|zon)|skin[^.]{0,40}(light|deep)",
-          "soft": true,
-          "why": "[C-SKIN-ZONING]: a light or deep zoning choice is written (which one is right is a human call)."
+          "pattern": "zoning|(red|pink|plum|red-orange)[^.]{0,30}(nose|ear|cheek)|(nose|ear|cheek)[^.]{0,30}(red|pink|plum|flush|blush)|cheek flush|blush",
+          "why": "[C-SKIN-NATURAL]: no skin zoning or nose, ear or cheek colour words (Shaz 2026-10-13, A/B test: zoning caused clown-red)."
         },
         {
           "id": "no-child-rider-on-adult",
@@ -628,19 +627,18 @@
           "why": "Decision 4 and spec 1e: no studio, renderer, T-pose or three-point lighting words."
         },
         {
-          "id": "names-skin-zoning",
-          "type": "contentMatches",
+          "id": "no-zoning-colour-words",
+          "type": "contentNotMatches",
           "field": "prompt",
-          "pattern": "(light|deep)[^.]{0,40}(skin|zon)|skin[^.]{0,40}(light|deep)",
-          "soft": true,
-          "why": "[C-SKIN-ZONING]: a light or deep zoning choice is written (which one is right is a human call)."
+          "pattern": "zoning|(red|pink|plum|red-orange)[^.]{0,30}(nose|ear|cheek)|(nose|ear|cheek)[^.]{0,30}(red|pink|plum|flush|blush)|cheek flush|blush",
+          "why": "[C-SKIN-NATURAL]: no skin zoning or nose, ear or cheek colour words (Shaz 2026-10-13, A/B test: zoning caused clown-red)."
         },
         {
           "id": "child-rider",
           "type": "contentMatches",
           "field": "prompt",
-          "pattern": "short legs|long torso|low cent(er|re) of gravity|child proportion",
-          "why": "[C-CHILD-RIDER]: child proportion rider for a child."
+          "pattern": "slim child build|narrow child shoulders|enlarged expressive head|child proportion",
+          "why": "[C-CHILD-RIDER]: r4-style child build wording for a child (Shaz 2026-10-13)."
         },
         {
           "id": "child-heads-tall",
