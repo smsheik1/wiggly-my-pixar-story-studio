@@ -8,7 +8,10 @@ import {loadStudio} from './instructions.mjs';
 import {sanitize,promptSectionsFor,labelFor,reasonCode} from './tracing.mjs';
 import {AudioEditPlan} from './audio-edit.mjs';
 
-export const OPENROUTER_URL='https://openrouter.ai/api/v1/chat/completions';
+export const MAX_INLINE_IMAGES=Math.max(1,Number(process.env.WIGGLY_MAX_INLINE_IMAGES)||8);
+// Meta (Muse) only accepts tool_choice "auto"; "none"/"required"/forced tools return HTTP 400.
+const toolChoiceFor=(model,choice)=>String(model).startsWith('meta/')?'auto':(choice??'auto');
+const OPENROUTER_URL='https://openrouter.ai/api/v1/chat/completions';
 export const DEFAULT_OPENROUTER_MODEL='deepseek/deepseek-v4.1-flash';
 export const OPENROUTER_PROVIDER_POLICY={require_parameters:true,max_price:{prompt:0.3,completion:1.2}};
 export const OPENROUTER_MAX_TOKENS=16000;
@@ -165,7 +168,7 @@ export class OpenRouterHost {
    let llmAttempt=0;
    const sendOnce=async(msgs,continuation=false)=>{
     const attempt=llmAttempt++;
-    const body={model,messages:msgs,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:providerPolicyFor(model),max_tokens:maxTokens??this.maxTokensFor(model)};
+    const body={model,messages:msgs,...(tools?.length?{tools,tool_choice:toolChoiceFor(model,toolChoice)}:{}),provider:providerPolicyFor(model),max_tokens:maxTokens??this.maxTokensFor(model)};
     if(!verify&&!continuation){
      body.response_format={type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}};
     }
@@ -250,6 +253,9 @@ export class OpenRouterHost {
    const system=developerInstructions(worker);
    const media=[],attached=new Set();
    if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){
+    // Providers reject requests with too many inline images (Meta: "Invalid upload request." at 19 images in r5).
+    // Attach up to WIGGLY_MAX_INLINE_IMAGES; the rest stay listed by sha256 and can be opened with the viewImage tool.
+    if(attached.size>=MAX_INLINE_IMAGES){media.push({type:'text',text:`Reference image sha256: ${file.sha256} (not attached inline; call viewImage to see it)`});continue;}
     if(!modelTraits(worker.modelVersion).inputs.includes('image')){
      const error=new Error(`OPENROUTER_VISION_UNSUPPORTED: ${worker.modelVersion} cannot take images; bind a vision model for ${worker.role}.`);
      error.stopDispatch=true;
