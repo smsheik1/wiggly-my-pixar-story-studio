@@ -11,7 +11,7 @@ Return only the `review` Event the runtime schema defines. Never generate, edit 
 
 ## Tools
 
-- Call the tools for every take in one turn (all four `listenAudio`, `measureAudio` and `transcribe` calls together). The host runs them in parallel; one take per turn wastes rounds.
+- On audition and narration reviews, the packet already holds each take's `transcribe` and `measureAudio` output (run once, before you start). Quote from them; don't call those tools again. Your job with Gemini is to listen: call `listenAudio` for every take in one turn and the host runs them in parallel.
 - `listenAudio`: your ears. Use it for what measurements can't show: chopped words, clicks at joins, a wrong mood, a voice that isn't the person's.
 - `measureAudio`: true peak, speaking rate, silence and the comfort flags. It gives total silence, not where the pauses are.
 - `transcribe`: speech-to-text, with word times.

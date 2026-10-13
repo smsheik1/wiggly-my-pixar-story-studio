@@ -5,3 +5,7 @@ Crew procedure files live in crew/<name>/SKILL.md; independent reviewer rubrics 
 Vera owns all image checks; the operator asks the human only to pick the winning option, never to confirm anatomy. Default image provider is local agy ($0); meta-muse is the fallback. Rev 5 full-sheet candidates are the default; rev <=4 stays compatible.
 
 Production bible: only the human signs it (`bible-sign`, interactive terminal). Never run bible-sign for the human, never sign on their behalf, and never treat an unsigned draft as locked.
+
+
+## Testing code fixes: replay, not live
+Test a code fix against saved responses: `node runner.mjs replay --run <run> [--expect-same-output]` replays the run's cassettes with the network blocked (`REPLAY_NETWORK_BLOCKED`). Never test a fix with live paid calls. Rehearsal loops run drive-codex/generate with `--record` (or `WIGGLY_RECORD=1`) so every paid response is saved for replay. A fix that changes the request (new prompt text, different images) shows up as `REPLAY_MISMATCH`; that is the signal to review the diff, not to go live.
