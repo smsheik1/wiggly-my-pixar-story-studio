@@ -36,8 +36,9 @@ function isTruncatedChoice(choice){
 // that is the setting that passed the r4 adult-sheet head-to-head (PR #31), and its
 // output cap is 32K because one xhigh Muse request used ~9.7K of the old 16K cap.
 export const MUSE_MAX_TOKENS=32000;
-// Ava's verdicts carry four takes of quoted evidence; at 16K they truncated in r5.
-export const AVA_MAX_TOKENS=32000;
+// Reviewer verdicts (Ava on Gemini) carry always-on reasoning plus a long structured
+// verdict; 16k truncated one in r5 and the uncached repair rounds cost 3x a normal review.
+export const REVIEWER_VERDICT_MAX_TOKENS=32000;
 export const OPENROUTER_MODEL_TRAITS={
  'deepseek/deepseek-v4.1-flash': { reasoning:'optional', inputs:['text','image'] },
  'meta/muse-spark-1.3-contributor': { reasoning:'always-on', inputs:['text','image','video'], productionEffort:'xhigh', maxTokens:MUSE_MAX_TOKENS },
@@ -45,7 +46,7 @@ export const OPENROUTER_MODEL_TRAITS={
  // medium effort with the default 16K cap, never Muse's xhigh/32K overrides.
  // OpenRouter makes reasoning mandatory for it, so it is always-on (the bind
  // ping sends effort low, never reasoning disabled).
- 'google/gemini-3.8-flash': { reasoning:'always-on', inputs:['text','image','video','file','audio'], maxPrice:{prompt:1,completion:5}, maxTokens:AVA_MAX_TOKENS },
+ 'google/gemini-3.8-flash': { reasoning:'always-on', inputs:['text','image','video','file','audio'], maxPrice:{prompt:1,completion:5}, maxTokens:REVIEWER_VERDICT_MAX_TOKENS },
 };
 // Offline audio-capability allowlist: Ava's configured model must be listed here.
 // listenAudio bytes go to the mediaReview Gemini provider (gemini-review.mjs);
