@@ -131,6 +131,7 @@ Motion and light that match the keyframe.
 
 - [V-MOTION] (check: june) Design one action per clip as observable results: anticipation winding the opposite way first, snap and settle with a small overshoot, moving holds that breathe, follow-through where hair and cloth arrive late, arcs for hands and heads, and weight read from timing.
 - [V-LIGHT] (check: june) Design lighting per clip from the keyframe: key direction and colour, rim for separation, bounce colour, practicals, atmosphere, and palette as a ratio with one accent; keep the keyframe's stylized animated-feature look.
+- [V-TALK] (check: june) Narration only: the main track is narration, so the viewer hears the narrator and never a character's voice, and no character dialogue is ever heard as active speech. Every clip sets `talk`. Use `mos` only when the script says something about people talking, or it plainly makes sense to show them talking; they are then shown in conversation as B-roll under the narration, with loose, unsynced mouth movement and no lip-sync or speech text. Otherwise use `none` (the default): nobody on screen talks.
 
 ## [video-architecture] Video: architecture
 
