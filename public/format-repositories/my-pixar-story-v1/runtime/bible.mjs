@@ -78,9 +78,9 @@ export const BibleContent = z.object({
 export const BibleEntry = z.object({
   version: z.number().int().positive(), hash: text, state: z.enum(['draft', 'signed']), content: BibleContent,
   createdAt: text, createdBy: z.object({ actor: text, message: text }).strict(),
-  signature: z.object({ by: text, message: text, at: text }).strict().optional(),
+  signature: z.object({ by: text, message: text, at: text, via: z.enum(['terminal', 'chat']).optional() }).strict().optional(),
 }).strict();
-export const ProjectBible = z.object({ policy: z.enum(['required', 'advisory']), versions: z.array(BibleEntry) }).strict();
+export const ProjectBible = z.object({ policy: z.enum(['required', 'advisory']), rehearsal: z.boolean().optional(), versions: z.array(BibleEntry) }).strict();
 
 export const bibleHash = content => digest(BibleContent.parse(content));
 export function parseBible(content) {
@@ -229,6 +229,16 @@ export function applyBibleEvent(p, e) {
   if (e.actor !== 'human') throw new Error(`${e.action} requires human authority; agents can never draft-over or sign the production bible.`);
   if (!e.message) throw new Error(`${e.action} needs the actual human instruction.`);
   const at = new Date().toISOString();
+  if (e.action === 'bible-policy') {
+    // Switch an existing run's policy (e.g. a rehearsal created as `required`). Logged in history by the workflow.
+    const policy = e.content?.policy, rehearsal = e.content?.rehearsal;
+    if (!['required', 'advisory'].includes(policy)) throw new Error('BIBLE_POLICY_INVALID: --set required|advisory.');
+    p.bible ??= { policy, versions: [] };
+    p.bible.policy = policy;
+    if (typeof rehearsal === 'boolean') p.bible.rehearsal = rehearsal;
+    return;
+  }
+  if (e.action === 'bible-draft' && p.bible?.rehearsal && signedBible(p)) throw new Error(`BIBLE_FROZEN_IN_REHEARSAL: v${signedBible(p).version} is signed; rehearsal runs never redraft after signing (that would need a new signature mid-run).`);
   if (e.action === 'bible-draft') {
     const { content, hash } = parseBible(e.content ?? compileBible(p));
     const problems = checkSources(p, content, { forSigning: false });
@@ -239,6 +249,9 @@ export function applyBibleEvent(p, e) {
     p.bible.versions.push({ version: (latest?.version ?? 0) + 1, hash, state: 'draft', content, createdAt: at, createdBy: { actor: e.actor, message: e.message } });
     return;
   }
+  // bible-approve (via chat): only for rehearsal runs on the advisory policy. Records the
+  // human's chat approval verbatim; it can never satisfy a `required` policy.
+  if (e.action === 'bible-approve' && !(p.bible?.policy === 'advisory' && p.bible?.rehearsal)) throw new Error('BIBLE_CHAT_APPROVAL_NOT_ALLOWED: chat approval is only for rehearsal runs with an advisory bible; production runs need bible-sign in Terminal.');
   // bible-sign: binds the exact draft content the human reviewed.
   const by = e.content?.by;
   if (typeof by !== 'string' || !by.trim()) throw new Error('BIBLE_SIGNER_REQUIRED: name the human signing (--by).');
@@ -252,7 +265,7 @@ export function applyBibleEvent(p, e) {
   const problems = checkSources(p, latest.content, { forSigning: true });
   if (problems.length) throw new Error(`BIBLE_SOURCE_NOT_LOCKED: ${problems.join('; ')}`);
   latest.state = 'signed';
-  latest.signature = { by: by.trim(), message: e.message, at };
+  latest.signature = { by: by.trim(), message: e.message, at, via: e.action === 'bible-approve' ? 'chat' : 'terminal' };
 }
 
 const list = items => items.map(x => `- ${x}`).join('\n');

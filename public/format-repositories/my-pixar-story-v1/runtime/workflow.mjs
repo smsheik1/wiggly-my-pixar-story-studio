@@ -69,7 +69,7 @@ export function initialProject(id, inputs, options = {}) {
   const base={ formatVersion: VERSION, schemaVersion: 2, studio, workflowRevision, productionProfile:options.productionProfile??studio.config.generation.video.profile, id, reviewMode:options.reviewMode ?? 'supervised', budget:{maxCostUsd:studio.config.limits.initialSpendCeilingUsd,reservations:[]}, inputs: Inputs.parse(inputs), step: workflowRevision>=3?'answers':'script', gate: 'author', characterId: null,
     sequence: 0, artifacts: [], jobs: [], history: [], allowances: [], feedback: [], reviewDisagreements: 0 };
   if(options.gatePolicy!==undefined)base.gatePolicy=options.gatePolicy;
-  if(['required','advisory'].includes(options.biblePolicy))base.bible={policy:options.biblePolicy,versions:[]};
+  if(['required','advisory'].includes(options.biblePolicy))base.bible={policy:options.biblePolicy,versions:[],...(options.rehearsal?{rehearsal:true}:{})};
   return Project.parse(base);
 }
 function invalidate(p, id) {
@@ -452,7 +452,7 @@ const requiredActor = (e, actor) => { if (e.actor !== actor) throw new Error(`${
 export function applyEvent(project, raw) {
   const p = structuredClone(Project.parse(project));
   if(p.bible)ProjectBible.parse(p.bible);
-  const e = ['bible-draft','bible-sign'].includes(raw?.action) ? BibleEvent.parse(raw) : Event.parse(raw);
+  const e = ['bible-draft','bible-sign','bible-approve','bible-policy'].includes(raw?.action) ? BibleEvent.parse(raw) : Event.parse(raw);
   let autoLockEntry = null;
   if (e.taskId !== taskFor(p).taskId) throw new Error('STALE_TASK: read current status before responding.');
   if(p.lifecycle==='abandoned'){
@@ -707,7 +707,7 @@ export function applyEvent(project, raw) {
     const config={...p.studio.config,agents},documents=p.studio.documents;
     p.studio={config,documents,sha256:digest({config,documents})};
     p.history.push({sequence:p.sequence,action:e.action,actor:e.actor,message:`${e.message} | models changed: ${changed.join(', ')}${kept.length?` | locked reviewers kept: ${kept.join(', ')}`:''}`,at:new Date().toISOString()});
-  }else if(['bible-draft','bible-sign'].includes(e.action)){
+  }else if(['bible-draft','bible-sign','bible-approve','bible-policy'].includes(e.action)){
     applyBibleEvent(p,e);
   }else if(e.action==='prefer-image-provider'){
     requiredActor(e,'human');
@@ -1064,7 +1064,7 @@ export function applyEvent(project, raw) {
     if (e.action === 'receipt') { if ([...imageSteps,'video','music','effect'].includes(p.step) && e.result?.prompt !== j.request.prompt) throw new Error('Receipt prompt differs from authorized request.'); if (['audition', 'narration'].includes(p.step) && e.result?.voiceId !== j.request.voice) throw new Error('Receipt voice differs from authorized request.'); if (!['submitting', 'submitted', 'uncertain'].includes(j.status)) throw new Error('No submitted job to collect.'); addArtifact(p, e.result, 'provider-runtime'); j.status = 'ready'; j.result = e.result;if(p.step==='narration')delete p.narrationRegeneration; }
     if (e.action === 'provider-error') { if (!e.message) throw new Error('Provider error needs diagnostics.'); j.status = 'uncertain'; p.gate = 'escalate'; }
   } else throw new Error('Unsupported action.');
-  if(p.debug?.enabled&&!['begin','bible-draft','bible-sign'].includes(e.action))p.debug.paused=true;
+  if(p.debug?.enabled&&!['begin','bible-draft','bible-sign','bible-approve','bible-policy'].includes(e.action))p.debug.paused=true;
   p.sequence++;
   if(['artifact','receipt','rendered'].includes(e.action)){const a=current(p,submittedKey);activity.artifactId=a.id;activity.artifactDigest=a.digest;}
   if(e.action==='plan')activity.jobId=p.jobs.at(-1).id;
