@@ -174,6 +174,8 @@ async function main() {
         !f.startsWith('cassettes') &&
         // Trace journal: timestamps/durations/ids differ per run by design.
         !f.startsWith('trace/') &&
+        // Bookkeeping with wall-clock stamps (reviewer attempt counts, verdict cache, escalations).
+        !f.startsWith('review-attempts/') && !f.startsWith('review-cache/') && !f.startsWith('escalations/') &&
         f !== 'writer.lock' &&
         f !== 'secrets.env' &&
         !f.endsWith('-shm') &&

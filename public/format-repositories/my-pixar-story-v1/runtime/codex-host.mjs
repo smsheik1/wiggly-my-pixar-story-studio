@@ -13,6 +13,7 @@ import {labelFor as traceLabelFor,reasonCode as traceReasonCode} from './tracing
 
 // Codex host default only. No crew agent is on Codex since the Muse swap; the host stays for
 // legacy pinned runs and any agent configured back to backend "codex".
+export const REVIEW_ATTEMPT_CAP=3;
 // Third failure at one step: record an escalation for the orchestrator (Grok Bot), not the human.
 async function escalate(receiptDirectory,task,receipt,attempt){
  const dir=join(receiptDirectory,'..','escalations');await mkdir(dir,{recursive:true});
@@ -365,6 +366,16 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
     const reviewCacheKey=task.gate==='review'&&task.crewWorker?.role==='audio-reviewer'&&task.artifact?.content?digest({content:task.artifact.content,criteria:task.criteria??null,worker:norm(task.crewWorker)}):null;
     const reviewCachePath=reviewCacheKey?join(receiptDirectory,'..','review-cache',reviewCacheKey+'.json'):null;
     if(!event&&reviewCachePath){const cached=await readJson(reviewCachePath);if(cached?.event)event={...cached.event,taskId:task.taskId,...(task.artifact?.id?{artifactId:task.artifact.id}:{})};}
+    // Hard cap: at most REVIEW_ATTEMPT_CAP paid reviewer invocations per reviewer per artifact digest, whatever
+    // triggered them (repair, restart, re-review). The next one stops and escalates to the orchestrator.
+    if(!event&&task.gate==='review'&&task.artifact?.content){
+     const k=digest({role:task.crewWorker?.role??null,content:task.artifact.content});
+     const cdir=join(receiptDirectory,'..','review-attempts'),cpath=join(cdir,k+'.json');
+     await mkdir(cdir,{recursive:true});
+     const prior=(await readJson(cpath))??{count:0,taskIds:[]};
+     if(prior.count>=REVIEW_ATTEMPT_CAP){await escalate(receiptDirectory,task,{error:`review attempt cap: ${prior.count} invocations of ${task.crewWorker?.role} on this artifact digest`},prior.count+1);throw new Error(`REVIEW_ATTEMPT_CAP: ${task.crewWorker?.role} already reviewed this artifact ${prior.count} times. ESCALATED_TO_ORCHESTRATOR: no further paid review calls until Grok Bot resolves it.`);}
+     await saveJson(cpath,{count:prior.count+1,role:task.crewWorker?.role??null,step:task.step,taskIds:[...prior.taskIds,task.taskId],at:new Date().toISOString()});
+    }
     // Preflight before any receipt write so a refused dispatch leaves no
     // stranded started receipt and never changes an existing receipt.
     if(!event&&typeof host.preflight==='function')await host.preflight(task.crewWorker);
