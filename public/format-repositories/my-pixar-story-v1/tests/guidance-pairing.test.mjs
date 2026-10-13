@@ -280,7 +280,7 @@ test('sheet skin: no zoning in craft, Pia, Vera or golden; r4 build wording rest
     assert.ok(!/zoning|plum-red|red-orange/i.test(await read(p)), `${p} must not mention zoning`);
   }
   const vera = await read('crew/vera/SKILL.md');
-  assert.match(vera, /red or pink nose, ear rims, or blotchy cheek blush/);
+  assert.match(vera, /A clown nose or heavy blush that isn't in the reference fails `likeness`/); // #67: reference is the source of truth
   assert.match(vera, /chunkier or bigger-headed than its heads-tall rule/);
   const golden = await read('evaluation/dept-evals/golden.json');
   assert.ok(!golden.includes('names-skin-zoning'));

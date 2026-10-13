@@ -58,7 +58,7 @@ Prompt review:
 
 Sheet review:
 - `likeness`: move skin tone, hair colour and face shapes to the front in more concrete words, and ease off any push on the mismatched feature.
-- `style`: for text on the sheet, remove words that invite lettering (names, "labelled", "chart") and keep the no-text line. For an oversized head on an adult, restate the adult height rule. For grey dark skin, restate the photo's rich deep tone (`C-SKIN-NATURAL`). For a red or pink nose, ear rims or cheek blush, remove any colour words there and restate even natural colour.
+- `style`: for text on the sheet, remove words that invite lettering (names, "labelled", "chart") and keep the no-text line. For an oversized head on an adult, restate the adult height rule. For grey dark skin, restate the photo's rich deep tone (`C-SKIN-NATURAL`). For a red or pink nose, ear rims or cheek blush that isn't in the reference, remove any colour words there and restate the reference's own natural colour.
 - `anatomy`: describe hands as a few large rounded forms with blunt fingertips. For children, describe the torso as slim, straight and flat.
 - `turnaround`: restate four views at the same height on one baseline, hands open and empty, and remove anything that reads as a prop.
 - `expressions`: keep the order. Add a few words to any expression that didn't read, for example "surprised: brows high, mouth a small open oval".
