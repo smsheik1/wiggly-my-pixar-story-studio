@@ -44,7 +44,7 @@ Prompts are built from fixed lines (same for every character, encoding how the h
 - [C-CAST-CONTRAST] (check: none) Design each new character against the existing cast so no two read as the same person.
 - [C-TEMPLATE] (check: sage) Fill the full character template: labelled lines for eyes, eyebrows, face, subject, skin, silhouette, hair, wardrobe, pose, camera, and background, opening with the house look.
 - [C-EYEBROWS] (check: sage) Pick one eyebrow setting: groomed (soft, hair-coloured, individual hairs), graphic (thick, dark, soft-edged), or sparse (fine, pale, barely visible).
-- [C-SKIN-ZONING] (check: sage, vera) Pick one skin zoning: light (pink nose tip, translucent ear tips, flushed cheeks, cool under-eyes) or deep (deep red-orange nose tip and ear rims, plum-red cheek flush, grey-violet under-eyes); always use deep for dark skin, since light on dark skin renders grey and dead.
+- [C-SKIN-ZONING] (check: sage, vera) Pick one skin zoning: light (faint pink at the nose tip, translucent ear tips, a soft natural warmth in the cheeks, cool under-eyes) or deep (a slight warm deepening of the skin's own tone at the nose tip and ear rims, a barely visible warm cheek tone, grey-violet under-eyes). Zoning is subtle: never a red nose, red ear rims or red or painted cheeks, which read as clown makeup; always use deep for dark skin, since light on dark skin renders grey and dead.
 - [C-HAIR] (check: sage, vera) Build hair as volume at three scales at once with a dark occluded core and a matte finish; write thin hair as thin volume, and name the three scales explicitly for tight coils.
 
 ## [prompt-rules] Prompt rules

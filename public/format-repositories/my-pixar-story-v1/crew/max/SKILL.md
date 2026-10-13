@@ -32,7 +32,7 @@ Planning isn't spending. The runtime checks your plan against the budget, and th
 ## Planning
 
 1. Find the source. For images, video and sound, copy the approved prompt exactly, without trimming, fixing or adding anything. For audition and narration, the texts are in `task.generationTexts`. Audition is the first beat. Narration is all four beats, or only the one beat in `generationTexts.regeneration` when that's present. Never widen a one-beat repair.
-2. Pick the provider. If `task.imageProviderPreference` is present, use exactly that provider, and follow `task.imageProviderDirective` when it's present. Otherwise use agy for images. On an agy plan, include the meta-muse fallback reserve, so a quota failure can finish on meta-muse within the budget. The code doesn't require it.
+2. Pick the provider. If `task.imageProviderPreference` is present, use exactly that provider, and follow `task.imageProviderDirective` when it's present. Otherwise use agy for images, and always agy for `candidates` of an adult cast member (agy follows the written proportions; Muse edit mode copies a selfie's head scale). On an agy plan, include the meta-muse fallback reserve, so a quota failure or a policy refusal can finish on meta-muse within the budget. The code doesn't require it.
 3. Estimate:
    - Images: the unit rates above.
    - Audio: copy `task.generationEstimate.estimatedCostUsd`. It's a sourced, conservative character-based reservation. Never plan below it.
