@@ -4,6 +4,7 @@ import {initialProject,taskFor,current} from '../runtime/workflow.mjs';
 import {inputs,send,reviewed,file,audioProject} from './helpers.mjs';
 import {image} from './background-helpers.mjs';
 import {digest} from '../runtime/contracts.mjs';
+import {locked} from '../runtime/gates.mjs';
 
 const proposed=[
  {id:'alex',name:'Alex',ageVariant:'adult',minor:false,storyPurpose:'Leads the memoir.'},
@@ -63,6 +64,12 @@ test('add-reference binds one photo and invalidates only that character',()=>{
  assert.equal(current(p,'characterPrompt:alex').approvedBy.message,'m');
  assert.equal(current(p,'characterPrompt:bob'),undefined);
  assert.equal(p.characterId,'bob');assert.equal(p.step,'characterPrompt');assert.equal(p.gate,'author');
+ // Regression (r5): the new roster version must stay locked, or every character prompt fails CHARACTER_PROMPT_BINDING_REQUIRED.
+ assert.ok(locked(p,'roster'),'roster stays locked after add-reference'); // A run already carrying an unreviewed add-reference version recovers on the next add-reference.
+ delete current(p,'roster').review;
+ assert.ok(!locked(p,'roster'));
+ p=send(p,'add-reference',{actor:'human',characterId:'bob',importFile:photo(10),message:'ISOLATED human adds second Bob photo'});
+ assert.ok(locked(p,'roster'),'recovered lock from last reviewed roster');
 });
 
 test('the producer asks the human directly with names and both choices',async()=>{
@@ -98,4 +105,17 @@ test('add-reference keeps other characters locked even when their work depends o
 test('add-reference refuses an unapproved roster',()=>{
  const p=rosterProject();
  assert.throws(()=>send(p,'add-reference',{actor:'human',characterId:'bob',importFile:photo(9),message:'ISOLATED add'}),/ADD_REFERENCE_NO_ROSTER/);
+});
+
+test('add-reference leaves the character\'s own old work on the old roster (fresh attempt cap), re-points others',()=>{
+ let p=rosterProject();
+ p.artifacts.find(x=>x.id==='roster@1').content.characters.find(c=>c.id==='bob').notes='ISOLATED bob; ISOLATED human: design Bob without a photo';
+ let b=current(p);
+ p=send(p,'approve',{artifactId:b.id,artifactDigest:b.digest,message:'ISOLATED approve roster',intakeConfirmation:intake({references:[],likeness:'interpreted',decisionNotes:'ISOLATED human: design Bob without a photo'})});
+ const old=current(p,'roster').id;
+ for(const id of ['alex','bob'])p.artifacts.push({id:`characterPrompt:${id}@1`,key:`characterPrompt:${id}`,kind:'characterPrompt',version:1,digest:`cp-${id}`,content:{prompt:'p',characterDigest:'d',referenceHashes:[],recipeSha256:'h'},dependencies:[old],valid:true,authoredBy:'t',approvedBy:{message:'m',at:new Date().toISOString()}});
+ p=send(p,'add-reference',{actor:'human',characterId:'bob',importFile:photo(11),message:'ISOLATED human adds Bob photo'});
+ const now=current(p,'roster').id;
+ assert.deepEqual(p.artifacts.find(a=>a.id==='characterPrompt:bob@1').dependencies,[old]);
+ assert.deepEqual(p.artifacts.find(a=>a.id==='characterPrompt:alex@1').dependencies,[now]);
 });

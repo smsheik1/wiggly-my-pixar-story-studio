@@ -577,12 +577,17 @@ export function applyEvent(project, raw) {
     // roster dependency into every character's prompt/candidates/sheet. Other
     // characters' entries are byte-identical, so their locked work is re-pointed
     // to the new roster version instead of being reopened.
+    // Review source: this roster, or (for runs hit by the old bug) the last reviewed version before a chain of add-reference versions.
+    const src=roster.review?roster:[...p.artifacts].reverse().find(a=>a.key==='roster'&&a.review&&a.version<roster.version)??roster;
     for(const a of p.artifacts.filter(a=>a.key==='roster'&&a.valid))a.valid=false;
     const version=p.artifacts.filter(a=>a.key==='roster').length+1;
-    const next={id:`roster@${version}`,key:'roster',kind:'roster',version,digest:digest(parsed),content:parsed,dependencies:roster.dependencies,valid:true,authoredBy:'human',approvedBy:{message:e.message,at:new Date().toISOString()}};
+    const next={id:`roster@${version}`,key:'roster',kind:'roster',version,digest:digest(parsed),content:parsed,dependencies:roster.dependencies,valid:true,authoredBy:'human',...(src.review?{review:src.review}:{}),...(src.reviewSequence!=null?{reviewSequence:src.reviewSequence}:{}),...(src.humanReview?{humanReview:src.humanReview}:{}),approvedBy:{message:e.message,at:new Date().toISOString()}};
+    // Keep the roster locked: carry the prior crew/human review forward (only a reference was appended).
     if(roster.intakeConfirmation)next.intakeConfirmation={...roster.intakeConfirmation,characters:roster.intakeConfirmation.characters.map(c=>c.id===characterId?{...c,references:[...c.references,file],likeness:'reference'}:c)};
     p.artifacts.push(next);
-    for(const a of p.artifacts)if(a.id!==next.id&&a.dependencies.includes(roster.id))a.dependencies=a.dependencies.map(d=>d===roster.id?next.id:d);
+    // Re-point only OTHER characters' work; this character's old prompts/candidates stay on the old roster so its prior jobs don't count against the new reference's attempt cap.
+    const own=a=>a.key.endsWith(`:${characterId}`);
+    for(const a of p.artifacts)if(a.id!==next.id&&!own(a)&&a.dependencies.includes(roster.id))a.dependencies=a.dependencies.map(d=>d===roster.id?next.id:d);
     for(const a of p.artifacts.filter(a=>a.valid&&['characterPrompt','candidates','sheetPrompt','sheet'].some(k=>a.key===`${k}:${characterId}`)))invalidate(p,a.id);
     p.characterId=characterId;p.step=refinedWorkflow(p)?'characterPrompt':'candidates';p.gate=refinedWorkflow(p)?'author':'produce';
     p.feedback.push({key:`characterPrompt:${characterId}`,message:e.message});
