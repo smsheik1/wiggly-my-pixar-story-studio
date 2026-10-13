@@ -129,9 +129,13 @@ export const Review = z.object({
     speakerSimilarity: z.number().min(0).max(1).optional(), speakerSimilarityMethod: text.optional(),
     referenceSha256: text.optional(), identityBasis:z.enum(['recorded-reference','human-recognition','consented-voice-id']).optional(), speakingRateWpm: z.array(z.number().positive()).optional(),
     silenceSeconds: z.array(z.number().nonnegative()).optional(), measurementNotes: text.optional(),
+    paletteSaturation: z.array(z.number().nonnegative()).optional(),
     truePeakDb: z.array(z.number()).optional(), comfort: z.array(z.object({harshness:z.boolean(),sibilance:z.boolean(),clippingOrDistortion:z.boolean(),suddenSpikes:z.boolean()})).optional(),
   }).optional(),
 });
+// [H-NO-BRANDS]: briefs, the bible and reviews may name the Pixar target look, but no studio,
+// film, vendor or model name ever reaches an image or video provider prompt.
+export const PROMPT_BRAND_TERMS = /\b(?:pixar|disney|dreamworks|seedance|gpt[- ]image|higgsfield|dankieft|renderman|octane|unreal engine|nano banana|ratatouille|toy story|inside out|incredibles)\b/i;
 export const Plans = z.object({ provider: z.enum(['cartesia', 'meta-muse', 'agy', 'replicate', 'elevenlabs']), operation: z.enum(['clone', 'audition', 'narration', 'candidates', 'sheet', 'backgroundCandidates', 'backgroundAngle', 'keyframe', 'video', 'music', 'effect']),
   estimatedCostUsd: z.number().nonnegative(), fallbackEstimatedCostUsd: z.number().nonnegative().optional(), parameters: z.object({ model: text.optional(), prompt: text.optional(), cartesiaVersion: text.optional() }).strict() }).strict();
 const CreativeDirection=z.object({scope:z.enum(['script','cast']),direction:text,sourceMessages:z.array(text).min(1)}).strict();

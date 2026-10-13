@@ -46,6 +46,29 @@ export async function verifyFiles(value) {
   }
   for (const child of Object.values(value)) await verifyFiles(child);
 }
+// Background plates are judged from the image itself, not only from the prompt wording.
+// ffmpeg signalstats SATAVG is the mean chroma saturation of the decoded plate (8-bit
+// scale, 0 = grey). r5's washed-out muted plates measured below 10; the floor is a
+// minimum, never a target, and Vera still judges the look with her own eyes.
+export const BACKGROUND_MIN_SATURATION = 12;
+export function parseSaturation(stderr) {
+  const m = [...String(stderr).matchAll(/SATAVG=([0-9.]+)/g)];
+  if (!m.length) throw new Error('PALETTE_UNMEASURABLE: ffmpeg signalstats returned no SATAVG.');
+  return Number(m.at(-1)[1]);
+}
+export async function measurePalette(file) {
+  await verifyFiles(file);
+  const { stderr } = await exec('ffmpeg', ['-hide_banner', '-nostats', '-i', file.path, '-vf', 'signalstats,metadata=print:key=lavfi.signalstats.SATAVG', '-f', 'null', '-'], { maxBuffer: 2 ** 22 });
+  return { sha256: file.sha256, saturation: parseSaturation(stderr), method: 'ffmpeg signalstats SATAVG (mean saturation, 8-bit)' };
+}
+// A passing background review must not pick a plate that measures muted or washed out.
+export function assertBackgroundPalette({ step, review, files, saturation }) {
+  if (!['backgroundCandidates', 'backgroundAngle'].includes(step)) return;
+  if (!['approved', 'provisional'].includes(review?.decision)) return;
+  const index = step === 'backgroundCandidates' && files.length > 1 ? review.recommendation?.selection ?? 0 : 0;
+  const value = saturation[index];
+  if (!(value >= BACKGROUND_MIN_SATURATION)) throw new Error(`BACKGROUND_PALETTE_MUTED: option ${index} measures mean saturation ${Number(value).toFixed(1)}, below the ${BACKGROUND_MIN_SATURATION} floor for a Pixar feature-film set. Fail \`style\` for that option (or pick an option that measures above the floor) and repair the prompt toward a rich, saturated palette.`);
+}
 export function parseMeasureAudioOutput(stderr) {
   const silenceSeconds = [...stderr.matchAll(/silence_duration: ([0-9.]+)/g)].reduce((sum, m) => sum + Number(m[1]), 0);
   const summaryPart = stderr.split('Summary:')[1] || '';

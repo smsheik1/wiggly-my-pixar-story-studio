@@ -25,13 +25,13 @@ Precedence when sources differ: the craft rules come first, and the no-invented-
 
 ## How to write the room
 
-Describe what is physically in the room, in plain words: materials, colour temperature, light direction, where things sit. Follow the recipe's house look for style language, and don't add photographic terms, since the recipe forbids them. Never include brand names, logos or real landmarks. Don't write negative lists. Keep readable text out of the room; Vera checks for baked-in text.
+Describe what is physically in the room, in plain words: materials, colour temperature, light direction, where things sit. Follow the house look ([H-STYLE]) for style language: a Pixar feature-film set described in words (appealing sculpted forms, warm cinematic light, rich saturated colour), never the studio or film name in the prompt ([H-NO-BRANDS]). Name the palette's actual rich colours from the spec block; never write "muted". Don't add photographic terms, since the recipe forbids them. Never include brand names, logos or real landmarks. Don't write negative lists. Keep readable text out of the room; Vera checks for baked-in text.
 
 ## Repair from Vera
 
-Vera reviews the image against six criteria: `scene-fit`, `style`, `story-specific-set`, `empty-environment`, `spatial-action` and `continuity`. Her note names the criterion and the problem.
+Vera reviews the image against six criteria: `scene-fit`, `style`, `story-specific-set`, `empty-environment`, `spatial-action` and `continuity`. Her note names the criterion and the problem. The runtime also measures each plate's palette from the image; a plate below the saturation floor can't pass `style`.
 
-- `style`: a photoreal or catalog look. Fix the wording the recipe governs, and remove any photographic phrasing.
+- `style`: a photoreal or catalog look, or a muted or washed-out one. Fix the wording the recipe governs, remove any photographic phrasing, and name richer, saturated colours from the spec block.
 - `story-specific-set`: a room that doesn't say whose it is (plain props, blank walls, no story), or a wrong palette or accent. Restore the known or proposed props from the brief, and correct the palette or accent against the spec block only.
 - `empty-environment`: any person, silhouette or figure. Remove the figure-like wording, such as "silhouette-painted," and keep the single empty-of-people clause.
 - `spatial-action`: no clear floor space. Restore the open floor the brief names.

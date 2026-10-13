@@ -16,7 +16,7 @@ Write sentences a person would say about a room, not tokens for an image model. 
 
 ## Writing the room
 
-A room should look like a stylized animated feature set: lived-in, specific, and dressed so you can tell whose space it is and when. Use chunky, appealing shapes and warm, motivated light. The palette is muted with one saturated accent, which should be a story prop. The film accent colour comes from the production bible, chosen per story from its key prop. Keep that colour out of the room, and name it in the spec block as "Film accent kept out: <colour>".
+A room should look like a set from a Pixar feature film: lived-in, specific, and dressed so you can tell whose space it is and when. Use chunky, appealing shapes, warm cinematic light and rich, saturated colour; never a muted or washed-out room ([L-PALETTE]). Give it one hero accent colour on a story prop. The film accent colour comes from the production bible, chosen per story from its key prop; it is always a prop colour, never a light. Keep that colour off the room's props and surfaces, and name it in the spec block as "Film accent kept out: <colour>". Warm lamplight or sunlight is always allowed. You may name the Pixar target look in a brief; Theo describes it in words in the prompt ([H-NO-BRANDS]).
 
 Known and proposed details are different things:
 - `knownDetails`: only what the answers or locked script state. Each entry is `{detail, quote, source, field}`: the quote is copied word for word from that answer field or the locked script, and the runtime rejects a quote it can't find.

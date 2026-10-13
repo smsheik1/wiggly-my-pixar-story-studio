@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "craftSha256": "b1df0027062729d4e480e978e6382d958d023ff4f2a854d608b14e767726562a",
+  "craftSha256": "2187440048083f22e08d517304a11f7943e701f5fd1078540a6fff0d47fde3cd",
   "duplicationBaseline": 52,
   "files": [
     {
@@ -871,8 +871,8 @@
       "source": "craft-sources/dan-kieft-pixar-prompter.md",
       "sourceSection": "§9",
       "rule": "locations",
-      "decision": "kept",
-      "reason": "Adapted into locations section: lived-in story dressing, muted palette with one saturated accent (Decision 5)."
+      "decision": "changed",
+      "reason": "Adapted into locations section: lived-in story dressing. Muted palette replaced by a rich, saturated Pixar feature-film palette with one hero accent; film accent is a prop colour, never a light (Shaz's r5 call, 2026-10-13, r5 issue #2: muted rooms didn't look Pixar)."
     },
     {
       "source": "craft-sources/dan-kieft-pixar-prompter.md",

@@ -215,7 +215,7 @@ test('Vera skill and visual rubric fail photoreal or 3D-hybrid style and keep th
   for (const doc of [vera, visual]) {
     assert.match(doc, /stylized animated feature/);
     assert.doesNotMatch(doc, /feature-quality 3D/);
-    assert.doesNotMatch(doc, /Pixar/);
+    assert.match(doc, /Pixar feature film/); // r5 #2: reviews may name the Pixar target look
     assert.match(doc, /fails? `style`/i);
     assert.match(doc, /quick normal pass/);
     assert.match(doc, /too small to count/);

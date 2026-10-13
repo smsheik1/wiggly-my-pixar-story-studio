@@ -16,7 +16,7 @@ import { shotFor, shotReferences, referenceBindings, planningReferences, validat
 import { requestDescriptor,planningAccountGuide,generationEstimate,narrationGenerationTexts } from './providers.mjs';
 import {scriptQuoteChecks,transcriptDiff,reviewerVariantAccepted} from './evaluators.mjs';
 import {AudioEditReceipt,AUDIO_EDIT_PROFILE,validateAudioEdit,validateEditingInvestigation} from './audio-edit.mjs';
-import { VERSION, Inputs, Project, Content, Review, Event, BibleEvent, Plans, IntakeConfirmation, PhotoInventoryEntry, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
+import { VERSION, Inputs, Project, Content, Review, Event, BibleEvent, Plans, PROMPT_BRAND_TERMS, IntakeConfirmation, PhotoInventoryEntry, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
 
 import { keyFor, current, locked, audioLocked, assertAllowed, backgroundSteps, imageSteps, authorSteps, supervised, reviewPassed, refinedWorkflow, miniProduction, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact, sheetWorkflow } from './gates.mjs';
 export { keyFor, current, locked, audioLocked, assertAllowed, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact } from './gates.mjs';
@@ -1019,6 +1019,7 @@ export function applyEvent(project, raw) {
     if (imageSteps.includes(p.step) && p.imageProviderPreference && plan.provider !== p.imageProviderPreference.provider) throw new Error(`IMAGE_PROVIDER_PREFERENCE: plan uses ${plan.provider} but the human prefers ${p.imageProviderPreference.provider}: ${p.imageProviderPreference.message}`);
     if(refinedWorkflow(p)&&p.step==='candidates'&&plan.parameters.prompt!==current(p,`characterPrompt:${p.characterId}`).content.prompt)throw new Error('Use the human-approved character design prompt exactly.');
     if (imageSteps.includes(p.step) && !plan.parameters.prompt) throw new Error('Image plan needs an authored prompt.');
+    if (plan.parameters.prompt && PROMPT_BRAND_TERMS.test(plan.parameters.prompt)) throw new Error(`PROMPT_BRAND_NAME: "${plan.parameters.prompt.match(PROMPT_BRAND_TERMS)[0]}" is in the prompt. Describe the house look in words; brand, studio and film names stay out of image and video prompts ([H-NO-BRANDS]).`);
     if (['backgroundCandidates', 'backgroundAngle'].includes(p.step) && (!locked(p, promptKey(p)) || plan.parameters.prompt !== current(p, promptKey(p)).content.prompt)) throw new Error('Use the human-approved background prompt exactly.');
     if(p.step==='video'&&plan.parameters.prompt!==current(p,`videoPrompt:${p.clipId}`).content.prompt)throw new Error('Use exact human-approved video prompt.');
     if(['music','effect'].includes(p.step)&&plan.parameters.prompt!==(p.step==='music'?current(p,'soundPlan').content.music:effectFor(p)).prompt)throw new Error('Use approved sound prompt.');

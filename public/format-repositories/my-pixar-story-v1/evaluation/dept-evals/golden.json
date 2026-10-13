@@ -222,12 +222,6 @@
           "why": "Rule [L-LAYOUT-REF]: direction includes a layout part in words."
         },
         {
-          "id": "no-pixar-word",
-          "type": "contentNotMatches",
-          "pattern": "\\bpixar\\b",
-          "why": "Rule [H-STYLE]: writer packets must not contain vendor or brand names."
-        },
-        {
           "id": "no-plain-unmarked",
           "type": "contentNotMatches",
           "pattern": "few plain unmarked|plain unmarked storage",
