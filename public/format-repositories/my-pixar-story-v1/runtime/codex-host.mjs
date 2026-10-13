@@ -13,6 +13,11 @@ import {labelFor as traceLabelFor,reasonCode as traceReasonCode} from './tracing
 
 // Codex host default only. No crew agent is on Codex since the Muse swap; the host stays for
 // legacy pinned runs and any agent configured back to backend "codex".
+// Third failure at one step: record an escalation for the orchestrator (Grok Bot), not the human.
+async function escalate(receiptDirectory,task,receipt,attempt){
+ const dir=join(receiptDirectory,'..','escalations');await mkdir(dir,{recursive:true});
+ await writeFile(join(dir,task.taskId+'.json'),JSON.stringify({to:'orchestrator',step:task.step,gate:task.gate,taskId:task.taskId,failures:attempt-1,lastError:receipt?.error??null,at:new Date().toISOString()},null,1)+'\n',{mode:0o600});
+}
 export const DEFAULT_WORKER_MODEL='gpt-6.1-sol';
 // Explicit host profile: no model fallback, native shell, apps or nested worker dispatch.
 const disabled=['shell_tool','unified_exec','apps','plugins','multi_agent','code_mode','browser_use','computer_use','view_image','image_generation','in_app_browser'];
@@ -366,7 +371,7 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
    }
    if(receipt?.status==='rejected'){
     if(!repairInvalid)throw new Error(`CODEX_RESULT_REJECTED: ${receipt.error}; inspect ${path}; --repair-invalid true explicitly requests a bounded repair of the known finished result.`);
-    if(attempt>limitsFor(status.project).finishedWorkerAttempts&&!(maxTasks===1&&recoveryAttempt?.taskId===task.taskId&&recoveryAttempt.attempt===attempt&&typeof recoveryAttempt.message==='string'&&recoveryAttempt.message.trim()))throw new Error('CODEX_REPAIR_LIMIT: configured finished-attempt limit exhausted; one further recovery attempt requires exact task/attempt and actual human authorization.');
+    if(attempt>limitsFor(status.project).finishedWorkerAttempts&&!(maxTasks===1&&recoveryAttempt?.taskId===task.taskId&&recoveryAttempt.attempt===attempt&&typeof recoveryAttempt.message==='string'&&recoveryAttempt.message.trim())){await escalate(receiptDirectory,task,receipt,attempt);throw new Error(`CODEX_REPAIR_LIMIT: configured finished-attempt limit exhausted (${attempt-1} failures). ESCALATED_TO_ORCHESTRATOR: Grok Bot finds the root cause (compare with the last good result) before any further attempt; see ${join(receiptDirectory,'..','escalations',task.taskId+'.json')}. The human is asked only for likeness, taste, spend or a change of plan.`);}
     const archive=path+`.rejected-${receipt.attempt}.json`,prior=await readJson(archive);
     if(prior&&digest(prior)!==digest(receipt))throw new Error('DISPATCH_RECEIPT_CONFLICT');
     if(!prior)await writeFile(archive,JSON.stringify(receipt)+'\n',{flag:'wx',mode:0o600});
