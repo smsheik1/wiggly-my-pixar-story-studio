@@ -13,6 +13,12 @@ import {labelFor as traceLabelFor,reasonCode as traceReasonCode} from './tracing
 
 // Codex host default only. No crew agent is on Codex since the Muse swap; the host stays for
 // legacy pinned runs and any agent configured back to backend "codex".
+export const REVIEW_ATTEMPT_CAP=3;
+// Third failure at one step: record an escalation for the orchestrator (Grok Bot), not the human.
+async function escalate(receiptDirectory,task,receipt,attempt){
+ const dir=join(receiptDirectory,'..','escalations');await mkdir(dir,{recursive:true});
+ await writeFile(join(dir,task.taskId+'.json'),JSON.stringify({to:'orchestrator',step:task.step,gate:task.gate,taskId:task.taskId,failures:attempt-1,lastError:receipt?.error??null,at:new Date().toISOString()},null,1)+'\n',{mode:0o600});
+}
 export const DEFAULT_WORKER_MODEL='gpt-6.1-sol';
 // Explicit host profile: no model fallback, native shell, apps or nested worker dispatch.
 const disabled=['shell_tool','unified_exec','apps','plugins','multi_agent','code_mode','browser_use','computer_use','view_image','image_generation','in_app_browser'];
@@ -355,6 +361,21 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
     if(receipt?.status==='started')throw new Error(`CODEX_DISPATCH_UNCERTAIN: inspect ${path} and the saved worker turn before reconciling. No automatic rerun.`);
     const attempt=(receipt?.status==='deferred'||receipt?.status==='not-dispatched')?(receipt.attempt||1):((receipt?.attempt??0)+(receipt?.status==='rejected'?1:0)||1);
     let event=receipt?.status==='completed'?receipt.event:null;
+    // Ava (audio reviewer): an unchanged audio artifact (same content digest, criteria and worker) reuses the
+    // earlier verdict instead of paying for a second identical review.
+    const reviewCacheKey=task.gate==='review'&&task.crewWorker?.role==='audio-reviewer'&&task.artifact?.content?digest({content:task.artifact.content,criteria:task.criteria??null,worker:norm(task.crewWorker)}):null;
+    const reviewCachePath=reviewCacheKey?join(receiptDirectory,'..','review-cache',reviewCacheKey+'.json'):null;
+    if(!event&&reviewCachePath){const cached=await readJson(reviewCachePath);if(cached?.event)event={...cached.event,taskId:task.taskId,...(task.artifact?.id?{artifactId:task.artifact.id}:{})};}
+    // Hard cap: at most REVIEW_ATTEMPT_CAP paid reviewer invocations per reviewer per artifact digest, whatever
+    // triggered them (repair, restart, re-review). The next one stops and escalates to the orchestrator.
+    if(!event&&task.gate==='review'&&task.artifact?.content){
+     const k=digest({role:task.crewWorker?.role??null,content:task.artifact.content});
+     const cdir=join(receiptDirectory,'..','review-attempts'),cpath=join(cdir,k+'.json');
+     await mkdir(cdir,{recursive:true});
+     const prior=(await readJson(cpath))??{count:0,taskIds:[]};
+     if(prior.count>=REVIEW_ATTEMPT_CAP){await escalate(receiptDirectory,task,{error:`review attempt cap: ${prior.count} invocations of ${task.crewWorker?.role} on this artifact digest`},prior.count+1);throw new Error(`REVIEW_ATTEMPT_CAP: ${task.crewWorker?.role} already reviewed this artifact ${prior.count} times. ESCALATED_TO_ORCHESTRATOR: no further paid review calls until Grok Bot resolves it.`);}
+     await saveJson(cpath,{count:prior.count+1,role:task.crewWorker?.role??null,step:task.step,taskIds:[...prior.taskIds,task.taskId],at:new Date().toISOString()});
+    }
     // Preflight before any receipt write so a refused dispatch leaves no
     // stranded started receipt and never changes an existing receipt.
     if(!event&&typeof host.preflight==='function')await host.preflight(task.crewWorker);
@@ -366,7 +387,7 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
    }
    if(receipt?.status==='rejected'){
     if(!repairInvalid)throw new Error(`CODEX_RESULT_REJECTED: ${receipt.error}; inspect ${path}; --repair-invalid true explicitly requests a bounded repair of the known finished result.`);
-    if(attempt>limitsFor(status.project).finishedWorkerAttempts&&!(maxTasks===1&&recoveryAttempt?.taskId===task.taskId&&recoveryAttempt.attempt===attempt&&typeof recoveryAttempt.message==='string'&&recoveryAttempt.message.trim()))throw new Error('CODEX_REPAIR_LIMIT: configured finished-attempt limit exhausted; one further recovery attempt requires exact task/attempt and actual human authorization.');
+    if(attempt>limitsFor(status.project).finishedWorkerAttempts&&!(maxTasks===1&&recoveryAttempt?.taskId===task.taskId&&recoveryAttempt.attempt===attempt&&typeof recoveryAttempt.message==='string'&&recoveryAttempt.message.trim())){await escalate(receiptDirectory,task,receipt,attempt);throw new Error(`CODEX_REPAIR_LIMIT: configured finished-attempt limit exhausted (${attempt-1} failures). ESCALATED_TO_ORCHESTRATOR: Grok Bot finds the root cause (compare with the last good result) before any further attempt; see ${join(receiptDirectory,'..','escalations',task.taskId+'.json')}. The human is asked only for likeness, taste, spend or a change of plan.`);}
     const archive=path+`.rejected-${receipt.attempt}.json`,prior=await readJson(archive);
     if(prior&&digest(prior)!==digest(receipt))throw new Error('DISPATCH_RECEIPT_CONFLICT');
     if(!prior)await writeFile(archive,JSON.stringify(receipt)+'\n',{flag:'wx',mode:0o600});
@@ -438,6 +459,7 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
     throw new Error(`CODEX_RESULT_REJECTED: known finished worker result violates the contract: ${error.message}. Inspect ${path}; use --repair-invalid true for a bounded repair.`);
    }
    await saveJson(path,{...started,status:'completed',event});
+   if(reviewCachePath){await mkdir(join(receiptDirectory,'..','review-cache'),{recursive:true});await saveJson(reviewCachePath,{event,at:new Date().toISOString()});}
    const updated=await workflow.respond(thread,event);completed++;
    endTrace('completed');
   if(event.action==='review'&&event.review?.decision==='rejected'){const notice=updated.pending.repairNotices.find(n=>n.artifactId===event.artifactId);if(notice)onProgress({type:'repair-notice',notice});}

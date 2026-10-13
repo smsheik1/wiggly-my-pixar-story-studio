@@ -344,12 +344,14 @@ export async function executeMediaRequest(job, runDir, apiKey, fetcher = fetch, 
         } catch (e) {
           agyTimer.fail(e, e.agyDiagnostics ? { agy: e.agyDiagnostics } : {});
           if (e.agyDiagnostics) { try { await atomicJson(join(dir, `${i}.agy-failure.json`), { error: String(e.message ?? e).slice(0, 2000), ...e.agyDiagnostics, at: new Date().toISOString() }); } catch {} }
-          if (!isAgyQuotaError(e.message)) throw e;
-          const reset = parseAgyQuotaReset(e.message);
+          // A policy refusal falls back to Muse automatically, like a quota failure (Shaz's rule).
+          const refused = /AGY_POLICY_REFUSED/.test(String(e.message ?? ''));
+          if (!isAgyQuotaError(e.message) && !refused) throw e;
+          const reset = refused ? null : parseAgyQuotaReset(e.message);
           const diagnostic = String(e.message ?? e).slice(0, 800);
-          await atomicJson(join(dir, `${i}.quota.json`), { diagnostic, reset, at: new Date().toISOString() });
+          await atomicJson(join(dir, `${i}.quota.json`), { diagnostic, reset, ...(refused ? { reason: 'policy-refusal' } : {}), at: new Date().toISOString() });
           const miss = missingIndices();
-          if (!fallback) throw new Error(`AGY_QUOTA_EXHAUSTED: agy image quota is used up${reset ? ` (resets ${reset})` : ''}; no fallback bound to this job.`);
+          if (!fallback) throw new Error(refused ? `AGY_POLICY_REFUSED: agy refused the prompt; no Muse fallback bound to this job.` : `AGY_QUOTA_EXHAUSTED: agy image quota is used up${reset ? ` (resets ${reset})` : ''}; no fallback bound to this job.`);
           if (!apiKey) throw new Error(`AGY_QUOTA_EXHAUSTED: agy image quota is used up${reset ? ` (resets ${reset})` : ''}; no META_API_KEY for the Muse fallback.`);
           await runMuseFallback(miss);
           break;

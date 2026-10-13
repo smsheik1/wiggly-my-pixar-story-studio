@@ -8,7 +8,10 @@ import {loadStudio} from './instructions.mjs';
 import {sanitize,promptSectionsFor,labelFor,reasonCode} from './tracing.mjs';
 import {AudioEditPlan} from './audio-edit.mjs';
 
-export const OPENROUTER_URL='https://openrouter.ai/api/v1/chat/completions';
+export const MAX_INLINE_IMAGES=Math.max(1,Number(process.env.WIGGLY_MAX_INLINE_IMAGES)||8);
+// Meta (Muse) only accepts tool_choice "auto"; "none"/"required"/forced tools return HTTP 400.
+const toolChoiceFor=(model,choice)=>String(model).startsWith('meta/')?'auto':(choice??'auto');
+const OPENROUTER_URL='https://openrouter.ai/api/v1/chat/completions';
 export const DEFAULT_OPENROUTER_MODEL='deepseek/deepseek-v4.1-flash';
 export const OPENROUTER_PROVIDER_POLICY={require_parameters:true,max_price:{prompt:0.3,completion:1.2}};
 export const OPENROUTER_MAX_TOKENS=16000;
@@ -33,6 +36,9 @@ function isTruncatedChoice(choice){
 // that is the setting that passed the r4 adult-sheet head-to-head (PR #31), and its
 // output cap is 32K because one xhigh Muse request used ~9.7K of the old 16K cap.
 export const MUSE_MAX_TOKENS=32000;
+// Reviewer verdicts (Ava on Gemini) carry always-on reasoning plus a long structured
+// verdict; 16k truncated one in r5 and the uncached repair rounds cost 3x a normal review.
+export const REVIEWER_VERDICT_MAX_TOKENS=32000;
 export const OPENROUTER_MODEL_TRAITS={
  'deepseek/deepseek-v4.1-flash': { reasoning:'optional', inputs:['text','image'] },
  'meta/muse-spark-1.3-contributor': { reasoning:'always-on', inputs:['text','image','video'], productionEffort:'xhigh', maxTokens:MUSE_MAX_TOKENS },
@@ -40,7 +46,7 @@ export const OPENROUTER_MODEL_TRAITS={
  // medium effort with the default 16K cap, never Muse's xhigh/32K overrides.
  // OpenRouter makes reasoning mandatory for it, so it is always-on (the bind
  // ping sends effort low, never reasoning disabled).
- 'google/gemini-3.8-flash': { reasoning:'always-on', inputs:['text','image','video','file','audio'], maxPrice:{prompt:1,completion:5} },
+ 'google/gemini-3.8-flash': { reasoning:'always-on', inputs:['text','image','video','file','audio'], maxPrice:{prompt:1,completion:5}, maxTokens:REVIEWER_VERDICT_MAX_TOKENS },
 };
 // Offline audio-capability allowlist: Ava's configured model must be listed here.
 // listenAudio bytes go to the mediaReview Gemini provider (gemini-review.mjs);
@@ -165,7 +171,7 @@ export class OpenRouterHost {
    let llmAttempt=0;
    const sendOnce=async(msgs,continuation=false)=>{
     const attempt=llmAttempt++;
-    const body={model,messages:msgs,...(tools?.length?{tools,tool_choice:toolChoice??'auto'}:{}),provider:providerPolicyFor(model),max_tokens:maxTokens??this.maxTokensFor(model)};
+    const body={model,messages:msgs,...(tools?.length?{tools,tool_choice:toolChoiceFor(model,toolChoice)}:{}),provider:providerPolicyFor(model),max_tokens:maxTokens??this.maxTokensFor(model)};
     if(!verify&&!continuation){
      body.response_format={type:'json_schema',json_schema:{name:'event',strict:true,schema:{type:'object',properties:{eventJson:{type:'string'}},required:['eventJson'],additionalProperties:false}}};
     }
@@ -199,7 +205,7 @@ export class OpenRouterHost {
      // Bind-time verification only: a task turn's 400/401 keeps the generic error below.
      if(verify&&(response.status===401||response.status===403)){const e=new Error(`OPENROUTER_AUTH_FAILED: OpenRouter rejected the API key (HTTP ${response.status}). No worker was bound.`);endLlmFail(e,response.status,text);throw e;}
      if(verify&&(response.status===400||response.status===404)){const e=new Error(`OPENROUTER_MODEL_UNAVAILABLE: ${model} was rejected by OpenRouter (HTTP ${response.status}). No worker was bound.${text?` ${text.slice(0,200).split(key).join('[REDACTED]')}`:''}`);endLlmFail(e,response.status,text);throw e;}
-     if(response.status===402){const e=new Error('OpenRouter credits exhausted. Add credits before dispatch; no model/provider fallback was submitted.');endLlmFail(e,402,text);throw e;}
+     if(response.status===402){const e=new Error('OpenRouter credits exhausted. Add credits before dispatch; no model/provider fallback was submitted.');e.safeRetryWithoutOutput=true;e.usageLimitExceeded=true;e.savedTools=[];e.retryAfter=null;endLlmFail(e,402,text);throw e;}
      if(response.status===429){
       const error=new Error(`OpenRouter usage limit reached (HTTP 429). No model/provider fallback was submitted.`);
       error.safeRetryWithoutOutput=true;error.savedTools=[];error.usageLimitExceeded=true;error.retryAfter=response.headers?.get?.('retry-after')??null;
@@ -207,7 +213,10 @@ export class OpenRouterHost {
       throw error;
      }
      if(response.status>=500){const e=new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status}. No model/provider fallback was submitted.`);endLlmFail(e,response.status,text);throw e;}
-     const e=new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status} ${text.slice(0,200)}. No model/provider fallback was submitted.`);endLlmFail(e,response.status,text);throw e;
+     const e=new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status} ${text.slice(0,200)}. No model/provider fallback was submitted.`);
+     // A definite 4xx means the provider accepted no work: close the dispatch as rejected instead of leaving it 'started'.
+     if(response.status>=400&&response.status<500&&![401,403].includes(response.status)){e.safeRetryWithoutOutput=true;e.savedTools=[];}
+     endLlmFail(e,response.status,text);throw e;
     }
     const result=await response.json();
     if(result?.usage&&usageSink)usageSink(result.usage);
@@ -250,6 +259,9 @@ export class OpenRouterHost {
    const system=developerInstructions(worker);
    const media=[],attached=new Set();
    if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){
+    // Providers reject requests with too many inline images (Meta: "Invalid upload request." at 19 images in r5).
+    // Attach up to WIGGLY_MAX_INLINE_IMAGES; the rest stay listed by sha256 and can be opened with the viewImage tool.
+    if(attached.size>=MAX_INLINE_IMAGES){media.push({type:'text',text:`Reference image sha256: ${file.sha256} (not attached inline; call viewImage to see it)`});continue;}
     if(!modelTraits(worker.modelVersion).inputs.includes('image')){
      const error=new Error(`OPENROUTER_VISION_UNSUPPORTED: ${worker.modelVersion} cannot take images; bind a vision model for ${worker.role}.`);
      error.stopDispatch=true;
@@ -258,7 +270,18 @@ export class OpenRouterHost {
     const viewed=await callTool('viewImage',{sha256:file.sha256});media.push({type:'text',text:`Reference image sha256: ${file.sha256}`},{type:'image_url',image_url:{url:viewed.imageUrl}});attached.add(viewKey(file.sha256));
    }
   const tools=this.toolDefinition();
-  const content=[{type:'text',text:packet},...media];
+  // Ava (audio reviewer) on audition/narration: transcribe (Cartesia) and measure every take once, up front,
+  // in parallel, and put the outputs in her starting packet. Gemini then only listens for delivery; a repeat
+  // transcribe/measure call on the same take returns the precomputed output without another provider call.
+  const precomputed=new Map();
+  if(worker.role==='audio-reviewer'&&['audition','narration'].includes(task.step)&&task.gate==='review'){
+   const takes=(task.artifact?.content?.files??[]).filter(f=>f?.sha256&&f.durationSeconds);
+   await Promise.all(takes.flatMap(f=>['transcribe','measureAudio'].map(async name=>{
+    try{precomputed.set(`${name}:${f.sha256}`,await callTool(name,{sha256:f.sha256}));}catch(error){precomputed.set(`${name}:${f.sha256}`,{error:String(error?.message??error)});}
+   })));
+  }
+  const preText=precomputed.size?`\n\nPrecomputed tool outputs (already run once per take; do not call transcribe or measureAudio again, use listenAudio for delivery):\n${sanitizeDataUrls(JSON.stringify(Object.fromEntries(precomputed)))}`:'';
+  const content=[{type:'text',text:packet+preText},...media];
   const messages=[{role:'system',content:system},{role:'user',content}];
   const label=labelFor(worker);
   let promptSections=[];
@@ -333,14 +356,16 @@ export class OpenRouterHost {
     if(!calls.length){output=typeof message?.content==='string'?message.content:JSON.stringify(message?.content??'');break;}
      messages.push({role:'assistant',content:message.content??'',tool_calls:calls});
      const pending=[];
-     for(const call of calls){
+     // Run one round's tool calls concurrently (e.g. Ava's per-take listen/measure/transcribe), then
+     // append the results in call order so the transcript stays deterministic.
+     const runCall=async(call,out,pend)=>{
       let args=null;try{args=JSON.parse(call.function?.arguments||'{}');}catch{args=null;}
       const checked=call.function?.name==='wiggly_tool'?ToolArguments.safeParse(args):{success:false,error:{message:`unknown tool ${call.function?.name}`}};
       if(!checked.success){
         let invTrace=null;try{invTrace=this.tracer?.tool?.({toolName:args?.name??call.function?.name??'unknown',args:args??{raw:call.function?.arguments??''}});}catch{invTrace=null;}
         const t0=Date.now();
         try{invTrace?.end?.({outcome:'invalid-args',durationMs:Date.now()-t0,error:String(checked.error.message).slice(0,500)});}catch{}
-        messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(`TOOL_ARGUMENTS_INVALID: ${checked.error.message}`)});continue;
+        out.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(`TOOL_ARGUMENTS_INVALID: ${checked.error.message}`)});return;
       }
       const parsed=checked.data;
       const toolArgs={sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})};
@@ -348,7 +373,8 @@ export class OpenRouterHost {
       const toolStart=Date.now();
       const endTool=(outcome,extra={})=>{try{toolTrace?.end?.({outcome,durationMs:Date.now()-toolStart,args:toolArgs,...extra});}catch{}};
       try{
-       const value=await callTool(parsed.name,{sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})});
+       const pre=['transcribe','measureAudio'].includes(parsed.name)?precomputed.get(`${parsed.name}:${parsed.sha256}`):undefined;
+       const value=pre&&!pre.error?pre:await callTool(parsed.name,{sha256:parsed.sha256,...(parsed.referenceSha256?{referenceSha256:parsed.referenceSha256}:{}),...(parsed.edit?{edit:parsed.edit}:{}),...(parsed.region?{region:parsed.region}:{})});
        if(value&&typeof value==='object'&&typeof value.imageUrl==='string'){
         if(!modelTraits(worker.modelVersion).inputs.includes('image')){
          const error=new Error(`OPENROUTER_VISION_UNSUPPORTED: ${worker.modelVersion} cannot take images; bind a vision model for ${worker.role}.`);
@@ -361,17 +387,19 @@ export class OpenRouterHost {
          ?{perception:value.perception??'direct-image',sha256:parsed.sha256,alreadyAttached:true,note:`image sha256 ${parsed.sha256} already attached above; use the attached image`}
          :{perception:value.perception??'direct-image',sha256:parsed.sha256,attached:true,note:`image attached as image_url below for sha256 ${parsed.sha256}`};
         endTool('completed',{output:{sha256:parsed.sha256,attached:!already}});
-        messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(compact))});
-        if(!already){attached.add(key);pending.push({sha256:parsed.sha256,region:parsed.region??null,url:value.imageUrl});}
-        continue;
+        out.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(compact))});
+        if(!already){attached.add(key);pend.push({sha256:parsed.sha256,region:parsed.region??null,url:value.imageUrl});}
+        return;
        }
        const summary=value?.bytes
          ?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8').slice(0,8000)}:{instruction:'Binary media: use your permitted perception tool.'})}
          :value;
        endTool('completed',{output:summary});
-       messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value))});
-      }catch(error){endTool('failed',{error:String(error?.message??error??'').slice(0,500)});messages.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(error.message)});if(error.stopDispatch)throw error;}
-     }
+       out.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(JSON.stringify(value.bytes?{file:value.file,...(/\.(json|md|txt)$/i.test(value.file.path)?{text:value.bytes.toString('utf8')}:{instruction:'Binary media: use your permitted perception tool.'})}:value))});
+      }catch(error){endTool('failed',{error:String(error?.message??error??'').slice(0,500)});out.push({role:'tool',tool_call_id:call.id,content:sanitizeDataUrls(error.message)});if(error.stopDispatch)throw error;}
+     };
+     const results=await Promise.all(calls.map(async call=>{const out=[],pend=[];await runCall(call,out,pend);return {out,pend};}));
+     for(const r of results){messages.push(...r.out);pending.push(...r.pend);}
      if(pending.length){
       const parts=[];
       for(const p of pending)parts.push({type:'text',text:`viewImage result for sha256 ${p.sha256}${p.region?` region ${JSON.stringify(p.region)}`:''}`},{type:'image_url',image_url:{url:p.url}});

@@ -174,6 +174,8 @@ async function main() {
         !f.startsWith('cassettes') &&
         // Trace journal: timestamps/durations/ids differ per run by design.
         !f.startsWith('trace/') &&
+        // Bookkeeping with wall-clock stamps (reviewer attempt counts, verdict cache, escalations).
+        !f.startsWith('review-attempts/') && !f.startsWith('review-cache/') && !f.startsWith('escalations/') &&
         f !== 'writer.lock' &&
         f !== 'secrets.env' &&
         !f.endsWith('-shm') &&
@@ -349,7 +351,7 @@ async function main() {
   const release = await lock(); const workflow = openWorkflow(join(runDir, 'checkpoints.sqlite'));
   try {
     if (command === 'init') {
-      const inputs = await json(args[0]); const studioDefaults = loadStudio(); const gates = option('gates', studioDefaults.config.gates?.defaultPolicy ?? 'per-step'); if(!['per-step','pick-only'].includes(gates)) throw new Error('--gates must be per-step|pick-only.'); const biblePolicy = option('bible', 'required'); if(!['required','advisory','off'].includes(biblePolicy)) throw new Error('--bible must be required|advisory|off.'); print(presentation(await workflow.init('project', inputs,{reviewMode:option('review-mode','supervised'),gatePolicy:gates,biblePolicy}))); return;
+      const inputs = await json(args[0]); const studioDefaults = loadStudio(); const gates = option('gates', studioDefaults.config.gates?.defaultPolicy ?? 'per-step'); if(!['per-step','pick-only'].includes(gates)) throw new Error('--gates must be per-step|pick-only.'); const rehearsal = option('rehearsal', 'false') === 'true'; const biblePolicy = option('bible', rehearsal ? 'advisory' : 'required'); if(!['required','advisory','off'].includes(biblePolicy)) throw new Error('--bible must be required|advisory|off.'); print(presentation(await workflow.init('project', inputs,{reviewMode:option('review-mode','supervised'),gatePolicy:gates,biblePolicy,rehearsal}))); return;
     }
     if (command === 'import') { print(await importMedia(args[0], runDir)); return; }
     const status = await workflow.status('project');
@@ -377,7 +379,7 @@ async function main() {
       if(show){const result=spawnSync(process.platform==='darwin'?'open':process.platform==='win32'?'explorer.exe':'xdg-open',[folder],{encoding:'utf8'});if(result.error||result.status!==0)throw new Error(`INPUT_FOLDER_OPEN_FAILED: ${folder}: ${result.error?.message??result.stderr??result.status}`);}
       print({producer,folder,opened:show,providerCalls:0,projectStateMutated:false});return;
     }
-    if(['bible-draft','bible-sign','bible-status','bible-render'].includes(command)){
+    if(['bible-draft','bible-sign','bible-approve','bible-policy','bible-status','bible-render'].includes(command)){
       // Production bible: draft (operator), render (for the human), sign (the human only).
       if(command==='bible-status'){if(args.length)throw new Error('Unknown bible-status arguments.');print(bibleSummary(status.project,runDir)??{policy:'none',message:'Historical run without a production bible; bible-draft creates one (advisory policy).'});return;}
       if(command==='bible-render'){
@@ -399,6 +401,22 @@ async function main() {
         const entry=result.project.bible.versions.at(-1);
         print({...bibleSummary(result.project,runDir),drafted:{version:entry.version,hash:entry.hash,state:entry.state,openQuestions:entry.content.openQuestions.length,unresolved:unresolvedPaths(entry.content)},next:'Render it for the human (bible-render). Only the human signs, with bible-sign in an interactive terminal.'});
         return;
+      }
+      if(command==='bible-policy'){
+        const set=option('set'),message=option('message'),reh=option('rehearsal');
+        if(!set||!message||args.length)throw new Error('bible-policy needs --set required|advisory --message "<the human instruction, quoted with time>" (optional --rehearsal true|false).');
+        const result=await workflow.respond('project',{taskId:status.pending.taskId,actor:'human',action:'bible-policy',content:{policy:set,...(reh!=null?{rehearsal:reh==='true'}:{})},message});
+        print(bibleSummary(result.project,runDir));return;
+      }
+      if(command==='bible-approve'){
+        // Logged chat approval for rehearsal runs: no TTY, but the human's own words and the hash are recorded.
+        const via=option('via'),by=option('by'),hash=option('hash'),message=option('message');
+        if(via!=='chat'||!by||!hash||!message||args.length)throw new Error('bible-approve needs --via chat --by <name> --hash <12+ chars> --message "<the human\'s chat approval, quoted with time>".');
+        const latest=status.project.bible?.versions.at(-1);
+        if(!latest)throw new Error('BIBLE_MISSING: draft the production bible first.');
+        if(hash.length<12||!latest.hash.startsWith(hash))throw new Error(`BIBLE_HASH_MISMATCH: v${latest.version} is ${latest.hash.slice(0,12)}.`);
+        const result=await workflow.respond('project',{taskId:status.pending.taskId,actor:'human',action:'bible-approve',artifactDigest:latest.hash,content:{by},message:`[chat approval] ${message}`});
+        print(bibleSummary(result.project,runDir));return;
       }
       // bible-sign is a human operator event: it refuses non-interactive callers (agents,
       // scripts, CI pipes) and needs the hash the human reviewed typed back as confirmation.
@@ -739,7 +757,7 @@ async function main() {
     if (command === 'respond') {
       const event = await json(args[0]);
       if (event.actor === 'runtime') throw new Error('Runtime events are reserved for the provider collector.');
-      if (['bible-draft','bible-sign'].includes(event.action)) throw new Error('BIBLE_COMMAND_REQUIRED: use bible-draft, and bible-sign (the human, in an interactive terminal), not respond.');
+      if (['bible-draft','bible-sign','bible-approve','bible-policy'].includes(event.action)) throw new Error('BIBLE_COMMAND_REQUIRED: use bible-draft, and bible-sign (the human, in an interactive terminal), not respond.');
       if(!status.project.crew&&['agent','reviewer'].includes(event.actor)&&event.action!=='note')throw new Error('CREW_NOT_CONFIGURED: run crew-template, bind actual host IDs/model/tools and submit human configure-crew.');
       await verifySubmission(status,event);
       print(presentation(await workflow.respond('project', event))); return;

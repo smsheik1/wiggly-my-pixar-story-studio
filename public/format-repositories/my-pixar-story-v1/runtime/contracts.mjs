@@ -158,7 +158,7 @@ export const Event = z.object({ taskId: text, action: z.enum(['prefer-image-prov
 }).strict();
 // Production bible events are human operator events only. They are deliberately NOT in
 // Event, so crew worker packets (which carry Event's schema) never even offer them.
-export const BibleEvent = z.object({ taskId: text, action: z.enum(['bible-draft','bible-sign']), actor: z.enum(['agent', 'reviewer', 'human', 'runtime']), message: text.optional(), content: z.unknown().optional(), artifactDigest: text.optional(), workerId: text.optional() }).strict();
+export const BibleEvent = z.object({ taskId: text, action: z.enum(['bible-draft','bible-sign','bible-approve','bible-policy']), actor: z.enum(['agent', 'reviewer', 'human', 'runtime']), message: text.optional(), content: z.unknown().optional(), artifactDigest: text.optional(), workerId: text.optional() }).strict();
 export const Project = z.object({
   formatVersion: z.literal(VERSION), schemaVersion: z.literal(2), id: text,
   studio:StudioSnapshot.optional(),
