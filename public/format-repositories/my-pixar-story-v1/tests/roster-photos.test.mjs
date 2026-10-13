@@ -106,3 +106,16 @@ test('add-reference refuses an unapproved roster',()=>{
  const p=rosterProject();
  assert.throws(()=>send(p,'add-reference',{actor:'human',characterId:'bob',importFile:photo(9),message:'ISOLATED add'}),/ADD_REFERENCE_NO_ROSTER/);
 });
+
+test('add-reference leaves the character\'s own old work on the old roster (fresh attempt cap), re-points others',()=>{
+ let p=rosterProject();
+ p.artifacts.find(x=>x.id==='roster@1').content.characters.find(c=>c.id==='bob').notes='ISOLATED bob; ISOLATED human: design Bob without a photo';
+ let b=current(p);
+ p=send(p,'approve',{artifactId:b.id,artifactDigest:b.digest,message:'ISOLATED approve roster',intakeConfirmation:intake({references:[],likeness:'interpreted',decisionNotes:'ISOLATED human: design Bob without a photo'})});
+ const old=current(p,'roster').id;
+ for(const id of ['alex','bob'])p.artifacts.push({id:`characterPrompt:${id}@1`,key:`characterPrompt:${id}`,kind:'characterPrompt',version:1,digest:`cp-${id}`,content:{prompt:'p',characterDigest:'d',referenceHashes:[],recipeSha256:'h'},dependencies:[old],valid:true,authoredBy:'t',approvedBy:{message:'m',at:new Date().toISOString()}});
+ p=send(p,'add-reference',{actor:'human',characterId:'bob',importFile:photo(11),message:'ISOLATED human adds Bob photo'});
+ const now=current(p,'roster').id;
+ assert.deepEqual(p.artifacts.find(a=>a.id==='characterPrompt:bob@1').dependencies,[old]);
+ assert.deepEqual(p.artifacts.find(a=>a.id==='characterPrompt:alex@1').dependencies,[now]);
+});

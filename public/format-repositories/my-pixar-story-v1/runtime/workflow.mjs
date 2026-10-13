@@ -585,7 +585,9 @@ export function applyEvent(project, raw) {
     // Keep the roster locked: carry the prior crew/human review forward (only a reference was appended).
     if(roster.intakeConfirmation)next.intakeConfirmation={...roster.intakeConfirmation,characters:roster.intakeConfirmation.characters.map(c=>c.id===characterId?{...c,references:[...c.references,file],likeness:'reference'}:c)};
     p.artifacts.push(next);
-    for(const a of p.artifacts)if(a.id!==next.id&&a.dependencies.includes(roster.id))a.dependencies=a.dependencies.map(d=>d===roster.id?next.id:d);
+    // Re-point only OTHER characters' work; this character's old prompts/candidates stay on the old roster so its prior jobs don't count against the new reference's attempt cap.
+    const own=a=>a.key.endsWith(`:${characterId}`);
+    for(const a of p.artifacts)if(a.id!==next.id&&!own(a)&&a.dependencies.includes(roster.id))a.dependencies=a.dependencies.map(d=>d===roster.id?next.id:d);
     for(const a of p.artifacts.filter(a=>a.valid&&['characterPrompt','candidates','sheetPrompt','sheet'].some(k=>a.key===`${k}:${characterId}`)))invalidate(p,a.id);
     p.characterId=characterId;p.step=refinedWorkflow(p)?'characterPrompt':'candidates';p.gate=refinedWorkflow(p)?'author':'produce';
     p.feedback.push({key:`characterPrompt:${characterId}`,message:e.message});
