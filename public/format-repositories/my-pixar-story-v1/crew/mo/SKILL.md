@@ -35,10 +35,9 @@ How your plan is used:
 If a locked shot can't be animated as written, plan the closest valid clip and say in the Event `message` which locked item can't be met (camera, action, framing or length) and what the shot or keyframe would need. Never change a shot's fields to make it fit.
 
 Advice:
-- Set `talk` on every clip from its beat. The story is told by voice-over narration, never dialogue, and the clips are silent, so nobody's lines are ever heard.
-  - `"none"` (the default): nobody on screen talks. The runtime adds "Mouths stay closed; no talking, no lip movement." to the video prompt.
-  - `"mos"`: use only when the locked shot or beat shows people in conversation, such as a couple chatting over dinner or a parent explaining something to a child. The runtime adds a silent-conversation line: loose, natural, unsynced mouth movement and gestures, with no lip-sync to any words. This is MOS dialogue, a conversation you see but don't hear, as in the "Married Life" montage in *Up*. Never use it to have a character speak a narration line. When a narrator (omniscient or voice-over) is present, character speech in B-roll defaults to silent conversation (talk: mos) unless the script explicitly marks it otherwise.
-  - When in doubt, use `"none"`. Mouths that look like they're syncing to real words, with no sound, read as broken.
+- Set `talk` on every clip from its beat. The main track is narration only: the viewer hears the narrator, never a character's voice, and no character dialogue is ever heard as active speech.
+  - `"mos"`: use only when the script says something about people talking, or it plainly makes sense to show them talking, such as a couple chatting over dinner. Even then it is B-roll under the narration. The runtime adds a silent-conversation line: loose, natural, unsynced mouth movement and gestures, with no lip-sync to any words.
+  - `"none"` (the default): every other clip. Nobody on screen talks. The runtime adds "Mouths stay closed; no talking, no lip movement." to the video prompt.
 - Keep left and right as the keyframe shows them. People shouldn't cross or swap sides within a clip.
 - One person moves at a time where you can. Two people doing the same motion in unison looks mechanical.
 - Use the narration only to judge the mood and pace of each beat. Never add story from it that the shot doesn't show.
