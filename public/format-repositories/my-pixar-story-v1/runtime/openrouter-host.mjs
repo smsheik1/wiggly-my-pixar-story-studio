@@ -202,7 +202,7 @@ export class OpenRouterHost {
      // Bind-time verification only: a task turn's 400/401 keeps the generic error below.
      if(verify&&(response.status===401||response.status===403)){const e=new Error(`OPENROUTER_AUTH_FAILED: OpenRouter rejected the API key (HTTP ${response.status}). No worker was bound.`);endLlmFail(e,response.status,text);throw e;}
      if(verify&&(response.status===400||response.status===404)){const e=new Error(`OPENROUTER_MODEL_UNAVAILABLE: ${model} was rejected by OpenRouter (HTTP ${response.status}). No worker was bound.${text?` ${text.slice(0,200).split(key).join('[REDACTED]')}`:''}`);endLlmFail(e,response.status,text);throw e;}
-     if(response.status===402){const e=new Error('OpenRouter credits exhausted. Add credits before dispatch; no model/provider fallback was submitted.');endLlmFail(e,402,text);throw e;}
+     if(response.status===402){const e=new Error('OpenRouter credits exhausted. Add credits before dispatch; no model/provider fallback was submitted.');e.safeRetryWithoutOutput=true;e.usageLimitExceeded=true;e.savedTools=[];e.retryAfter=null;endLlmFail(e,402,text);throw e;}
      if(response.status===429){
       const error=new Error(`OpenRouter usage limit reached (HTTP 429). No model/provider fallback was submitted.`);
       error.safeRetryWithoutOutput=true;error.savedTools=[];error.usageLimitExceeded=true;error.retryAfter=response.headers?.get?.('retry-after')??null;
@@ -210,7 +210,10 @@ export class OpenRouterHost {
       throw error;
      }
      if(response.status>=500){const e=new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status}. No model/provider fallback was submitted.`);endLlmFail(e,response.status,text);throw e;}
-     const e=new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status} ${text.slice(0,200)}. No model/provider fallback was submitted.`);endLlmFail(e,response.status,text);throw e;
+     const e=new Error(`OPENROUTER_REQUEST_FAILED: HTTP ${response.status} ${text.slice(0,200)}. No model/provider fallback was submitted.`);
+     // A definite 4xx means the provider accepted no work: close the dispatch as rejected instead of leaving it 'started'.
+     if(response.status>=400&&response.status<500&&![401,403].includes(response.status)){e.safeRetryWithoutOutput=true;e.savedTools=[];}
+     endLlmFail(e,response.status,text);throw e;
     }
     const result=await response.json();
     if(result?.usage&&usageSink)usageSink(result.usage);
