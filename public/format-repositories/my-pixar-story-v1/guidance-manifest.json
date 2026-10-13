@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "craftSha256": "450e681b6941e2bcd5648c6eb155b9570a41ac056c7322fe36e698460dc83e2f",
+  "craftSha256": "2187440048083f22e08d517304a11f7943e701f5fd1078540a6fff0d47fde3cd",
   "duplicationBaseline": 52,
   "files": [
     {
@@ -992,6 +992,20 @@
       "rule": "R-SHEET-HEX",
       "decision": "changed",
       "reason": "Shaz decision 2026-10-11 3:17 PM CT (Vera failure-table review): Vera's #B5B5B5 background check removed; the hex stays a writer instruction (Pia) and Sage still checks it is written in the prompt."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§3 skin zoning settings",
+      "rule": "C-SKIN-NATURAL",
+      "decision": "changed",
+      "reason": "Shaz decision 2026-10-13 (A/B test: zoning caused clown-red): C-SKIN-ZONING removed; skin matches the photos with even natural colour, no added nose/ear/cheek redness; dark skin stays rich, never grey."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§3 child proportion rider",
+      "rule": "C-CHILD-RIDER",
+      "decision": "changed",
+      "reason": "Shaz decision 2026-10-13 (A/B test: r4 build wording reduced chunkiness): 'long torso, short legs, low centre of gravity' dropped; r4 build wording restored in C-HEADS-TALL and C-CHILD-RIDER."
     }
   ],
   "allowlist": [
