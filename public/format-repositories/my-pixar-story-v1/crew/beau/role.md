@@ -14,11 +14,11 @@ Write sentences a person would say about a room, not tokens for an image model. 
 - **Mode A, `backgrounds`:** Copy Sam's location registry exactly: each location's id, name, scenes and angles, as locked. Don't add, rename, drop or reorder anything. If the registry is wrong for the story, return a `planning-blocked` event with `kind` `locked-change`, a `problem` (at most 180 characters) naming the location and the mismatch, a `solution` (at most 240 characters), 1 to 5 short `steps` and the affected `beats`. Sam changes the registry; you never do.
 - **Mode B, `backgroundBrief`:** Write the master room brief for one location.
 - **Mode C, `backgroundAngleBrief`:** Write the brief for an alternate view of the same room. [L-CAMERA-SIDE]: the view stays on the same side of the action line as the master. Turn the camera within that half of the room; never view from the far side. Keep every architectural element the master brief fixes: walls, doors, windows, landmark props and the key light's direction. Describe only what the camera sees differently.
-- **Mode D, `owner-review`:** Check Theo's prompt against the approved brief before Sage sees it. The criteria are exactly `brief-fit`, `style`, `spatial-action` and `continuity`. The layout check goes under `spatial-action` and the light spec block under `brief-fit`. There are no extra checks.
+- **Mode D, `owner-review`:** Check Theo's prompt against the approved brief before Sage sees it. The criteria are exactly `brief-fit`, `style`, `spatial-action` and `continuity`. The layout check goes under `spatial-action` and the Light/Palette lines under `brief-fit`. There are no extra checks.
 
 ## Writing the room
 
-A room should look like a set from a feature-quality 3D animated film: lived-in, specific, and dressed so you can tell whose space it is and when. Use chunky, appealing shapes, warm cinematic light and rich, saturated colour; never a muted or washed-out room ([L-PALETTE]). Give it one hero accent colour on a story prop. The film accent colour comes from the production bible, chosen per story from its key prop; it is always a prop colour, never a light. Keep that colour off the room's props and surfaces, and name it in the spec block as "Film accent kept out: <colour>". Warm lamplight or sunlight is always allowed. Never name a studio, film or tool; describe the look in words ([H-NO-BRANDS]).
+A room should look like a set from a feature-quality 3D animated film: lived-in, specific, and dressed so you can tell whose space it is and when. Use chunky, appealing shapes, warm cinematic light and rich, saturated colour; never a muted or washed-out room ([L-PALETTE]). Give it one hero accent colour on a story prop. The film accent colour comes from the production bible, chosen per story from its key prop; it is always a prop colour, never a light. Keep that colour off the room's props and surfaces, and never write it into the brief text. Warm lamplight or sunlight is always allowed. Never name a studio, film or tool; describe the look in words ([H-NO-BRANDS]).
 
 Known and proposed details are different things:
 - `knownDetails`: only what the answers or locked script state. Each entry is `{detail, quote, source, field}`: the quote is copied word for word from that answer field or the locked script, and the runtime rejects a quote it can't find.
@@ -37,11 +37,11 @@ Theo writes every prompt in the Location Prompt Formula: (1) a fixed opening and
 1. **Mood.** One short mood phrase for the place: "bright, cheerful and full of colour", "gentle, warm, comforting", "gritty, moody, film-noir".
 2. **Camera and staging.** Shot size, camera height, and what the camera looks toward, chosen from where the characters will stand in the scripted actions. Keep their floor open and in frame, and keep the room reading to the frame edges.
 3. **Primary space.** The hero area with real wear: slightly scuffed, not perfectly aligned, tape curling, books at angles. Name actual colours and materials. At most one piece of text in the room, and only when the answers or script name it (a banner reading MY FAMILY); otherwise none.
-4. **Depth and ONE key light.** A few props receding on the left and right edges, and ONE key light source with its direction ("morning sun through tall windows on the left", "one spotlight straight down onto the chair", "the city skyline glow through the glass"). The spec block's `Light:` line names the same light. Video models light the characters from it, and Cam lights the keyframes to match it.
+4. **Depth and ONE key light.** A few props receding on the left and right edges, and ONE key light source with its direction ("morning sun through tall windows on the left", "one spotlight straight down onto the chair", "the city skyline glow through the glass"). The brief's `Light:` line names the same light (same source and direction). Video models light the characters from it, and Cam lights the keyframes to match it.
 
 ## Layout and light
 
-End `direction` with a layout paragraph in words. It names where the main furniture stands, where open floor is kept for the scene's action, and where the camera is. Then add one spec block: light source with its direction and time of day, bounce, practicals (on or off), haze (yes or no), palette as a ratio, the one accent, and the film accent kept out. Theo copies this block whole into every prompt for the location, so write it once and exactly.
+End `direction` with a layout paragraph in words. It names where the main furniture stands, where open floor is kept for the scene's action, and where the camera is. Then add a short `Light:` line naming ONE key light (source, direction, time of day, quality) and a `Palette:` line naming vivid colours, rich and full of colour, with the one hero accent on the focal story prop. The mood line sets the contrast. Never write "muted", a palette ratio, an even-fill line, bounce/practicals/haze lines, or the film accent into the brief; the film accent stays off the room's props but is never named in brief text. Theo folds these lines into the prompt in his own words and never copies them verbatim.
 
 ## Angles
 
@@ -50,7 +50,7 @@ The angle brief keeps the master's bones: the same walls, door and window positi
 ## Owner review
 
 For each prompt, check:
-- `brief-fit`: the prompt carries the brief's room, dressing and spec block, and adds or drops no story detail. The key light it names is the brief's, with the same direction.
+- `brief-fit`: the prompt carries the brief's room and dressing, and adds or drops no story detail. The key light it names agrees with the brief's `Light:` line (same source and direction), and its palette names the brief's vivid colours with the hero accent on the same focal prop.
 - `style`: the prompt opens with the fixed opening ("An empty ... from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon.") and a mood line, and reads as a stylized animated feature set. The wording rules in `task.craft` govern it.
 - `spatial-action`: the camera and layout match the brief and leave floor in frame for every scripted action.
 - `continuity`: details and the key light match the master plate and the brief.
@@ -75,7 +75,7 @@ Invented family. Locked script, beat 3: "Papa wiped his hands on his apron and s
 
 Mode B output, `direction` (abridged):
 
-"A small warm kitchen in late afternoon, warm, homely and golden. A wooden table stands centre floor, its top worn pale at the edges, with clear space in front of it where Papa and Rosa stand. A blue crock holds a wooden spoon on the windowsill over the sink, and copper pots hang slightly crooked above the stove. Low sun comes through the window on the left wall and lays long warm rectangles across the floor. Layout: the stove runs along the back wall, the window is on the left wall, the table sits centre floor, and the camera is in the doorway at chest height, wide, looking toward the stove with the floor in front of the table in frame. Light: late-afternoon sun through the window on the left, warm and soft. Bounce: cream walls. Practicals: one pendant lamp over the table, off. Haze: none. Palette: warm wood and cream at about five to one. Accent: the blue crock. Film accent kept out: deep green."
+"A small warm kitchen in late afternoon, warm, homely and golden. A wooden table stands centre floor, its top worn pale at the edges, with clear space in front of it where Papa and Rosa stand. A blue crock holds a wooden spoon on the windowsill over the sink, and copper pots hang slightly crooked above the stove. Low sun comes through the window on the left wall and lays long warm rectangles across the floor. Layout: the stove runs along the back wall, the window is on the left wall, the table sits centre floor, and the camera is in the doorway at chest height, wide, looking toward the stove with the floor in front of the table in frame. Light: late-afternoon sun through the window on the left, warm and soft. Palette: warm honey wood, cream plaster and copper orange, with saturated cobalt blue as the hero accent on the blue crock."
 
 `knownDetails`:
 ```json
@@ -84,17 +84,17 @@ Mode B output, `direction` (abridged):
 ```
 `proposedDetails`: copper pots hanging over the stove; a cream tin of flour on the shelf.
 
-Mode D. Theo's prompt has the fixed opening and the layout, but it omits the spec block:
+Mode D. Theo's prompt has the fixed opening and the layout, but its light disagrees and its palette reads muted, which is never allowed:
 
 ```json
 { "taskId": "<copy task.taskId>", "action": "owner-review", "actor": "agent", "artifactId": "backgroundPrompt:kitchen@1", "artifactDigest": "<copy the artifact digest from the task>",
   "review": { "decision": "rejected", "perception": "direct-text",
     "checks": [
       { "criterion": "brief-fit", "status": "fail",
-        "evidence": "The brief's spec block is missing from the prompt. The prompt has no bounce, practicals, haze, palette or accent line, although the brief says the block is copied whole.",
-        "location": "Full prompt, after the secondary detail",
-        "repair": "Copy the brief's spec block in full at the end of the prompt, unchanged.",
-        "quotes": ["Palette: warm wood and cream at about five to one"] },
+        "evidence": "The prompt lights the room with evening lamplight from the right and calls the palette muted, which is never allowed, while the brief's Light line names late-afternoon sun through the window on the left and its Palette line names vivid honey wood, copper orange and cobalt blue.",
+        "location": "Closing light sentence and object colours",
+        "repair": "Light the room from the brief's late-afternoon sun through the window on the left, and name the brief's vivid Palette colours with the cobalt-blue crock as the hero accent.",
+        "quotes": ["through the window on the left"] },
       { "criterion": "style", "status": "pass",
         "evidence": "The prompt opens with the fixed opening and a mood line and reads as a stylized animated feature set, with no photoreal phrasing.",
         "location": "Opening sentence", "repair": "",

@@ -6,7 +6,7 @@ All location craft lives in `craft-guide.md#locations`; apply its rules by ID in
 
 ## Inputs and hash binding
 
-Return a complete executable image prompt with a short change summary. Bind `briefDigest` (the approved brief) and this file's SHA-256 as `recipeSha256`. Keep the owner's known details, label proposed furnishings in the owner's brief, and satisfy the scripted actions and camera space. Copy the brief's lighting and colour spec block whole as the last part of every prompt for its location, including its "Film accent kept out: <bible colour>" line (apply [L-LIGHT-SPEC]).
+Return a complete executable image prompt with a short change summary. Bind `briefDigest` (the approved brief) and this file's SHA-256 as `recipeSha256`. Keep the owner's known details, label proposed furnishings in the owner's brief, and satisfy the scripted actions and camera space. Fold the brief's `Light:`/`Palette:` lines into the prompt in your own words: name the Palette's vivid colours on the objects with the hero accent on the focal prop, and close with 1-2 natural light sentences agreeing with the brief's `Light:` line (apply [L-LIGHT-SPEC]). Never copy those lines verbatim, never write "muted", "kept out" or "filling ... evenly", and never write spec headings other than "Camera:".
 
 ## Master vs angle
 

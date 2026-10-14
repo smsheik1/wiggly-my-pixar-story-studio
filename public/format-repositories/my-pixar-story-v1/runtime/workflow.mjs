@@ -16,7 +16,7 @@ import { shotFor, shotReferences, referenceBindings, planningReferences, validat
 import { requestDescriptor,planningAccountGuide,generationEstimate,narrationGenerationTexts } from './providers.mjs';
 import {scriptQuoteChecks,transcriptDiff,reviewerVariantAccepted} from './evaluators.mjs';
 import {assertMustKeepCopied,assertPromptKeepsTraits,mustKeepOf} from './identity.mjs';
-import {assertBackgroundPrompt,keyLightOf} from './background-prompt.mjs';
+import {assertBackgroundPrompt,assertBackgroundBrief,keyLightOf} from './background-prompt.mjs';
 // Keyframe prompts: each on-screen person's must-keep identity traits (only when any exist).
 // The approved background prompt's named key light, so Cam lights the characters to match the plate.
 const backgroundKeyLightFor=p=>{const shot=shotFor(p);if(!shot)return{};const bg=(shot.angleId&&current(p,`backgroundAnglePrompt:${shot.locationId}:${shot.angleId}`))||current(p,`backgroundPrompt:${shot.locationId}`);const light=bg?keyLightOf(bg.content.prompt):null;return light?{backgroundKeyLight:light}:{};};
@@ -277,6 +277,7 @@ export function validateArtifactContent(p, content, author, previous=current(p))
     if (new Set(parsed.sceneIds).size !== parsed.sceneIds.length || allowed.some(id => !parsed.sceneIds.includes(id)) || parsed.sceneIds.some(id => !allowed.includes(id))) throw new Error('Brief must cover exactly its immediate scenes.');
     if (parsed.references.some(f => !f.width || !f.height || f.durationSeconds)) throw new Error('Background references must be measured still images.');
     verifyKnownDetails(p, parsed);
+    assertBackgroundBrief(parsed.direction);
   }
   if (isPrompt(p)) {
     const brief = current(p, briefKey(p));

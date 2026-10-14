@@ -93,15 +93,16 @@ Short but always complete: an edit prompt is a whole prompt, not a fragment.
 
 ## [locations] Locations
 
-Rooms look like sets from a Pixar feature film: dressed from the story, empty of people only, in rich, saturated colour with warm cinematic light. A bland, muted or empty-feeling room fails. Example spec block for a brief:
+Rooms look like sets from a Pixar feature film: dressed from the story, empty of people only, in rich, saturated colour with warm cinematic light. A bland, muted or empty-feeling room fails. Example Light and Palette lines for a brief:
 
-Light: morning daylight through side windows, warm and soft, filling the room evenly. Bounce: cool bounce off pale walls. Practicals: no. Haze: no. Palette: rich honey woods, deep teal and warm mustard at roughly three to one. Accent: one hero colour on a story prop. Film accent kept out: <the bible's filmAccent colour, a prop colour, never a light>.
+Light: morning daylight through side windows on the left, warm and soft.
+Palette: bright teal, sunflower-yellow and grass-green, with sunflower-yellow as the hero accent on the story banner.
 
 - [L-DRESSED] (check: vera, sage) Empty of people only, never an empty set (a writer rule, not prompt text): dress every set from the brief's known and proposed details with specific lived-in props showing whose space it is and when (era, age); neutral era-consistent dressing is fine, but a bland, generic catalog room still fails; forbid generic catalog rooms, plain unmarked objects, and blank walls.
 - [L-SET-PLATE] (check: sage) Use the set plate only for space, materials, colours, and light.
 - [L-LAYOUT-REF] (check: sage, beau) Set positions and camera from a separate layout reference written in words in the brief; ignore the faces in it.
 - [L-CAMERA-SIDE] (check: vera, beau) The camera stays on the same side of the action line as the master for the whole location; turning within that half is fine.
-- [L-LIGHT-SPEC] (check: sage, beau) Write one lighting and colour spec block per location in the brief and copy it whole into every prompt for that location: light source and time of day, bounce, practicals yes or no, haze yes or no, palette as a ratio, the one hero accent, and the production bible's `filmAccent` colour kept out.
+- [L-LIGHT-SPEC] (check: sage, beau) End the brief `direction` with a layout paragraph in words, then a short `Light:` line naming ONE key light (source, direction, time of day, quality) and a `Palette:` line naming vivid colours with the one hero accent on the focal story prop. Never write a palette ratio, an even-fill line, bounce/practicals/haze lines, or the film accent into the brief; the `filmAccent` colour stays off the room's props per [L-ACCENT-OUT] but is never named in brief text.
 - [L-PALETTE] (check: vera, sage) Rich, saturated feature-film palette with one hero accent on a story prop; a muted, washed-out or desaturated room fails, and so does a bland or empty-feeling one.
 - [L-ACCENT-OUT] (check: vera, sage) Keep the production bible's `filmAccent` colour off the room's props and surfaces. The film accent is always a prop colour, never a light, so warm motivated light (lamplight, sunlight) is always allowed.
 - [L-SHOTS-FIRST] (check: beau, sage) Build the room for the shots the script needs: list the scripted actions and positions in that space before writing.

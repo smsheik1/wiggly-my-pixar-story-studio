@@ -212,8 +212,14 @@
         {
           "id": "has-lighting-colour-spec",
           "type": "contentMatches",
-          "pattern": "light[\\s\\S]*accent[\\s\\S]*kept out",
-          "why": "Rule [L-LIGHT-SPEC]: lighting and colour spec block with light, accent, and film accent kept out."
+          "pattern": "Light:[\\s\\S]*Palette:",
+          "why": "Rule [L-LIGHT-SPEC]: brief ends with a Light line (one key light) and a Palette line (vivid colours, hero accent)."
+        },
+        {
+          "id": "no-kept-out",
+          "type": "contentNotMatches",
+          "pattern": "kept out",
+          "why": "The film accent is never named in brief text."
         },
         {
           "id": "has-layout-in-words",

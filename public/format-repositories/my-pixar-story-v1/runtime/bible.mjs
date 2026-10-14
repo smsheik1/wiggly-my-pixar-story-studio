@@ -65,7 +65,7 @@ export const BibleContent = z.object({
   style: z.object({ look: text, sets: text, rules: z.array(text).min(1) }).strict(),
   scenes: z.array(Scene).min(1),
   // Per-story film accent: the colour plus the key story prop it comes from. Beau keeps
-  // it out of rooms, Theo copies the spec block whole. Optional on read so historical
+  // it off room props and never names it in brief text; Theo never writes it into prompts. Optional on read so historical
   // bibles without it still load; compileBible drafts it UNRESOLVED for signing.
   // The accent is a prop colour, never a light: r5's "warm amber lamplight" kept warm light out of every room.
   filmAccent: z.object({ colour: text.refine(c => !FILM_ACCENT_LIGHT.test(c), { message: 'FILM_ACCENT_IS_LIGHT: the film accent is a prop colour (e.g. "cobalt blue"), never a light, lamp, glow or time of day; warm motivated light is always allowed in rooms.' }), keyProp: text }).strict().optional(),
@@ -139,7 +139,7 @@ export function biblePacket(p, role, gate, artifact) {
   const staleArtifact = reviewing && artifact && BIBLE_DOWNSTREAM_STEPS.includes(artifact.kind) && artifact.bible?.hash !== signed.hash;
   return {
     status: 'signed', version: signed.version, hash: signed.hash, signedBy: signed.signature.by, signedAt: signed.signature.at, sections,
-    // Beau builds rooms around it (kept out) and Theo copies the spec block whole.
+    // Beau keeps it off room props (never named in brief text) and Theo never writes it into prompts.
     ...(signed.content.filmAccent && ['background-product-owner', 'pixar-prompter'].includes(role) ? { filmAccent: signed.content.filmAccent } : {}),
     instruction: reviewing ? REVIEW_INSTRUCTION : AUTHOR_INSTRUCTION,
     ...(latest !== signed ? { note: `Draft v${latest.version} is unsigned; it is NOT in force. Work against signed v${signed.version}.` } : {}),
@@ -297,7 +297,7 @@ export function renderBibleMarkdown(entry, { runDir = null, superseded = false }
     out.push('- **Continuity (every shot):**', ...c.continuity.map(x => `  - ${x}`), '');
   }
   out.push('## Style', '', `**Look:** ${b.style.look}`, '', `**Sets:** ${b.style.sets}`, '', list(b.style.rules), '');
-  if (b.filmAccent) out.push(`**Film accent:** ${b.filmAccent.colour} (from ${b.filmAccent.keyProp}). Kept off room props and surfaces (never a light); named in every brief spec block as "Film accent kept out: <colour>".`, '');
+  if (b.filmAccent) out.push(`**Film accent:** ${b.filmAccent.colour} (from ${b.filmAccent.keyProp}). Kept off room props and surfaces (never a light); never named in brief or prompt text.`, '');
   out.push('## Scene digest', '');
   for (const s of b.scenes) {
     out.push(`### Beat ${s.beat}: ${s.location} (\`${s.id}\`)`, '');
