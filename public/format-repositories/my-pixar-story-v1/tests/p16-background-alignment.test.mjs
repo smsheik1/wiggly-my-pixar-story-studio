@@ -42,14 +42,22 @@ test('safety self-check: no forbidden process, network or host imports in source
   assert.ok(!/['"]codex\s+app-server['"]/.test(source), 'must not mention starting codex app-server');
 });
 
-test('craft locations: bible filmAccent example, camera side, shots-first tag, dressed and no-text rules', { timeout: 20000 }, async () => {
+test('craft locations: Light/Palette lines, camera side, shots-first tag, dressed and no-text rules', { timeout: 20000 }, async () => {
   const guide = await read('../craft-guide.md');
-  assert.match(guide, /Film accent kept out: <the bible's filmAccent colour, a prop colour, never a light>/);
-  assert.doesNotMatch(guide, /Film accent kept out: deep red/);
+  const locations = guide.split('## [locations]')[1].split('\n## ')[0];
+  assert.match(locations, /Example Light and Palette lines/);
+  assert.match(locations, /Light: morning daylight through side windows on the left/);
+  assert.match(locations, /Palette: bright teal, sunflower-yellow and grass-green/);
+  assert.doesNotMatch(locations, /kept out/i);
+  assert.doesNotMatch(locations, /filling the room evenly/i);
+  assert.doesNotMatch(locations, /five to one|three to one|as a ratio/i);
+  assert.doesNotMatch(locations, /Bounce:/);
+  assert.match(guide, /\[L-LIGHT-SPEC\] \(check: sage, beau\) End the brief `direction` with a layout paragraph/);
+  assert.match(guide, /never named in brief text/i);
   assert.match(guide, /\[L-CAMERA-SIDE\] \(check: vera, beau\) The camera stays on the same side of the action line as the master for the whole location; turning within that half is fine\./);
   assert.match(guide, /\[L-SHOTS-FIRST\] \(check: beau, sage\)/);
   assert.match(guide, /\[L-ACCENT-OUT\] \(check: vera, sage\) Keep the production bible's `filmAccent` colour off the room's props and surfaces\. The film accent is always a prop colour, never a light/);
-  assert.match(guide, /production bible's `filmAccent` colour kept out/);
+  assert.match(guide, /stays off the room's props per \[L-ACCENT-OUT\]/);
   const dressed = guide.split('\n').find(l => l.startsWith('- [L-DRESSED]'));
   assert.match(dressed, /Empty of people only, never an empty set \(a writer rule, not prompt text\)/);
   assert.match(dressed, /from the brief's known and proposed details/);
@@ -61,7 +69,7 @@ test('craft locations: bible filmAccent example, camera side, shots-first tag, d
   assert.doesNotMatch(minText, /4 names/);
 });
 
-test('background recipe: one empty-of-people clause, brief-only dressing, whole spec block, house look', { timeout: 20000 }, async () => {
+test('background recipe: one empty-of-people clause, brief-only dressing, folded Light/Palette, house look', { timeout: 20000 }, async () => {
   const recipe = await read('../background-prompter.md');
   assert.match(recipe, /the room is empty of people/);
   assert.equal(recipe.match(/the room is empty of people/g).length, 1, 'exactly one empty-of-people clause');
@@ -70,8 +78,11 @@ test('background recipe: one empty-of-people clause, brief-only dressing, whole 
   assert.doesNotMatch(recipe, /feature-quality/i);
   assert.match(recipe, /house look in `craft-guide\.md#house-style`/);
   assert.match(recipe, /knownDetails and proposedDetails only/);
-  assert.match(recipe, /Copy the brief's lighting and colour spec block whole as the last part of every prompt/);
-  assert.match(recipe, /"Film accent kept out: <bible colour>" line/);
+  assert.match(recipe, /Fold the brief's `Light:`\/`Palette:` lines into the prompt in your own words/);
+  assert.match(recipe, /Never copy those lines verbatim/);
+  assert.doesNotMatch(recipe, /Copy the brief's lighting and colour spec block whole/);
+  assert.doesNotMatch(recipe, /Film accent kept out:/);
+  assert.doesNotMatch(recipe, /five to one|Bounce:/);
 });
 
 test('visual rubric: neutral dressing, no feature wording, no video section, exact fail mapping', { timeout: 20000 }, async () => {
