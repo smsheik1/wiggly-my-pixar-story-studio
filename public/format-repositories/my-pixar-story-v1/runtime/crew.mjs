@@ -11,6 +11,7 @@ import {supervised,reviewPassed} from './gates.mjs';
 import {artifactEvidence} from './evaluators.mjs';
 import {validateEditingInvestigation,AudioEditPlan} from './audio-edit.mjs';
 import {findSlashAbbreviations} from './script-lint.mjs';
+import {assertReviewChecksTraits} from './identity.mjs';
 export {findSlashAbbreviations};
 // These are format capabilities, not arbitrary filesystem/network/shell access.
 export const crewRoles=loadStudio().config.agents;
@@ -216,7 +217,7 @@ export async function prepareCrewTask(p,task){
  const expected=taskFor(p);
  if(task.taskId!==expected.taskId||task.step!==p.step||task.gate!==p.gate)throw new Error('STALE_TASK: read current status before dispatch.');
  // No worker can receive replaced, omitted, stale or invented project context.
- const fields=['generationEstimate','planningGuide','generationTexts','voiceIdentity','voiceBasis','voiceChoice','imageProviderPreference','imageProviderDirective','creativeDirections','productionBible','workflowRevision','proposedCast','locationEntry','characterReferences','narration','projectId','artifact','dependencies','approvedScript','lockedAnswers','inputs','sourceInputs','sourceInputDigest','originalInputsRequired','questionnaire','castEntry','characterDigest','photoInventory','recipe','references','referenceBindings','availableLocations','shotIntentions','immediateScenes','shot','videoBinding','visualReferences','soundDirection','soundDefaults','importFile','voiceReference','intakeConfirmation','feedback','criteria','formatRole','crewWorker','skill','stepGuide','allowedTools','studioConfig','studioSha256','instruction','craft'];
+ const fields=['generationEstimate','planningGuide','generationTexts','voiceIdentity','voiceBasis','voiceChoice','imageProviderPreference','imageProviderDirective','creativeDirections','productionBible','workflowRevision','proposedCast','locationEntry','characterReferences','narration','projectId','artifact','dependencies','approvedScript','lockedAnswers','inputs','sourceInputs','sourceInputDigest','originalInputsRequired','questionnaire','castEntry','castMustKeep','characterDigest','photoInventory','recipe','references','referenceBindings','availableLocations','shotIntentions','immediateScenes','shot','videoBinding','visualReferences','soundDirection','soundDefaults','importFile','voiceReference','intakeConfirmation','feedback','criteria','formatRole','crewWorker','skill','stepGuide','allowedTools','studioConfig','studioSha256','instruction','craft'];
  for(const field of fields)if(digest(task[field]??null)!==digest(expected[field]??null))throw new Error(`TASK_INPUT_MISMATCH: ${field} is missing, changed or stale; read the current task packet.`);
  if(['author','produce'].includes(p.gate))assertAllowed(p,p.step);
  for(const a of expected.dependencies??[])if(!a.valid||(!a.approvedBy&&a.kind!=='clone')||current(p,a.key)?.id!==a.id)throw new Error(`TASK_INPUT_NOT_LOCKED: ${a.key}`);
@@ -310,6 +311,7 @@ export async function runCrewTask(p,task,host){
     event.review.measurements={...event.review.measurements,paletteSaturation:saturation};
     assertBackgroundPalette({step:task.step,review:event.review,files,saturation});
    }
+   if(worker.role==='visual-reviewer'&&['candidates','sheet'].includes(task.step))assertReviewChecksTraits(event.review,task.castEntry);
    event.review.toolEvidence=receipts;
    verifyReviewQuotes({role:worker.role,task,review:event.review,outputs});
    verifyReviewRecommendation({task,review:event.review});

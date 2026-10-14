@@ -318,6 +318,13 @@
      ]
     },
     {
+     "id": "C-MUST-KEEP",
+     "check": [
+      "vera",
+      "sage"
+     ]
+    },
+    {
      "id": "C-IDENTITY-OPTIONS",
      "check": [
       "sage"

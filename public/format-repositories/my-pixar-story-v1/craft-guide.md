@@ -68,7 +68,8 @@ Short concrete prompts beat long ones: everything above earns its place, and lon
 For real people, the photos win over any design instinct. This replaces the old variation advice: likeness never varies.
 
 - [C-IDENTITY] (check: vera, sage) Skin tone, hair colour, and face always match the person and their photos, and never vary.
-- [C-IDENTITY-OPTIONS] (check: vera) The 3 options come from one prompt. They may differ only in style strength, outfit, and pose or hair styling, never likeness.
+- [C-MUST-KEEP] (check: vera, sage) Identity traits from intake stay fixed in every view: anything the person always wears or that is always part of how they look (the roster entry's `mustKeep`) appears in every figure, option, expression and keyframe, and is never dropped, swapped or restyled away.
+- [C-IDENTITY-OPTIONS] (check: vera) The 3 options come from one prompt. They may differ only in style strength, outfit, and pose or hair styling, never likeness or a `mustKeep` trait.
 
 ## [character-sheet] Character sheet
 

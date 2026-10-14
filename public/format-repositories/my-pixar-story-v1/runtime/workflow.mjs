@@ -15,6 +15,9 @@ import { requireVisualQualification } from '../evaluation/visual-qualification.m
 import { shotFor, shotReferences, referenceBindings, planningReferences, validateShots, validateLocationRegistry, validateKeyframePrompt, mergeShotsPatch } from './shots.mjs';
 import { requestDescriptor,planningAccountGuide,generationEstimate,narrationGenerationTexts } from './providers.mjs';
 import {scriptQuoteChecks,transcriptDiff,reviewerVariantAccepted} from './evaluators.mjs';
+import {assertMustKeepCopied,assertPromptKeepsTraits,mustKeepOf} from './identity.mjs';
+// Keyframe prompts: each on-screen person's must-keep identity traits (only when any exist).
+const castMustKeepFor=p=>{const m=Object.fromEntries((current(p,'roster')?.content.characters??[]).filter(c=>mustKeepOf(c).length).map(c=>[c.id,mustKeepOf(c)]));return Object.keys(m).length?{castMustKeep:m}:{};};
 import {AudioEditReceipt,AUDIO_EDIT_PROFILE,validateAudioEdit,validateEditingInvestigation} from './audio-edit.mjs';
 import { VERSION, Inputs, Project, Content, Review, Event, BibleEvent, Plans, PROMPT_BRAND_TERMS, IntakeConfirmation, PhotoInventoryEntry, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
 
@@ -198,6 +201,7 @@ export function validateArtifactContent(p, content, author, previous=current(p))
     if(!locked(p,'roster')||parsed.characterDigest!==digest(cast)||digest(parsed.referenceHashes)!==digest(cast.references.map(f=>f.sha256))||parsed.recipeSha256!==expectedRecipe)throw new Error('CHARACTER_PROMPT_BINDING_REQUIRED: bind the exact approved cast, ordered photos and packaged recipe.');
     // Rev 5: this prompt IS the sheet prompt (no separate sheetPrompt step), so the fixed
     // eight must appear in the prompt text, in order.
+    assertPromptKeepsTraits(parsed.prompt,[cast]);
     if(sheetWorkflow(p)&&!fixedEightInOrder(parsed.prompt))throw new Error('SHEET_EXPRESSIONS_ORDER_REQUIRED: the rev 5 sheet prompt must name the fixed eight expressions in order (neutral, happy, delighted, sad, surprised, confused, angry, talking).');
   }
   if(refinedWorkflow(p)&&p.step==='candidates'&&parsed.prompt!==current(p,`characterPrompt:${p.characterId}`).content.prompt)throw new Error('Candidates must use the human-approved character prompt exactly.');
@@ -412,6 +416,7 @@ export function taskFor(p) {
     immediateScenes: sceneLocation?.scenes.filter(s => shot ? s.id === shot.sceneId : !p.angleId || sceneLocation.angles.find(a => a.id === p.angleId)?.sceneIds.includes(s.id)) ?? [],
     lockedAnswers:current(p,'answers')??null,
     ...(p.step==='answers'?{questionnaire,sourceInputs:p.inputs,sourceInputDigest:digest(p.inputs),originalInputsRequired:!p.feedback.some(f=>f.key==='answers'&&f.intent&&f.message)}:{}),
+    ...(p.step==='keyframePrompt'?castMustKeepFor(p):{}),
     ...(['characterPrompt','candidates','sheetPrompt','sheet'].includes(p.step)?{castEntry:current(p,'roster')?.content.characters.find(c=>c.id===p.characterId)}:{}),
     ...(p.step==='characterPrompt'&&current(p,'roster')?.content.characters.some(c=>c.id===p.characterId)?{characterDigest:digest(current(p,'roster').content.characters.find(c=>c.id===p.characterId))}:{}),
     ...(p.step==='roster'?{photoInventory:rosterPhotoInventory(p)}:{}),
@@ -955,6 +960,7 @@ export function applyEvent(project, raw) {
         const proposed=current(p,'script').content.proposedCast,inventory=intake.characters.filter(c=>c.likeness!=='omit');
         if(intake.characters.length!==proposed.length||proposed.some(c=>!intake.characters.some(i=>i.id===c.id&&i.name===c.name&&i.ageVariant===c.ageVariant&&i.minor===c.minor)))throw new Error('SCRIPT_CAST_MISMATCH: reference decisions must cover the approved script cast; revise the script to change who appears.');
         if(inventory.length!==a.content.characters.length||inventory.some(i=>!a.content.characters.some(c=>c.id===i.id&&c.name===i.name&&c.ageVariant===i.ageVariant&&digest(c.references)===digest(i.references)&&(i.likeness!=='interpreted'||c.notes.includes(i.decisionNotes)))))throw new Error('INTAKE_ROSTER_MISMATCH: roster must use the exact human-confirmed references and interpretation notes.');
+        if(p.step==='roster')assertMustKeepCopied(inventory,a.content.characters);
       }
       a.intakeConfirmation=intake;
     }

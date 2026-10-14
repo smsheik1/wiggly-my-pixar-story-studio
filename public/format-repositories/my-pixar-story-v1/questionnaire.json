@@ -21,5 +21,22 @@
       "answerGroup": "scene5LegacyFinale",
       "prompt": "What is one thing you wish your kids truly understood about who you are inside\u2014and if you could give your 8-year-old self a hug today, what would you say?"
     }
+  ],
+  "storyQuestions": [
+    {
+      "id": "religiousHousehold",
+      "once": "story",
+      "optional": true,
+      "prompt": "Did you grow up in a religious household, and which religion?"
+    }
+  ],
+  "personFollowUps": [
+    {
+      "id": "mustKeep",
+      "once": "person",
+      "optional": true,
+      "prompt": "Anything they always wear or that's always part of how they look?",
+      "note": "May offer example questions from the religion answer (e.g. Muslim: 'Did she wear a hijab?'; Sikh: 'Did he wear a turban?'). Never assume: a trait is kept only when the human says yes, and answers are per person."
+    }
   ]
 }

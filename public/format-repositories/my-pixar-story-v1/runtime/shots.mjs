@@ -1,5 +1,6 @@
 import { current, locked, supervised, characterSheet, characterSheetArtifact, sheetKeyFor } from './gates.mjs';
 import { digest, ShotsPatch } from './contracts.mjs';
+import { assertPromptKeepsTraits } from './identity.mjs';
 export const shotFor = p => current(p, 'shots')?.content.shots.find(s => s.id === p.shotId);
 export function shotReferences(p, shot = shotFor(p)) {
   const background = current(p, shot.angleId ? `backgroundAngle:${shot.locationId}:${shot.angleId}` : `backgroundCandidates:${shot.locationId}`);
@@ -63,6 +64,8 @@ export function validateShots(p, content, planning=false) {
 }
 export function validateKeyframePrompt(p, content) {
   if (content.shotDigest !== digest(shotFor(p)) || digest(content.references) !== digest(referenceBindings(p))) throw new Error('Composition prompt must bind this shot and exact approved setting/character reference images in order.');
+  const ids = [...new Set(content.references.filter(r => r.role === 'character' && r.characterId).map(r => r.characterId))];
+  assertPromptKeepsTraits(content.prompt, ids.map(id => current(p, 'roster')?.content.characters.find(c => c.id === id)).filter(Boolean));
 }
 
 export function planningReferences(p) {
