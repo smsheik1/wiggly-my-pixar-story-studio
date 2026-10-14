@@ -1,8 +1,21 @@
 {
   "comment": "Built crew skills. build-skills.mjs joins the shared sources and the role file into crew/<name>/SKILL.md. Edit the sources, never the built SKILL.md. Agents not listed here keep their hand-written SKILL.md until converted.",
-  "shared": ["crew/_shared/base.md"],
+  "shared": [
+    "crew/_shared/base.md"
+  ],
   "visualShared": [],
   "agents": {
-    "pia": { "role": "crew/pia/role.md", "visual": true }
+    "pia": {
+      "role": "crew/pia/role.md",
+      "visual": true
+    },
+    "beau": {
+      "role": "crew/beau/role.md",
+      "visual": true
+    },
+    "theo": {
+      "role": "crew/theo/role.md",
+      "visual": true
+    }
   }
 }
