@@ -4,6 +4,8 @@
 // - at most one rendered text element (quoted strings and runs of capitals, e.g. MY FAMILY);
 // - one sentence must name a light source together with a direction.
 // - never "muted"; never "kept out"; never "filling ... evenly" / "even fill" after a key light.
+// - wall art is face-free: never "family photo(s)", "portrait(s)" or "photo of".
+const FACE_ART_RE = /\bfamily photos?\b|\bportraits?\b|\bphoto of\b/i;
 const EMPTY = /\bempty of (?:all )?people\b/i;
 // Capitals that are vocabulary, not rendered text.
 const ACRONYMS = new Set(['CG', 'CGI', 'TV', 'LED', 'LEDS', 'DVD', 'VHS', 'CD', 'CRT', 'PC', 'USB', 'AM', 'PM', 'OK']);
@@ -95,6 +97,7 @@ export function backgroundPromptProblems(prompt) {
   if (/\bmuted\b/i.test(s)) problems.push('name vivid colours; never write "muted"');
   if (/kept out/i.test(s)) problems.push('never name excluded things ("kept out")');
   if (/\bevenly\b/i.test(s) || /even\s+fill/i.test(s)) problems.push('never write "filling ... evenly" (or "even fill") after a directional key light');
+  if (FACE_ART_RE.test(s)) problems.push('write wall art face-free: never "family photos", "portraits" or "photo of" (landscapes, kids\' drawings or patterns instead)');
   return problems;
 }
 

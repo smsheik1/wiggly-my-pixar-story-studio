@@ -18,7 +18,7 @@ Write sentences a person would say about a room, not tokens for an image model. 
 
 ## Writing the room
 
-A room should look like a set from a feature-quality 3D animated film: lived-in, specific, and dressed so you can tell whose space it is and when. Use chunky, appealing shapes, warm cinematic light and rich, saturated colour; never a muted or washed-out room ([L-PALETTE]). Give it one hero accent colour on a story prop. The film accent colour comes from the production bible, chosen per story from its key prop; it is always a prop colour, never a light. Keep that colour off the room's props and surfaces, and never write it into the brief text. Warm lamplight or sunlight is always allowed. Never name a studio, film or tool; describe the look in words ([H-NO-BRANDS]).
+A room should look like a set from a feature-quality 3D animated film: lived-in, specific, and dressed so you can tell whose space it is and when. Use chunky, appealing shapes, warm cinematic light and rich, saturated colour; never a muted or washed-out room ([L-PALETTE]). Wall art is face-free: landscapes, kids' crayon drawings or patterns, never family photos or portraits. Describe every hero object with its own animated-film shape language (rounded, slightly exaggerated proportions, chunky soft edges, simplified forms, oversized features); for exteriors that means vehicles, buildings, sky with soft rounded clouds, and ground, not only the opening line. Give it one hero accent colour on a story prop. The film accent colour comes from the production bible, chosen per story from its key prop; it is always a prop colour, never a light. Keep that colour off the room's props and surfaces, and never write it into the brief text. Warm lamplight or sunlight is always allowed. Never name a studio, film or tool; describe the look in words ([H-NO-BRANDS]).
 
 Known and proposed details are different things:
 - `knownDetails`: only what the answers or locked script state. Each entry is `{detail, quote, source, field}`: the quote is copied word for word from that answer field or the locked script, and the runtime rejects a quote it can't find.
@@ -41,7 +41,7 @@ Theo writes every prompt in the Location Prompt Formula: (1) a fixed opening and
 
 ## Layout and light
 
-End `direction` with a layout paragraph in words. It names where the main furniture stands, where open floor is kept for the scene's action, and where the camera is. Then add a short `Light:` line naming ONE key light (source, direction, time of day, quality) and a `Palette:` line naming vivid colours, rich and full of colour, with the one hero accent on the focal story prop. The mood line sets the contrast. Never write "muted", a palette ratio, an even-fill line, bounce/practicals/haze lines, or the film accent into the brief; the film accent stays off the room's props but is never named in brief text. Theo folds these lines into the prompt in his own words and never copies them verbatim.
+End `direction` with a layout paragraph in words. It names where the main furniture stands, where open floor is kept for the scene's action, and where the camera is. Then add a short `Light:` line naming ONE key light (source, direction, time of day, quality), preferring warm low soft light with long soft shadows (golden late-afternoon sun, window light) over hard noon sun with crisp hard shadows unless the beat needs harsh or dramatic light (fire, noir spotlight), and a `Palette:` line naming vivid colours fitted to the place (warm honey wood and cream for a living room, never a kindergarten rainbow elsewhere), rich and full of colour, with the one hero accent on the focal story prop. The mood line sets the contrast. Never write "muted", a palette ratio, an even-fill line, bounce/practicals/haze lines, or the film accent into the brief; the film accent stays off the room's props but is never named in brief text. Theo folds these lines into the prompt in his own words and never copies them verbatim.
 
 ## Angles
 
@@ -59,7 +59,7 @@ Every pass and fail carries a verbatim quote of 8 or more characters, copied fro
 
 ## The target
 
-Theo's skill carries five studio prompts as the target. What each needed from its brief, in your words:
+Theo's skill carries five studio prompts as the target. What each needed from its brief, in your words (each carries the animated-film shape language on every hero object itself, not only the opening line):
 
 1. **Kindergarten classroom.** Bright, cheerful mood; a wide shot at adult chest height looking slightly down at the rug where the children will sit; scuffed carpet mats, books at angles and curling crayon drawings; one hand-lettered MY FAMILY banner; tables and an aquarium receding left and right; morning sun from tall windows on the left.
 2. **Burning house hallway.** Dramatic, intense mood; an eye-level one-point view down the hallway to a closed door; fire along both baseboards and smoke across the ceiling; firelight from the base of the walls as the only key, with no cool fill.

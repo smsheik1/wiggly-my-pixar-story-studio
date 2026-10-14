@@ -103,6 +103,16 @@ test('brief directions must never say muted', () => {
   assert.throws(() => author(p, { ...brief(p), direction: 'A warm room with a muted palette.' }), /BACKGROUND_BRIEF/);
 });
 
+test('wall art is face-free: family photos, portraits and photo-of are rejected', () => {
+  const base = 'An empty room, completely empty of people. Framed watercolor landscapes and a child\'s crayon drawing on the wall. Warm morning sunlight through the window on the left.';
+  assert.deepEqual(backgroundPromptProblems(base), []);
+  for (const banned of ['framed family photos on the wall', 'framed family photo on the wall', 'a framed portrait on the wall', 'framed portraits on the wall', 'a framed photo of the family on the wall', 'FRAMED FAMILY PHOTOS on the wall']) {
+    const p = `An empty room, completely empty of people. ${banned}. Warm morning sunlight through the window on the left.`;
+    assert.ok(backgroundPromptProblems(p).some(x => /face-free/i.test(x)), `flags wall art: ${banned}`);
+    assert.throws(() => assertBackgroundPrompt(p), /BACKGROUND_PROMPT_FORMULA: .*face-free/);
+  }
+});
+
 test('build lint: beau/theo roles use muted only in never/not sentences', () => {
   assert.deepEqual(backgroundMutedProblems('A room with rich colour; never a muted room.'), []);
   assert.deepEqual(backgroundMutedProblems('Not a muted palette.'), []);

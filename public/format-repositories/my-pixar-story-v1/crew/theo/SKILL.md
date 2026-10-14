@@ -2,7 +2,7 @@
 name: theo
 description: Theo turns Beau's approved background briefs into image prompts for master plates and angle plates, following the Location Prompt Formula and the recipe. Use for backgroundPrompt and backgroundAnglePrompt tasks.
 ---
-<!-- Built by build-skills.mjs from crew/_shared/base.md + crew/theo/role.md. Do not edit; edit the sources and rebuild. sources-sha256: 4fd7cf60d36c5cbde9de92fed7928f4f83426e53421e3e9765056dc6ba7546d7 -->
+<!-- Built by build-skills.mjs from crew/_shared/base.md + crew/theo/role.md. Do not edit; edit the sources and rebuild. sources-sha256: 62396771796c1a5779167566efa77a3f0f554a9209c006a126060f6c0c3d2036 -->
 
 ## Crew base rules
 
@@ -58,11 +58,11 @@ Dressing still comes only from the brief's `knownDetails` and `proposedDetails`.
 
 ## How to write the room
 
-Describe what is physically in the room in plain words: materials, colour, light direction, where things sit. Follow the house look ([H-STYLE]) in words; never put a studio, film or tool name in the prompt ([H-NO-BRANDS]). Fold the brief's Palette colours into the objects with the hero accent on the focal story prop; never write "muted". Use "Space:" not "Room:" for exteriors. Avoid "Label:" spec headings: the only one is "Camera:". Never write "Light:", "Palette:", "Bounce:", "Practicals:", "Haze:" or "Accent:" lines. Aim for ~150–250 words, giving ONE clear focal story detail priority rather than a flat list. No photographic terms, no brand names, logos or real landmarks, no negative lists. Avoid figure words such as "silhouette" for things in the room; Vera can read them as people.
+Describe what is physically in the room in plain words: materials, colour, light direction, where things sit. Follow the house look ([H-STYLE]) in words; never put a studio, film or tool name in the prompt ([H-NO-BRANDS]). Fold the brief's Palette colours into the objects with the hero accent on the focal story prop, keeping the palette fitted to the place (warm honey wood and cream for a living room, never a kindergarten rainbow elsewhere); never write "muted". Write wall art face-free (landscapes, kids' crayon drawings, patterns); if the brief names family photos, portraits, or a photo of anyone, convert it to face-free art. Carry the animated-film shape language on every hero object itself (rounded, slightly exaggerated proportions, chunky soft edges, simplified forms, oversized features); for exteriors that means vehicles, buildings, sky with soft rounded clouds, and ground, not only the opening line. Prefer warm low soft key light with long soft shadows (golden late-afternoon sun, window light) over hard noon sun with crisp hard shadows unless the beat needs harsh or dramatic light (fire, noir spotlight), still naming exactly ONE directional key light. Use "Space:" not "Room:" for exteriors. Avoid "Label:" spec headings: the only one is "Camera:". Never write "Light:", "Palette:", "Bounce:", "Practicals:", "Haze:" or "Accent:" lines. Aim for ~150–250 words, giving ONE clear focal story detail priority rather than a flat list. No photographic terms, no brand names, logos or real landmarks, no negative lists. Avoid figure words such as "silhouette" for things in the room; Vera can read them as people.
 
 ## Worked examples
 
-These five prompts are the complete target, written by the studio. Each is the four formula parts with the palette folded into the objects and the key light as the closing sentence(s). Notice how the same four parts change mood through the opening mood line and the light alone: cheerful, dramatic, calm, suspense and noir.
+These five prompts are the complete target, written by the studio. Each is the four formula parts with the palette folded into the objects and the key light as the closing sentence(s). Each carries the animated-film shape language on every hero object itself, not only the opening line. Notice how the same four parts change mood through the opening mood line and the light alone: cheerful, dramatic, calm, suspense and noir.
 
 ### Example 1: Kindergarten classroom, bright and cheerful, sunlight from the left
 
