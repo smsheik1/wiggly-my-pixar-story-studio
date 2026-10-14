@@ -105,7 +105,7 @@ Light: morning daylight through side windows, warm and soft, filling the room ev
 - [L-PALETTE] (check: vera, sage) Rich, saturated feature-film palette with one hero accent on a story prop; a muted, washed-out or desaturated room fails, and so does a bland or empty-feeling one.
 - [L-ACCENT-OUT] (check: vera, sage) Keep the production bible's `filmAccent` colour off the room's props and surfaces. The film accent is always a prop colour, never a light, so warm motivated light (lamplight, sunlight) is always allowed.
 - [L-SHOTS-FIRST] (check: beau, sage) Build the room for the shots the script needs: list the scripted actions and positions in that space before writing.
-- [L-MIN-TEXT] (check: vera, sage) No readable text in plates: no signs, labels, names, brands or watermarks rendered in the image.
+- [L-MIN-TEXT] (check: vera, sage) No readable text in plates (no signs, labels, names, brands, logos, watermarks) except at most one hand-lettered item the brief explicitly names, reading exactly as named; any extra or unrequested text, brands/logos/real landmarks, or garbled lettering fails.
 - [L-CHILD-DRAWINGS] (check: none) Draw children's drawings as a five-year-old hand works: heads bigger than bodies, arms straight out of the head, colour scribbled outside the lines, heavy uneven pressure, a floating blue strip for sky, a sun wedged in a corner, wobbly oversized letters running out of space, with ability varying across the wall.
 - [L-SETS-DEFAULT] (check: none) Real Pixar feature-film sets: lived-in, story-dressed, rich saturated colour with one hero accent and warm cinematic light; empty of people, never an empty set, never muted.
 
