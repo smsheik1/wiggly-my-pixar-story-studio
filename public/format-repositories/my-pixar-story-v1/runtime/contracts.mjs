@@ -10,6 +10,8 @@ export const Inputs = z.object({
   subject: z.object({ fullName: text, preferredName: text, recipientName: text,
     relationshipToRecipient: z.enum(['parent', 'grandparent', 'spouse']),
   }).passthrough(),
+  // Once-per-story intake question (optional, free text). Only shapes which follow-up examples are offered.
+  religiousHousehold: z.string().trim().optional(),
   answers: z.object(Object.fromEntries(['scene1Childhood', 'scene2TeenFreedom', 'scene3LeapOfFaith',
     'scene4Romance', 'scene5LegacyFinale'].map(key => [key, z.record(z.string(), text).refine(v => Object.keys(v).length > 0)]))),
 }).passthrough();
@@ -28,11 +30,13 @@ const Script = z.object({
     finding: text, resolution: text })),
 });
 const Character = z.object({ id: text.regex(/^[a-z][a-z0-9-]*$/), name: text, ageVariant: text,
-  important: z.literal(true), references: z.array(File), notes: text });
+  important: z.literal(true), references: z.array(File), notes: text,
+  // Identity traits from intake that stay fixed in every view (absent = none).
+  mustKeep: z.array(text).optional() });
 const slug = text.regex(/^[a-z][a-z0-9-]*$/);
 export const IntakeConfirmation=z.object({
  voiceConsent:z.literal(true),
- characters:z.array(z.object({id:slug,name:text,ageVariant:text,minor:z.boolean(),photoRights:z.literal(true),guardianAuthority:z.boolean().optional().describe('deprecated, ignored'),references:z.array(File),likeness:z.enum(['reference','interpreted','omit','await-reference']),decisionNotes:text})).min(1),
+ characters:z.array(z.object({id:slug,name:text,ageVariant:text,minor:z.boolean(),photoRights:z.literal(true),guardianAuthority:z.boolean().optional().describe('deprecated, ignored'),references:z.array(File),likeness:z.enum(['reference','interpreted','omit','await-reference']),decisionNotes:text,mustKeep:z.array(text).optional().describe("per-person answer to 'Anything they always wear or that's always part of how they look?'")})).min(1),
  resolvedFindings:z.array(z.object({findingDigest:text,resolution:text})),
 }).strict();
 const Scene = z.object({ id: slug, beat: z.number().int().min(1).max(4), description: text, action: text, characterIds: z.array(slug), sourceAnswers: z.array(z.enum(Object.keys(Inputs.shape.answers.shape))) });

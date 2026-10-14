@@ -20,6 +20,7 @@ The runtime rejects your Event, and you lose an attempt, unless all of these hol
 - `referenceHashes` lists the `sha256` of each photo in `task.castEntry.references`, in the same order. If there are no photos, it is an empty list.
 - `recipeSha256` is copied from `task.recipe.sha256`.
 - The prompt names the fixed eight expressions in this order: neutral, happy, delighted, sad, surprised, confused, angry, talking.
+- Every trait in `task.castEntry.mustKeep` appears word for word in the prompt (`MUST_KEEP_MISSING_FROM_PROMPT` otherwise).
 - `characterId` is optional at the top level of the Event. If you use it, copy the cast entry's `id`.
 
 A binding mismatch returns `CHARACTER_PROMPT_BINDING_REQUIRED`, so copy every hash exactly. The sheet's 4:3 shape is set by the generation request. Don't write an aspect ratio in the prompt.
@@ -35,7 +36,8 @@ Follow `task.recipe` and the rule text in `task.craft`. The rules are authoritat
 5. **Sheet layout.** Follow the character-sheet rules. The top row is four full-body views (front, three-quarter, profile, back) in one identical neutral pose, at one height on one baseline. Below that come eight head-and-shoulders close-ups in two rows of four, in the fixed order. Every figure is neutral, hands open and empty. Nothing is held.
 6. **Background.** Flat #B5B5B5 across the whole canvas, written as the hex. Don't add lighting or grade lines for the grey backdrop.
 7. **Close.** One essential negation: "no text, labels, captions, expression names or watermarks anywhere in the image." The expression names appear in the order list, named for the model and never rendered as text. Don't add an avoid list.
-8. **Outfit and marks.** Where the photos show the outfit, match it. Where they show none, make a design call: choose an outfit true to the person, keep it identical in every figure, and record it in `message`. Add no marks, scars, tattoos or props the photos don't show.
+8. **Must-keep traits.** Write every trait in `task.castEntry.mustKeep` into the prompt word for word, in the subject or wardrobe line, and say it is the same in every figure (`C-MUST-KEEP`). The outfit design call works around these traits and never drops one.
+9. **Outfit and marks.** Where the photos show the outfit, match it. Where they show none, make a design call: choose an outfit true to the person, keep it identical in every figure, and record it in `message`. Add no marks, scars, tattoos or props the photos don't show.
 
 Advice, not checked by code:
 - Push one feature past life size and pull its neighbours the other way. Choose a feature the face already has, so the push helps likeness.
@@ -62,6 +64,7 @@ Sheet review:
 - `anatomy`: describe hands as a few large rounded forms with blunt fingertips. For children, describe the torso as slim, straight and flat.
 - `turnaround`: restate four views at the same height on one baseline, hands open and empty, and remove anything that reads as a prop.
 - `expressions`: keep the order. Add a few words to any expression that didn't read, for example "surprised: brows high, mouth a small open oval".
+- `likeness` for a missing must-keep trait: name the trait earlier and more concretely, and say "in every figure".
 - `consistency`: give one wardrobe line and say "same face, hair, age and outfit in every figure".
 
 ## A look with no photo
@@ -96,6 +99,7 @@ Every value in angle brackets is a placeholder, copied from the task, never from
 - Are `characterDigest`, `referenceHashes` (in order) and `recipeSha256` copied from this task?
 - Does the prompt match the photos on skin tone, hair colour and face, and show the cast entry's age?
 - Does it have four views, the fixed eight in order, hands empty, flat #B5B5B5 and the no-text line?
+- Is every `mustKeep` trait in the prompt word for word?
 - Is the prompt free of brand names, lighting lines, aspect ratio, avoid lists and invented marks?
 - Is `taskId` copied and `actor` `"agent"`?
 - Are your design calls (or what changed) in `message`?

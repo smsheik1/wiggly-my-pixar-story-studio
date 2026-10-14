@@ -24,6 +24,8 @@ These are enforced on submit, so get them exactly right:
   - The event has a `blocker` object, and it is required. Its `kind` must be `"locked-change"`, the only kind this step accepts. Another kind, or no `blocker`, is rejected.
   - The blocker has four required fields plus optional `beats`, and no others: `kind`; `problem`, at most 180 characters, naming the shot id and the locked item in conflict; `solution`, at most 240 characters, the change you'd suggest; `steps`, 1 to 5 short steps for the human, each at most 240 characters; and optionally `beats`, the affected beat numbers (1 to 4).
 
+If `task.castMustKeep` lists identity traits for a person in the shot, write each one word for word into the prompt where that person is placed; they stay fixed in every frame (`C-MUST-KEEP`), and the runtime refuses a prompt that drops one (`MUST_KEEP_MISSING_FROM_PROMPT`).
+
 The image model receives the references in that same order, so the setting plate is Image 1 and the character sheets are Image 2, Image 3 and so on. The frame's 16:9 shape is set by the request, not the prompt.
 
 ## Looking

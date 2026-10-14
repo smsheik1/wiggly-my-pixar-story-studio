@@ -17,6 +17,7 @@ The human's version of the cast is in `intakeConfirmation`. Each character there
 
 - `action` is `"artifact"`. `taskId` and `actor` are copied from the task.
 - `content.characters` has at least one entry. Each entry has these fields: `id` (lowercase slug, unique), `name`, `ageVariant`, `important`, `references` and `notes`.
+- `mustKeep` (optional list of strings) holds the person's confirmed identity traits; every intake trait must be copied.
 - `important` is always the literal `true`. It is a fixed marker, never a choice.
 - Every reference is a measured still image: a file record with `path`, `sha256`, `bytes`, `width` and `height`, and no `durationSeconds`.
 - In qualified mode, every entry needs at least one photo.
@@ -29,7 +30,8 @@ The human's version of the cast is in `intakeConfirmation`. Each character there
 2. Bind the photos. Use only photo records the packet actually gives you, from the maker's inputs, the intake confirmation, a creative direction or human feedback. Copy each record whole. Never type, guess or shorten a hash, and never reuse a record from an example.
 3. View every photo with `viewImage` before you bind it. Bind a photo only to the person and age it shows. If a photo shows several people, keep it for each person it shows, and say in their notes which one they are (position, clothing). If a photo seems to show a different age than the entry, say so in `notes`. Don't drop it on your own.
 4. No photo: leave `references` empty and write in `notes` that no photo has been supplied. If the intake likeness is `interpreted`, copy that character's `decisionNotes` into `notes` word for word.
-5. Write identity notes from what you saw: skin tone, hair color and texture, face shape, eye color, build, glasses or other things always worn, and which person in a group photo. Add the story purpose in a few words, taken from the script's `storyPurpose`. These notes guide likeness. They never override the photos.
+5. Copy identity traits. For each person, copy every trait in their `intakeConfirmation` entry's `mustKeep` (the human's answer to "Anything they always wear or that's always part of how they look?") into the roster entry's `mustKeep`, word for word, as a list. Add nothing the human didn't say: a religion answer or a photo is never a reason to add a trait. If there is no answer, use `mustKeep: []`. At approval, the runtime refuses a roster that drops a confirmed trait (`MUST_KEEP_NOT_COPIED`).
+6. Write identity notes from what you saw: skin tone, hair color and texture, face shape, eye color, build, glasses or other things always worn, and which person in a group photo. Add the story purpose in a few words, taken from the script's `storyPurpose`. These notes guide likeness. They never override the photos.
 
 Never invent. Notes describe what the photos and the script show. Don't add pets, gifts, keepsakes, jobs or events, or guess at a personality the answers don't give. Where the evidence is thin, say so plainly ("only photo is a distant group shot; face detail limited").
 
@@ -94,6 +96,7 @@ Every value in angle brackets is a placeholder. Copy each photo record whole fro
 
 - Does every non-omitted `proposedCast` person appear once, with the same `id`, `name` and `ageVariant`, in order, and is everyone marked `omit` left out?
 - Did you view every photo you bound, and is each record copied whole from the packet?
+- Is every intake `mustKeep` trait copied word for word into that person's `mustKeep`, and nothing added?
 - Is `important` set to `true` on every entry?
 - Does every person without a photo have `references: []` and a plain note, plus their `decisionNotes` word for word if their likeness is `interpreted`?
 - Do the notes describe only what you saw or what the script gives, with no mention of minors or photo rights?

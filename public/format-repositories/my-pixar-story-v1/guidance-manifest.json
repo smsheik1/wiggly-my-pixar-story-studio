@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "craftSha256": "2187440048083f22e08d517304a11f7943e701f5fd1078540a6fff0d47fde3cd",
+  "craftSha256": "0ca976d4b5f9971f98048f30bfddfca168d097423c836a1ac3cb83f13940be03",
   "duplicationBaseline": 52,
   "files": [
     {
@@ -1006,6 +1006,13 @@
       "rule": "C-CHILD-RIDER",
       "decision": "changed",
       "reason": "Shaz decision 2026-10-13 (A/B test: r4 build wording reduced chunkiness): 'long torso, short legs, low centre of gravity' dropped; r4 build wording restored in C-HEADS-TALL and C-CHILD-RIDER."
+    },
+    {
+      "source": "craft-sources/dan-kieft-pixar-prompter.md",
+      "sourceSection": "§8.2 render as source of truth (identity traits)",
+      "rule": "C-MUST-KEEP",
+      "decision": "changed",
+      "reason": "Shaz decision 2026-10-13: identity traits from intake (anything a person always wears or that is always part of how they look) stay fixed in every view; Cleo copies them into mustKeep, Pia/Cam write them, Vera fails likeness without them. No hard-coded religious garment in shared rules."
     }
   ],
   "allowlist": [
