@@ -155,3 +155,10 @@ test('r5 end-of-run: leftover run processes and started dispatches are closed wh
     assert.equal(clean.clean, true);
   } finally { await rm(dir, { recursive: true }); }
 });
+
+test('video prompts: no music, sound effects only', async () => {
+  const { AUDIO_CLAUSE, MUSIC_WORDS, withAudioClause } = await import('../runtime/studio.mjs');
+  assert.equal(withAudioClause(withAudioClause('Camera: held')), `Camera: held\n${AUDIO_CLAUSE}`);
+  assert.ok(MUSIC_WORDS.test('soft piano music swells')); assert.ok(MUSIC_WORDS.test('a gentle score'));
+  assert.ok(!MUSIC_WORDS.test('a door creaks; footsteps on wood'));
+});
