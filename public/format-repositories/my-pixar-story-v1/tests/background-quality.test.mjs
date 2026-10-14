@@ -13,7 +13,7 @@ test('background direction requires dressed storied sets that are empty of peopl
  const recipe=await read('../background-prompter.md'),visual=await read('../evaluation/rubrics/visual.md');
  // The empty-of-people rule in each file's current wording.
  assert.match(beau,/never places a person in it/,'beau direction carries no people');
- assert.match(theo,/the room is empty of people/,'theo single empty-of-people clause');
+ assert.match(theo,/Write "completely empty of people" once/,'theo single empty-of-people clause');
  assert.match(recipe,/the room is empty of people/,'recipe single empty-of-people clause');
  assert.match(visual,/empty of people only/i,'visual empty-means-empty-of-people-only');
  // The dressed-room rule in each file's current wording.

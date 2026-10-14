@@ -40,12 +40,13 @@ Keep it short and concrete, one paragraph, in this order:
 3. **Anchors.** Restate only the one or two details that most identify each person (from the sheet or the bible's locked description), never the whole design. Prose that redescribes a person overrides the reference and drifts the likeness.
 4. **Staging.** Place each person from `task.shot.staging` in screen-side language: the person's own left or right plus screen left or right. When two or more people share the frame, give a height ruler ("Rosa's head reaches Papa's chest").
 5. **Action and contact.** The opening moment of the shot's action, with the contact points that matter: which hand holds what, where feet stand, where eyes look. If the action has a person holding something, describe the grip plainly; the empty-hands rule is for character sheets, not story frames.
-6. **Camera.** The starting framing from `task.shot.camera`, in plain shot language: close-up, medium or wide, and the eye height. Avoid lens millimetres, depth-of-field and other photographic terms; they pull the image toward photoreal.
-7. **Close.** One single frame. The only negation you need is "no text or lettering anywhere in the image." Don't write avoid lists, limb counts or "no collage" lines.
+6. **Key light.** `task.backgroundKeyLight` is the one key light the approved background prompt named, with its direction, for example "soft morning sunlight ... from unseen tall windows on the left". When it is present, add one short sentence lighting the people from that same source and direction, such as "Light the people from the morning sun through the windows on the left, so their highlights and shadows match the room." Never invent a second light or move this one. When it is absent, say only that the people take the plate's light.
+7. **Camera.** The starting framing from `task.shot.camera`, in plain shot language: close-up, medium or wide, and the eye height. Avoid lens millimetres, depth-of-field and other photographic terms; they pull the image toward photoreal.
+8. **Close.** One single frame. The only negation you need is "no text or lettering anywhere in the image." Don't write avoid lists, limb counts or "no collage" lines.
 
 Likeness can't be traded away. A real person's skin tone, hair colour and face come from their sheet, which matches their photos. Never lighten, recolour or restyle them in the prompt.
 
-Advice, not rules: one clear action reads better than two. Put the face that carries the beat where the eye lands first. Light should fall the way the plate's light falls, so the people sit in the room rather than on top of it.
+Advice, not rules: one clear action reads better than two. Put the face that carries the beat where the eye lands first. Light should fall the way the plate's key light falls (`task.backgroundKeyLight`), so the people sit in the room rather than on top of it.
 
 ## Shots with no characters
 
