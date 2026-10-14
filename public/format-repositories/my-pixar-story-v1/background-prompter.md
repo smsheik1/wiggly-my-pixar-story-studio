@@ -10,7 +10,7 @@ Return a complete executable image prompt with a short change summary. Bind `bri
 
 ## Master vs angle
 
-For a new master: specify camera, room geography, foreground/middle/background, scale, and the dressing from the brief's knownDetails and proposedDetails only (apply [L-DRESSED]). The set stays fully dressed with clear floor space reserved for characters; the room is empty of people. Keep the production bible's filmAccent colour out of the room (apply [L-ACCENT-OUT]) and keep readable text out of the plate (apply [L-MIN-TEXT]).
+For a new master: specify camera, room geography, foreground/middle/background, scale, and the dressing from the brief's knownDetails and proposedDetails only (apply [L-DRESSED]). The set stays fully dressed with clear floor space reserved for characters; the room is empty of people. Keep the production bible's filmAccent colour out of the room (apply [L-ACCENT-OUT]) and allow at most one hand-lettered item only when the brief names it, keeping all other readable text out of the plate (apply [L-MIN-TEXT]).
 
 For a new angle: use the selected master image as the actual reference; describe the camera change and preserve architecture, furnishings, palette, landmarks and proportions. Keep the camera on the same side of the action line as the master (apply [L-CAMERA-SIDE]). The complete edit prompt may be concise; do not reinvent the room. State uncertain unseen geography as a proposal for review.
 
