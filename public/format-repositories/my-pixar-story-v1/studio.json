@@ -229,6 +229,7 @@
       "pixar-prompter": [
         "house-style",
         "prompt-rules",
+        "identity",
         "edit-prompts",
         "locations",
         "working-method"
@@ -239,6 +240,7 @@
       "composition-writer": [
         "house-style",
         "prompt-rules",
+        "identity",
         "edit-prompts",
         "composition",
         "working-method"
@@ -274,6 +276,7 @@
       ],
       "scene-reviewer": [
         "house-style",
+        "identity",
         "composition",
         "video-sources",
         "video-animation",

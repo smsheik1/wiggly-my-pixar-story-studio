@@ -3,7 +3,7 @@ import {join,extname,basename} from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
 import {z} from 'zod';
 import {Event,digest} from './contracts.mjs';
-import {buildWorkerPacket,wigglyToolDefinition,crewRoles,taskAssets} from './crew.mjs';
+import {buildWorkerPacket,wigglyToolDefinition,crewRoles,taskAssets,systemSkillEnabled,splitStablePrompt} from './crew.mjs';
 import {loadStudio} from './instructions.mjs';
 import {sanitize,promptSectionsFor,labelFor,reasonCode} from './tracing.mjs';
 import {AudioEditPlan} from './audio-edit.mjs';
@@ -255,8 +255,11 @@ export class OpenRouterHost {
  }
   async runTask(task,{worker,callTool}){
    await this.preflight(worker);
-   const packet=buildWorkerPacket(task,worker);
-   const system=developerInstructions(worker);
+   const stableInSystem=systemSkillEnabled();
+   const packet=buildWorkerPacket(task,worker,{stableInSystem});
+   // Flag on: identity line, then the stable documents; the work order stays last in the user message.
+   const stable=stableInSystem?splitStablePrompt(task).stable:'';
+   const system=stable?`${developerInstructions(worker)}\n\n${stable}`:developerInstructions(worker);
    const media=[],attached=new Set();
    if((task.allowedTools??crewRoles[worker.role].tools).includes('viewImage'))for(const file of taskAssets(task).values())if(file.width&&!file.durationSeconds){
     // Providers reject requests with too many inline images (Meta: "Invalid upload request." at 19 images in r5).

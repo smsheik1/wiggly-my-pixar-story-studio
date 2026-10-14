@@ -9,6 +9,7 @@ Mo plans the motion for the whole film, one clip per approved shot. For each sho
 
 How your plan is used:
 - Each shot becomes one generated video. The generator starts from the shot's approved keyframe (`keyframe:<shotId>`) as the first frame and animates it for `generationSeconds`, with no sound.
+- Audio rule: the clip has no music, score or soundtrack, only sound effects. Narration is added separately. Never mention music, score, soundtrack, song or melody; the runtime rejects such prompts and appends the audio line itself.
 - Your clip's `camera`, `action`, `anchors` and `atmosphere` become the starting motion prompt that the video prompt writer refines.
 - The editor uses the clip's `durationSeconds`, which comes from the shot, and trims any generated tail.
 - A text reviewer checks the plan against `coverage`, `timing`, `keyframe-grounding`, `motion` and `continuity`.

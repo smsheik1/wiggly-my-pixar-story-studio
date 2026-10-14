@@ -32,7 +32,28 @@ export const workerBackend=(worker,config=null)=>{
 // eventSchema for every backend (CodexHost and OpenRouter). Hosts attach
 // reference images and the wiggly_tool definition around this packet.
 export const WORKER_PACKET_INSTRUCTION='Complete ONLY this current task. Allowed action is review for review, owner-review for owner-review, plan for produce, otherwise artifact; narration/author, shot-planner on shotIntentions/shots author, composition-writer on keyframePrompt author, background-product-owner on backgrounds author and produce may also return an evidenced planning-blocked event. Never return runtime provider-error events. repairFeedback and savedTools describe HISTORICAL attempts, not a current tool failure. Continue the investigation with currently granted tools and compatible cached receipts; do not merely repeat a saved error. Saved narration edit output hashes are not automatically in scope after restart. To resume a saved draft, listen/inspect/transcribe its original current source as required, then call renderAudioEdit with that original source hash and the exact saved plan. This reuses its immutable local receipt, grants the draft hash in the current task, and does not create another draft. Then listen to the granted output before submitting. A current fatal tool failure is handled by the host and must not be fabricated from history. Source facts are in the supplied task. Do not invent facts, approval, tool evidence or perception. For a review, inspect every required criterion and return evidence and repairs, using your exact workerId/modelVersion/capabilityVersion. Missing capabilities mean inconclusive. Return eventJson containing the serialized Event object. Do not emit other text.';
-export function buildWorkerPacket(task,worker){
+// WIGGLY_SYSTEM_SKILL=1 (default off): the stable documents (skill, craft rules,
+// step guide, communication guide) go into the system message, stable-first, so the
+// provider can cache that prefix across calls. They are removed from the packet so
+// nothing is sent twice; the packet keeps each document's path and sha256 as a pointer.
+export const systemSkillEnabled=(env=process.env)=>env.WIGGLY_SYSTEM_SKILL==='1';
+const ref=d=>d&&typeof d==='object'?{path:d.path??d.id??null,sha256:d.sha256??null,inSystemMessage:true}:d;
+export function splitStablePrompt(task){
+ const parts=[];
+ if(task.skill?.content)parts.push(`# Skill (${task.skill.path})\n\n${task.skill.content.trim()}`);
+ if(Array.isArray(task.craft)&&task.craft.length)parts.push(`# House craft rules (task.craft)\n\n${task.craft.map(c=>`<!-- craft: ${c.id} -->\n${String(c.content).trim()}`).join('\n\n')}`);
+ if(task.stepGuide?.content)parts.push(`# Step guide (${task.stepGuide.path})\n\n${task.stepGuide.content.trim()}`);
+ if(task.communication?.content)parts.push(`# Communication (${task.communication.path})\n\n${task.communication.content.trim()}`);
+ const stripped={...task};
+ if(task.skill?.content)stripped.skill=ref(task.skill);
+ if(Array.isArray(task.craft))stripped.craft=task.craft.map(c=>({id:c.id,sha256:c.sha256,inSystemMessage:true}));
+ if(task.stepGuide?.content)stripped.stepGuide=ref(task.stepGuide);
+ if(task.communication?.content)stripped.communication=ref(task.communication);
+ return {stable:parts.join('\n\n'),task:stripped};
+}
+export const SYSTEM_SKILL_NOTE=' Your skill, the task.craft house rules, your step guide and the communication guide are in the system message; the packet lists them by path and sha256 only.';
+export function buildWorkerPacket(task,worker,{stableInSystem=false}={}){
+ if(stableInSystem)task=splitStablePrompt(task).task;
   // Supervised Phase 2: Sam stages only {id, staging, continuityNotes}; the runtime
   // merges the patch into the locked intentions before validation and review.
   const patchStep=task.step==='shots'&&task.reviewPolicy?.mode==='supervised';
@@ -43,7 +64,8 @@ export function buildWorkerPacket(task,worker){
  }
  if(task.step==='script'&&task.workflowRevision>=4)contentSchema.required=[...(contentSchema.required??[]),'proposedCast'];
  const instruction=task.craft?`${WORKER_PACKET_INSTRUCTION} task.craft sections are house craft rules; your skill says how to apply them to this task; the no-invented-facts rule wins any conflict.`:WORKER_PACKET_INSTRUCTION;
- return JSON.stringify({instruction,task:{...task,worker},contentSchema,eventSchema:z.toJSONSchema(Event)});
+ const finalInstruction=stableInSystem?instruction+SYSTEM_SKILL_NOTE:instruction;
+ return JSON.stringify({instruction:finalInstruction,task:{...task,worker},contentSchema,eventSchema:z.toJSONSchema(Event)});
 }
 export function wigglyToolDefinition(){
  return {type:'function',name:'wiggly_tool',description:'Call an allowed format tool on a hash from the current task. For renderAudioEdit supply edit with kind, keepRanges in fractional seconds and reason. Never read another path or submit a generation.',inputSchema:{type:'object',properties:{name:{type:'string'},sha256:{type:'string'},referenceSha256:{type:['string','null']},edit:{anyOf:[z.toJSONSchema(AudioEditPlan),{type:'null'}]},region:{anyOf:[{type:'object',description:'viewImage close-up crop in relative 0-1 coordinates',properties:{x:{type:'number'},y:{type:'number'},width:{type:'number'},height:{type:'number'}},required:['x','y','width','height'],additionalProperties:false},{type:'null'}]}},required:['name','sha256','referenceSha256'],additionalProperties:false}};
