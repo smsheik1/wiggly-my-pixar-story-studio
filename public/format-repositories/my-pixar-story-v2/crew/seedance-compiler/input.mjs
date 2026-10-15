@@ -85,8 +85,8 @@ export const SeedanceCompilerInput = z.object({
 export function selectSeedanceCompilerInput(state = {}) {
   const p = state.project ?? state;
   const sd = p.storyDirector ?? p.stagePlay ?? {};
-  const ca = p.characterArchitect?.output ?? p.characterArchitect ?? {};
-  const ls = p.locationScout?.output ?? p.locationScout ?? {};
+  const ca = p.characterArchitect?.output ?? {}; // outputs only (hints/options live beside them)
+  const ls = p.locationScout?.output ?? {};
   const assets = p.approvedAssets ?? {};
   let current;
   const segments = (sd.segments ?? []).map((seg) => ({

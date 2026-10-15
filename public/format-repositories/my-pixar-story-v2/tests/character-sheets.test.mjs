@@ -161,13 +161,13 @@ test('input selector keeps cast, outfit/location context and photo text notes on
   assert.throws(() => CharacterArchitectInput.parse({ ...s, storyboardPrompt: {} }));
 });
 test('input: model-sheet mode requires masterRenderRef per cast tag (Gemini wording); asset keys only', () => {
-  const st = state(); st.project.characterArchitect = { mode: 'model-sheet' };
+  const st = state(); st.project.characterArchitect = { options: { mode: 'model-sheet' } };
   assert.throws(() => selectCharacterArchitectInput(st), /masterRenderRef is REQUIRED when generating a model-sheet \(Format B\)/);
-  st.project.characterArchitect.masterRenderRef = { '@Shaz': 'asset:master-render:shaz-v1' };
+  st.project.characterArchitect.options.masterRenderRef = { '@Shaz': 'asset:master-render:shaz-v1' };
   assert.throws(() => selectCharacterArchitectInput(st), /missing for @Mom, @Sister/);
-  st.project.characterArchitect.masterRenderRef = { '@Shaz': 'a:1', '@Mom': 'a:2', '@Sister': 'https://x.invalid/s.png' };
+  st.project.characterArchitect.options.masterRenderRef = { '@Shaz': 'a:1', '@Mom': 'a:2', '@Sister': 'https://x.invalid/s.png' };
   assert.throws(() => selectCharacterArchitectInput(st), /local asset key/);
-  st.project.characterArchitect = { mode: 'model-sheet', masterRenderRef: { '@Shaz': 'a:1', '@Mom': 'a:2', '@Sister': 'a:3' }, variationDirectives: { focusTrait: 'sunglasses' } };
+  st.project.characterArchitect = { options: { mode: 'model-sheet', masterRenderRef: { '@Shaz': 'a:1', '@Mom': 'a:2', '@Sister': 'a:3' }, variationDirectives: { focusTrait: 'sunglasses' } } };
   const s = selectCharacterArchitectInput(st);
   assert.equal(s.mode, 'model-sheet'); assert.equal(s.variationDirectives.focusTrait, 'sunglasses');
   assert.throws(() => CharacterArchitectInput.parse({ ...s, variationDirectives: { referenceStyleImageUrl: 'https://x' } }));

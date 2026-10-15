@@ -73,8 +73,8 @@ export function selectLocationScoutInput(state = {}) {
     if (!e) settings.push(e = { name: s.location, sceneIds: [] });
     e.sceneIds.push(s.sceneId);
   }
-  // Optional overrides: state.locationScout.settings[<name>] = { paletteRestrictions, stagingRequirements, lightingAnchor, singleSignText }
-  const hints = p.locationScout?.settings ?? {};
+  // Optional overrides: state.locationScout.hints[<name>] = { paletteRestrictions, stagingRequirements, lightingAnchor, singleSignText }
+  const hints = p.locationScout?.hints ?? {}; // inputs only; the LS output lives at locationScout.output
   // Forbidden wall colours derived from cast signature accents (colour words only; the cast itself is not passed on).
   const COLOURS = /\b(red|orange|yellow|mustard|green|teal|blue|navy|purple|magenta|pink|grey|black|white|brown|gold)\b/gi;
   const accentColours = [...new Set((sd.cast ?? []).flatMap((c) => (c.signatureAccent ?? '').match(COLOURS) ?? []).map((c) => c.toLowerCase()))];

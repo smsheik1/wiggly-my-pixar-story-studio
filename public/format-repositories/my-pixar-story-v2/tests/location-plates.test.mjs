@@ -47,12 +47,12 @@ test('input: Gemini per-setting fields derived (actorCount, forbidden accent col
   assert.equal(k.lightingAnchor, undefined); assert.equal(k.singleSignText, undefined);
 });
 test('input: per-setting overrides from state.locationScout.settings', () => {
-  const k = input(story(), {}, { locationScout: { settings: { Kitchen: {
+  const k = input(story(), {}, { locationScout: { hints: { Kitchen: {
     stagingRequirements: { actorCount: 3, blockingGeometry: 'two chairs across the table', cameraPerspective: 'chest height straight on' },
     lightingAnchor: { source: 'kitchen window', timeOfDay: 'afternoon', shadowCharacteristics: 'long soft shadows' }, singleSignText: 'LAB' } } } }).settings[0];
   assert.equal(k.stagingRequirements.actorCount, 3); assert.equal(k.lightingAnchor.source, 'kitchen window'); assert.equal(k.singleSignText, 'LAB');
-  assert.throws(() => input(story(), {}, { locationScout: { settings: { Kitchen: { singleSignText: 'x'.repeat(31) } } } }));
-  assert.throws(() => input(story(), {}, { locationScout: { settings: { Kitchen: { stagingRequirements: { actorCount: 0 } } } } }));
+  assert.throws(() => input(story(), {}, { locationScout: { hints: { Kitchen: { singleSignText: 'x'.repeat(31) } } } }));
+  assert.throws(() => input(story(), {}, { locationScout: { hints: { Kitchen: { stagingRequirements: { actorCount: 0 } } } } }));
 });
 test('input contract is strict', () => assert.throws(() => LocationScoutInput.parse({ ...input(), characterSheets: [] })));
 test('schema: bad tag order/format, multiline, wrong engine, emptySetGuarantee false, bad scene id, extra key, lens bounds', () => {

@@ -6,8 +6,8 @@ import { selectSeedanceCompilerInput, SeedanceCompilerInput } from '../crew/seed
 import { validateSeedancePrompts as validate, validateSeedanceSegment as validateOne } from '../crew/linter/check-seedance-prompts.mjs';
 
 const json = (f) => JSON.parse(readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
-const state = () => ({ storyDirector: json('good-stage-play.json'), characterArchitect: json('good-master-renders.json'),
-  locationScout: json('good-location-plates.json'), approvedAssets: json('good-approved-assets.json'), photoNotes: [{ elementTag: '@Shaz', notes: '/Users/shaz/p.jpg' }] });
+const state = () => ({ storyDirector: json('good-stage-play.json'), characterArchitect: { output: json('good-master-renders.json') },
+  locationScout: { output: json('good-location-plates.json') }, approvedAssets: json('good-approved-assets.json'), photoNotes: [{ elementTag: '@Shaz', notes: '/Users/shaz/p.jpg' }] });
 const input = (st = state()) => selectSeedanceCompilerInput(st);
 const out = () => json('good-seedance-prompts.json');
 const cls = () => json('good-seedance-classroom.json');

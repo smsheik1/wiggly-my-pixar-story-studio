@@ -42,7 +42,7 @@ export function selectCharacterArchitectInput(state = {}) {
   }));
   const photoNotes = (p.photoNotes ?? p.inputs?.photoNotes ?? [])
     .map(({ elementTag, notes }) => ({ elementTag, notes: scrub(notes) }));
-  const ca = p.characterArchitect ?? {};
+  const ca = p.characterArchitect?.options ?? {}; // options only; the CA output lives at characterArchitect.output
   const opt = {};
   for (const k of ['mode', 'masterRenderRef', 'variationDirectives']) if (ca[k] !== undefined) opt[k] = ca[k];
   return CharacterArchitectInput.parse({ cast: sd.cast ?? [], segments, photoNotes, ...opt });
