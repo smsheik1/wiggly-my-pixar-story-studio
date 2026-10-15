@@ -24,3 +24,17 @@ test('video: Seedance 2.5 480p, not yet enabled', () => {
   const v = V2_MODELS['seedance-compiler'].video;
   assert.equal(v.model, 'bytedance/seedance-2.5'); assert.equal(v.resolution, '480p'); assert.equal(v.enabled, false);
 });
+import { loadSkill } from '../config/models.mjs';
+test('downstreamAgents and maxTokens', () => {
+  assert.deepEqual(V2_MODELS['story-director'].downstreamAgents, ['character-architect', 'location-scout']);
+  for (const [a, c] of Object.entries(V2_MODELS)) {
+    assert.ok(Array.isArray(c.downstreamAgents), a);
+    for (const d of c.downstreamAgents) assert.ok(V2_MODELS[d], `${a} -> unknown ${d}`);
+    assert.ok(Number.isInteger(c.maxTokens), a);
+    if (c.kind === 'llm') assert.ok(c.maxTokens > 0, a);
+  }
+});
+test('loadSkill reads role.md and throws clearly when missing', () => {
+  assert.match(loadSkill('story-director'), /Story Director/);
+  assert.throws(() => loadSkill('nobody'), /unknown v2 agent "nobody"/);
+});

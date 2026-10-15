@@ -15,7 +15,15 @@ export const StoryDirectorInput = z.object({
     maxTotalSeconds: z.number().int().max(90).default(90),
     narrationAllowed: z.boolean().default(true),
     dialogueAllowed: z.boolean().default(true),
-  }).default({}),
+  }).prefault({}),
+  targetTotalRuntimeSec: z.number().int().min(20).max(180).default(90),
+  settingSeed: z.string().optional(),
+  voiceNoteTranscript: z.string().optional(),
+  toneDirectives: z.object({
+    genre: z.enum(['comedy-subversion', 'emotional-journey', 'character-vignette']).default('comedy-subversion'),
+    pacing: z.enum(['slow-burn', 'standard-pixar', 'rapid-fire']).default('standard-pixar'),
+    runningGagSeed: z.string().optional(),
+  }).strict().prefault({}),
 }).strict();
 
 /** Filter shared pipeline state down to the Story Director's slice (drops photos, URLs, secrets, other agents' outputs). */
@@ -29,5 +37,8 @@ export function selectStoryDirectorInput(state = {}) {
     answers: inputs.answers ?? {},
     castDescriptions,
     format: p.format ?? {},
+    ...pick(inputs, ['targetTotalRuntimeSec', 'settingSeed', 'voiceNoteTranscript', 'toneDirectives']),
   });
 }
+
+function pick(o, keys) { return Object.fromEntries(keys.filter(k => o[k] !== undefined).map(k => [k, o[k]])); }
