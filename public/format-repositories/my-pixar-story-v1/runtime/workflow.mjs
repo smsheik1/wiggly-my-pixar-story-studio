@@ -25,9 +25,39 @@ const backgroundKeyLightFor=p=>{const shot=shotFor(p);if(!shot)return{};const bg
 const castMustKeepFor=p=>{const m=Object.fromEntries((current(p,'roster')?.content.characters??[]).filter(c=>mustKeepOf(c).length).map(c=>[c.id,mustKeepOf(c)]));return Object.keys(m).length?{castMustKeep:m}:{};};
 import {AudioEditReceipt,AUDIO_EDIT_PROFILE,validateAudioEdit,validateEditingInvestigation} from './audio-edit.mjs';
 import { VERSION, Inputs, Project, Content, Review, Event, BibleEvent, Plans, PROMPT_BRAND_TERMS, IntakeConfirmation, PhotoInventoryEntry, VoiceChoiceInput, VoiceLookup, NarrationRegeneration, Prescreen, criteria, digest } from './contracts.mjs';
+import {
+  isParallelStage,
+  initCharacterBranches,
+  initLocationBranches,
+  initKeyframeBranches,
+  initClipAndSoundBranches,
+  syncFocusedBranch,
+  findBranchForEvent,
+  nextBranch,
+  activeBranches,
+  batchRequireBudget,
+  applyBranchEvents as rawApplyBranchEvents,
+  projectForBranch,
+} from './branches.mjs';
 
 import { keyFor, current, locked, audioLocked, assertAllowed, backgroundSteps, imageSteps, authorSteps, supervised, reviewPassed, refinedWorkflow, miniProduction, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact, sheetWorkflow } from './gates.mjs';
 export { keyFor, current, locked, audioLocked, assertAllowed, voiceBasis, consentedVoiceIdentity, sheetKeyFor, characterSheet, characterSheetArtifact } from './gates.mjs';
+export {
+  isParallelStage,
+  initCharacterBranches,
+  initLocationBranches,
+  initKeyframeBranches,
+  initClipAndSoundBranches,
+  syncFocusedBranch,
+  findBranchForEvent,
+  nextBranch,
+  activeBranches,
+  batchRequireBudget,
+  projectForBranch,
+};
+export const taskForBranch = (p, branch) => taskFor(projectForBranch(p, branch));
+export const activeBranchTasks = p => activeBranches(p).map(b => taskForBranch(p, b));
+export const applyBranchEvents = (p, events, applyEventFn = applyEvent) => rawApplyBranchEvents(p, events, applyEventFn, taskFor);
 export function criteriaFor(p, step = p.step) {
   if (step === 'candidates' && sheetWorkflow(p)) return criteria.sheet;
   return criteria[step] ?? [];
@@ -120,11 +150,54 @@ export function dependencies(p) {
 }
 function next(p) {
   p.reviewDisagreements = 0;
+  if (isParallelStage(p)) {
+    const branch = findBranchForEvent(p, {
+      characterId: p.characterId,
+      locationId: p.locationId,
+      angleId: p.angleId,
+      shotId: p.shotId,
+      clipId: p.clipId,
+      effectId: p.effectId,
+      step: p.step,
+    });
+    if (branch) nextBranch(p, branch);
+    if (p.branches.every(b => b.completed)) {
+      const type = p.branches[0].type;
+      delete p.branches;
+      if (type === 'character') {
+        p.characterId = null;
+        p.step = supervised(p) ? 'shotIntentions' : 'backgrounds';
+        p.gate = 'author';
+      } else if (type === 'location') {
+        p.locationId = null;
+        p.angleId = null;
+        p.step = 'shots';
+        p.gate = 'author';
+      } else if (type === 'keyframe') {
+        p.shotId = null;
+        p.step = supervised(p) ? 'videoPlan' : 'reviewerQualification';
+        p.gate = 'author';
+      } else if (type === 'video' || type === 'sound') {
+        p.clipId = null;
+        p.effectId = null;
+        p.step = 'editPlan';
+        p.gate = 'author';
+      }
+    } else {
+      syncFocusedBranch(p);
+    }
+    const reusable = locked(p, keyFor(p));
+    if (p.step !== 'complete' && reusable) next(p);
+    return;
+  }
   if(studioNext(p)){const reusable=locked(p,keyFor(p));if(p.step!=='complete'&&reusable)next(p);return;}
   const steps = ['answers','script', 'voiceSample', 'clone', 'audioReviewerQualification', 'audition', 'narration', 'roster'];
   const i = steps.indexOf(p.step);
   if (i >= 0 && i < steps.length - 1) p.step = steps[i + 1];
-  else if (p.step === 'roster') { p.characterId = current(p, 'roster').content.characters[0].id; p.step = refinedWorkflow(p)?'characterPrompt':'candidates'; }
+  else if (p.step === 'roster') {
+    const chars = current(p, 'roster').content.characters;
+    initCharacterBranches(p, chars, refinedWorkflow(p), sheetWorkflow(p));
+  }
   else if (p.step === 'characterPrompt') p.step='candidates';
   else if (p.step === 'candidates') {
     if (sheetWorkflow(p)) {
@@ -140,7 +213,10 @@ function next(p) {
     p.step = missing ? (refinedWorkflow(p)?'characterPrompt':'candidates') : supervised(p)?'shotIntentions':'backgrounds';
   }
   else if(p.step==='shotIntentions')p.step='backgrounds';
-  else if (p.step === 'backgrounds') { p.locationId = current(p, 'backgrounds').content.locations[0].id; p.angleId = null; p.step = 'backgroundBrief'; }
+  else if (p.step === 'backgrounds') {
+    const locs = current(p, 'backgrounds').content.locations;
+    initLocationBranches(p, locs);
+  }
   else if (p.step === 'backgroundBrief') p.step = 'backgroundPrompt';
   else if (p.step === 'backgroundPrompt') p.step = 'backgroundCandidates';
   else if (p.step === 'backgroundAngleBrief') p.step = 'backgroundAnglePrompt';
@@ -153,7 +229,10 @@ function next(p) {
       p.locationId = missing?.id ?? null; p.angleId = null; p.step = missing ? 'backgroundBrief' : 'shots';
     }
   }
-  else if (p.step === 'shots') { p.shotId = current(p, 'shots').content.shots[0].id; p.step = 'keyframePrompt'; }
+  else if (p.step === 'shots') {
+    const shots = current(p, 'shots').content.shots;
+    initKeyframeBranches(p, shots);
+  }
   else if (p.step === 'keyframePrompt') p.step = 'keyframe';
   else if (p.step === 'keyframe') { const missing = current(p, 'shots').content.shots.find(s => !locked(p, `keyframe:${s.id}`)); p.shotId = missing?.id ?? null; p.step = missing ? 'keyframePrompt' : supervised(p)?'videoPlan':'reviewerQualification'; }
   if(p.step==='voiceSample'&&p.voiceChoice?.reuseWithoutSample&&current(p,'clone'))p.step='clone';
@@ -455,9 +534,21 @@ function repairVisual(p, message) {
 }
 function reopen(p,a,message){
   invalidate(p,a.id);
-    p.step = a.kind; const parts = a.key.split(':'); p.characterId = ['characterPrompt','candidates', 'sheetPrompt', 'sheet'].includes(a.kind) ? parts[1] : null; p.locationId = backgroundSteps.includes(a.kind) ? parts[1] : null; p.angleId = a.kind.startsWith('backgroundAngle') ? parts[2] : null; p.shotId = ['keyframePrompt', 'keyframe'].includes(a.kind) ? parts[1] : null; p.clipId=['videoPrompt','video'].includes(a.kind)?parts[1]:null;p.effectId=a.kind==='effect'?parts[1]:null;
-    p.gate = authorSteps.includes(a.kind) || (a.kind==='music'&&current(p,'soundPlan').content.music.mode==='import') || (a.kind==='effect'&&effectFor(p).mode==='import') ? 'author' : a.kind === 'voiceSample' ? 'human' : 'produce';
-    p.feedback.push({ key: a.key, message: message }); p.reviewDisagreements = 0;
+  p.step = a.kind; const parts = a.key.split(':'); p.characterId = ['characterPrompt','candidates', 'sheetPrompt', 'sheet'].includes(a.kind) ? parts[1] : null; p.locationId = backgroundSteps.includes(a.kind) ? parts[1] : null; p.angleId = a.kind.startsWith('backgroundAngle') ? parts[2] : null; p.shotId = ['keyframePrompt', 'keyframe'].includes(a.kind) ? parts[1] : null; p.clipId=['videoPrompt','video'].includes(a.kind)?parts[1]:null;p.effectId=a.kind==='effect'?parts[1]:null;
+  p.gate = authorSteps.includes(a.kind) || (a.kind==='music'&&current(p,'soundPlan').content.music.mode==='import') || (a.kind==='effect'&&effectFor(p).mode==='import') ? 'author' : a.kind === 'voiceSample' ? 'human' : 'produce';
+  p.feedback.push({ key: a.key, message: message }); p.reviewDisagreements = 0;
+  if (p.branches) {
+    const b = findBranchForEvent(p, { artifactId: a.id, characterId: p.characterId, locationId: p.locationId, shotId: p.shotId, clipId: p.clipId, effectId: p.effectId });
+    if (b) {
+      b.step = p.step;
+      b.gate = p.gate;
+      if (b.type === 'location') b.angleId = p.angleId;
+      if (b.type === 'sound') b.effectId = p.effectId;
+      b.completed = false;
+      b.reviewDisagreements = 0;
+    }
+    syncFocusedBranch(p);
+  }
 }
 export const filmVisualCriteria=['technical','story','visual-continuity','motion','safety','provenance'];
 export const filmAudioCriteria=['narration','mix','safety','provenance'];
@@ -468,7 +559,22 @@ export function applyEvent(project, raw) {
   if(p.bible)ProjectBible.parse(p.bible);
   const e = ['bible-draft','bible-sign','bible-approve','bible-policy'].includes(raw?.action) ? BibleEvent.parse(raw) : Event.parse(raw);
   let autoLockEntry = null;
-  if (e.taskId !== taskFor(p).taskId) throw new Error('STALE_TASK: read current status before responding.');
+  const branch = isParallelStage(p) ? findBranchForEvent(p, e) : null;
+  const expectedTask = branch ? taskFor(projectForBranch(p, branch)) : taskFor(p);
+  if (e.taskId !== expectedTask.taskId && e.taskId !== taskFor(p).taskId && (!branch || (e.taskId !== branch.taskId && e.taskId !== undefined))) {
+    throw new Error('STALE_TASK: read current status before responding.');
+  }
+  if (branch) {
+    p.step = branch.step;
+    p.gate = branch.gate;
+    p.characterId = branch.characterId;
+    p.locationId = branch.locationId;
+    p.angleId = branch.angleId;
+    p.shotId = branch.shotId;
+    p.clipId = branch.clipId;
+    p.effectId = branch.effectId;
+    p.reviewDisagreements = branch.reviewDisagreements ?? 0;
+  }
   if(p.lifecycle==='abandoned'){
     if(!['note','reconcile'].includes(e.action))throw new Error('PROJECT_ABANDONED: no new production or approvals; reconcile saved provider outcomes only.');
     if(e.action==='reconcile'){requiredActor(e,'human');const job=p.jobs.find(j=>j.id===e.jobId);if(!job||job.digest!==e.artifactDigest||!e.message||!['confirmed-no-result','confirmed-unusable-result','confirmed-completed'].includes(e.result?.outcome))throw new Error('Abandoned reconciliation needs exact job, original human direction and confirmed outcome.');job.status=e.result.outcome==='confirmed-completed'?'ready':'failed';job.reconciliation={outcome:e.result.outcome,message:e.message,at:new Date().toISOString()};}
@@ -1086,6 +1192,22 @@ export function applyEvent(project, raw) {
   if(e.action==='plan')activity.jobId=p.jobs.at(-1).id;
   p.history.push({ sequence: p.sequence, action: e.action, actor: e.actor, ...activity, message: e.message ?? '', at: new Date().toISOString() });
   if (autoLockEntry) { p.sequence++; p.history.push({ sequence: p.sequence, ...autoLockEntry }); }
+  if (branch && p.branches) {
+    const currentBranch = p.branches.find(b => b.id === branch.id);
+    if (currentBranch) {
+      if (e.action !== 'approve') {
+        currentBranch.gate = p.gate;
+        if (currentBranch.type === 'location' && p.angleId !== null) currentBranch.angleId = p.angleId;
+        if (currentBranch.type === 'sound' && p.effectId !== null) currentBranch.effectId = p.effectId;
+      }
+      currentBranch.reviewDisagreements = p.reviewDisagreements ?? 0;
+      if (['plan', 'artifact', 'receipt'].includes(e.action)) {
+        currentBranch.attempts = currentBranch.attempts || {};
+        currentBranch.attempts[currentBranch.step] = (currentBranch.attempts[currentBranch.step] || 0) + 1;
+      }
+    }
+    syncFocusedBranch(p);
+  }
   return Project.parse(p);
 }
 
