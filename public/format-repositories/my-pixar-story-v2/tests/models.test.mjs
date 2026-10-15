@@ -64,3 +64,15 @@ test('location scout: Gemini role label, 8192 tokens, loadLocationScoutSkill', a
   assert.deepEqual(c.downstreamAgents, ['vera', 'seedance-compiler']);
   assert.match(loadLocationScoutSkill(), /Location Scout & Environment Plate Architect/);
 });
+test('seedance compiler: muse max, Seedance 2.5 480p disabled, upstream CA + LS, downstream vera, contract files exist', async () => {
+  const c = V2_MODELS['seedance-compiler'];
+  assert.deepEqual([c.provider, c.model, c.effort], ['openrouter', 'meta/muse-spark-1.3-contributor', 'max']);
+  assert.deepEqual([c.video.model, c.video.resolution, c.video.enabled], ['bytedance/seedance-2.5', '480p', false]);
+  assert.deepEqual(c.targetEngines, { video: 'seedance-2.5' }); assert.equal(c.segmentMaxSec, 30); assert.equal(c.continuation, 'extend');
+  assert.deepEqual(c.upstreamAgents, ['character-architect', 'location-scout']);
+  assert.ok(c.downstreamAgents.includes('vera'));
+  for (const u of c.upstreamAgents) assert.ok(V2_MODELS[u].downstreamAgents.includes('seedance-compiler'), u);
+  const { existsSync } = await import('node:fs');
+  for (const f of Object.values(c.contract)) assert.ok(existsSync(new URL('../' + f, import.meta.url)), f);
+  assert.match(loadSkill('seedance-compiler'), /Seedance Compiler/);
+});
