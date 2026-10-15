@@ -564,13 +564,16 @@ function reopen(p,a,message){
 export const filmVisualCriteria=['technical','story','visual-continuity','motion','safety','provenance'];
 export const filmAudioCriteria=['narration','mix','safety','provenance'];
 const filmCriteria=p=>reviewPassed(current(p)?.visualReview)?filmAudioCriteria:filmVisualCriteria;
+const branchStepNames=['characterPrompt','candidates','sheetPrompt','sheet',...backgroundSteps,'keyframePrompt','keyframe','videoPrompt','video','soundPlan','music','effect'];
 const requiredActor = (e, actor) => { if (e.actor !== actor) throw new Error(`${e.action} requires ${actor} authority.`); };
 export function applyEvent(project, raw) {
   const p = structuredClone(Project.parse(project));
   if(p.bible)ProjectBible.parse(p.bible);
   const e = ['bible-draft','bible-sign','bible-approve','bible-policy'].includes(raw?.action) ? BibleEvent.parse(raw) : Event.parse(raw);
   let autoLockEntry = null;
-  const branch = isParallelStage(p) ? findBranchForEvent(p, e) : null;
+  // Only resolve a branch when the project is actually on a per-branch step; a sequential step
+  // (e.g. narration) must keep its own step/gate so step-specific guards still apply.
+  const branch = isParallelStage(p) && branchStepNames.includes(p.step) ? findBranchForEvent(p, e) : null;
   const expectedTask = branch ? taskFor(projectForBranch(p, branch)) : taskFor(p);
   if (e.taskId !== expectedTask.taskId && e.taskId !== taskFor(p).taskId && (!branch || (e.taskId !== branch.taskId && e.taskId !== undefined))) {
     throw new Error('STALE_TASK: read current status before responding.');
