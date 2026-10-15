@@ -1,0 +1,31 @@
+{
+ "title": "The Sunglasses Scientist",
+ "logline": "An eight-year-old in sunglasses insists he is a scientist, and his mother believes him.",
+ "clarifyingQuestion": null,
+ "assumptions": ["Assumed the card battles happened at the kitchen table."],
+ "cast": [
+  {"id":"shaz-child","name":"Shaz","ageVariant":"8","minor":true,"gender":"male","family":true,"skinTone":"warm medium brown","look":"small round-faced boy, short black hair, dark sunglasses indoors, plain t-shirt","voice":"flat total conviction","storyPurpose":"the maker as a boy"},
+  {"id":"mom","name":"Mom","ageVariant":"adult","minor":false,"gender":"female","family":true,"skinTone":"warm medium brown","look":"kind woman in a soft blue hijab covering all hair and hairline, long modest dress","voice":"warm, teasing","storyPurpose":"believes in him"},
+  {"id":"sister","name":"Sister","ageVariant":"18","minor":false,"gender":"female","family":true,"skinTone":"light warm brown","look":"young woman in a grey hijab fully covering hair and hairline, hoodie","voice":"dry","storyPurpose":"card rival"}
+ ],
+ "locations": [{"id":"kitchen","name":"Kitchen","description":"family kitchen with a wooden table","keyLight":"soft window light from screen left","timeOfDay":"afternoon"}],
+ "beats": [
+  {"beat":1,"part":1,"durationSeconds":15,"emotionalPurpose":"ordinary world, a laugh","devices":["ordinary-world","business"],"sourceAnswers":["scene1Childhood"],"narration":"I wore sunglasses everywhere. Even inside.","directQuotes":[],
+   "dialogue":[{"line":"@shaz-child: {I am a scientist.}","shotId":"b1s2","seconds":2}],
+   "shots":[
+    {"id":"b1s1","start":0,"end":5,"job":"establish","size":"wide","angle":"eye level","cameraMove":"static","characterIds":["shaz-child","sister"],"locationId":"kitchen","action":"Shaz screen-left slaps a card down; sister screen-right","acting":"dead serious","skinTones":"Shaz warm medium brown; sister light warm brown","keyLight":"window screen left","continuity":"Shaz faces screen right"},
+    {"id":"b1s2","start":5,"end":10,"job":"action","size":"medium","angle":"eye level","cameraMove":"slow push-in","characterIds":["shaz-child"],"locationId":"kitchen","action":"Shaz lowers his sunglasses","acting":"total conviction","skinTones":"warm medium brown","keyLight":"window screen left","continuity":"faces screen right"},
+    {"id":"b1s3","start":10,"end":15,"job":"react","size":"close-up","angle":"eye level","cameraMove":"static","characterIds":["mom"],"locationId":"kitchen","action":"Mom in the doorway","acting":"holds back a smile, a slow blink","skinTones":"warm medium brown","keyLight":"window screen left","continuity":"faces screen left"}
+   ]},
+  {"beat":2,"part":1,"durationSeconds":15,"emotionalPurpose":"warmth","devices":["payoff"],"sourceAnswers":["scene5LegacyFinale"],"narration":"She never once laughed at me.","directQuotes":[],
+   "dialogue":[{"line":"@mom: {Then go do science, habibi.}","shotId":"b2s1","seconds":2}],
+   "shots":[
+    {"id":"b2s1","start":0,"end":8,"job":"feeling","size":"medium","angle":"eye level","cameraMove":"static","characterIds":["mom","shaz-child"],"locationId":"kitchen","action":"Mom kneels to Shaz height","acting":"gentle","skinTones":"both warm medium brown","keyLight":"window screen left","continuity":"Mom screen right"},
+    {"id":"b2s2","start":8,"end":15,"job":"button","size":"close-up","angle":"eye level","cameraMove":"slow push-in","characterIds":["shaz-child"],"locationId":"kitchen","action":"Shaz pushes sunglasses back up","acting":"tiny proud smile, breathing","skinTones":"warm medium brown","keyLight":"window screen left","continuity":"held pose with breathing"}
+   ]}
+ ],
+ "directorsNotes":["Play the first line completely straight."],
+ "storyboardPrompt":"An eight-panel colour storyboard sheet, two rows of four, painted 3D animated family-film style; Panel 1: wide, warm medium brown boy in sunglasses and light warm brown young woman in a grey hijab with no visible hair at a kitchen table; Panel 2: medium, the boy lowers his sunglasses; no text except shot numbers.",
+ "commonSenseChecks":[],
+ "deckHtml":"<!doctype html><html><head><title>Deck</title></head><body><h1>The Sunglasses Scientist</h1></body></html>"
+}
