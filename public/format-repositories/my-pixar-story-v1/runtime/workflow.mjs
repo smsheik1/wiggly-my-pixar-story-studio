@@ -8,6 +8,8 @@ import { createHash } from 'node:crypto';
 import { extname } from 'node:path';
 import { Annotation, Command, START, StateGraph, interrupt } from '@langchain/langgraph';
 import { SqliteSaver } from '@langchain/langgraph-checkpoint-sqlite';
+import { SlimSqliteSaver, slimStudio, hydrateStudio, ensureBlobsTable } from './checkpoint-blobs.mjs';
+export { SlimSqliteSaver, slimStudio, hydrateStudio, ensureBlobsTable };
 import {Crew,roleFor,assignedWorker,assertCrewEvent,normalizeQuote} from './crew.mjs';
 import {requireAudioQualification} from '../evaluation/audio-qualification.mjs';
 import { studioSteps, studioDependencies, studioNext, validateStudioContent, videoBinding, effectFor } from './studio.mjs';
@@ -1108,7 +1110,7 @@ export function workflowGraph() {
 }
 
 export function openWorkflow(databasePath) {
-  const saver = SqliteSaver.fromConnString(databasePath);
+  const saver = SlimSqliteSaver.fromConnString(databasePath);
   const graph = workflowGraph().compile({ checkpointer: saver });
   const config = id => ({ configurable: { thread_id: id }, durability: 'sync' });
   return {
