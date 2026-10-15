@@ -32,16 +32,17 @@ function isTruncatedChoice(choice){
 
 // productionEffort / maxTokens are per-model production overrides. The host-wide
 // reasoningEffort constructor argument stays medium/high (never max/xhigh); only a
-// model listed here may run higher in production. Muse Spark runs at xhigh because
-// that is the setting that passed the r4 adult-sheet head-to-head (PR #31), and its
-// output cap is 32K because one xhigh Muse request used ~9.7K of the old 16K cap.
+// model listed here may run higher in production. Muse Spark runs at max (operator
+// choice Oct 15 2026; OpenRouter lists max as the top supported effort for this model;
+// xhigh passed the r4 adult-sheet head-to-head, PR #31). Its output cap is 32K because
+// one xhigh Muse request used ~9.7K of the old 16K cap.
 export const MUSE_MAX_TOKENS=32000;
 // Reviewer verdicts (Ava on Gemini) carry always-on reasoning plus a long structured
 // verdict; 16k truncated one in r5 and the uncached repair rounds cost 3x a normal review.
 export const REVIEWER_VERDICT_MAX_TOKENS=32000;
 export const OPENROUTER_MODEL_TRAITS={
  'deepseek/deepseek-v4.1-flash': { reasoning:'optional', inputs:['text','image'] },
- 'meta/muse-spark-1.3-contributor': { reasoning:'always-on', inputs:['text','image','video'], productionEffort:'xhigh', maxTokens:MUSE_MAX_TOKENS },
+ 'meta/muse-spark-1.3-contributor': { reasoning:'always-on', inputs:['text','image','video'], productionEffort:'max', maxTokens:MUSE_MAX_TOKENS },
  // Ava (audio-reviewer): Gemini takes audio input; it runs at the host-wide
  // medium effort with the default 16K cap, never Muse's xhigh/32K overrides.
  // OpenRouter makes reasoning mandatory for it, so it is always-on (the bind

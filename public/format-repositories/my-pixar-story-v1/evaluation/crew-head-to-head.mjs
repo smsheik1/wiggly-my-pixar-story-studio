@@ -29,7 +29,7 @@ export const TASK_DEFS = {
 export const HARD_CAP_USD = 0.10;
 
 // Evaluation-only reasoning efforts. The production OpenRouterHost refuses a host-wide xhigh/max;
-// production runs Muse at its per-model xhigh override (OPENROUTER_MODEL_TRAITS). This script may
+// production runs Muse at its per-model max override (OPENROUTER_MODEL_TRAITS). This script may
 // set any effort a model offers, per model, for one evaluation host only.
 export const EVAL_EFFORTS = {
   'meta/muse-spark-1.3-contributor': ['low', 'medium', 'high', 'xhigh', 'max'],
