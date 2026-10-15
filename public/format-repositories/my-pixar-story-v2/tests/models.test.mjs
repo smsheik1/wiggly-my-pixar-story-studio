@@ -38,3 +38,11 @@ test('loadSkill reads role.md and throws clearly when missing', () => {
   assert.match(loadSkill('story-director'), /Story Director/);
   assert.throws(() => loadSkill('nobody'), /unknown v2 agent "nobody"/);
 });
+test('character architect: muse max, Nano Banana sheets, feeds vera + compiler, contract files exist', async () => {
+  const c = V2_MODELS['character-architect'];
+  assert.deepEqual([c.provider, c.model, c.effort], ['openrouter', 'meta/muse-spark-1.3-contributor', 'max']);
+  assert.equal(c.imageSteps.character.model, 'nano-banana-2.1');
+  assert.deepEqual(c.downstreamAgents, ['vera', 'seedance-compiler']);
+  const { existsSync } = await import('node:fs');
+  for (const f of Object.values(c.contract)) assert.ok(existsSync(new URL('../' + f, import.meta.url)), f);
+});

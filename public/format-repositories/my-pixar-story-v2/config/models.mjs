@@ -6,8 +6,9 @@ export const NANO_BANANA = Object.freeze({ provider: 'google-flow', model: 'nano
 export const V2_MODELS = Object.freeze({
   'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 32000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
     imageSteps: { storyboard: NANO_BANANA } },
-  'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 16000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
-    imageSteps: { character: NANO_BANANA } },
+  'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 24000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
+    imageSteps: { character: NANO_BANANA },
+    contract: { output: 'crew/character-architect/schema.mjs', input: 'crew/character-architect/input.mjs', gate: 'crew/linter/check-character-sheets.mjs' } },
   'location-scout': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 16000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
     imageSteps: { location: NANO_BANANA } },
   'seedance-compiler': { downstreamAgents: ['linter'], maxTokens: 16000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
