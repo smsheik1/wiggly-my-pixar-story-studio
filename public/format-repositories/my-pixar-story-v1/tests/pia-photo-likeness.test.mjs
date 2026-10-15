@@ -64,3 +64,9 @@ test('the old expression set no longer satisfies the rev 5 order check', () => {
   const shuffled = contentFor(cast, photoPrompt('').replace('pure joy, thoughtful concentration', 'thoughtful concentration, pure joy'));
   assert.throws(() => validateArtifactContent(p, shuffled, 'pia'), /SHEET_EXPRESSIONS_ORDER_REQUIRED/);
 });
+
+test('photo on the cast entry: text-only prose face from the photo passes (Flow, nothing attached)', () => {
+  const {p, cast} = piaProject();
+  const prompt = `Create ONE complete cinematic stylized 3D animated-feature character model sheet of an adult man, approximately seven heads tall. His face is a broad square with a strong rounded jaw; his eyes are dark-brown ovals under thick straight black brows; his skin is a warm medium-brown, even natural colour; his hair is short black and wavy with no fringe. Wardrobe: navy shirt, mustard vest, same in every figure. Eight portraits in this order: ${EIGHT_LIST}. Background is flat #B5B5B5. No text, labels, captions, expression names or watermarks anywhere in the image.`;
+  assert.doesNotThrow(() => validateArtifactContent(p, contentFor(cast, prompt), 'pia'));
+});
