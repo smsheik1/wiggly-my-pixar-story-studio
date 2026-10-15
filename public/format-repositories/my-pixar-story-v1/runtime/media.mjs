@@ -1,5 +1,6 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { resolve, extname, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -15,13 +16,72 @@ export async function probe(path) {
   throw new Error('No supported audio/image stream.');
 }
 export async function importMedia(source, runDir) {
-  const extension = extname(source).toLowerCase();
+  let extension = extname(source).toLowerCase();
   if (!['.wav', '.mp3', '.m4a', '.flac', '.ogg', '.png', '.jpg', '.jpeg', '.webp', '.mp4', '.mov'].includes(extension)) throw new Error('Import a supported audio or image file.');
-  const bytes = await readFile(resolve(source)); const sha256 = sha(bytes);
+  let bytes = await readFile(resolve(source));
+  // Phone photos can store pixels sideways with an EXIF orientation tag (r5's
+  // IMG_2901 reads rotated 90 degrees). ffprobe reports the stored dimensions and
+  // some viewers ignore the tag, so Pia and the image model can receive a rotated
+  // face. Normalize once at import so stored bytes are the display image.
+  if ((extension === '.jpg' || extension === '.jpeg') && jpegOrientation(bytes) > 1) {
+    bytes = await normalizeOrientation(bytes, extension);
+    extension = '.png';
+  }
+  const sha256 = sha(bytes);
   const path = join(runDir, 'assets', `${sha256}${extension}`); await mkdir(join(runDir, 'assets'), { recursive: true });
   try { await writeFile(path, bytes, { flag: 'wx', mode: 0o600 }); } catch (e) { if (e.code !== 'EEXIST') throw e; }
   if (sha(await readFile(path)) !== sha256) throw new Error('Immutable asset collision/tampering.');
   return { path, sha256, bytes: bytes.length, ...await probe(path) };
+}
+// Minimal EXIF orientation reader (JPEG APP1/TIFF tag 0x0112), no new deps.
+// Returns 1-8, or 1 when absent/unparseable. Only JPEG carries this tag shape.
+export function jpegOrientation(input) {
+  try {
+    const b = Buffer.isBuffer(input) ? input : Buffer.from(input);
+    if (b.length < 4 || b[0] !== 0xFF || b[1] !== 0xD8) return 1;
+    let i = 2;
+    while (i + 4 <= b.length) {
+      if (b[i] !== 0xFF) break;
+      const marker = b[i + 1];
+      if (marker === 0xDA || marker === 0xD9) break;
+      if (marker === 0x01 || (marker >= 0xD0 && marker <= 0xD7)) { i += 2; continue; }
+      const len = (b[i + 2] << 8) | b[i + 3];
+      if (len < 2 || i + 2 + len > b.length) break;
+      if (marker === 0xE1 && len >= 16 && b[i + 4] === 0x45 && b[i + 5] === 0x78 && b[i + 6] === 0x69 && b[i + 7] === 0x66 && b[i + 8] === 0 && b[i + 9] === 0) {
+        const t = i + 10, le = b[t] === 0x49 && b[t + 1] === 0x49, be = b[t] === 0x4D && b[t + 1] === 0x4D;
+        const u16 = o => le ? b.readUInt16LE(o) : b.readUInt16BE(o);
+        const u32 = o => le ? b.readUInt32LE(o) : b.readUInt32BE(o);
+        if ((le || be) && u16(t + 2) === 42 && t + 8 <= b.length) {
+          const off = t + u32(t + 4);
+          if (off + 2 <= b.length) {
+            const n = u16(off);
+            for (let e = 0; e < n; e++) {
+              const p = off + 2 + e * 12;
+              if (p + 12 > b.length) break;
+              if (u16(p) === 0x0112 && u16(p + 2) === 3 && u32(p + 4) === 1) {
+                const v = u16(p + 8);
+                return v >= 1 && v <= 8 ? v : 1;
+              }
+            }
+          }
+        }
+        return 1;
+      }
+      i += 2 + len;
+    }
+  } catch { /* unparseable: treat as orientation 1 */ }
+  return 1;
+}
+// Transcode through ffmpeg, whose decoder applies the EXIF rotation by default,
+// and keep the lossless result so the tag never needs interpreting downstream.
+async function normalizeOrientation(bytes, extension) {
+  const dir = await mkdtemp(join(tmpdir(), 'wiggly-orient-'));
+  try {
+    const input = join(dir, `input${extension}`), output = join(dir, 'normalized.png');
+    await writeFile(input, bytes, { mode: 0o600 });
+    await exec('ffmpeg', ['-v', 'error', '-y', '-i', input, output]);
+    return await readFile(output);
+  } finally { await rm(dir, { recursive: true, force: true }); }
 }
 // Generation only appends silence. Local repair is a separate recorded edit; never silently trim here.
 export async function narrationWindow(file, runDir, outputPath) {

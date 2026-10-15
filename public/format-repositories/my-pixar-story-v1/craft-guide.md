@@ -37,7 +37,7 @@ Prompts are built from fixed lines (same for every character, encoding how the h
 - [C-HEADS-TALL] (check: vera) Height in heads: toddler 4, child 5, teen 6-6.5, adult 7. Write it as natural build wording, e.g. child: "slim child build, slightly enlarged expressive head, approximately five heads tall, narrow child shoulders and natural limbs"; teen: "approximately six-head-tall youthful proportions, slim-to-average build". Never draw a child or teen chunkier or bigger-headed than this.
 - [C-CHILD-RIDER] (check: sage, vera) Child proportions are for children only: slim child build, slightly enlarged expressive head, narrow child shoulders, natural limbs; never carry this rider onto adults.
 - [C-TODDLER-TORSO] (check: none) Writing tip: describe a toddler's torso as slim and flat; "round belly" or "full cheeks" comes back as a paunch.
-- [C-SIGNATURE] (check: sage, vera) Give each character one signature element that is worn or attached, never held, and carries the only saturated colour in an otherwise muted palette.
+- [C-SIGNATURE] (check: sage, vera) Give each character one signature element that is worn or attached, never held, in the outfit's own colours.
 - [C-WEAR] (check: none) Wear tells a story: grime where hands touch, pale worn edges, one thing undone or broken.
 - [C-HANDS] (check: vera) Design hands from a few large rounded forms with thick blunt fingertips and minimal knuckle detail; vary only what the character justifies.
 - [C-FACIAL-HAIR] (check: vera) Render facial hair as a soft matte shell over the skin colour, never as individual drawn hairs.
@@ -59,7 +59,7 @@ Short concrete prompts beat long ones: everything above earns its place, and lon
 - [P-NO-AVOID-LIST] (check: sage) No avoid list: keep at most the one or two essential negations (no text; empty of people) and drop the rest.
 - [P-NO-ASPECT-TEXT] (check: sage) No aspect ratio in the prompt text; set it in the tool call.
 - [P-REF-RENDERS] (check: none) Never ask the prompt to act on a reference render; describe the person, not the picture.
-- [P-GREY-NO-LIGHTING] (check: sage) No lighting or grade lines on a grey studio backdrop; drive lighting with a reference image later.
+- [P-GREY-NO-LIGHTING] (check: sage) On a grey studio backdrop, carry exactly one soft three-point studio lighting line with even exposure; no grade or colour-grade lines.
 - [P-MISREADS] (check: none) Avoid wording the image model can misread; write "the face is built from distinct planes", never "face planes".
 - [P-BRANDING-TRAPS] (check: sage) Design around branding traps: change the silhouette instead of writing "no logos".
 
@@ -77,7 +77,7 @@ Format B (turnaround plus expressions) is the only sheet format. For people with
 
 - [R-SHEET-NEUTRAL] (check: vera) Keep everything neutral: closed-lip expression, head level, eyes to camera, arms relaxed, hands open and empty, feet flat and parallel; no smile, no acting, no signature pose.
 - [R-SHEET-VIEWS] (check: vera, sage) Top row is four full-body views of the same character in one identical neutral pose (front, three-quarter, profile, back), exactly the same height and scale on one shared baseline, evenly spaced and clear of the frame edges.
-- [R-SHEET-EIGHT] (check: vera, sage) Below are eight head-and-shoulders close-ups in two even rows of four, all facing camera, in this fixed order: neutral, happy, delighted, sad, surprised, confused, angry, talking; a character detail may sit inside a slot.
+- [R-SHEET-EIGHT] (check: vera, sage) Below are eight head-and-shoulders close-ups in two even rows of four, all facing camera, in this fixed order: neutral, warm smile, pure joy, thoughtful concentration, determined resolve, gentle surprise, tender concern, playful mischief; a character detail may sit inside a slot.
 - [R-SHEET-HEX] (check: sage) Background is flat #B5B5B5 across the whole canvas, written as the hex in every prompt.
 - [R-SHEET-NO-TEXT] (check: vera, sage) No text or labels on the sheet.
 - [R-SHEET-PROPS] (check: none) Props and non-humanoid subjects use the props variant: front, back, and a detail close-up on the identifying feature, with neutral framing.

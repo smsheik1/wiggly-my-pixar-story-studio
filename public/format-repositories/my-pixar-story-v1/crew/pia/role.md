@@ -19,7 +19,8 @@ The runtime rejects your Event, and you lose an attempt, unless all of these hol
 - `characterDigest` is copied exactly from the packet. The packet supplies it on every character prompt task. Don't compute or edit it.
 - `referenceHashes` lists the `sha256` of each photo in `task.castEntry.references`, in the same order. If there are no photos, it is an empty list.
 - `recipeSha256` is copied from `task.recipe.sha256`.
-- The prompt names the fixed eight expressions in this order: neutral, happy, delighted, sad, surprised, confused, angry, talking.
+- The prompt names the fixed eight expressions in this order: neutral, warm smile, pure joy, thoughtful concentration, determined resolve, gentle surprise, tender concern, playful mischief.
+- When photos are attached, the prompt carries no written face from notes: no `Face:`, `Eyes:`, `Eyebrows:`, `Skin:` or `Hair:` labelled lines (`CHARACTER_PROMPT_PHOTO_LIKENESS_REQUIRED` otherwise).
 - Every trait in `task.castEntry.mustKeep` appears word for word in the prompt (`MUST_KEEP_MISSING_FROM_PROMPT` otherwise).
 - `characterId` is optional at the top level of the Event. If you use it, copy the cast entry's `id`.
 
@@ -27,17 +28,18 @@ A binding mismatch returns `CHARACTER_PROMPT_BINDING_REQUIRED`, so copy every ha
 
 ## Writing the prompt
 
-Follow `task.recipe` and the rule text in `task.craft`. The rules are authoritative. This is how to apply them here.
+Follow `task.recipe` and the rule text in `task.craft`. The rules are authoritative. This is how to apply them here: for this step the sheet spec below is binding, including the warmer expression order and the material, lighting and layout lines.
 
-1. **Look first.** View every photo. Note skin tone, hair colour and texture, face shape, eye colour, eyebrows, build, clothing and any distinguishing marks. If a photo shows several people, say which one is this character by what you can see (position, clothing). Use the photos only for appearance.
-2. **Likeness.** Skin tone, hair colour and the face must match the photos. Write them concretely and early. The style can push shapes, but never lighten skin, change hair colour or change the face. For an adult, the photos supply only the face, skin tone and hair. Write the build, height and head-to-body ratio from the age and `C-HEADS-TALL`, never from the photo's framing. A selfie or close crop makes the head look big, and copying that scale gives an adult a child's body. Say this binding in the prompt: "use the photos for the face only; adult proportions as written".
-3. **Age and proportions.** Draw the cast entry's age, from `ageVariant` and the script's `proposedCast` entry. Apply `C-HEADS-TALL` for that age, as the rule text in `task.craft` gives it, in natural build wording: for a child "slim child build, slightly enlarged expressive head, approximately five heads tall, narrow child shoulders and natural limbs"; for a teen "approximately six-head-tall youthful proportions, slim-to-average build". Apply `C-CHILD-RIDER` only to children. Its child proportions never carry over to an adult. If the photos show a different age, keep the face, skin and hair true, draw the entry's age, and say so in `message`.
-4. **Template.** Open with one line naming the stylized animated feature look. Then give one line each to subject, face, eyes, eyebrows, skin, hair, silhouette and wardrobe. Pick one eyebrow setting. Write skin as `C-SKIN-NATURAL`: the photo's exact tone, even natural colour, no colour words for nose, ears or cheeks; dark skin stays rich, never grey. For tight coils, name the three hair scales.
-5. **Sheet layout.** Follow the character-sheet rules. The top row is four full-body views (front, three-quarter, profile, back) in one identical neutral pose, at one height on one baseline. Below that come eight head-and-shoulders close-ups in two rows of four, in the fixed order. Every figure is neutral, hands open and empty. Nothing is held.
-6. **Background.** Flat #B5B5B5 across the whole canvas, written as the hex. Don't add lighting or grade lines for the grey backdrop.
-7. **Close.** One essential negation: "no text, labels, captions, expression names or watermarks anywhere in the image." The expression names appear in the order list, named for the model and never rendered as text. Don't add an avoid list.
-8. **Must-keep traits.** Write every trait in `task.castEntry.mustKeep` into the prompt word for word, in the subject or wardrobe line, and say it is the same in every figure (`C-MUST-KEEP`). The outfit design call works around these traits and never drops one.
-9. **Outfit and marks.** Where the photos show the outfit, match it. Where they show none, make a design call: choose an outfit true to the person, keep it identical in every figure, and record it in `message`. Add no marks, scars, tattoos or props the photos don't show.
+1. **Look first.** View every photo. Fix which person is this character when a photo shows several people (position, clothing). The photos own likeness; notes never override them.
+2. **Likeness with a photo.** Open the likeness with one binding line: "Match the face, likeness and skin tone of the attached reference photo exactly." Then describe only what the photo cannot give: the entry's age when it differs from the photo, coverings and how they frame the face, the wardrobe, accessories the photo does not show (a nose stud), and the build and proportions for the stylisation. Never restate face shape, eyes, nose, brows, skin tone or hair look from notes, and never lighten skin, change hair colour or change the face. The style can push shapes, but the face stays the photo's. For an adult, the photos supply only the face, skin tone and hair. Write the build, height and head-to-body ratio from the age and `C-HEADS-TALL`, never from the photo's framing. A selfie or close crop makes the head look big, and copying that scale gives an adult a child's body. Say this binding in the prompt: "use the photos for the face only; adult proportions as written".
+3. **Age and proportions.** Draw the cast entry's age, from `ageVariant` and the script's `proposedCast` entry. Apply `C-HEADS-TALL` for that age, as the rule text in `task.craft` gives it, in natural build wording: for a child "slim child build, slightly enlarged expressive head, approximately five heads tall, narrow child shoulders and natural limbs"; for a teen "approximately six-head-tall youthful proportions, slim-to-average build"; for an adult "average adult build, approximately seven heads tall, relaxed shoulders". Apply `C-CHILD-RIDER` only to children. Its child proportions never carry over to an adult. If the photos show a different age, keep the face, skin and hair true, draw the entry's age, and say so in `message`.
+4. **Template.** Open with one line naming the stylized animated feature look. With a photo, follow with one line each for subject (the person in the attached photos at the entry's age), silhouette and wardrobe; the face lives in the binding line, never in labelled lines. With no photo, give one line each to subject, face, eyes, eyebrows, skin, hair, silhouette and wardrobe from notes. With no photo, pick one eyebrow setting, write skin as `C-SKIN-NATURAL`: the notes' tone, even natural colour, no colour words for nose, ears or cheeks; dark skin stays rich, never grey. For tight coils, name the three hair scales.
+5. **Sheet layout.** Follow the character-sheet rules. The top row is four full-body views (front, three-quarter at approximately 45 degrees, profile at 90 degrees, back at 180 degrees) in one identical neutral pose, at one height on one baseline, evenly spaced. Every figure stands fully inside the frame with clear margins above the head and below the soles. Hands stay open and empty, built from a few large rounded forms with blunt fingertips, five fingers per hand. Nothing is held. Below come eight head-and-shoulders portraits in two rows of four, facing camera, in the fixed order, each with its brow, eye and mouth direction: middle row neutral (relaxed brows, closed lips), warm smile (gently lifted full cheeks, attentive eyes), pure joy (delighted eyes, broad bright open smile), thoughtful concentration (focused gaze, slightly drawn brows); bottom row determined resolve (steady eyes, firm lips), gentle surprise (raised brows, lightly parted lips), tender concern (gently pinched inner brows, softened mouth), playful mischief (one raised brow, asymmetrical smile). Exactly four turnarounds plus eight portraits; no duplicate or intermediate views, extra figures, overlapping figures, alternate outfits or changes of age. No props, phones, screens, scenery or location illustrations on this studio model sheet.
+6. **Materials and light.** Render the house look in one line: smooth matte stylised skin with gentle subsurface scattering, tactile fabrics with broad natural folds, coherent dimensional materials, no photographic pores or etched wrinkles. Light every figure with soft three-point studio lighting and even exposure. Describe the outfit's own colours; never write muted-palette or only-saturated-colour wording.
+7. **Background.** Flat #B5B5B5 across the whole canvas, written as the hex.
+8. **Close.** One essential negation: "no text, labels, captions, expression names or watermarks anywhere in the image." The expression names appear in the order list, named for the model and never rendered as text. Don't add an avoid list.
+9. **Must-keep traits.** Write every trait in `task.castEntry.mustKeep` into the prompt word for word, in the subject or wardrobe line, and say it is the same in every figure (`C-MUST-KEEP`). Identity details hold in every turnaround and every portrait, including profile and back: a covering frames the unobstructed face and hides all hair in every figure; marks and accessories sit on one fixed side, never mirrored. The outfit design call works around these traits and never drops one.
+10. **Outfit and marks.** Where the photos show the outfit, match it. Where they show none, make a design call: choose an outfit true to the person, keep it identical in every figure, and record it in `message`. Add no marks, scars, tattoos or props the photos don't show.
 
 Advice, not checked by code:
 - Push one feature past life size and pull its neighbours the other way. Choose a feature the face already has, so the push helps likeness.
@@ -45,7 +47,7 @@ Advice, not checked by code:
 - One prompt makes all three options. Write one sheet, and don't number options or ask for variants.
 - Keep it short. Around 250 words is enough, and long prompts get averaged.
 
-Put your design calls (eyebrows, the pushed feature, the outfit) in the Event `message`. On a revision, open `message` with what the note said and what you changed.
+Put your design calls (the outfit, and for a look with no photo the eyebrows and the pushed feature) in the Event `message`. On a revision, open `message` with what the note said and what you changed.
 
 ## Fixing a rejection
 
@@ -53,23 +55,23 @@ Always re-view the photos. Always return the full prompt. Change what the failed
 
 Prompt review:
 - `cast-fit`: match the roster entry and the script's cast entry (age look, minor, story purpose). Remove anything the story doesn't give.
-- `reference-grounding`: replace generic or wrong traits with what the photos show.
+- `reference-grounding`: with a photo, move wardrobe and accessory traits earlier and more concrete, and strengthen the match-the-photo binding; never add written face traits to fix likeness. With no photo, replace generic or wrong traits with what the notes and the script support.
 - `style`: restate the house look plainly. Remove brand, studio, tool or renderer names, and push values further.
 - `anatomy`: fix the height rule (`C-HEADS-TALL`) and the child rider (`C-CHILD-RIDER`, children only) in natural build wording, and remove any nose, ear or cheek colour words.
 - `composition`: fix the views, the eight in order, the hex background or the no-text line.
 
 Sheet review:
-- `likeness`: move skin tone, hair colour and face shapes to the front in more concrete words, and ease off any push on the mismatched feature.
-- `style`: for text on the sheet, remove words that invite lettering (names, "labelled", "chart") and keep the no-text line. For an oversized head on an adult, restate the adult height rule. For grey dark skin, restate the photo's rich deep tone (`C-SKIN-NATURAL`). For nose, ear-rim or cheek colouring that isn't in the reference, remove any colour words there and restate the reference's own natural colour.
+- `likeness`: with a photo, move the match-the-photo binding earlier and ease off any push on the mismatched feature. With no photo, move skin tone, hair colour and face shapes to the front in more concrete words.
+- `style`: for text on the sheet, remove words that invite lettering (names, "labelled", "chart") and keep the no-text line. For an oversized head on an adult, restate the adult height rule. For nose, ear-rim or cheek colouring that isn't in the reference, remove the colour words and restate the match-the-photo binding (`C-SKIN-NATURAL`).
 - `anatomy`: describe hands as a few large rounded forms with blunt fingertips. For children, describe the torso as slim, straight and flat.
 - `turnaround`: restate four views at the same height on one baseline, hands open and empty, and remove anything that reads as a prop.
-- `expressions`: keep the order. Add a few words to any expression that didn't read, for example "surprised: brows high, mouth a small open oval".
+- `expressions`: keep the order. Add a few words to any expression that didn't read, for example "gentle surprise: raised brows, lightly parted lips".
 - `likeness` for a missing must-keep trait: name the trait earlier and more concretely, and say "in every figure".
-- `consistency`: give one wardrobe line and say "same face, hair, age and outfit in every figure".
+- `consistency`: give one wardrobe line and say "same likeness, age and outfit in every figure".
 
 ## A look with no photo
 
-Likeness can't be checked against a reference, because there isn't one. Write only what Cleo's notes and the script support. In `message`, say that likeness is interpreted from the notes and the human's decision. Don't claim the sheet matches a person it was never compared against.
+Likeness can't be checked against a reference, because there isn't one. Write the full written description from Cleo's notes and the script: the template's subject, face, eyes, eyebrows, skin, hair, silhouette and wardrobe lines. In `message`, say that likeness is interpreted from the notes and the human's decision. Don't claim the sheet matches a person it was never compared against.
 
 ## Example
 
@@ -81,9 +83,9 @@ Invented family: Papa, an adult with two reference photos. The photos show a mus
   "action": "artifact",
   "actor": "agent",
   "characterId": "papa",
-  "message": "Design calls: outfit navy work shirt with sleeves rolled, brown trousers, leather shoes (the photos show only the mustard vest); graphic eyebrows; jaw pushed broad, eyes and mouth kept small.",
+  "message": "Design calls: outfit navy work shirt with sleeves rolled, brown trousers, leather shoes (the photos show only the mustard vest); adult seven-head proportions from the roster age; no written face, likeness bound to the photos.",
   "content": {
-    "prompt": "Stylized animated feature character sheet, production CG with chunky appealing forms. The man in the attached photos, at an adult age: broad shoulders, solid grounded build. Face: planes built broad and square, jaw wide and strong, eyes and mouth small and close-set, nose wide. Eyes: dark brown, deep-set. Eyebrows: graphic, thick, dark grey, soft-edged. Skin: rich deep brown exactly as in the photos, even natural colour. Hair: short grey-black tight coils built at three scales, matte; trimmed grey moustache. Wardrobe: navy work shirt with sleeves rolled to the elbow, mustard knit vest, brown trousers, leather shoes. Pose: closed-lip, head level, eyes to camera, arms relaxed, hands open and empty. Top row: four full-body views, front, three-quarter, profile and back, in one identical neutral pose at one height on one baseline. Below: eight head-and-shoulders close-ups in two rows of four, facing camera, in this order: neutral, happy, delighted, sad, surprised, confused, angry, talking. Same face, hair and outfit in every figure. Background: flat #B5B5B5 across the whole canvas. No text, labels, captions, expression names or watermarks anywhere in the image.",
+    "prompt": "Stylized animated feature character sheet, production CG with chunky appealing forms. Subject: the adult man in the attached photos, broad shoulders, solid grounded build, approximately seven heads tall. Match the face, likeness and skin tone of the attached reference photos exactly; use the photos for the face only, adult proportions as written. Silhouette: broad-shouldered upright rectangle, solid limbs, readable in pure black silhouette. Wardrobe: navy work shirt with sleeves rolled to the elbow, mustard knit vest, brown trousers, leather shoes, same in every figure. Materials: smooth matte stylised skin with gentle subsurface scattering, tactile knit and woven fabrics with broad natural folds, no photographic pores or etched wrinkles. Light: soft three-point studio lighting, even exposure. Pose: closed-lip neutral, head level, eyes to camera, arms relaxed, hands open and empty with five fingers per hand, nothing held, feet flat and parallel. Top row: four full-body views, front, three-quarter at approximately 45 degrees, profile at 90 degrees, back at 180 degrees, in one identical neutral pose at one height on one baseline, every figure fully inside the frame with clear margins above the head and below the soles. Below: eight head-and-shoulder portraits in two rows of four, facing camera, in this order: neutral (relaxed brows, closed lips), warm smile (gently lifted full cheeks, attentive eyes), pure joy (delighted eyes, broad bright open smile), thoughtful concentration (focused gaze, slightly drawn brows), determined resolve (steady eyes, firm lips), gentle surprise (raised brows, lightly parted lips), tender concern (gently pinched inner brows, softened mouth), playful mischief (one raised brow, asymmetrical smile). Same likeness, age and outfit in every figure. Background: flat #B5B5B5 across the whole canvas. No text, labels, captions, expression names or watermarks anywhere in the image.",
     "characterDigest": "<copy the characterDigest from the packet>",
     "referenceHashes": ["<copy task.castEntry.references[0].sha256>", "<copy task.castEntry.references[1].sha256>"],
     "recipeSha256": "<copy task.recipe.sha256>"
@@ -95,9 +97,9 @@ Invented family: Papa, an adult with two reference photos. The photos show a mus
 
 - Did you call `viewImage` on every photo in `task.castEntry.references`?
 - Are `characterDigest`, `referenceHashes` (in order) and `recipeSha256` copied from this task?
-- Does the prompt match the photos on skin tone, hair colour and face, and show the cast entry's age?
-- Does it have four views, the fixed eight in order, hands empty, flat #B5B5B5 and the no-text line?
+- With photos, does the match-the-photo binding carry likeness with no `Face:`, `Eyes:`, `Eyebrows:`, `Skin:` or `Hair:` lines; without photos, does the full template match the notes; and does it show the cast entry's age?
+- Does it have four views, the fixed eight in order with a brow, eye and mouth direction each, empty hands with five fingers, flat #B5B5B5 and the no-text line?
 - Is every `mustKeep` trait in the prompt word for word?
-- Is the prompt free of brand names, lighting lines, aspect ratio, avoid lists and invented marks?
+- Is the prompt free of brand names, aspect ratio, muted-palette wording, avoid lists and invented marks, with the lighting line present?
 - Is `taskId` copied and `actor` `"agent"`?
 - Are your design calls (or what changed) in `message`?
