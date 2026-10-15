@@ -126,7 +126,14 @@ export function syncFocusedBranch(p) {
   } else if ((limits.videoConcurrency === 1 && limits.soundConcurrency === 1) && uncompleted.some(b => b.type === 'video')) {
     focused = uncompleted.find(b => b.type === 'video') || uncompleted[0];
   } else {
-    focused = uncompleted[0];
+    const currentBranch = uncompleted.find(b =>
+      (p.characterId && b.characterId === p.characterId) ||
+      (p.locationId && b.locationId === p.locationId) ||
+      (p.shotId && b.shotId === p.shotId) ||
+      (p.clipId && b.clipId === p.clipId) ||
+      (p.effectId && (b.effectId === p.effectId || b.type === 'sound'))
+    );
+    focused = currentBranch || uncompleted[0];
   }
 
   p.step = focused.step;
@@ -212,6 +219,26 @@ export function findBranchForEvent(p, e) {
   }
   if (e.taskId) {
     const b = p.branches.find(b => b.taskId === e.taskId);
+    if (b) return b;
+  }
+  if (p.characterId) {
+    const b = p.branches.find(b => b.characterId === p.characterId);
+    if (b) return b;
+  }
+  if (p.locationId) {
+    const b = p.branches.find(b => b.locationId === p.locationId);
+    if (b) return b;
+  }
+  if (p.shotId) {
+    const b = p.branches.find(b => b.shotId === p.shotId);
+    if (b) return b;
+  }
+  if (p.clipId) {
+    const b = p.branches.find(b => b.clipId === p.clipId);
+    if (b) return b;
+  }
+  if (p.effectId) {
+    const b = p.branches.find(b => b.effectId === p.effectId || b.type === 'sound');
     if (b) return b;
   }
   return p.branches.find(b => !b.completed) || p.branches[0];
@@ -415,14 +442,32 @@ export function applyBranchEvents(p, events, applyEventFn, taskForFn) {
   };
   const sorted = [...events].sort((a, b) => branchIndex(a) - branchIndex(b));
   let curr = p;
-  for (const ev of sorted) {
+  for (let i = 0; i < sorted.length; i++) {
+    const ev = sorted[i];
     const branch = findBranchForEvent(curr, ev);
     const eventToApply = { ...ev };
     if (taskForFn && branch && branch.step && ev.taskId !== 'stale') {
       const task = taskForFn(projectForBranch(curr, branch));
       eventToApply.taskId = task.taskId;
     }
-    curr = applyEventFn(curr, eventToApply);
+    const res = applyEventFn(curr, eventToApply);
+    if (res && typeof res.then === 'function') {
+      return (async () => {
+        curr = await res;
+        for (let j = i + 1; j < sorted.length; j++) {
+          const ev2 = sorted[j];
+          const branch2 = findBranchForEvent(curr, ev2);
+          const eventToApply2 = { ...ev2 };
+          if (taskForFn && branch2 && branch2.step && ev2.taskId !== 'stale') {
+            const task2 = taskForFn(projectForBranch(curr, branch2));
+            eventToApply2.taskId = task2.taskId;
+          }
+          curr = await applyEventFn(curr, eventToApply2);
+        }
+        return curr;
+      })();
+    }
+    curr = res;
   }
   return curr;
 }

@@ -480,7 +480,7 @@ export function taskFor(p) {
   const sceneLocation = shot ? current(p, 'backgrounds').content.locations.find(l => l.id === shot.locationId) : location(p);
   const job = p.jobs.findLast(j => j.key === keyFor(p) && !['ready', 'failed'].includes(j.status));
   const voiceIdState = consentedVoiceIdentity(p, a);
-  return { ...loaded, ...stepGuide, communication:communicationFor(p),studioConfig:studioFor(p)?.config??null,taskId: digest({ id: p.id, sequence: p.sequence, step: p.step, gate: p.gate }), projectId: p.id,
+  return { ...loaded, ...stepGuide, communication:communicationFor(p),studioConfig:studioFor(p)?.config??null,taskId: digest({ id: p.id, sequence: p.sequence, step: p.step, gate: p.gate, ...(isParallelStage(p)?{branch:p.characterId??p.locationId??p.shotId??p.clipId??p.effectId??null}:{}) }), projectId: p.id,
     reviewPolicy:{mode:p.reviewMode,qualificationRequired:!supervised(p),humanMediaConfirmationRequired:supervised(p)&&!crewReviewEligible(p,a),speakerMeasurementRequired:!supervised(p),automaticVideoRepairAllowed:!supervised(p)&&!miniProduction(p)},
     lifecycle:p.lifecycle,budget:spendSummary(p),
     voiceIdentity: {basis: voiceBasis(p).kind==='recorded-reference'?'recorded-reference':voiceIdState.verified?'consented-voice-id':'human-recognition', verified: voiceIdState.verified, boundVoiceId: voiceIdState.boundVoiceId},
@@ -526,11 +526,22 @@ export function taskFor(p) {
   };
 }
 function repairVisual(p, message) {
-  if(miniProduction(p)&&['sheet','backgroundCandidates','backgroundAngle'].includes(p.step)){const step={sheet:'sheetPrompt',backgroundCandidates:'backgroundPrompt',backgroundAngle:'backgroundAnglePrompt'}[p.step],key=p.step==='sheet'?`${step}:${p.characterId}`:`${step}:${p.locationId}${p.step==='backgroundAngle'?':'+p.angleId:''}`,prompt=current(p,key);invalidate(p,prompt.id);p.feedback.push({key,message});p.step=step;p.gate='author';return;}
-  if(p.step==='candidates'){const prompt=current(p,`characterPrompt:${p.characterId}`);invalidate(p,prompt.id);p.feedback.push({key:prompt.key,message});p.step='characterPrompt';p.gate='author';return;}
-  const video=p.step==='video'; const prompt = current(p, video?`videoPrompt:${p.clipId}`:`keyframePrompt:${p.shotId}`); invalidate(p, prompt.id);
-  p.feedback.push({ key: prompt.key, message });
-  p.step = video?'videoPrompt':'keyframePrompt'; p.gate = 'author';
+  if(miniProduction(p)&&['sheet','backgroundCandidates','backgroundAngle'].includes(p.step)){const step={sheet:'sheetPrompt',backgroundCandidates:'backgroundPrompt',backgroundAngle:'backgroundAnglePrompt'}[p.step],key=p.step==='sheet'?`${step}:${p.characterId}`:`${step}:${p.locationId}${p.step==='backgroundAngle'?':'+p.angleId:''}`,prompt=current(p,key);invalidate(p,prompt.id);p.feedback.push({key,message});p.step=step;p.gate='author';}
+  else if(p.step==='candidates'){const prompt=current(p,`characterPrompt:${p.characterId}`);invalidate(p,prompt.id);p.feedback.push({key:prompt.key,message});p.step='characterPrompt';p.gate='author';}
+  else {
+    const video=p.step==='video'; const prompt = current(p, video?`videoPrompt:${p.clipId}`:`keyframePrompt:${p.shotId}`); invalidate(p, prompt.id);
+    p.feedback.push({ key: prompt.key, message });
+    p.step = video?'videoPrompt':'keyframePrompt'; p.gate = 'author';
+  }
+  if (p.branches) {
+    const b = findBranchForEvent(p, { characterId: p.characterId, locationId: p.locationId, shotId: p.shotId, clipId: p.clipId });
+    if (b) {
+      b.step = p.step;
+      b.gate = p.gate;
+      b.completed = false;
+    }
+    syncFocusedBranch(p);
+  }
 }
 function reopen(p,a,message){
   invalidate(p,a.id);
@@ -565,8 +576,19 @@ export function applyEvent(project, raw) {
     throw new Error('STALE_TASK: read current status before responding.');
   }
   if (branch) {
-    p.step = branch.step;
-    p.gate = branch.gate;
+    const hasExplicitTarget = Boolean(e.branchId || e.characterId || e.locationId || e.shotId || e.clipId || e.effectId || e.artifactId || e.jobId);
+    if (!hasExplicitTarget) {
+      if (branch.step !== p.step) {
+        branch.step = p.step;
+        branch.gate = p.gate;
+      }
+      if (p.reviewDisagreements !== undefined && branch.reviewDisagreements !== p.reviewDisagreements) {
+        branch.reviewDisagreements = p.reviewDisagreements;
+      }
+    } else {
+      p.step = branch.step;
+      p.gate = branch.gate;
+    }
     p.characterId = branch.characterId;
     p.locationId = branch.locationId;
     p.angleId = branch.angleId;
@@ -711,6 +733,15 @@ export function applyEvent(project, raw) {
     for(const a of p.artifacts.filter(a=>a.valid&&['characterPrompt','candidates','sheetPrompt','sheet'].some(k=>a.key===`${k}:${characterId}`)))invalidate(p,a.id);
     p.characterId=characterId;p.step=refinedWorkflow(p)?'characterPrompt':'candidates';p.gate=refinedWorkflow(p)?'author':'produce';
     p.feedback.push({key:`characterPrompt:${characterId}`,message:e.message});
+    if (p.branches) {
+      const b = p.branches.find(b => b.characterId === characterId);
+      if (b) {
+        b.step = p.step;
+        b.gate = p.gate;
+        b.completed = false;
+      }
+      syncFocusedBranch(p);
+    }
   }else if(e.action==='intake-photos'){
     requiredActor(e,'human');
     if(!e.message)throw new Error('intake-photos needs --message "<maker note>" with measured stills and labels.');
@@ -1196,6 +1227,7 @@ export function applyEvent(project, raw) {
     const currentBranch = p.branches.find(b => b.id === branch.id);
     if (currentBranch) {
       if (e.action !== 'approve') {
+        currentBranch.step = p.step;
         currentBranch.gate = p.gate;
         if (currentBranch.type === 'location' && p.angleId !== null) currentBranch.angleId = p.angleId;
         if (currentBranch.type === 'sound' && p.effectId !== null) currentBranch.effectId = p.effectId;

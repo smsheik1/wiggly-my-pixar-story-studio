@@ -5,7 +5,7 @@ import {readFile,mkdir,writeFile,rename} from 'node:fs/promises';
 import {join,extname,basename} from 'node:path';
 import {z} from 'zod';
 import {Content,Event,digest} from './contracts.mjs';
-import {applyEvent} from './workflow.mjs';
+import {applyEvent, isParallelStage, activeBranchTasks, applyBranchEvents, batchRequireBudget, projectForBranch, findBranchForEvent, taskForBranch, taskFor} from './workflow.mjs';
 import {bibleWaiting} from './bible.mjs';
 import {crewRoles,runCrewTask,taskAssets,buildWorkerPacket} from './crew.mjs';
 import {AudioEditPlan} from './audio-edit.mjs';
@@ -346,40 +346,35 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
  if(!receiptDirectory)throw new Error('DISPATCH_RECEIPTS_REQUIRED: provide the run’s durable dispatch directory.');
  await mkdir(receiptDirectory,{recursive:true});
  let completed=0;
- while(completed<maxTasks){
-  const status=await workflow.status(thread),task=status.pending;
-  if(status.project.debug?.enabled&&status.project.debug.paused)return {completed,stop:'debug-pause',status};
-  // A run that requires a signed production bible waits here (no worker call, no spend).
-  if(bibleWaiting(status.project))return {completed,stop:'bible-unsigned',status};
-  // Provider execution stays in the authorized runner; this loop never generates media.
-  if(!['author','owner-review','review','produce'].includes(task.gate)||task.gate==='produce'&&task.step==='film'||['audioReviewerQualification','reviewerQualification'].includes(task.step))return {completed,stop:'graph-gate',status};
-  onProgress({step:task.step,gate:task.gate});
+
+ const executeOneTask = async (task, taskProject) => {
+   onProgress({step:task.step,gate:task.gate});
    const path=join(receiptDirectory,task.taskId+'.json'),receipt=await readJson(path);
-    const norm=w=>w&&typeof w==='object'?{...w,backend:w.backend??'codex'}:w;
-    const sameWorker=receipt&&(receipt.workerDigest===digest(task.crewWorker)||digest(norm(receipt.worker))===digest(norm(task.crewWorker)));
-    if(receipt&&!sameWorker&&!((receipt.status==='rejected'||receipt.status==='deferred'||receipt.status==='not-dispatched')&&digest({...norm(receipt.worker),capabilityVersion:null})===digest({...norm(task.crewWorker),capabilityVersion:null})))throw new Error('DISPATCH_WORKER_CHANGED');
-    if(receipt?.status==='started')throw new Error(`CODEX_DISPATCH_UNCERTAIN: inspect ${path} and the saved worker turn before reconciling. No automatic rerun.`);
-    const attempt=(receipt?.status==='deferred'||receipt?.status==='not-dispatched')?(receipt.attempt||1):((receipt?.attempt??0)+(receipt?.status==='rejected'?1:0)||1);
-    let event=receipt?.status==='completed'?receipt.event:null;
-    // Ava (audio reviewer): an unchanged audio artifact (same content digest, criteria and worker) reuses the
-    // earlier verdict instead of paying for a second identical review.
-    const reviewCacheKey=task.gate==='review'&&task.crewWorker?.role==='audio-reviewer'&&task.artifact?.content?digest({content:task.artifact.content,criteria:task.criteria??null,worker:norm(task.crewWorker)}):null;
-    const reviewCachePath=reviewCacheKey?join(receiptDirectory,'..','review-cache',reviewCacheKey+'.json'):null;
-    if(!event&&reviewCachePath){const cached=await readJson(reviewCachePath);if(cached?.event)event={...cached.event,taskId:task.taskId,...(task.artifact?.id?{artifactId:task.artifact.id}:{})};}
-    // Hard cap: at most REVIEW_ATTEMPT_CAP paid reviewer invocations per reviewer per artifact digest, whatever
-    // triggered them (repair, restart, re-review). The next one stops and escalates to the orchestrator.
-    if(!event&&task.gate==='review'&&task.artifact?.content){
-     const k=digest({role:task.crewWorker?.role??null,content:task.artifact.content});
-     const cdir=join(receiptDirectory,'..','review-attempts'),cpath=join(cdir,k+'.json');
-     await mkdir(cdir,{recursive:true});
-     const prior=(await readJson(cpath))??{count:0,taskIds:[]};
-     if(prior.count>=REVIEW_ATTEMPT_CAP){await escalate(receiptDirectory,task,{error:`review attempt cap: ${prior.count} invocations of ${task.crewWorker?.role} on this artifact digest`},prior.count+1);throw new Error(`REVIEW_ATTEMPT_CAP: ${task.crewWorker?.role} already reviewed this artifact ${prior.count} times. ESCALATED_TO_ORCHESTRATOR: no further paid review calls until Grok Bot resolves it.`);}
-     await saveJson(cpath,{count:prior.count+1,role:task.crewWorker?.role??null,step:task.step,taskIds:[...prior.taskIds,task.taskId],at:new Date().toISOString()});
-    }
-    // Preflight before any receipt write so a refused dispatch leaves no
-    // stranded started receipt and never changes an existing receipt.
-    if(!event&&typeof host.preflight==='function')await host.preflight(task.crewWorker);
-    if(receipt?.status==='deferred'){
+   const norm=w=>w&&typeof w==='object'?{...w,backend:w.backend??'codex'}:w;
+   const sameWorker=receipt&&(receipt.workerDigest===digest(task.crewWorker)||digest(norm(receipt.worker))===digest(norm(task.crewWorker)));
+   if(receipt&&!sameWorker&&!((receipt.status==='rejected'||receipt.status==='deferred'||receipt.status==='not-dispatched')&&digest({...norm(receipt.worker),capabilityVersion:null})===digest({...norm(task.crewWorker),capabilityVersion:null})))throw new Error('DISPATCH_WORKER_CHANGED');
+   if(receipt?.status==='started')throw new Error(`CODEX_DISPATCH_UNCERTAIN: inspect ${path} and the saved worker turn before reconciling. No automatic rerun.`);
+   const attempt=(receipt?.status==='deferred'||receipt?.status==='not-dispatched')?(receipt.attempt||1):((receipt?.attempt??0)+(receipt?.status==='rejected'?1:0)||1);
+   let event=receipt?.status==='completed'?receipt.event:null;
+   // Ava (audio reviewer): an unchanged audio artifact (same content digest, criteria and worker) reuses the
+   // earlier verdict instead of paying for a second identical review.
+   const reviewCacheKey=task.gate==='review'&&task.crewWorker?.role==='audio-reviewer'&&task.artifact?.content?digest({content:task.artifact.content,criteria:task.criteria??null,worker:norm(task.crewWorker)}):null;
+   const reviewCachePath=reviewCacheKey?join(receiptDirectory,'..','review-cache',reviewCacheKey+'.json'):null;
+   if(!event&&reviewCachePath){const cached=await readJson(reviewCachePath);if(cached?.event)event={...cached.event,taskId:task.taskId,...(task.artifact?.id?{artifactId:task.artifact.id}:{})};}
+   // Hard cap: at most REVIEW_ATTEMPT_CAP paid reviewer invocations per reviewer per artifact digest, whatever
+   // triggered them (repair, restart, re-review). The next one stops and escalates to the orchestrator.
+   if(!event&&task.gate==='review'&&task.artifact?.content){
+    const k=digest({role:task.crewWorker?.role??null,content:task.artifact.content});
+    const cdir=join(receiptDirectory,'..','review-attempts'),cpath=join(cdir,k+'.json');
+    await mkdir(cdir,{recursive:true});
+    const prior=(await readJson(cpath))??{count:0,taskIds:[]};
+    if(prior.count>=REVIEW_ATTEMPT_CAP){await escalate(receiptDirectory,task,{error:`review attempt cap: ${prior.count} invocations of ${task.crewWorker?.role} on this artifact digest`},prior.count+1);throw new Error(`REVIEW_ATTEMPT_CAP: ${task.crewWorker?.role} already reviewed this artifact ${prior.count} times. ESCALATED_TO_ORCHESTRATOR: no further paid review calls until Grok Bot resolves it.`);}
+    await saveJson(cpath,{count:prior.count+1,role:task.crewWorker?.role??null,step:task.step,taskIds:[...prior.taskIds,task.taskId],at:new Date().toISOString()});
+   }
+   // Preflight before any receipt write so a refused dispatch leaves no
+   // stranded started receipt and never changes an existing receipt.
+   if(!event&&typeof host.preflight==='function')await host.preflight(task.crewWorker);
+   if(receipt?.status==='deferred'){
     if(receipt.reason!=='usage-limit')throw new Error(`CODEX_DISPATCH_UNKNOWN_DEFERRED: inspect ${path}.`);
     const archive=path+`.deferred-${receipt.attempt}.json`,prior=await readJson(archive);
     if(prior&&digest(prior)!==digest(receipt))throw new Error('DISPATCH_RECEIPT_CONFLICT');
@@ -387,87 +382,135 @@ export async function driveCrew(workflow,thread,host,{maxTasks,receiptDirectory,
    }
    if(receipt?.status==='rejected'){
     if(!repairInvalid)throw new Error(`CODEX_RESULT_REJECTED: ${receipt.error}; inspect ${path}; --repair-invalid true explicitly requests a bounded repair of the known finished result.`);
-    if(attempt>limitsFor(status.project).finishedWorkerAttempts&&!(maxTasks===1&&recoveryAttempt?.taskId===task.taskId&&recoveryAttempt.attempt===attempt&&typeof recoveryAttempt.message==='string'&&recoveryAttempt.message.trim())){await escalate(receiptDirectory,task,receipt,attempt);throw new Error(`CODEX_REPAIR_LIMIT: configured finished-attempt limit exhausted (${attempt-1} failures). ESCALATED_TO_ORCHESTRATOR: Grok Bot finds the root cause (compare with the last good result) before any further attempt; see ${join(receiptDirectory,'..','escalations',task.taskId+'.json')}. The human is asked only for likeness, taste, spend or a change of plan.`);}
+    if(attempt>limitsFor(taskProject).finishedWorkerAttempts&&!(maxTasks===1&&recoveryAttempt?.taskId===task.taskId&&recoveryAttempt.attempt===attempt&&typeof recoveryAttempt.message==='string'&&recoveryAttempt.message.trim())){await escalate(receiptDirectory,task,receipt,attempt);throw new Error(`CODEX_REPAIR_LIMIT: configured finished-attempt limit exhausted (${attempt-1} failures). ESCALATED_TO_ORCHESTRATOR: Grok Bot finds the root cause (compare with the last good result) before any further attempt; see ${join(receiptDirectory,'..','escalations',task.taskId+'.json')}. The human is asked only for likeness, taste, spend or a change of plan.`);}
     const archive=path+`.rejected-${receipt.attempt}.json`,prior=await readJson(archive);
     if(prior&&digest(prior)!==digest(receipt))throw new Error('DISPATCH_RECEIPT_CONFLICT');
     if(!prior)await writeFile(archive,JSON.stringify(receipt)+'\n',{flag:'wx',mode:0o600});
    }
    // A not-dispatched receipt was already archived by reconciliation; the new
    // started receipt overwrites it at the same attempt without conflict.
-   const started={status:'started',taskId:task.taskId,worker:task.crewWorker,workerDigest:digest(task.crewWorker),attempt,...(attempt>limitsFor(status.project).finishedWorkerAttempts?{recoveryAuthorization:{actor:'human',...recoveryAttempt,at:new Date().toISOString()}}:{})};
-  if(!event){
-   if(receipt)await saveJson(path,started);else await writeFile(path,JSON.stringify(started)+'\n',{flag:'wx',mode:0o600});
-  }
-  let turnTrace=null;
-  try{
-    const w=task.crewWorker??{};
-    turnTrace=tracer?.turn?.({role:w.role,workerName:w.name,workerId:w.workerId,label:traceLabelFor(w),model:w.modelVersion,backend:w.backend??'codex',taskId:task.taskId,step:task.step,gate:task.gate,attempt,studioSha256:task.studioSha256??status.project.studio?.sha256??null});
-    if(turnTrace&&['visual-reviewer','scene-reviewer'].includes(w.role)){
-      const files=task.artifact?.content?.files??(task.artifact?.content?.file?[task.artifact.content.file]:[]);
-      if(Array.isArray(files)){
-        for(const [idx,f] of files.entries()){
-          const name=files.length===1?(f.path?basename(f.path):'image.png'):`option-${idx}-${f.path?basename(f.path):'image.png'}`;
-          tracer?.attachImage?.(turnTrace,{name,path:f.path,sha256:f.sha256});
-        }
-      }
-    }
-  }catch{turnTrace=null;}
-  const turnStart=Date.now();
-  let traceEnded=false;
-  const endTrace=(outcome,extra={})=>{
-    if(traceEnded)return;traceEnded=true;
-    try{
-      const childTotals=turnTrace?._childTotals??{};
-      const errMsg=extra.error??null;
-      const rc=errMsg?traceReasonCode(errMsg):(childTotals.reasonCode??null);
-      // Codex turns run on the ChatGPT subscription: no per-call bill, so cost is an explicit 0 (not missing).
-      const subscription=(task?.crewWorker?.backend??'codex')==='codex';
-      turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart,...childTotals,...extra,...(rc?{reasonCode:rc}:{}),...(subscription?{usage_metadata:{total_cost:0},cost_source:'subscription',cost_note:'codex subscription'}:{})});
-    }catch{}
-  };
-  const runOneTask=async()=>{
+   const started={status:'started',taskId:task.taskId,worker:task.crewWorker,workerDigest:digest(task.crewWorker),attempt,...(attempt>limitsFor(taskProject).finishedWorkerAttempts?{recoveryAuthorization:{actor:'human',...recoveryAttempt,at:new Date().toISOString()}}:{})};
+   if(!event){
+    if(receipt)await saveJson(path,started);else await writeFile(path,JSON.stringify(started)+'\n',{flag:'wx',mode:0o600});
+   }
+   let turnTrace=null;
    try{
-    event=event?Event.parse(event):await runCrewTask(status.project,{...task,...(receipt?.status==='rejected'?{repairFeedback:{error:receipt.error,previousEvent:receipt.event,instruction:'Repair this evidenced validation error. Preserve current source facts and return the current gate Event.'}}:{})},host);
-    applyEvent(status.project,event);
-    // Validate actual referenced files before declaring a finished response reusable.
-    // Recheck old completed receipts too; changed/missing bytes cannot trap repair.
-    await verifySubmission(status,event);
-    if(event.action==='review'||event.action==='owner-review')try{
-      const w=task.crewWorker??{};
-      tracer?.review?.({decision:event.review?.decision,artifactId:event.artifactId,reviewer:{label:traceLabelFor(w),model:w.modelVersion},recommendation:event.review?.recommendation??null,selection:event.review?.recommendation?.selection??null,checks:(event.review?.checks??[]).map(c=>({criterion:c.criterion,status:c.status,evidence:c.evidence,repair:c.repair??''})),summary:event.review?.summary??null,findings:event.review?.findings??null});
-    }catch{}
-   }catch(error){
-     // A clean usage-limit failure defers without consuming a finished-worker
-     // attempt and retries with normal framing. Other clean native failures
-     // record as rejected. Anything else stays uncertain.
-     if(!event&&error?.safeRetryWithoutOutput){
-      if(error?.usageLimitExceeded){
-       endTrace('deferred-usage-limit',{error:error.message,reasonCode:traceReasonCode(error)});
-       await saveJson(path,{...started,status:'deferred',reason:'usage-limit',retryAfter:error.retryAfter??null,error:error.message,event:{savedTools:error.savedTools??[]}});
-       if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
+     const w=task.crewWorker??{};
+     turnTrace=tracer?.turn?.({role:w.role,workerName:w.name,workerId:w.workerId,label:traceLabelFor(w),model:w.modelVersion,backend:w.backend??'codex',taskId:task.taskId,step:task.step,gate:task.gate,attempt,studioSha256:task.studioSha256??taskProject.studio?.sha256??null});
+     if(turnTrace&&['visual-reviewer','scene-reviewer'].includes(w.role)){
+       const files=task.artifact?.content?.files??(task.artifact?.content?.file?[task.artifact.content.file]:[]);
+       if(Array.isArray(files)){
+         for(const [idx,f] of files.entries()){
+           const name=files.length===1?(f.path?basename(f.path):'image.png'):`option-${idx}-${f.path?basename(f.path):'image.png'}`;
+           tracer?.attachImage?.(turnTrace,{name,path:f.path,sha256:f.sha256});
+         }
+       }
+     }
+   }catch{turnTrace=null;}
+   const turnStart=Date.now();
+   let traceEnded=false;
+   const endTrace=(outcome,extra={})=>{
+     if(traceEnded)return;traceEnded=true;
+     try{
+       const childTotals=turnTrace?._childTotals??{};
+       const errMsg=extra.error??null;
+       const rc=errMsg?traceReasonCode(errMsg):(childTotals.reasonCode??null);
+       const subscription=(task?.crewWorker?.backend??'codex')==='codex';
+       turnTrace?.end?.({outcome,durationMs:Date.now()-turnStart,...childTotals,...extra,...(rc?{reasonCode:rc}:{}),...(subscription?{usage_metadata:{total_cost:0},cost_source:'subscription',cost_note:'codex subscription'}:{})});
+     }catch{}
+   };
+   const runOneTask=async()=>{
+    try{
+     event=event?Event.parse(event):await runCrewTask(taskProject,{...task,...(receipt?.status==='rejected'?{repairFeedback:{error:receipt.error,previousEvent:receipt.event,instruction:'Repair this evidenced validation error. Preserve current source facts and return the current gate Event.'}}:{})},host);
+     applyEvent(taskProject,event);
+     await verifySubmission({project:taskProject,pending:task},event);
+     if(event.action==='review'||event.action==='owner-review')try{
+       const w=task.crewWorker??{};
+       tracer?.review?.({decision:event.review?.decision,artifactId:event.artifactId,reviewer:{label:traceLabelFor(w),model:w.modelVersion},recommendation:event.review?.recommendation??null,selection:event.review?.recommendation?.selection??null,checks:(event.review?.checks??[]).map(c=>({criterion:c,status:c.status,evidence:c.evidence,repair:c.repair??''})),summary:event.review?.summary??null,findings:event.review?.findings??null});
+     }catch{}
+    }catch(error){
+      if(!event&&error?.safeRetryWithoutOutput){
+       if(error?.usageLimitExceeded){
+        endTrace('deferred-usage-limit',{error:error.message,reasonCode:traceReasonCode(error)});
+        await saveJson(path,{...started,status:'deferred',reason:'usage-limit',retryAfter:error.retryAfter??null,error:error.message,event:{savedTools:error.savedTools??[]}});
+        if(taskProject.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
+        throw error;
+       }
+       endTrace('rejected',{error:error.message,reasonCode:traceReasonCode(error)});
+       await saveJson(path,{...started,status:'rejected',error:error.message,event:{savedTools:error.savedTools??[]}});
+       if(taskProject.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
        throw error;
       }
-      endTrace('rejected',{error:error.message,reasonCode:traceReasonCode(error)});
-      await saveJson(path,{...started,status:'rejected',error:error.message,event:{savedTools:error.savedTools??[]}});
-      if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
-      throw error;
-     }
-     if(!event&&!error.knownFinished){endTrace('error',{error:error.message,reasonCode:traceReasonCode(error)});if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});throw error;}
-    endTrace('error',{error:error.message,reasonCode:traceReasonCode(error)});
-    await saveJson(path,{...started,status:'rejected',event:event??error.finishedResult,error:error.message});
-    if(status.project.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
-    throw new Error(`CODEX_RESULT_REJECTED: known finished worker result violates the contract: ${error.message}. Inspect ${path}; use --repair-invalid true for a bounded repair.`);
-   }
-   await saveJson(path,{...started,status:'completed',event});
-   if(reviewCachePath){await mkdir(join(receiptDirectory,'..','review-cache'),{recursive:true});await saveJson(reviewCachePath,{event,at:new Date().toISOString()});}
-   const updated=await workflow.respond(thread,event);completed++;
-   endTrace('completed');
-  if(event.action==='review'&&event.review?.decision==='rejected'){const notice=updated.pending.repairNotices.find(n=>n.artifactId===event.artifactId);if(notice)onProgress({type:'repair-notice',notice});}
-  };
-  try{
-    if(turnTrace&&tracer?.within)await tracer.within(turnTrace,runOneTask);
-    else await runOneTask();
-  }catch(e){endTrace('error',{error:e?.message??String(e)});throw e;}finally{endTrace('error');}
+      if(!event&&!error.knownFinished){endTrace('error',{error:error.message,reasonCode:traceReasonCode(error)});if(taskProject.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});throw error;}
+     endTrace('error',{error:error.message,reasonCode:traceReasonCode(error)});
+     await saveJson(path,{...started,status:'rejected',event:event??error.finishedResult,error:error.message});
+     if(taskProject.debug?.enabled)await workflow.respond(thread,{taskId:task.taskId,actor:'runtime',action:'debug-stop',message:error.message});
+     throw new Error(`CODEX_RESULT_REJECTED: known finished worker result violates the contract: ${error.message}. Inspect ${path}; use --repair-invalid true for a bounded repair.`);
+    }
+    await saveJson(path,{...started,status:'completed',event});
+    if(reviewCachePath){await mkdir(join(receiptDirectory,'..','review-cache'),{recursive:true});await saveJson(reviewCachePath,{event,at:new Date().toISOString()});}
+    endTrace('completed');
+    return event;
+   };
+   let resultEvent;
+   try{
+     if(turnTrace&&tracer?.within)resultEvent=await tracer.within(turnTrace,runOneTask);
+     else resultEvent=await runOneTask();
+   }catch(e){endTrace('error',{error:e?.message??String(e)});throw e;}finally{endTrace('error');}
+   return resultEvent;
+ };
+
+ while(completed<maxTasks){
+  const status=await workflow.status(thread),task=status.pending;
+  if(status.project.debug?.enabled&&status.project.debug.paused)return {completed,stop:'debug-pause',status};
+  if(bibleWaiting(status.project))return {completed,stop:'bible-unsigned',status};
+  if(!['author','owner-review','review','produce'].includes(task.gate)||task.gate==='produce'&&task.step==='film'||['audioReviewerQualification','reviewerQualification'].includes(task.step))return {completed,stop:'graph-gate',status};
+
+  const isParallel = isParallelStage(status.project) && !status.project.debug?.enabled;
+  const activeTasks = isParallel ? activeBranchTasks(status.project) : [task];
+
+  if (isParallel && activeTasks.length > 1) {
+    const remaining = maxTasks - completed;
+    const batchTasks = activeTasks.slice(0, remaining);
+    if (batchTasks.length > 1) {
+      if (batchTasks.some(t => !['author','owner-review','review','produce'].includes(t.gate) || (t.gate==='produce' && t.step==='film') || ['audioReviewerQualification','reviewerQualification'].includes(t.step))) {
+        return {completed, stop: 'graph-gate', status};
+      }
+      const batchPlans = batchTasks.map(t => t.generationEstimate ?? t.plan).filter(Boolean);
+      if (batchPlans.length > 0) {
+        batchRequireBudget(status.project, batchPlans, { reserveId: 'batch:' + batchTasks.map(t => t.taskId).join(':'), provider: 'batch-runtime' });
+      }
+      const events = await Promise.all(batchTasks.map(t => {
+        const branch = findBranchForEvent(status.project, t);
+        const taskProject = branch ? projectForBranch(status.project, branch) : status.project;
+        return executeOneTask(t, taskProject);
+      }));
+      const resultPlans = events.map(e => e.plan).filter(Boolean);
+      if (resultPlans.length > 0) {
+        batchRequireBudget(status.project, resultPlans, { reserveId: 'batch-result:' + events.map(e => e.taskId).join(':'), provider: 'batch-runtime' });
+      }
+      await applyBranchEvents(status.project, events, async (_curr, ev) => {
+        const updated = await workflow.respond(thread, ev);
+        completed++;
+        if (ev.action === 'review' && ev.review?.decision === 'rejected') {
+          const notice = updated.pending?.repairNotices?.find(n => n.artifactId === ev.artifactId);
+          if (notice) onProgress({ type: 'repair-notice', notice });
+        }
+        return updated.project;
+      }, taskFor);
+      continue;
+    }
+  }
+
+  const branch = isParallelStage(status.project) ? findBranchForEvent(status.project, task) : null;
+  const taskProject = branch ? projectForBranch(status.project, branch) : status.project;
+  const event = await executeOneTask(task, taskProject);
+  const updated = await workflow.respond(thread, event);
+  completed++;
+  if (event.action === 'review' && event.review?.decision === 'rejected') {
+    const notice = updated.pending?.repairNotices?.find(n => n.artifactId === event.artifactId);
+    if (notice) onProgress({ type: 'repair-notice', notice });
+  }
  }
  const status=await workflow.status(thread);
  return {completed,stop:status.project.debug?.enabled&&status.project.debug.paused?'debug-pause':'task-limit',status};

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import {
   initialProject,
   applyEvent,
@@ -19,6 +20,9 @@ import {
   backgroundRecipeSha256,
 } from '../runtime/workflow.mjs';
 import { criteria, digest } from '../runtime/contracts.mjs';
+import { driveCrew } from '../runtime/codex-host.mjs';
+import { crewRoles } from '../runtime/crew.mjs';
+import { importMedia } from '../runtime/media.mjs';
 import { inputs, script, event, send, approved, reviewed, produce, file, answersLocked } from './helpers.mjs';
 import { image, sheetImage, backgroundProject, registry } from './background-helpers.mjs';
 import { keyframeProject, composition } from './shot-helpers.mjs';
@@ -645,3 +649,98 @@ test('resuming old checkpoints without branch cursors works identically (regress
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('real dispatch function runs 2 branch tasks overlapping in time', { timeout: 20000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'parallel-dispatch-'));
+  const receiptDirectory = join(dir, 'host-dispatch');
+  try {
+    const imgPath1 = join(dir, 'alex.png');
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=blue:s=1600x900', '-frames:v', '1', imgPath1]);
+    const photo1 = await importMedia(imgPath1, dir);
+
+    const imgPath2 = join(dir, 'sam.png');
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=green:s=1600x900', '-frames:v', '1', imgPath2]);
+    const photo2 = await importMedia(imgPath2, dir);
+
+    let p = startRosterProject();
+    const rosterWithRealPhotos = {
+      characters: [
+        { id: 'alex', name: 'Alex', ageVariant: 'adult', important: true, references: [photo1], notes: 'isolated Alex' },
+        { id: 'sam', name: 'Sam', ageVariant: 'adult', important: true, references: [photo2], notes: 'isolated Sam' },
+      ],
+    };
+    p = approved(reviewed(send(p, 'artifact', { workerId: 'cast-owner', content: rosterWithRealPhotos })));
+    p = send(p, 'configure-crew', {
+      actor: 'human',
+      message: 'ISOLATED crew for parallel dispatch test',
+      crew: {
+        workers: Object.entries(crewRoles).map(([role, { name }]) => ({
+          workerId: role === 'audio-reviewer' ? 'audio-reviewer' : `isolated-${role}`,
+          name,
+          role,
+          modelVersion: role === 'audio-reviewer' ? 'ISOLATED-audio-v1' : 'isolated-host',
+          capabilityVersion: role === 'audio-reviewer' ? 'ISOLATED-tools-v1' : 'isolated-tools',
+          execution: 'host',
+        })),
+      },
+    });
+
+    assert.ok(Array.isArray(p.branches));
+    assert.equal(p.branches.length, 2);
+    assert.equal(p.step, 'characterPrompt');
+
+    const workflow = {
+      status: async () => ({ project: p, pending: taskFor(p) }),
+      respond: async (_id, e) => {
+        p = applyEvent(p, e);
+        return workflow.status();
+      },
+    };
+
+    const taskTimes = [];
+    const host = {
+      tools: {
+        viewImage: async () => ({ perception: 'direct-image' }),
+      },
+      runTask: async (task, { worker, callTool }) => {
+        const start = Date.now();
+        for (const f of task.castEntry?.references ?? []) {
+          await callTool('viewImage', { sha256: f.sha256 });
+        }
+        await new Promise(r => setTimeout(r, 60));
+        const end = Date.now();
+        taskTimes.push({ taskId: task.taskId, characterId: task.characterId, start, end });
+        const prompt = task.characterId === 'alex'
+          ? 'neutral, warm smile, pure joy, thoughtful concentration, determined resolve, gentle surprise, tender concern, playful mischief. Alex likeness.'
+          : 'neutral, warm smile, pure joy, thoughtful concentration, determined resolve, gentle surprise, tender concern, playful mischief. Sam likeness.';
+        return {
+          taskId: task.taskId,
+          actor: 'agent',
+          workerId: worker.workerId,
+          action: 'artifact',
+          characterId: task.characterId,
+          branchId: `char:${task.characterId}`,
+          content: {
+            prompt,
+            recipeSha256: characterRecipeSha256,
+            characterDigest: task.characterDigest,
+            referenceHashes: (task.castEntry?.references ?? []).map(r => r.sha256),
+          },
+        };
+      },
+    };
+
+    const result = await driveCrew(workflow, 'run', host, { maxTasks: 2, receiptDirectory });
+    assert.equal(result.completed, 2);
+    assert.equal(taskTimes.length, 2);
+    const [t0, t1] = taskTimes;
+    assert.ok(t1.start < t0.end && t0.start < t1.end, 'Real dispatch function ran 2 branch tasks overlapping in time');
+
+    const statusAfter = await workflow.status('run');
+    assert.equal(statusAfter.project.branches[0].gate, 'review');
+    assert.equal(statusAfter.project.branches[1].gate, 'review');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
