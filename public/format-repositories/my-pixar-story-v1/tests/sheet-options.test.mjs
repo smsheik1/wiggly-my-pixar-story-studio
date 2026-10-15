@@ -93,7 +93,7 @@ test('rev 5 skips sheetPrompt/sheet; selection IS the final sheet and downstream
   assert.equal(taskFor(p).formatRole, 'sheet-prompter');
   assert.equal(taskFor(p).recipe.sha256, characterRecipeSha256);
   const cast = current(p, 'roster').content.characters[0];
-  const prompt = { prompt: 'Full sheet prompt with 4 views and 8 expressions: neutral, happy, delighted, sad, surprised, confused, angry, talking', characterDigest: digest(cast), referenceHashes: cast.references.map(f => f.sha256), recipeSha256: characterRecipeSha256 };
+  const prompt = { prompt: 'Full sheet prompt with 4 views and 8 expressions: neutral, warm smile, pure joy, thoughtful concentration, determined resolve, gentle surprise, tender concern, playful mischief', characterDigest: digest(cast), referenceHashes: cast.references.map(f => f.sha256), recipeSha256: characterRecipeSha256 };
   p = approved(reviewed(send(p, 'artifact', { workerId: 'pia', content: prompt })));
   assert.equal(p.step, 'candidates');
   p = produce(p, { files: [1, 2, 3].map(sheetImage), prompt: prompt.prompt });

@@ -15,7 +15,7 @@ import { requireVisualQualification } from '../evaluation/visual-qualification.m
 import { shotFor, shotReferences, referenceBindings, planningReferences, validateShots, validateLocationRegistry, validateKeyframePrompt, mergeShotsPatch } from './shots.mjs';
 import { requestDescriptor,planningAccountGuide,generationEstimate,narrationGenerationTexts } from './providers.mjs';
 import {scriptQuoteChecks,transcriptDiff,reviewerVariantAccepted} from './evaluators.mjs';
-import {assertMustKeepCopied,assertPromptKeepsTraits,mustKeepOf} from './identity.mjs';
+import {assertMustKeepCopied,assertPromptKeepsTraits,assertPromptPhotoLikeness,mustKeepOf} from './identity.mjs';
 import {assertBackgroundPrompt,assertBackgroundBrief,keyLightOf} from './background-prompt.mjs';
 // Keyframe prompts: each on-screen person's must-keep identity traits (only when any exist).
 // The approved background prompt's named key light, so Cam lights the characters to match the plate.
@@ -30,7 +30,7 @@ export function criteriaFor(p, step = p.step) {
   if (step === 'candidates' && sheetWorkflow(p)) return criteria.sheet;
   return criteria[step] ?? [];
 }
-export const FIXED_SHEET_EXPRESSIONS = ['neutral', 'happy', 'delighted', 'sad', 'surprised', 'confused', 'angry', 'talking'];
+export const FIXED_SHEET_EXPRESSIONS = ['neutral', 'warm smile', 'pure joy', 'thoughtful concentration', 'determined resolve', 'gentle surprise', 'tender concern', 'playful mischief'];
 export function fixedEightInOrder(prompt){
   let at=-1;
   for(const word of FIXED_SHEET_EXPRESSIONS){
@@ -205,7 +205,8 @@ export function validateArtifactContent(p, content, author, previous=current(p))
     // Rev 5: this prompt IS the sheet prompt (no separate sheetPrompt step), so the fixed
     // eight must appear in the prompt text, in order.
     assertPromptKeepsTraits(parsed.prompt,[cast]);
-    if(sheetWorkflow(p)&&!fixedEightInOrder(parsed.prompt))throw new Error('SHEET_EXPRESSIONS_ORDER_REQUIRED: the rev 5 sheet prompt must name the fixed eight expressions in order (neutral, happy, delighted, sad, surprised, confused, angry, talking).');
+    assertPromptPhotoLikeness(parsed.prompt,cast);
+    if(sheetWorkflow(p)&&!fixedEightInOrder(parsed.prompt))throw new Error('SHEET_EXPRESSIONS_ORDER_REQUIRED: the rev 5 sheet prompt must name the fixed eight expressions in order (neutral, warm smile, pure joy, thoughtful concentration, determined resolve, gentle surprise, tender concern, playful mischief).');
   }
   if(refinedWorkflow(p)&&p.step==='candidates'&&parsed.prompt!==current(p,`characterPrompt:${p.characterId}`).content.prompt)throw new Error('Candidates must use the human-approved character prompt exactly.');
   if (p.step === 'voiceSample' && (!parsed.files[0].durationSeconds || parsed.files[0].durationSeconds < 10)) throw new Error('Voice sample must contain at least 10 seconds of measured audio.');
@@ -263,7 +264,7 @@ export function validateArtifactContent(p, content, author, previous=current(p))
     if(!/no text/i.test(parsed.prompt)||!/watermark/i.test(parsed.prompt))throw new Error('SHEET_PROMPT_NO_TEXT_REQUIRED: the sheet prompt must state that no text, labels, captions, expression names or watermarks may be rendered in the image.');
     if (parsed.referenceSha256 !== candidate.content.files[candidate.selection].sha256) throw new Error('Sheet prompt must bind the actual selected character image.');
     if(sheetWorkflow(p)){
-      if(!Array.isArray(parsed.expressions)||parsed.expressions.length!==FIXED_SHEET_EXPRESSIONS.length||!parsed.expressions.every((e,i)=>e===FIXED_SHEET_EXPRESSIONS[i]))throw new Error('SHEET_EXPRESSIONS_ORDER_REQUIRED: sheet expressions must equal the fixed eight in order (neutral, happy, delighted, sad, surprised, confused, angry, talking).');
+      if(!Array.isArray(parsed.expressions)||parsed.expressions.length!==FIXED_SHEET_EXPRESSIONS.length||!parsed.expressions.every((e,i)=>e===FIXED_SHEET_EXPRESSIONS[i]))throw new Error('SHEET_EXPRESSIONS_ORDER_REQUIRED: sheet expressions must equal the fixed eight in order (neutral, warm smile, pure joy, thoughtful concentration, determined resolve, gentle surprise, tender concern, playful mischief).');
     }
   }
   if (p.step === 'sheet' && parsed.prompt !== current(p, `sheetPrompt:${p.characterId}`).content.prompt) throw new Error('Sheet must use the reviewed prompt exactly.');

@@ -33,6 +33,23 @@ export function assertPromptKeepsTraits(prompt,characters){
  const missing=characters.flatMap(c=>missingTraits(mustKeepOf(c),prompt).map(t=>`${c.name??c.id}: "${t}"`));
  if(missing.length)throw new Error(`MUST_KEEP_MISSING_FROM_PROMPT: write every mustKeep identity trait into the prompt: ${missing.join('; ')}.`);
 }
+// Photo-grounded likeness: when the roster binds reference photos for the character,
+// the prompt must match the photo instead of restating the face from notes. Only
+// labelled face lines count (they sit mid-line after a period in real prompts);
+// plain words (coverings, "same likeness") stay allowed.
+const PHOTO_FACE_LABEL=/\b(Face|Eyes|Eyebrows|Skin|Hair)\s*:/gi;
+export function photoFaceLabels(prompt){
+ const found=new Set();
+ for(const m of String(prompt??'').matchAll(PHOTO_FACE_LABEL))found.add(m[1][0].toUpperCase()+m[1].slice(1).toLowerCase());
+ return [...found];
+}
+export function assertPromptPhotoLikeness(prompt,characters){
+ for(const c of Array.isArray(characters)?characters:[characters]){
+  if(!c||!Array.isArray(c.references)||!c.references.length)continue;
+  const labels=photoFaceLabels(prompt);
+  if(labels.length)throw new Error(`CHARACTER_PROMPT_PHOTO_LIKENESS_REQUIRED: ${c.name??c.id} has a reference photo attached: match the face, likeness and skin tone of the photo exactly instead of describing the face from notes (found ${labels.join(', ')} labelled lines). Describe only age deltas, coverings, wardrobe, accessories and build.`);
+ }
+}
 // Vera on a sheet: a passing likeness check must say it saw every trait; otherwise fail likeness.
 export function assertReviewChecksTraits(review,castEntry){
  const traits=mustKeepOf(castEntry);
