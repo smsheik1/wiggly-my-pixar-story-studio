@@ -36,7 +36,7 @@ test('a settled transcript-only rejection goes back to Ava, not Nora',{timeout:1
 test('Nora cannot ask for settlements on beats that already match',{timeout:10000},()=>{
  const p=transcriptRejected(false);assert.equal(p.gate,'author');
  const back=applyEvent(p,refusal(p));assert.equal(back.gate,'review');assert.equal(taskFor(back).formatRole,'audio-reviewer');
- assert.match(back.feedback.at(-1).message,/Ava \(audio reviewer\)/);
+ assert.match(back.feedback.at(-1).message,/Ava Audio Reviewer/);
 });
 
 test('other failed criteria still route to Nora',{timeout:10000},()=>{

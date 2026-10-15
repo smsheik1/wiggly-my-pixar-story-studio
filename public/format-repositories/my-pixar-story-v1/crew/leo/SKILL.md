@@ -3,7 +3,7 @@ name: leo
 description: Leo organizes the maker's questionnaire answers and writes the four-beat narration script in the maker's own voice. Use for the answers and script steps.
 ---
 
-# Leo, script writer
+# Leo Script Engineer
 
 The film exists so the recipient learns who the maker really was and feels closer to them.
 

@@ -812,7 +812,7 @@ export function applyEvent(project, raw) {
     // allowed while the current narration is unapproved and every job is reconciled.
     const preAudition=['voiceSample','clone','audition'].includes(p.step)&&!p.jobs.length&&!p.artifacts.some(a=>a.approvedBy&&['audition','narration'].includes(a.kind));
     const duringNarration=p.step==='narration'&&!current(p,'narration')?.approvedBy&&!p.jobs.some(j=>['submitting','submitted','uncertain','authorized'].includes(j.status));
-    if(!e.message||!p.studio||!(preAudition||duringNarration))throw new Error('AUDIO_REFRESH_LOCKED: refresh Ava (audio reviewer) instructions explicitly before audio approval: pre-provider, or during unapproved narration with reconciled jobs.');
+    if(!e.message||!p.studio||!(preAudition||duringNarration))throw new Error('AUDIO_REFRESH_LOCKED: refresh Ava Audio Reviewer instructions explicitly before audio approval: pre-provider, or during unapproved narration with reconciled jobs.');
     if(duringNarration){const next=loadStudio(),documents={...p.studio.documents};for(const path of ['crew/ava/SKILL.md','evaluation/rubrics/audio.md']){if(!next.documents[path]||!p.studio.documents[path])throw new Error(`AUDIO_REFRESH_SCOPE: ${path} is not bound in this studio.`);documents[path]=next.documents[path];}
       // Copy ONLY Ava's skill and the audio rubric; config, tools and every other document stay pinned.
       p.studio={config:p.studio.config,documents,sha256:digest({config:p.studio.config,documents})};
@@ -1162,7 +1162,7 @@ export function applyEvent(project, raw) {
         if(!keep.length)sendBackToReview=true;else e.blocker={...e.blocker,beats:keep};}
     }
     if(e.blocker.kind==='account-readiness'){const {kind,...help}=e.blocker;if(digest(help)!==digest(planningAccountGuide(p)))throw new Error('PLANNING_HELP_BINDING: use canonical account guidance; never invent payment requirements, URLs or account failures.');}
-    if(sendBackToReview){p.gate='review';p.feedback.push({key:keyFor(p),message:'Every narration beat now matches its locked text (or is human-settled); returning the take to Ava (audio reviewer) for re-review.'});}else{p.gate='escalate';p.feedback.push({key:keyFor(p),message:e.message});}
+    if(sendBackToReview){p.gate='review';p.feedback.push({key:keyFor(p),message:'Every narration beat now matches its locked text (or is human-settled); returning the take to Ava Audio Reviewer for re-review.'});}else{p.gate='escalate';p.feedback.push({key:keyFor(p),message:e.message});}
   } else if (e.action === 'plan') {
     requiredActor(e, 'agent');
     if (p.gate !== 'produce') throw new Error('Generation planning is not allowed here.');
