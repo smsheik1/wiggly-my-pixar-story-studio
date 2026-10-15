@@ -47,3 +47,20 @@ test('character architect: muse max, Nano Banana sheets, feeds vera + compiler, 
   const { existsSync } = await import('node:fs');
   for (const f of Object.values(c.contract)) assert.ok(existsSync(new URL('../' + f, import.meta.url)), f);
 });
+test('location scout: muse max, Nano Banana plates, parallel with CA, feeds compiler, contract files exist', async () => {
+  const c = V2_MODELS['location-scout'];
+  assert.deepEqual([c.provider, c.model, c.effort], ['openrouter', 'meta/muse-spark-1.3-contributor', 'max']);
+  assert.equal(c.imageSteps.location.model, 'nano-banana-2.1');
+  assert.deepEqual(c.targetEngines, { plate: 'nano-banana-2.1' });
+  assert.ok(c.downstreamAgents.includes('seedance-compiler'));
+  assert.deepEqual(c.parallelWith, ['character-architect']);
+  const { existsSync } = await import('node:fs');
+  for (const f of Object.values(c.contract)) assert.ok(existsSync(new URL('../' + f, import.meta.url)), f);
+});
+test('location scout: Gemini role label, 8192 tokens, loadLocationScoutSkill', async () => {
+  const { loadLocationScoutSkill } = await import('../config/models.mjs');
+  const c = V2_MODELS['location-scout'];
+  assert.equal(c.role, 'Location Scout & Environment Plate Architect'); assert.equal(c.maxTokens, 8192);
+  assert.deepEqual(c.downstreamAgents, ['vera', 'seedance-compiler']);
+  assert.match(loadLocationScoutSkill(), /Location Scout & Environment Plate Architect/);
+});
