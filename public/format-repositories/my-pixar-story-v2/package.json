@@ -1,0 +1,8 @@
+{
+  "name": "my-pixar-story-v2",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": { "test": "node --test tests/" },
+  "dependencies": { "zod": "4.3.6" }
+}

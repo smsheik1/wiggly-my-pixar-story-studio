@@ -1,0 +1,27 @@
+// v2 target model & provider map (static). Not wired into any pipeline yet.
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+export const NANO_BANANA = Object.freeze({ provider: 'google-flow', model: 'nano-banana-2.1', promptLines: 'single' });
+
+export const V2_MODELS = Object.freeze({
+  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 32000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
+    imageSteps: { storyboard: NANO_BANANA } },
+  'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 16000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
+    imageSteps: { character: NANO_BANANA } },
+  'location-scout': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 16000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
+    imageSteps: { location: NANO_BANANA } },
+  'seedance-compiler': { downstreamAgents: ['linter'], maxTokens: 16000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
+    video: { provider: 'replicate', model: 'bytedance/seedance-2.5', resolution: '480p', enabled: false,
+             note: 'not yet enabled: Seedance testing only after all upstream agents are proven' } },
+  vera: { downstreamAgents: [], maxTokens: 8000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max' },
+  linter: { downstreamAgents: [], maxTokens: 0, kind: 'code', provider: 'none', model: 'none' },
+});
+
+const CREW = new URL('../crew/', import.meta.url);
+/** Read an agent's role.md; throws a clear error if the agent or its skill file is missing. */
+export function loadSkill(agent) {
+  if (!V2_MODELS[agent]) throw new Error(`loadSkill: unknown v2 agent "${agent}"`);
+  const path = fileURLToPath(new URL(`${agent}/role.md`, CREW));
+  if (!existsSync(path)) throw new Error(`loadSkill: missing skill file for "${agent}" at ${path}`);
+  return readFileSync(path, 'utf8');
+}

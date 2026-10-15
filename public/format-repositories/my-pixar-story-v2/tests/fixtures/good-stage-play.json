@@ -1,0 +1,247 @@
+{
+ "masthead": {
+  "title": "The Sunglasses Scientist",
+  "draftNumber": 1,
+  "oneLinePremise": "An eight-year-old in sunglasses insists he is a scientist, and his whole family has to play along."
+ },
+ "shapeBar": {
+  "totalRuntimeSec": 46,
+  "parts": [
+   {
+    "name": "Part 1: Original",
+    "durationSec": 30
+   },
+   {
+    "name": "Part 2: Sequel",
+    "durationSec": 16
+   }
+  ]
+ },
+ "cast": [
+  {
+   "name": "Shaz",
+   "elementTag": "@Shaz",
+   "age": 8,
+   "oneWordRole": "scientist",
+   "physicalDescription": "Small round-faced boy, short black hair, dark sunglasses worn indoors, plain red t-shirt.",
+   "signatureAccent": "red plastic sunglasses",
+   "voiceDescription": "Eight-year-old boy, flat declarative delivery, total conviction, quick pace.",
+   "skinTone": "warm medium brown",
+   "gender": "male",
+   "family": true
+  },
+  {
+   "name": "Mom",
+   "elementTag": "@Mom",
+   "age": 40,
+   "oneWordRole": "mother",
+   "physicalDescription": "Kind round face, soft blue hijab fully covering hair and hairline, long modest dress.",
+   "signatureAccent": "soft blue hijab",
+   "voiceDescription": "Warm adult woman, gentle teasing tone, slow pace, quiet laugh.",
+   "skinTone": "warm medium brown",
+   "gender": "female",
+   "family": true
+  },
+  {
+   "name": "Sister",
+   "elementTag": "@Sister",
+   "age": 18,
+   "oneWordRole": "rival",
+   "physicalDescription": "Young woman, grey hijab fully covering hair and hairline, oversized hoodie.",
+   "signatureAccent": "yellow hoodie strings",
+   "voiceDescription": "Eighteen-year-old, dry deadpan delivery, unimpressed, clipped lines.",
+   "skinTone": "light warm brown",
+   "gender": "female",
+   "family": true
+  }
+ ],
+ "segments": [
+  {
+   "segmentId": 1,
+   "title": "Part 1: Original",
+   "targetDurationSec": 30,
+   "goalSummary": "Ordinary afternoon card battle; Shaz declares himself a scientist twice, the third time Mom believes him. Six shots.",
+   "continuityLocks": [
+    "Shaz screen-left, Sister screen-right at the kitchen table",
+    "180-degree line along the table edge"
+   ],
+   "shots": [
+    {
+     "shotNumber": 1,
+     "startSec": 0,
+     "endSec": 5,
+     "whatWeSee": "Wide shot of the kitchen table; Shaz slaps a card down across from his sister.",
+     "isContinuousMove": false,
+     "location": "Kitchen",
+     "whatWeHear": "Card slap, fridge hum."
+    },
+    {
+     "shotNumber": 2,
+     "startSec": 5,
+     "endSec": 9,
+     "whatWeSee": "Medium on Shaz lowering his sunglasses very slowly.",
+     "isContinuousMove": false,
+     "dialogue": {
+      "speaker": "@Shaz",
+      "line": "{I am a scientist.}",
+      "isVoiceover": false,
+      "isOffCamera": false
+     }
+    },
+    {
+     "shotNumber": 3,
+     "startSec": 9,
+     "endSec": 14,
+     "whatWeSee": "Close-up on Sister, unimpressed, one slow blink.",
+     "isContinuousMove": false,
+     "dialogue": {
+      "speaker": "@Sister",
+      "line": "{You are eight.}",
+      "isVoiceover": false,
+      "isOffCamera": false
+     },
+     "directorsNote": "Play it completely straight; it is the ruler for the third beat."
+    },
+    {
+     "shotNumber": 4,
+     "startSec": 14,
+     "endSec": 20,
+     "whatWeSee": "Medium on Shaz pushing sunglasses up and slapping a second card.",
+     "isContinuousMove": false,
+     "dialogue": {
+      "speaker": "@Shaz",
+      "line": "{A scientist. Not even kidding.}",
+      "isVoiceover": false,
+      "isOffCamera": false
+     }
+    },
+    {
+     "shotNumber": 5,
+     "startSec": 20,
+     "endSec": 24,
+     "whatWeSee": "Mom appears in the doorway holding a tea towel, watching.",
+     "isContinuousMove": false,
+     "whatWeHear": "No dialogue in this shot; kettle starts to whistle."
+    },
+    {
+     "shotNumber": 6,
+     "startSec": 24,
+     "endSec": 30,
+     "whatWeSee": "Close-up on Mom: she nods seriously, holding back a smile, breathing.",
+     "isContinuousMove": false,
+     "dialogue": {
+      "speaker": "@Mom",
+      "line": "{Then go do science, habibi.}",
+      "isVoiceover": false,
+      "isOffCamera": false
+     }
+    }
+   ]
+  },
+  {
+   "segmentId": 2,
+   "title": "Part 2: Sequel",
+   "targetDurationSec": 16,
+   "goalSummary": "Payoff: the sunglasses stay on; the narrator lands the memory. Three shots.",
+   "continuityLocks": [
+    "Same kitchen, same screen sides"
+   ],
+   "shots": [
+    {
+     "shotNumber": 1,
+     "startSec": 0,
+     "endSec": 6,
+     "whatWeSee": "Wide: Shaz marches to the window, sunglasses on, holding a cup of water like a beaker.",
+     "isContinuousMove": false,
+     "narration": {
+      "speaker": "@Shaz",
+      "line": "{She never once laughed at me.}"
+     }
+    },
+    {
+     "shotNumber": 2,
+     "startSec": 6,
+     "endSec": 10,
+     "whatWeSee": "Close-up on Sister sliding her sunglasses on too.",
+     "isContinuousMove": false,
+     "whatWeHear": "No dialogue in this shot; chair creak."
+    },
+    {
+     "shotNumber": 3,
+     "startSec": 10,
+     "endSec": 16,
+     "whatWeSee": "Wide held image: the three of them in afternoon light, slow breathing, sunglasses glinting.",
+     "isContinuousMove": true,
+     "whatWeHear": "Soft music swell."
+    }
+   ]
+  }
+ ],
+ "storyboardPrompt": {
+  "targetEngine": "nano-banana-2.1",
+  "fullPrompt": "An eight-panel colour storyboard sheet from a feature animation studio's pre-production, two even rows of four 16:9 panels on a warm off-white page, each with a small hand-written shot number. Panel 1 [shot 1]: wide shot; a warm medium brown boy in red sunglasses and a light warm brown young woman in a grey hijab with no visible hair at a kitchen table. Window light from the left. No text other than shot numbers.",
+  "panels": [
+   {
+    "panelNumber": 1,
+    "shotNumberRef": 1,
+    "shotSizeAndAngle": "Medium shot at eye level",
+    "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+    "lightAndPalette": "Soft window light from the left, warm amber shadows"
+   },
+   {
+    "panelNumber": 2,
+    "shotNumberRef": 2,
+    "shotSizeAndAngle": "Medium shot at eye level",
+    "whatIsInFrame": "Light warm brown young woman in a grey hijab, unimpressed",
+    "lightAndPalette": "Soft window light from the left, warm amber shadows"
+   },
+   {
+    "panelNumber": 3,
+    "shotNumberRef": 3,
+    "shotSizeAndAngle": "Medium shot at eye level",
+    "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+    "lightAndPalette": "Soft window light from the left, warm amber shadows"
+   },
+   {
+    "panelNumber": 4,
+    "shotNumberRef": 4,
+    "shotSizeAndAngle": "Medium shot at eye level",
+    "whatIsInFrame": "Light warm brown young woman in a grey hijab, unimpressed",
+    "lightAndPalette": "Soft window light from the left, warm amber shadows"
+   },
+   {
+    "panelNumber": 5,
+    "shotNumberRef": 5,
+    "shotSizeAndAngle": "Medium shot at eye level",
+    "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+    "lightAndPalette": "Soft window light from the left, warm amber shadows"
+   },
+   {
+    "panelNumber": 6,
+    "shotNumberRef": 6,
+    "shotSizeAndAngle": "Medium shot at eye level",
+    "whatIsInFrame": "Light warm brown young woman in a grey hijab, unimpressed",
+    "lightAndPalette": "Soft window light from the left, warm amber shadows"
+   },
+   {
+    "panelNumber": 7,
+    "shotNumberRef": 1,
+    "shotSizeAndAngle": "Medium shot at eye level",
+    "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+    "lightAndPalette": "Soft window light from the left, warm amber shadows"
+   },
+   {
+    "panelNumber": 8,
+    "shotNumberRef": 2,
+    "shotSizeAndAngle": "Medium shot at eye level",
+    "whatIsInFrame": "Light warm brown young woman in a grey hijab, unimpressed",
+    "lightAndPalette": "Soft window light from the left, warm amber shadows"
+   }
+  ]
+ },
+ "htmlScriptDocument": "<!doctype html><html><head><link href=\"https://fonts.googleapis.com/css2?family=Fraunces&family=Karla&family=Space+Mono\" rel=\"stylesheet\"><style>body{background:#E4E6D9;color:#22272A;font-family:Karla}.card{background:#F2F3EA}</style></head><body><h1>The Sunglasses Scientist</h1><p>Draft 1</p></body></html>",
+ "clarifyingQuestion": null,
+ "assumptions": [
+  "Assumed the card battles happened at the kitchen table."
+ ]
+}
