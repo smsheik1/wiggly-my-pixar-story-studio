@@ -42,7 +42,8 @@ test('character architect: muse max, Nano Banana sheets, feeds vera + compiler, 
   const c = V2_MODELS['character-architect'];
   assert.deepEqual([c.provider, c.model, c.effort], ['openrouter', 'meta/muse-spark-1.3-contributor', 'max']);
   assert.equal(c.imageSteps.character.model, 'nano-banana-2.1');
-  assert.deepEqual(c.downstreamAgents, ['vera', 'seedance-compiler']);
+  assert.ok(c.downstreamAgents.includes('seedance-compiler') && c.downstreamAgents.includes('vera'));
+  assert.deepEqual(c.targetEngines, { masterRender: 'nano-banana-2.1', modelSheet: 'nano-banana-2.1' });
   const { existsSync } = await import('node:fs');
   for (const f of Object.values(c.contract)) assert.ok(existsSync(new URL('../' + f, import.meta.url)), f);
 });

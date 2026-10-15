@@ -8,6 +8,7 @@ export const V2_MODELS = Object.freeze({
     imageSteps: { storyboard: NANO_BANANA } },
   'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 24000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
     imageSteps: { character: NANO_BANANA },
+    targetEngines: { masterRender: 'nano-banana-2.1', modelSheet: 'nano-banana-2.1' },
     contract: { output: 'crew/character-architect/schema.mjs', input: 'crew/character-architect/input.mjs', gate: 'crew/linter/check-character-sheets.mjs' } },
   'location-scout': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 16000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
     imageSteps: { location: NANO_BANANA } },
