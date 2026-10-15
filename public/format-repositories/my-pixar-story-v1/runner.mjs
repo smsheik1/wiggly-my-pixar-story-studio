@@ -12,7 +12,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import fs from 'node:fs';
 import { z } from 'zod';
 import { VERSION, Content, Event, Review, Plans, Inputs, IntakeConfirmation, VoiceChoiceInput, digest } from './runtime/contracts.mjs';
-import { openWorkflow, revisionImpact } from './runtime/workflow.mjs';
+import { openWorkflow, revisionImpact, isParallelStage, activeBranchTasks } from './runtime/workflow.mjs';
 import { importMedia, verifyFiles, measureAudio } from './runtime/media.mjs';
 import { executeJob, loadKey, remediation, checkProvider,lookupExistingVoice,atomicJson } from './runtime/providers.mjs';
 import { current, locked, assertAllowed } from './runtime/gates.mjs';
@@ -567,7 +567,14 @@ async function main() {
           }));
           perceptionScope.getStore()?.digests.push(requestDigest);
         }
-        budgetQueue=budgetQueue.then(async()=>{const latest=await workflow.status('project');if(latest.pending.taskId!==task.taskId)throw new Error('STALE_TASK: inference reservation belongs to an older task.');await workflow.respond('project',{taskId:task.taskId,actor:'runtime',action:'reserve-compute',reservation:{id:provider+':'+requestDigest,provider,estimatedCostUsd:amount}});});
+        budgetQueue=budgetQueue.then(async()=>{
+          const latest=await workflow.status('project');
+          const validTaskIds = isParallelStage(latest.project)
+            ? [latest.pending.taskId, ...activeBranchTasks(latest.project).map(t => t.taskId)]
+            : [latest.pending.taskId];
+          if(!validTaskIds.includes(task.taskId))throw new Error('STALE_TASK: inference reservation belongs to an older task.');
+          await workflow.respond('project',{taskId:task.taskId,actor:'runtime',action:'reserve-compute',reservation:{id:provider+':'+requestDigest,provider,estimatedCostUsd:amount}});
+        });
         return budgetQueue;
       };
       const afterResponse=async({requestDigest,usage=null})=>{

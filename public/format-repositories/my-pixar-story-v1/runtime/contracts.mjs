@@ -160,16 +160,33 @@ export const Event = z.object({ taskId: text, action: z.enum(['prefer-image-prov
   budgetLimitUsd:z.number().nonnegative().optional(), reservation:z.object({id:text,provider:z.enum(['gemini','cartesia-stt']),estimatedCostUsd:z.number().positive()}).strict().optional(),
   actor: z.enum(['agent', 'reviewer', 'human', 'runtime']), workerId: text.optional(),
    resolvedFindings:z.array(z.object({findingDigest:text,resolution:text})).optional(), intakeConfirmation:IntakeConfirmation.optional(), photoInventory:z.array(PhotoInventoryEntry).optional(), beat:z.number().int().min(1).max(4).optional(), impactDigest:text.optional(), artifactId: text.optional(), artifactDigest: text.optional(), message: text.optional(), selection: z.number().int().optional(),
-  reviewMode:z.enum(['supervised','qualified']).optional(), workflowRevision:z.number().int().min(2).max(5).optional(), characterId:text.optional(), effectId:text.optional(), importFile:z.unknown().optional(), importProvenance:SheetProvenance.optional(),
+  reviewMode:z.enum(['supervised','qualified']).optional(), workflowRevision:z.number().int().min(2).max(5).optional(), branchId:text.optional(), characterId:text.optional(), locationId:text.optional(), shotId:text.optional(), clipId:text.optional(), effectId:text.optional(), importFile:z.unknown().optional(), importProvenance:SheetProvenance.optional(),
   humanReview:Review.optional(), crew:z.unknown().optional(), content: z.unknown().optional(), review: Review.optional(), plan: Plans.optional(), jobId: text.optional(),
   providerJobId: text.optional(), result: z.unknown().optional(), allowance: z.object({ operations: z.array(Plans.shape.operation).min(1), maxRequests: z.number().int().positive(), maxCostUsd: z.number().nonnegative(), repairOf:z.string().optional() }).strict().optional(), prescreen: Prescreen.optional(),
 }).strict();
 // Production bible events are human operator events only. They are deliberately NOT in
 // Event, so crew worker packets (which carry Event's schema) never even offer them.
 export const BibleEvent = z.object({ taskId: text, action: z.enum(['bible-draft','bible-sign','bible-approve','bible-policy']), actor: z.enum(['agent', 'reviewer', 'human', 'runtime']), message: text.optional(), content: z.unknown().optional(), artifactDigest: text.optional(), workerId: text.optional() }).strict();
+export const BranchCursor = z.object({
+  id: text,
+  type: z.enum(['character', 'location', 'keyframe', 'video', 'sound']).optional(),
+  step: z.enum(['answers', 'characterPrompt', 'script', 'voiceSample', 'clone', 'audioReviewerQualification', 'audition', 'narration', 'roster', 'candidates', 'sheetPrompt', 'sheet', 'backgrounds', 'backgroundBrief', 'backgroundPrompt', 'backgroundCandidates', 'backgroundAngleBrief', 'backgroundAnglePrompt', 'backgroundAngle', 'shotIntentions', 'shots', 'keyframePrompt', 'keyframe', 'video', 'reviewerQualification', 'videoPlan', 'videoPrompt', 'soundPlan', 'music', 'effect', 'editPlan', 'film', 'complete']),
+  gate: z.enum(['author', 'owner-review', 'review', 'human', 'produce', 'authorize', 'collect', 'escalate', 'pending']),
+  characterId: z.string().nullable().default(null),
+  locationId: z.string().nullable().default(null),
+  angleId: z.string().nullable().default(null),
+  shotId: z.string().nullable().default(null),
+  clipId: z.string().nullable().default(null),
+  effectId: z.string().nullable().default(null),
+  completed: z.boolean().default(false),
+  taskId: text.optional(),
+  attempts: z.record(z.string(), z.number()).optional(),
+  reviewDisagreements: z.number().int().default(0),
+}).strict();
 export const Project = z.object({
   formatVersion: z.literal(VERSION), schemaVersion: z.literal(2), id: text,
   studio:StudioSnapshot.optional(),
+  branches: z.array(BranchCursor).optional(),
   narrationRegeneration:NarrationRegeneration.extend({artifactId:text,artifactDigest:text,message:text}).strict().optional(),
   voiceChoice:VoiceChoiceInput.extend({selectedBy:z.object({message:text,at:text}),lookup:VoiceLookup.optional()}).optional(),
   debug:z.object({enabled:z.boolean(),paused:z.boolean()}).strict().optional(),

@@ -344,7 +344,12 @@
     "reviewDisagreements": 2,
     "finishedWorkerAttempts": 3,
     "crewTasksPerDispatch": 8,
-    "initialSpendCeilingUsd": 0
+    "initialSpendCeilingUsd": 0,
+    "characterConcurrency": 2,
+    "locationConcurrency": 2,
+    "keyframeConcurrency": 2,
+    "videoConcurrency": 2,
+    "soundConcurrency": 2
   },
   "reviewers": {
     "text-reviewer": "evaluation/rubrics/text.md",

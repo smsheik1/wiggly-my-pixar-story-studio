@@ -116,6 +116,21 @@ function collectQuoteHaystacks(task,outputs){
  }
  return haystacks.map(h=>normalizeQuote(h)).filter(h=>h.length>0);
 }
+export function matchQuote(raw, haystacks){
+ const fragments=String(raw??'').split(/\.\.\.|\u2026/).map(f=>normalizeQuote(f)).filter(f=>f.length>0);
+ const totalLength=fragments.reduce((acc,f)=>acc+f.length,0);
+ if(totalLength<8)return false;
+ return haystacks.some(h=>{
+  const lowerH=h.toLowerCase();
+  let lastIdx=0;
+  for(const f of fragments){
+   const idx=lowerH.indexOf(f.toLowerCase(),lastIdx);
+   if(idx===-1)return false;
+   lastIdx=idx+f.length;
+  }
+  return true;
+ });
+}
 export function verifyReviewQuotes({role,task,review,outputs}){
  if(!QUOTE_ROLES.includes(role))return;
  if(!review||review.decision==='inconclusive')return;
@@ -134,9 +149,7 @@ export function verifyReviewQuotes({role,task,review,outputs}){
   const quotes=check.quotes??[];
   if(!quotes.length)throw Object.assign(new Error(`REVIEW_QUOTE_MISSING: ${check.criterion} needs at least one verbatim quote`),{knownFinished:true});
   for(const raw of quotes){
-   const q=normalizeQuote(raw);
-   if(q.length<8)throw Object.assign(new Error(`REVIEW_QUOTE_NOT_FOUND: ${check.criterion}: "${String(raw).slice(0,120)}"`),{knownFinished:true});
-   if(!haystacks.some(h=>h.includes(q)))throw Object.assign(new Error(`REVIEW_QUOTE_NOT_FOUND: ${check.criterion}: "${String(raw).slice(0,120)}"`),{knownFinished:true});
+   if(!matchQuote(raw,haystacks))throw Object.assign(new Error(`REVIEW_QUOTE_NOT_FOUND: ${check.criterion}: "${String(raw).slice(0,120)}"`),{knownFinished:true});
   }
  }
 }

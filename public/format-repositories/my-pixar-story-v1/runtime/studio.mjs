@@ -3,6 +3,7 @@ import { current, locked, supervised, miniProduction } from './gates.mjs';
 import { shotReferences } from './shots.mjs';
 import { digest } from './contracts.mjs';
 import { requireVisualQualification } from '../evaluation/visual-qualification.mjs';
+import { initClipAndSoundBranches } from './branches.mjs';
 export const studioSteps=['reviewerQualification','videoPlan','videoPrompt','video','soundPlan','music','effect','editPlan','film'];
 export const clipFor=p=>current(p,'videoPlan')?.content.clips.find(c=>c.id===p.clipId);
 export const effectFor=p=>current(p,'soundPlan')?.content.effects.find(c=>c.id===p.effectId);
@@ -52,7 +53,10 @@ export function studioDependencies(p){
 }
 export function studioNext(p){
  if(p.step==='reviewerQualification'){p.step='videoPlan';p.gate='author';}
- else if(p.step==='videoPlan'){p.clipId=current(p,'videoPlan').content.clips[0].id;p.step='videoPrompt';p.gate='author';}
+ else if(p.step==='videoPlan'){
+   const clips=current(p,'videoPlan').content.clips;
+   initClipAndSoundBranches(p, clips);
+ }
  else if(p.step==='videoPrompt'){p.step='video';p.gate='produce';}
  else if(p.step==='video'){const missing=current(p,'videoPlan').content.clips.find(c=>!locked(p,`video:${c.id}`));p.clipId=missing?.id??null;p.step=missing?'videoPrompt':'soundPlan';p.gate='author';}
  else if(p.step==='soundPlan'&&current(p,'soundPlan').content.music){p.step='music';p.gate=current(p,'soundPlan').content.music.mode==='generate'?'produce':'author';}
