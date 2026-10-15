@@ -316,7 +316,7 @@ const textReviewFixture = () => {
   return { state, fetcher, bodies };
 };
 
-test('7. production OpenRouterHost refuses a host-wide xhigh/max (Muse alone runs xhigh via its model override); the evaluation host sets any offered effort per model', { timeout: 10000 }, async () => {
+test('7. production OpenRouterHost refuses a host-wide xhigh/max (Muse alone runs max via its model override); the evaluation host sets any offered effort per model', { timeout: 10000 }, async () => {
   const { OpenRouterHost } = await import('../runtime/openrouter-host.mjs');
   const { evaluationHost, assertEvalEffort } = await import('../evaluation/crew-head-to-head.mjs');
   for (const reasoningEffort of ['xhigh', 'max']) {
@@ -329,10 +329,10 @@ test('7. production OpenRouterHost refuses a host-wide xhigh/max (Muse alone run
   // DeepSeek has no xhigh; unknown levels are refused.
   assert.throws(() => assertEvalEffort('deepseek/deepseek-v4.1-flash', 'xhigh'), /HEAD_TO_HEAD_EFFORT_INVALID/);
   assert.throws(() => assertEvalEffort('meta/muse-spark-1.3-contributor', 'ultra'), /HEAD_TO_HEAD_EFFORT_INVALID/);
-  // Eval can still run Muse below its production xhigh.
+  // Eval can still run Muse below its production max.
   assert.equal(evaluationHost({ cwd: '/tmp', model: 'meta/muse-spark-1.3-contributor', fetcher: async () => { throw new Error('no network'); } }, 'high').requestSettings().reasoning.effort, 'high');
   // A fresh production host: Muse at its per-model xhigh, DeepSeek still medium; real runs never import the evaluation host.
-  assert.equal(new OpenRouterHost({ cwd: '/tmp', model: 'meta/muse-spark-1.3-contributor' }).requestSettings().reasoning.effort, 'xhigh');
+  assert.equal(new OpenRouterHost({ cwd: '/tmp', model: 'meta/muse-spark-1.3-contributor' }).requestSettings().reasoning.effort, 'max');
   assert.equal(new OpenRouterHost({ cwd: '/tmp', model: 'deepseek/deepseek-v4.1-flash' }).requestSettings().reasoning.effort, 'medium');
   const runnerSrc = await readFile(new URL('../runner.mjs', import.meta.url), 'utf8');
   assert.doesNotMatch(runnerSrc, /crew-head-to-head|evaluationHost/);

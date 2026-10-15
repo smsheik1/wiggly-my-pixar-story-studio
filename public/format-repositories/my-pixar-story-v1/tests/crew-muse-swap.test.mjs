@@ -1,5 +1,5 @@
 // Crew swap to Muse Spark 1.3 Contributor (Oct 11 2026): every agent on OpenRouter Muse,
-// production effort xhigh + 32K output for Muse only, and no crew command needs Codex.
+// production effort max + 32K output for Muse only, and no crew command needs Codex.
 // No network: every fetcher is local; no real codex is spawned.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -66,7 +66,7 @@ test('4. full crew-start binds all 17 roles on OpenRouter (Muse + Gemini Ava) wi
  }finally{await rm(dir,{recursive:true});}
 });
 
-test('5. production effort/output: Muse xhigh + 32K, DeepSeek medium + 16K, Gemini medium + 32K reviewer verdict (never Muse overrides); host-wide xhigh/max still refused', {timeout:10000}, async () => {
+test('5. production effort/output: Muse max + 32K, DeepSeek medium + 16K, Gemini medium + 32K reviewer verdict (never Muse overrides); host-wide xhigh/max still refused', {timeout:10000}, async () => {
  const dir=await mkdtemp(join(tmpdir(),'memoir-muse-effort-'));
  try{
   const secretsPath=join(dir,'secrets.env');await writeFile(secretsPath,'OPENROUTER_API_KEY=test-key\n');
@@ -75,7 +75,7 @@ test('5. production effort/output: Muse xhigh + 32K, DeepSeek medium + 16K, Gemi
   await host.chat({model:MUSE,messages:[{role:'user',content:'x'}],verify:true});
   await host.chat({model:'deepseek/deepseek-v4.1-flash',messages:[{role:'user',content:'x'}],verify:true});
   await host.chat({model:AVA,messages:[{role:'user',content:'x'}],verify:true});
-  assert.deepEqual(bodies[0].reasoning,{effort:'xhigh'});assert.equal(bodies[0].max_tokens,MUSE_MAX_TOKENS);assert.equal(MUSE_MAX_TOKENS,32000);
+  assert.deepEqual(bodies[0].reasoning,{effort:'max'});assert.equal(bodies[0].max_tokens,MUSE_MAX_TOKENS);assert.equal(MUSE_MAX_TOKENS,32000);
   assert.deepEqual(bodies[1].reasoning,{effort:'medium'});assert.equal(bodies[1].max_tokens,OPENROUTER_MAX_TOKENS);
   assert.deepEqual(bodies[2].reasoning,{effort:'medium'});assert.equal(bodies[2].max_tokens,REVIEWER_VERDICT_MAX_TOKENS);
   assert.equal(host.effortFor(AVA),'medium');assert.equal(host.maxTokensFor(AVA),REVIEWER_VERDICT_MAX_TOKENS);
