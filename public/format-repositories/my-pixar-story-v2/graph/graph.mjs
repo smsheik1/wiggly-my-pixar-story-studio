@@ -4,6 +4,7 @@
 // after MAX_ATTEMPTS failures the node escalates (status 'escalated') and the graph stops.
 import { StateGraph, START, END, interrupt } from '@langchain/langgraph';
 import { PipelineAnnotation } from './state.mjs';
+import { deepAgentInvoke } from './deep-agent-node.mjs';
 import { V2_MODELS, loadSkill } from '../config/models.mjs';
 import { selectStoryDirectorInput } from '../crew/story-director/input.mjs';
 import { parseStagePlay } from '../crew/story-director/schema.mjs';
@@ -58,7 +59,11 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
     }
     let issues = [];
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const raw = await invoke({ agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues) });
+      let raw;
+      try { raw = await invoke({ agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state }); } catch (e) {
+        issues = [{ severity: 'error', code: 'AGENT_RUN_FAILED', message: e.message }];
+        continue;
+      }
       let out;
       try { out = spec.parse(raw); } catch (e) {
         issues = (e.issues ?? [{ path: [], message: e.message }]).map((i) => ({ severity: 'error', code: 'SCHEMA_REJECTED', message: i.message, path: (i.path ?? []).join('.') }));
@@ -99,9 +104,10 @@ export function makeApprovalNode({ useInterrupt = false } = {}) {
 
 const halted = (s) => s.status === 'escalated' || s.status === 'awaiting-approval';
 
-/** Build and compile the v2 graph. `invoke` is the model call (inject a fake in tests). */
-export function buildGraph({ invoke, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer } = {}) {
-  if (typeof invoke !== 'function') throw new Error('buildGraph: an invoke function is required');
+/** Build and compile the v2 graph. Default invoke runs each agent as a Deep Agent; inject a fake invoke in tests. */
+export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer } = {}) {
+  if (invoke === undefined) invoke = deepAgentInvoke(deepAgent);
+  if (typeof invoke !== 'function') throw new Error('buildGraph: invoke must be a function');
   const node = (a) => makeAgentNode(a, invoke, { maxAttempts });
   const g = new StateGraph(PipelineAnnotation)
     .addNode('story-director', node('story-director'))

@@ -103,7 +103,7 @@ test('parallel outputs merge without clobbering; reducers', async () => {
 test('selector failure escalates immediately; buildGraph needs invoke; state schema rejects URL assets', async () => {
   const s = await buildGraph({ invoke: fakeInvoke() }).invoke({ inputs: { answers: 'nope' } });
   assert.equal(s.status, 'escalated'); assert.equal(s.escalations[0].issues[0].code, 'INPUT_SELECTOR_FAILED');
-  assert.throws(() => buildGraph({}), /invoke function is required/);
+  assert.throws(() => buildGraph({ invoke: 42 }), /invoke must be a function/);
   assert.throws(() => parseInitialState(initial({ approvedAssets: { '@Image 1': 'https://x.example/a.png' } })));
   assert.equal(parseInitialState(initial()).status, 'running');
   assert.equal(retryNotes([]), '');
