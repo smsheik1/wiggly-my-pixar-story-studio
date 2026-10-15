@@ -127,6 +127,6 @@ test('graph happy path through the deep-agent node (scripted model, zero network
 test('deep agent that never submits counts as a failed attempt and escalates after 3', () => tmp(async (runs) => {
   const createModel = async () => new ScriptedModel([done]);
   const s = await buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'nosubmit' } }).invoke({ inputs: { answers: {} } });
-  assert.equal(s.status, 'escalated'); assert.equal(s.escalations[0].agent, 'story-director');
+  assert.equal(s.status, 'failed'); assert.equal(s.escalations[0].agent, 'story-director');
   assert.ok(s.escalations[0].issues.some((i) => i.code === 'AGENT_RUN_FAILED' && /without calling submit/.test(i.message)));
 }));

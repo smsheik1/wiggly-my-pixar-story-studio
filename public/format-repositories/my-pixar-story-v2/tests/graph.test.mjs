@@ -20,7 +20,7 @@ function fakeInvoke(bad = {}) {
       if (req.agent === 'location-scout') o.locations[0].locationPlatePrompt.promptText += ' A boy sits at the table.';
       else if (req.agent === 'story-director') return '{not json';
       else if (req.agent === 'character-architect') o.characters[0].elementTag = '@Nobody';
-      else o.segments[0].compiledPrompt += ' Render in 1080p.';
+      else o.segments[0].tenBlocks.block6_visualStyle += ' Render in 1080p.';
       return JSON.stringify(o);
     }
     return JSON.stringify(json(FIX[req.agent]));
@@ -62,7 +62,7 @@ test('retry then pass: gate issues are fed into the retry prompt', async () => {
 test('3 failures escalate and stop the graph (no compiler call)', async () => {
   const invoke = fakeInvoke({ 'character-architect': Infinity });
   const s = await buildGraph({ invoke }).invoke(initial({ approvedAssets: assets() }));
-  assert.equal(s.status, 'escalated');
+  assert.equal(s.status, 'failed');
   assert.equal(invoke.calls.filter((c) => c.agent === 'character-architect').length, 3);
   assert.ok(!invoke.calls.some((c) => c.agent === 'seedance-compiler'));
   assert.equal(s.escalations[0].agent, 'character-architect'); assert.ok(s.escalations[0].issues.some((i) => i.code === 'TAG_PARITY'));
@@ -71,7 +71,7 @@ test('3 failures escalate and stop the graph (no compiler call)', async () => {
 test('compiler escalation after 3 bad prompts', async () => {
   const invoke = fakeInvoke({ 'seedance-compiler': Infinity });
   const s = await buildGraph({ invoke }).invoke(initial({ approvedAssets: assets() }));
-  assert.equal(s.status, 'escalated'); assert.ok(s.escalations[0].issues.some((i) => i.code === 'WRONG_RESOLUTION'));
+  assert.equal(s.status, 'failed'); assert.ok(s.escalations[0].issues.some((i) => i.code === 'WRONG_RESOLUTION'));
 });
 test('missing approvedAssets halts at the approval gate', async () => {
   const invoke = fakeInvoke();
@@ -97,12 +97,12 @@ test('parallel outputs merge without clobbering; reducers', async () => {
   const s = await buildGraph({ invoke: fakeInvoke() }).invoke(initial({ approvedAssets: assets(), locationScout: { hints: { Kitchen: { singleSignText: 'LAB' } } } }));
   assert.ok(s.locationScout.hints && s.locationScout.output, 'hints and output coexist');
   assert.deepEqual(Object.keys(s.gateIssues).sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director']);
-  assert.equal(statusReducer('escalated', 'done'), 'escalated'); assert.equal(statusReducer('running', 'awaiting-approval'), 'awaiting-approval');
+  assert.equal(statusReducer('failed', 'done'), 'failed'); assert.equal(statusReducer('running', 'awaiting-approval'), 'awaiting-approval');
   assert.deepEqual(requiredAssetTags(s), ['@Image 1', '@Image 2', '@Image 3', '@Loc 1']);
 });
 test('selector failure escalates immediately; buildGraph needs invoke; state schema rejects URL assets', async () => {
   const s = await buildGraph({ invoke: fakeInvoke() }).invoke({ inputs: { answers: 'nope' } });
-  assert.equal(s.status, 'escalated'); assert.equal(s.escalations[0].issues[0].code, 'INPUT_SELECTOR_FAILED');
+  assert.equal(s.status, 'failed'); assert.equal(s.escalations[0].issues[0].code, 'INPUT_SELECTOR_FAILED');
   assert.throws(() => buildGraph({ invoke: 42 }), /invoke must be a function/);
   assert.throws(() => parseInitialState(initial({ approvedAssets: { '@Image 1': 'https://x.example/a.png' } })));
   assert.equal(parseInitialState(initial()).status, 'running');

@@ -15,7 +15,7 @@ import { tool } from 'langchain';
 import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
 import { CharacterArchitectOutputSchema } from '../crew/character-architect/schema.mjs';
 import { LocationScoutOutputSchema } from '../crew/location-scout/schema.mjs';
-import { SeedanceCompilerOutputSchema } from '../crew/seedance-compiler/schema.mjs';
+import { SeedanceCompilerOutputSchema, SeedanceSubmitSchema, withAssembledPrompts } from '../crew/seedance-compiler/schema.mjs';
 import { loadSkill } from '../config/models.mjs';
 
 export const RUNS_ROOT = fileURLToPath(new URL('../runs/', import.meta.url));
@@ -77,10 +77,13 @@ export function workspaceAgent(model, root, profileKey, name, tools, systemPromp
 /** submit_<agent>: args are validated by the agent's output schema; returnDirect ends the agent run. */
 export function makeSubmitTool(agent, submissions) {
   const schema = OUTPUT_SCHEMAS[agent];
-  return tool(async (args) => { const v = schema.parse(args); submissions.push(v); return JSON.stringify({ submitted: true }); }, {
+  // Seedance Compiler: compiledPrompt is assembled in code from tenBlocks, so the tool takes the blocks only.
+  const toolSchema = agent === 'seedance-compiler' ? SeedanceSubmitSchema : schema;
+  const prep = agent === 'seedance-compiler' ? withAssembledPrompts : (x) => x;
+  return tool(async (args) => { const v = schema.parse(prep(args)); submissions.push(v); return JSON.stringify({ submitted: true }); }, {
     name: `submit_${agent.replaceAll('-', '_')}`,
     description: `Submit the final ${agent} output. Arguments must match the JSON contract in your SKILL.md exactly.`,
-    schema, returnDirect: true,
+    schema: toolSchema, returnDirect: true,
   });
 }
 

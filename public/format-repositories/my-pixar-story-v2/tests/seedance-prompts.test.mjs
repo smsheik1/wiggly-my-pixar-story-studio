@@ -144,7 +144,9 @@ test('G11 schema: blocks 2/3 swapped -> sequential order refine (and OUT_OF_ORDE
   const d = cls(); const s = d.segments[0];
   const v = `[VOICES]\n${s.tenBlocks.block2_voices}`, g = `[GOAL]\n${s.tenBlocks.block3_goal}`;
   s.compiledPrompt = s.compiledPrompt.replace(`${v}\n\n${g}`, `${g}\n\n${v}`);
-  assert.throws(() => parseSeedancePrompts(d), /sequential order/); hasCode(one(d), 'OUT_OF_ORDER_BLOCK');
+  hasCode(one(d), 'OUT_OF_ORDER_BLOCK'); // gate still catches a hand-edited prompt
+  // parse re-assembles compiledPrompt from tenBlocks in code, so the swap cannot survive into the output
+  const p = parseSeedancePrompts(d).segments[0].compiledPrompt; assert.ok(p.indexOf('[VOICES]') < p.indexOf('[GOAL]'));
 });
 test('G12 "Mia: {..}" without @ -> MISSING_SPEAKER_HANDLE_AT', () =>
   hasCode(one(T(cls(), (t) => t.replace('@Mia: {Me!', 'Mia: {Me!'), 0, 'block5_shots')), 'MISSING_SPEAKER_HANDLE_AT'));

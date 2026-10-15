@@ -13,10 +13,12 @@ import { Annotation } from '@langchain/langgraph';
 import { ASSET_KEY } from '../crew/character-architect/schema.mjs';
 
 export const AGENTS = ['story-director', 'character-architect', 'location-scout', 'seedance-compiler'];
-export const STATUSES = ['running', 'awaiting-approval', 'escalated', 'done'];
+export const STATUSES = ['running', 'done', 'awaiting-approval', 'escalated', 'failed'];
 
 const Issue = z.object({ severity: z.string(), code: z.string(), message: z.string(), path: z.string().optional() }).passthrough();
 export const EscalationSchema = z.object({ agent: z.string(), reason: z.string(), attempts: z.number().int(), issues: z.array(Issue) });
+
+export const ValidationErrorSchema = z.object({ node: z.string(), attempt: z.number().int().positive(), errors: z.array(Issue), timestamp: z.string() });
 
 export const PipelineStateSchema = z.object({
   inputs: z.object({ subject: z.string().optional(), answers: z.record(z.string(), z.unknown()) }).passthrough(),
@@ -30,6 +32,8 @@ export const PipelineStateSchema = z.object({
   attempts: z.record(z.string(), z.number().int()).default({}),
   gateIssues: z.record(z.string(), z.array(Issue)).default({}),
   escalations: z.array(EscalationSchema).default([]),
+  retryCounts: z.record(z.string(), z.number().int().nonnegative()).default({}),
+  validationErrors: z.array(ValidationErrorSchema).default([]),
   status: z.enum(STATUSES).default('running'),
   pendingApproval: z.array(z.string()).default([]),
 });
@@ -40,9 +44,9 @@ export const parseInitialState = (s) => PipelineStateSchema.parse(s);
 const replace = (a, b) => (b === undefined ? a : b);
 const mergeObj = (a = {}, b = {}) => ({ ...a, ...b });
 const mergeSlot = (a = {}, b = {}) => ({ ...a, ...b }); // e.g. {options} + {output}
-// escalated > awaiting-approval > done > running: a parallel branch that escalates is never overwritten by its sibling.
-const RANK = { running: 0, done: 1, 'awaiting-approval': 2, escalated: 3 };
-export const statusReducer = (a = 'running', b) => (b === undefined ? a : (b === 'running' && a !== 'escalated') ? b : (RANK[b] >= RANK[a] ? b : a));
+// failed > escalated > awaiting-approval > done > running: once a branch fails, no sibling or later node can clear it.
+const RANK = { running: 0, done: 1, 'awaiting-approval': 2, escalated: 3, failed: 4 };
+export const statusReducer = (a = 'running', b) => (b === undefined ? a : (RANK[b] >= RANK[a] ? b : a));
 
 export const PipelineAnnotation = Annotation.Root({
   inputs: Annotation({ reducer: replace, default: () => ({ answers: {} }) }),
@@ -56,6 +60,8 @@ export const PipelineAnnotation = Annotation.Root({
   attempts: Annotation({ reducer: mergeObj, default: () => ({}) }),
   gateIssues: Annotation({ reducer: mergeObj, default: () => ({}) }),
   escalations: Annotation({ reducer: (a = [], b = []) => [...a, ...b], default: () => [] }),
+  retryCounts: Annotation({ reducer: mergeObj, default: () => ({}) }),
+  validationErrors: Annotation({ reducer: (a = [], b = []) => [...a, ...b], default: () => [] }), // append-only log
   status: Annotation({ reducer: statusReducer, default: () => 'running' }),
   pendingApproval: Annotation({ reducer: replace, default: () => [] }),
 });

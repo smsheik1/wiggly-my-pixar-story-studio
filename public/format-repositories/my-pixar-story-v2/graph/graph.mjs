@@ -17,9 +17,38 @@ import { parseLocationPlates } from '../crew/location-scout/schema.mjs';
 import { validateLocationPlates } from '../crew/linter/check-location-plates.mjs';
 import { selectSeedanceCompilerInput } from '../crew/seedance-compiler/input.mjs';
 import { parseSeedancePrompts } from '../crew/seedance-compiler/schema.mjs';
+import { validateCharacterArchitectOutput } from '../crew/linter/check-character-sheets.mjs';
 import { validateSeedancePrompts } from '../crew/linter/check-seedance-prompts.mjs';
 
 export const MAX_ATTEMPTS = 3;
+
+// ---- Character Architect: per-character gating, name-prefixed errors, keep valid characters across retries ----
+const charIndex = (path = '') => { const m = /^characters\.(\d+)/.exec(path); return m ? +m[1] : -1; };
+/** Gate each character separately (prefixed by name), plus the cast-level checks. */
+export function gateCharacters(out, story) {
+  const cast = validateCharacterSheets(out, story);
+  const issues = cast.issues.filter((i) => charIndex(i.path) < 0); // cast-level only (TAG_PARITY, mode)
+  (out?.characters ?? []).forEach((c, i) => {
+    const one = validateCharacterArchitectOutput(c, { pathPrefix: `characters.${i}` }).issues;
+    const castLevelForThis = cast.issues.filter((x) => charIndex(x.path) === i && !one.some((y) => y.code === x.code && y.message === x.message));
+    for (const x of [...one, ...castLevelForThis]) issues.push({ ...x, character: c.name, message: `${c.name}: ${x.message}` });
+  });
+  const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
+  return { isValid: errors.length === 0, errors, warnings: issues.filter((i) => i.severity !== 'error').map((i) => i.message), issues };
+}
+/** Characters with no error issues, keyed by elementTag. */
+export function keepValidCharacters(out, issues) {
+  const bad = new Set(issues.filter((i) => i.severity === 'error').map((i) => charIndex(i.path)));
+  return Object.fromEntries((out?.characters ?? []).filter((_, i) => !bad.has(i)).map((c) => [c.elementTag, c]));
+}
+/** Merge a retry with previously valid characters: valid ones are kept as-is, in cast order. */
+export function mergeCharacters(kept, out, state) {
+  if (!kept || !Object.keys(kept).length) return out;
+  const order = (state?.storyDirector?.cast ?? []).map((c) => c.elementTag);
+  const fresh = Object.fromEntries((out.characters ?? []).map((c) => [c.elementTag, c]));
+  const tags = [...new Set([...order, ...Object.keys(fresh), ...Object.keys(kept)])].filter((t) => kept[t] || fresh[t]);
+  return { ...out, characters: tags.map((t, i) => ({ ...(kept[t] ?? fresh[t]), imageTag: `@Image ${i + 1}` })) };
+}
 
 /** Per-agent wiring: selector, parser, gate, and how the output is written back to state. */
 export const AGENT_SPECS = {
@@ -28,8 +57,9 @@ export const AGENT_SPECS = {
     write: (out) => ({ storyDirector: out }),
   },
   'character-architect': {
-    select: selectCharacterArchitectInput, parse: parseCharacterSheets, gate: (out, _in, state) => validateCharacterSheets(out, state.storyDirector),
+    select: selectCharacterArchitectInput, parse: parseCharacterSheets, gate: (out, _in, state) => gateCharacters(out, state.storyDirector),
     write: (out) => ({ characterArchitect: { output: out } }),
+    carry: keepValidCharacters, merge: mergeCharacters,
   },
   'location-scout': {
     select: selectLocationScoutInput, parse: parseLocationPlates, gate: (out, input) => validateLocationPlates(out, input),
@@ -49,19 +79,24 @@ export function retryNotes(issues = []) {
 }
 
 /** Build one agent node around an injectable invoke({ agent, config, skill, input, attempt, retryNotes }) -> string|object. */
-export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs = AGENT_SPECS, skill = loadSkill } = {}) {
+export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs = AGENT_SPECS, skill = loadSkill, now = () => new Date().toISOString() } = {}) {
   const spec = specs[agent];
   return async (state) => {
     let input;
     try { input = spec.select(state); } catch (e) {
       const issues = [{ severity: 'error', code: 'INPUT_SELECTOR_FAILED', message: e.message }];
-      return { status: 'escalated', gateIssues: { [agent]: issues }, escalations: [{ agent, reason: 'input selector failed', attempts: 0, issues }] };
+      return { status: 'failed', gateIssues: { [agent]: issues }, retryCounts: { [agent]: 0 },
+        validationErrors: [{ node: agent, attempt: 1, errors: issues, timestamp: now() }],
+        escalations: [{ agent, reason: 'input selector failed', attempts: 0, issues }] };
     }
     let issues = [];
+    let kept = null;
+    const log = [];
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (attempt > 1) log.push({ node: agent, attempt: attempt - 1, errors: issues, timestamp: now() });
       let raw;
       try { raw = await invoke({ agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state }); } catch (e) {
-        issues = [{ severity: 'error', code: 'AGENT_RUN_FAILED', message: e.message }];
+        issues = [{ severity: 'error', code: 'AGENT_RUN_FAILED', message: `model call failed: ${e.message}` }];
         continue;
       }
       let out;
@@ -69,11 +104,14 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
         issues = (e.issues ?? [{ path: [], message: e.message }]).map((i) => ({ severity: 'error', code: 'SCHEMA_REJECTED', message: i.message, path: (i.path ?? []).join('.') }));
         continue;
       }
+      if (spec.merge) out = spec.merge(kept, out, state);
       const r = spec.gate(out, input, state);
-      if (r.isValid) return { ...spec.write(out), attempts: { [agent]: attempt }, gateIssues: { [agent]: r.issues } };
+      if (r.isValid) return { ...spec.write(out), attempts: { [agent]: attempt }, retryCounts: { [agent]: attempt - 1 }, gateIssues: { [agent]: r.issues }, validationErrors: log };
       issues = r.issues;
+      if (spec.carry) kept = { ...(kept ?? {}), ...spec.carry(out, issues) };
     }
-    return { status: 'escalated', attempts: { [agent]: maxAttempts }, gateIssues: { [agent]: issues },
+    log.push({ node: agent, attempt: maxAttempts, errors: issues, timestamp: now() });
+    return { status: 'failed', attempts: { [agent]: maxAttempts }, retryCounts: { [agent]: maxAttempts - 1 }, gateIssues: { [agent]: issues }, validationErrors: log,
       escalations: [{ agent, reason: `failed the gate ${maxAttempts} times`, attempts: maxAttempts, issues }] };
   };
 }
@@ -102,7 +140,7 @@ export function makeApprovalNode({ useInterrupt = false } = {}) {
   };
 }
 
-const halted = (s) => s.status === 'escalated' || s.status === 'awaiting-approval';
+const halted = (s) => ['escalated', 'failed', 'awaiting-approval'].includes(s.status);
 
 /** Build and compile the v2 graph. Default invoke runs each agent as a Deep Agent; inject a fake invoke in tests. */
 export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer } = {}) {

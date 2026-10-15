@@ -65,7 +65,7 @@ export const GenerationPayloadSchema = z.object({
 /** Ordered position of each header in a compiled prompt (-1 if missing). */
 export const headerPositions = (text) => BLOCK_HEADERS.map((h) => text.indexOf(h));
 
-export const SeedanceSegmentSchema = z.object({
+export const SeedanceSegmentBase = z.object({
   segmentId: z.number().int().positive().describe('Stage-play segment id'),
   title: z.string().min(3),
   totalDurationSec: z.number().int().min(1).max(MAX_SEGMENT_SECONDS),
@@ -79,7 +79,9 @@ export const SeedanceSegmentSchema = z.object({
   extendsFrom: z.number().int().positive().nullable(),
   references: z.array(ReferenceSchema).min(1),
   shots: z.array(CompiledShotSchema).min(1),
-}).strict().superRefine((seg, ctx) => {
+}).strict();
+
+export const SeedanceSegmentSchema = SeedanceSegmentBase.superRefine((seg, ctx) => {
   const pos = headerPositions(seg.compiledPrompt);
   pos.forEach((p, i) => { if (p < 0) ctx.addIssue({ code: 'custom', path: ['compiledPrompt'], message: `missing block header ${BLOCK_HEADERS[i]}` }); });
   const present = pos.filter((p) => p >= 0);
@@ -105,6 +107,22 @@ export const SeedanceSegmentSchema = z.object({
     if (!locTags.has(s.locationTag)) ctx.addIssue({ code: 'custom', path: ['shots', i, 'locationTag'], message: `locationTag ${s.locationTag} is not a bound location reference` });
   });
 });
+
+/** Assemble compiledPrompt in code from the 10 ordered blocks (headers can never go missing or out of order). */
+export function assembleCompiledPrompt(tenBlocks = {}) {
+  return BLOCK_HEADERS.map((h, i) => `${h}\n${String(tenBlocks[BLOCK_KEYS[i]] ?? '').trim()}`).join('\n\n');
+}
+/** Return a copy of an output object with every segment's compiledPrompt assembled from its tenBlocks. */
+export function withAssembledPrompts(obj) {
+  if (!obj || !Array.isArray(obj.segments)) return obj;
+  return { ...obj, segments: obj.segments.map((s) => (s && s.tenBlocks ? { ...s, compiledPrompt: assembleCompiledPrompt(s.tenBlocks) } : s)) };
+}
+/** Submit-tool schema: same contract, but compiledPrompt is optional (code assembles it). */
+export const SeedanceSubmitSchema = z.object({
+  segments: z.array(SeedanceSegmentBase.extend({ compiledPrompt: z.string().optional() })).min(1),
+  totalRuntimeSec: z.number().int().positive().max(MAX_TOTAL_SECONDS),
+  assumptions: z.array(z.string()).default([]),
+}).strict();
 
 export const SeedanceCompilerOutputSchema = z.object({
   segments: z.array(SeedanceSegmentSchema).min(1),
@@ -135,7 +153,7 @@ export function parseSeedancePrompts(input) {
   if (typeof input === 'string') {
     try { obj = JSON.parse(input); } catch (e) { throw new SeedancePromptParseError([{ path: [], message: `not valid JSON (${e.message})` }]); }
   }
-  const r = SeedanceCompilerOutputSchema.safeParse(obj);
+  const r = SeedanceCompilerOutputSchema.safeParse(withAssembledPrompts(obj));
   if (!r.success) throw new SeedancePromptParseError(r.error.issues);
   return r.data;
 }
