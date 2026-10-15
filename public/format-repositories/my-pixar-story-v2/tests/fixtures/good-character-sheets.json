@@ -1,0 +1,123 @@
+{
+ "characters": [
+  {
+   "elementTag": "@Shaz",
+   "name": "Shaz",
+   "age": 8,
+   "gender": "male",
+   "family": true,
+   "skinTone": "warm medium brown",
+   "turnaroundViews": [
+    "front",
+    "three-quarter",
+    "side",
+    "back"
+   ],
+   "expressionCount": 8,
+   "expressions": [
+    "neutral",
+    "warm smile",
+    "pure joy",
+    "thoughtful concentration",
+    "determined resolve",
+    "gentle surprise",
+    "tender concern",
+    "playful mischief"
+   ],
+   "outfits": [
+    {
+     "segmentIds": [
+      1,
+      2
+     ],
+     "description": "Crisp bright red cotton t-shirt, navy shorts, grey sneakers, red plastic sunglasses.",
+     "isMain": true
+    }
+   ],
+   "imageTag": "@Image 1",
+   "targetEngine": "nano-banana-2.1",
+   "sheetPrompt": "Create ONE complete cinematic stylized 3D animated-feature character model sheet for Shaz, an eight-year-old boy who insists he is a scientist and plays every card battle at the kitchen table with total conviction. He is about five heads tall with a child's proportions: an enlarged round head, a long torso, short legs, narrow shoulders and a low centre of gravity, so he reads as a small sturdy circle in black silhouette. His face is round and soft with full cheeks, a small rounded chin and slightly prominent ears; his eyes are large warm dark-brown ovals that carry a serious, unblinking certainty; his eyebrows are groomed, soft and hair-coloured, made of individual hairs, sitting straight and level. His skin is a warm medium brown, one even natural colour across the face, ears and hands, rich and warm in the shadows and never grey. His hair is short, thick and black with a slight wave, cut close at the sides and pushed forward on top, built as a three-dimensional volume with a dark occluded core and lit groups in front, matte. His signature accent is a pair of red plastic sunglasses he wears pushed up on his head or over his eyes, the brightest colour on him, worn and attached, never held. His main outfit is a crisp bright red cotton t-shirt over darker navy shorts with small grey sneakers, so the bright main garment reads clean against the darker piece and the grey backdrop; the cotton is soft and lightly creased at the hem where his hands always grab it. Render the house look: clearly simplified sculpted feature-animation geometry with broad soft facial planes, smooth stylised skin with gentle subsurface scattering and a soft healthy sheen, warm glow through the ears and fingertips, glossy expressive eyes with clear catchlights, a small iris inside a wide band of white with the upper lid resting as a soft thick band, tactile fabrics with broad natural folds, coherent dimensional materials and no photographic pores or etched wrinkles. Light every figure with a warm cinematic key from the upper left, a soft cool fill and a gentle rim light along the shoulders and head so the forms have real shading and depth while every figure stays evenly exposed. Hands are oversized and appealing, built from a few large rounded forms with thick blunt fingertips, five fingers per hand, open and empty, nothing held. Lay the sheet out as one studio model sheet on a flat even mid-grey backdrop: the top row is exactly four full-body turnaround views of Shaz (front, three-quarter at about forty-five degrees, side profile at ninety degrees and back at one hundred eighty degrees) in one identical neutral pose, at one height on one shared baseline, evenly spaced, every figure fully inside the frame with clear margins above the head and below the soles. Below the turnaround come exactly eight expression portraits, head and shoulders, facing camera, in two rows of four, in this order: neutral (relaxed brows, closed lips), warm smile (gently lifted full cheeks, attentive eyes), pure joy (delighted eyes, broad bright open smile), thoughtful concentration (focused gaze, slightly drawn brows), determined resolve (steady eyes, firm lips), gentle surprise (raised brows, lightly parted lips), tender concern (gently pinched inner brows, softened mouth), playful mischief (one raised brow, asymmetrical smile). The face, age, proportions, skin tone and outfit stay identical in every figure and every portrait, from the front view to the back view; no duplicate or intermediate views, no extra figures, no overlapping figures, no props, no phones, no scenery. Keep the appeal of a beloved animated family film: readable silhouette, warm personality in the eyes, honest faces without mugging. No text, labels, captions, expression names or watermarks anywhere in the image.",
+   "likenessSource": "photo-notes"
+  },
+  {
+   "elementTag": "@Mom",
+   "name": "Mom",
+   "age": 40,
+   "gender": "female",
+   "family": true,
+   "skinTone": "warm medium brown",
+   "turnaroundViews": [
+    "front",
+    "three-quarter",
+    "side",
+    "back"
+   ],
+   "expressionCount": 8,
+   "expressions": [
+    "neutral",
+    "warm smile",
+    "pure joy",
+    "thoughtful concentration",
+    "determined resolve",
+    "gentle surprise",
+    "tender concern",
+    "playful mischief"
+   ],
+   "outfits": [
+    {
+     "segmentIds": [
+      1
+     ],
+     "description": "Long cream cotton tunic, charcoal skirt, soft blue hijab, tea towel tucked at waist.",
+     "isMain": true
+    }
+   ],
+   "imageTag": "@Image 2",
+   "targetEngine": "nano-banana-2.1",
+   "sheetPrompt": "Create ONE complete cinematic stylized 3D animated-feature character model sheet for Mom, an adult woman of about forty who watches from the kitchen doorway, holds back a smile and believes every word her son says. She is about seven heads tall with adult proportions: a natural adult head size, relaxed shoulders and a soft upright posture, reading as a gentle tall oval in black silhouette. Her face is round and kind with full cheeks, a rounded chin and a small calm mouth; her eyes are warm dark-brown almonds with soft lower lids that crinkle when she is amused; her eyebrows are groomed, soft and dark brown, gently arched. Her skin is a warm medium brown, one even natural colour across the face and hands, rich in the shadows and never grey. She wears a soft blue hijab wrapped neatly around the head and under the chin and draped over the shoulders, with no visible hair, hairline or dark band at the forehead; the fabric meets the skin of her face cleanly in one smooth edge. The hijab is her identity carrier and stays identical in every turnaround and every portrait, including profile and back. Her main outfit is a long crisp cream cotton tunic over a darker charcoal ankle-length skirt with simple flat shoes, so the bright main garment reads clean against the darker piece; a small tea towel is tucked at her waist, worn and attached, never held. The cloth has weight and few large folds, slightly softened at the cuffs from years of kitchen work. Render the house look: clearly simplified sculpted feature-animation geometry with broad soft facial planes, smooth stylised skin with gentle subsurface scattering and a soft healthy sheen, warm glow through the ears and fingertips, glossy expressive eyes with clear catchlights, a small iris inside a wide band of white with the upper lid resting as a soft thick band, tactile fabrics with broad natural folds, coherent dimensional materials and no photographic pores or etched wrinkles. Light every figure with a warm cinematic key from the upper left, a soft cool fill and a gentle rim light along the shoulders and head so the forms have real shading and depth while every figure stays evenly exposed. Hands are oversized and appealing, built from a few large rounded forms with thick blunt fingertips, five fingers per hand, open and empty, nothing held. Lay the sheet out as one studio model sheet on a flat even mid-grey backdrop: the top row is exactly four full-body turnaround views of Mom (front, three-quarter at about forty-five degrees, side profile at ninety degrees and back at one hundred eighty degrees) in one identical neutral pose, at one height on one shared baseline, evenly spaced, every figure fully inside the frame with clear margins above the head and below the soles. Below the turnaround come exactly eight expression portraits, head and shoulders, facing camera, in two rows of four, in this order: neutral (relaxed brows, closed lips), warm smile (gently lifted full cheeks, attentive eyes), pure joy (delighted eyes, broad bright open smile), thoughtful concentration (focused gaze, slightly drawn brows), determined resolve (steady eyes, firm lips), gentle surprise (raised brows, lightly parted lips), tender concern (gently pinched inner brows, softened mouth), playful mischief (one raised brow, asymmetrical smile). The face, age, proportions, skin tone and outfit stay identical in every figure and every portrait, from the front view to the back view; no duplicate or intermediate views, no extra figures, no overlapping figures, no props, no phones, no scenery. Keep the appeal of a beloved animated family film: readable silhouette, warm personality in the eyes, honest faces without mugging. No text, labels, captions, expression names or watermarks anywhere in the image.",
+   "likenessSource": "photo-notes"
+  },
+  {
+   "elementTag": "@Sister",
+   "name": "Sister",
+   "age": 18,
+   "gender": "female",
+   "family": true,
+   "skinTone": "light warm brown",
+   "turnaroundViews": [
+    "front",
+    "three-quarter",
+    "side",
+    "back"
+   ],
+   "expressionCount": 8,
+   "expressions": [
+    "neutral",
+    "warm smile",
+    "pure joy",
+    "thoughtful concentration",
+    "determined resolve",
+    "gentle surprise",
+    "tender concern",
+    "playful mischief"
+   ],
+   "outfits": [
+    {
+     "segmentIds": [
+      1,
+      2
+     ],
+     "description": "Crisp white oversized hoodie with yellow drawstrings, black trousers, soft grey hijab.",
+     "isMain": true
+    }
+   ],
+   "imageTag": "@Image 3",
+   "targetEngine": "nano-banana-2.1",
+   "sheetPrompt": "Create ONE complete cinematic stylized 3D animated-feature character model sheet for Sister, an eighteen-year-old young woman who is the dry, unimpressed rival in every card battle and quietly slides her own sunglasses on at the end. She is about six and a half heads tall with young adult proportions: a natural adult head size, long limbs and a relaxed slouch, reading as a tall loose rectangle in black silhouette. Her face is oval with a slightly pointed chin and a flat, deadpan mouth; her eyes are narrow dark-brown almonds under heavy relaxed upper lids that blink slowly; her eyebrows are graphic, thick and dark, soft-edged, set in a flat line. Her skin is a light warm brown, one even natural colour across the face and hands, never grey or washed out. She wears a soft grey hijab wrapped snugly around the head and under the chin, with no visible hair, hairline or dark band at the forehead; the fabric meets the skin cleanly in one smooth edge and stays identical in every turnaround and every portrait, including profile and back. Her signature accent is the yellow drawstrings of her hoodie, the brightest colour on her. Her main outfit is a crisp white oversized cotton hoodie over darker black loose trousers with grey canvas shoes, so the bright main garment reads clean against the darker piece; the hoodie sleeves are pushed to the forearms and the cuffs are slightly stretched. Render the house look: clearly simplified sculpted feature-animation geometry with broad soft facial planes, smooth stylised skin with gentle subsurface scattering and a soft healthy sheen, warm glow through the ears and fingertips, glossy expressive eyes with clear catchlights, a small iris inside a wide band of white with the upper lid resting as a soft thick band, tactile fabrics with broad natural folds, coherent dimensional materials and no photographic pores or etched wrinkles. Light every figure with a warm cinematic key from the upper left, a soft cool fill and a gentle rim light along the shoulders and head so the forms have real shading and depth while every figure stays evenly exposed. Hands are oversized and appealing, built from a few large rounded forms with thick blunt fingertips, five fingers per hand, open and empty, nothing held. Lay the sheet out as one studio model sheet on a flat even mid-grey backdrop: the top row is exactly four full-body turnaround views of Sister (front, three-quarter at about forty-five degrees, side profile at ninety degrees and back at one hundred eighty degrees) in one identical neutral pose, at one height on one shared baseline, evenly spaced, every figure fully inside the frame with clear margins above the head and below the soles. Below the turnaround come exactly eight expression portraits, head and shoulders, facing camera, in two rows of four, in this order: neutral (relaxed brows, closed lips), warm smile (gently lifted full cheeks, attentive eyes), pure joy (delighted eyes, broad bright open smile), thoughtful concentration (focused gaze, slightly drawn brows), determined resolve (steady eyes, firm lips), gentle surprise (raised brows, lightly parted lips), tender concern (gently pinched inner brows, softened mouth), playful mischief (one raised brow, asymmetrical smile). The face, age, proportions, skin tone and outfit stay identical in every figure and every portrait, from the front view to the back view; no duplicate or intermediate views, no extra figures, no overlapping figures, no props, no phones, no scenery. Keep the appeal of a beloved animated family film: readable silhouette, warm personality in the eyes, honest faces without mugging. No text, labels, captions, expression names or watermarks anywhere in the image.",
+   "likenessSource": "photo-notes"
+  }
+ ],
+ "assumptions": [
+  "Outfits inferred from the script; Shaz wears the same red t-shirt in both segments."
+ ]
+}
