@@ -1,98 +1,128 @@
-// Story Director v2 output contract (Zod). Structural shape only; semantic rules live in
-// ../linter/check-stage-play.mjs. parseStagePlay() throws StagePlayParseError with readable paths.
+// Story Director v2 output contract (Zod, plain JS).
+// BASE: Gemini's StoryDirectorOutputSchema (gemini-schema.ts). Wiggly additions are marked "WIGGLY".
 import { z } from 'zod';
 
-const slug = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'must be a lowercase slug');
-const sec = z.number().int('must be a whole second').nonnegative();
-// Dialogue line: `@speaker-id: {exact words}`
-export const DIALOGUE_RE = /^@([a-z0-9]+(?:-[a-z0-9]+)*): \{([^{}]+)\}$/;
+export const MAX_SEGMENT_SECONDS = 30;
+export const MAX_TOTAL_SECONDS = 180; // WIGGLY: matches input targetTotalRuntimeSec max
+export const IMAGE_ENGINE = 'nano-banana-2.1'; // WIGGLY: Nano Banana 2.1 via Google Flow, not gpt-image-2
 
-export const CastMember = z.object({
-  id: slug,
+export const DialogueSchema = z.object({
+  speaker: z.string().describe("The speaker handle, e.g. '@Ben' or '@Miss_Park'"),
+  line: z.string().regex(/^\{.+\}$/, 'Dialogue line must be enclosed in curly braces {}').describe("Verbatim dialogue line enclosed in braces, e.g. '{This is my dad.}'"),
+  isVoiceover: z.boolean().default(false).describe('True if spoken as voiceover from off-screen or memory'),
+  isOffCamera: z.boolean().default(false).describe('True if speaker is in the scene but currently out of frame'),
+});
+
+// WIGGLY: optional narration in the maker's cloned storyteller voice, alongside or instead of dialogue.
+export const NarrationSchema = z.object({
+  speaker: z.string().describe("Narrator element tag, usually the maker, e.g. '@Shaz'"),
+  line: z.string().regex(/^\{.+\}$/, 'Narration line must be enclosed in curly braces {}'),
+});
+
+export const ShotCardSchema = z.object({
+  shotNumber: z.number().int().positive().describe('Sequential shot number within the segment'),
+  startSec: z.number().int().nonnegative().describe('Start timecode in whole integer seconds'),
+  endSec: z.number().int().positive().describe('End timecode in whole integer seconds'),
+  tag: z.string().optional().describe("Optional shot tag, e.g. 'Montage', 'Continuous camera move', 'Fire wipe'"),
+  location: z.string().optional().describe('Where we are — specified only when location changes'),
+  whatWeSee: z.string().min(10).describe('Visual action description in plain English; no jargon'),
+  whatWeHear: z.string().optional().describe('Foley, room tone, or music cues; mandatory on silent shots'),
+  dialogue: DialogueSchema.optional(),
+  narration: NarrationSchema.optional(), // WIGGLY
+  directorsNote: z.string().optional().describe('Explains consequence: what breaks if this shot is got wrong'),
+  isContinuousMove: z.boolean().default(false).describe('True if camera move is unbroken across the entire duration'),
+}).refine((shot) => shot.endSec > shot.startSec, { message: 'endSec must be strictly greater than startSec' });
+
+export const ScriptSegmentSchema = z.object({
+  segmentId: z.number().int().positive().describe('Segment index (e.g. 1 for Original, 2 for Sequel, 3 for Sequel 2)'),
+  title: z.string().min(3).describe("Part title, e.g. 'Part 1: Ben's Presentation'"),
+  targetDurationSec: z.number().int().min(1).max(30).describe('Total segment duration in seconds — HARD CEILING IS 30s'),
+  goalSummary: z.string().min(10).describe('2-3 sentences explaining goal, shot count, and the hard narrative stop'),
+  continuityLocks: z.array(z.string()).min(1).describe('Character counts, seating positions, 180-degree axis lock'),
+  shots: z.array(ShotCardSchema).min(1).describe('Ordered shot sequence'),
+}).refine((segment) => {
+  const total = segment.shots.reduce((acc, shot) => acc + (shot.endSec - shot.startSec), 0);
+  return total <= 30;
+}, { message: 'The sum of shot durations in a segment CANNOT EXCEED 30 seconds' })
+  // WIGGLY: contiguous, non-overlapping, starting at 0 in every segment.
+  .refine((segment) => segment.shots.every((s, i) => s.startSec === (i === 0 ? 0 : segment.shots[i - 1].endSec)),
+    { message: 'Timecodes must start at 0 and be strictly consecutive within each segment' });
+
+export const CastCardSchema = z.object({
   name: z.string().min(1),
-  ageVariant: z.string().min(1),
-  minor: z.boolean(),
+  elementTag: z.string().regex(/^@[\w_]+$/, "Element tag must start with @ and contain alphanumeric or underscore, e.g. '@Mia'"),
+  age: z.number().int().positive(),
+  oneWordRole: z.string().min(2).describe("e.g. 'presenter', 'teacher', 'father'"),
+  physicalDescription: z.string().min(20).describe('Plain visual description anyone could draw from; no non-visual adjectives'),
+  signatureAccent: z.string().min(5).describe('One worn/attached item carrying the only saturated color in an otherwise muted palette'),
+  voiceDescription: z.string().min(20).describe('Age, nationality, timbre, pace, delivery, emotional shifts'),
+  // WIGGLY
+  skinTone: z.string().min(3).describe('Plain-words skin tone; repeated in every panel and shot that shows them'),
   gender: z.enum(['female', 'male']),
-  family: z.boolean().default(true),
-  skinTone: z.string().min(3),
-  look: z.string().min(10),
-  voice: z.string().default(''),
-  storyPurpose: z.string().min(1),
+  family: z.boolean().default(true).describe('Member of the maker’s family (hijab rule applies to female family)'),
+}).refine((c) => !(c.age >= 13 && c.age <= 17), { message: 'Teens are depicted as 18: age 13-17 is not allowed', path: ['age'] })
+  .refine((c) => !(c.gender === 'female' && c.family) || /hijab/i.test(c.physicalDescription),
+    { message: 'Female family members must wear a hijab (state it in physicalDescription)', path: ['physicalDescription'] });
+
+export const StoryboardPanelSchema = z.object({
+  panelNumber: z.number().int().min(1).max(8),
+  shotNumberRef: z.number().int().positive(),
+  shotSizeAndAngle: z.string().min(3).describe("e.g. 'Wide shot at adult chest height'"),
+  whatIsInFrame: z.string().min(10).describe('Who is in frame, naming skin tone explicitly, and what they are doing'),
+  lightAndPalette: z.string().min(10).describe('Direction of key light, shadow warmth, and color tones'),
 });
 
-export const Location = z.object({
-  id: slug, name: z.string().min(1), description: z.string().min(1),
-  keyLight: z.string().min(1), timeOfDay: z.string().min(1),
-});
-
-export const Shot = z.object({
-  id: z.string().min(1),
-  start: sec, end: sec,
-  job: z.string().min(1),
-  size: z.enum(['wide', 'medium', 'close-up', 'extreme close-up', 'insert', 'over-the-shoulder']),
-  angle: z.enum(['eye level', 'low', 'high', 'overhead']),
-  cameraMove: z.enum(['static', 'slow push-in', 'pull back', 'pan', 'track']),
-  characterIds: z.array(slug),
-  locationId: slug,
-  action: z.string().min(1),
-  acting: z.string().min(1),
-  skinTones: z.string().default(''),
-  keyLight: z.string().min(1),
-  continuity: z.string().min(1),
-});
-
-export const DialogueLine = z.object({
-  line: z.string().regex(DIALOGUE_RE, 'dialogue must be `@speaker-id: {exact words}`'),
-  shotId: z.string().min(1),
-  seconds: sec.min(1),
-});
-
-export const Beat = z.object({
-  beat: z.number().int().positive(),
-  part: z.number().int().positive(),
-  durationSeconds: sec.min(2).max(30, 'a Part segment can never exceed 30 s'),
-  emotionalPurpose: z.string().min(1),
-  devices: z.array(z.string()).default([]),
-  sourceAnswers: z.array(z.string()).min(1),
-  narration: z.string().default(''),
-  directQuotes: z.array(z.object({ text: z.string().min(1), sourceAnswer: z.string().min(1) })).default([]),
-  dialogue: z.array(DialogueLine).default([]),
-  shots: z.array(Shot).min(1),
-});
-
-export const StagePlay = z.object({
-  title: z.string().min(1),
-  logline: z.string().min(1),
-  clarifyingQuestion: z.string().min(1).nullable(),
+export const StoryDirectorOutputSchema = z.object({
+  masthead: z.object({
+    title: z.string().min(3),
+    draftNumber: z.number().int().positive().default(1),
+    oneLinePremise: z.string().min(10).describe('Gives away the tone and conflict, but NOT the ending'),
+  }),
+  shapeBar: z.object({
+    totalRuntimeSec: z.number().int().positive().max(MAX_TOTAL_SECONDS),
+    parts: z.array(z.object({ name: z.string(), durationSec: z.number().int().positive() })),
+  }),
+  cast: z.array(CastCardSchema).min(1),
+  segments: z.array(ScriptSegmentSchema).min(1),
+  storyboardPrompt: z.object({
+    targetEngine: z.literal(IMAGE_ENGINE).default(IMAGE_ENGINE), // WIGGLY (was gpt-image-2)
+    fullPrompt: z.string().min(100).refine((s) => !/[\r\n]/.test(s), 'fullPrompt must be a single line (Google Flow)')
+      .describe('Copy-pasteable 8-panel painted color board prompt for Nano Banana 2.1 in Google Flow, one line'),
+    panels: z.array(StoryboardPanelSchema).length(8, 'Storyboard MUST contain exactly 8 panels'),
+  }),
+  htmlScriptDocument: z.string().min(200).describe('Rendered HTML card deck formatted in Fraunces, Karla, Space Mono and warm paper palette'),
+  // WIGGLY
+  clarifyingQuestion: z.string().min(1).nullable().default(null),
   assumptions: z.array(z.string()).default([]),
-  cast: z.array(CastMember).min(1),
-  locations: z.array(Location).min(1),
-  beats: z.array(Beat).min(1),
-  directorsNotes: z.array(z.string()).default([]),
-  storyboardPrompt: z.string().min(20),
-  commonSenseChecks: z.array(z.object({
-    category: z.string(), finding: z.string(), resolution: z.string(),
-  })).default([]),
-  deckHtml: z.string().regex(/<html[\s>]/i, 'deckHtml must be an HTML document'),
-}).strict();
+}).superRefine((d, ctx) => {
+  // WIGGLY tag parity: every speaker/narrator must be a cast elementTag.
+  const tags = new Set(d.cast.map((c) => c.elementTag));
+  d.segments.forEach((seg, si) => seg.shots.forEach((s, hi) => {
+    for (const k of ['dialogue', 'narration']) if (s[k] && !tags.has(s[k].speaker))
+      ctx.addIssue({ code: 'custom', path: ['segments', si, 'shots', hi, k, 'speaker'], message: `Speaker ${s[k].speaker} is not a cast elementTag` });
+  }));
+  const total = d.segments.reduce((n, seg) => n + seg.shots.reduce((m, s) => m + (s.endSec - s.startSec), 0), 0);
+  if (total > MAX_TOTAL_SECONDS) ctx.addIssue({ code: 'custom', path: ['segments'], message: `Film runtime ${total}s exceeds ${MAX_TOTAL_SECONDS}s` });
+});
+
+export const StagePlay = StoryDirectorOutputSchema;
 
 export class StagePlayParseError extends Error {
   constructor(issues) {
     super('Story Director output failed the contract:\n' +
-      issues.map(i => `  - ${i.path.join('.') || '(root)'}: ${i.message}`).join('\n'));
+      issues.map((i) => `  - ${(i.path ?? []).join('.') || '(root)'}: ${i.message}`).join('\n'));
     this.name = 'StagePlayParseError';
     this.issues = issues;
   }
 }
 
-/** Parse a stage play (object or JSON string). Throws StagePlayParseError on any violation. */
+/** Parse Story Director output (object or JSON string). Throws StagePlayParseError on any violation. */
 export function parseStagePlay(input) {
   let obj = input;
   if (typeof input === 'string') {
-    try { obj = JSON.parse(input); }
-    catch (e) { throw new StagePlayParseError([{ path: [], message: `not valid JSON (${e.message})` }]); }
+    try { obj = JSON.parse(input); } catch (e) { throw new StagePlayParseError([{ path: [], message: `not valid JSON (${e.message})` }]); }
   }
-  const r = StagePlay.safeParse(obj);
+  const r = StoryDirectorOutputSchema.safeParse(obj);
   if (!r.success) throw new StagePlayParseError(r.error.issues);
   return r.data;
 }

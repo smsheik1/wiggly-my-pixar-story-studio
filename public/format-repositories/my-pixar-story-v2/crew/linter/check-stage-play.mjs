@@ -1,100 +1,121 @@
 #!/usr/bin/env node
-// v2 deterministic validation gate for a Story Director stage play.
-// Usage: node check-stage-play.mjs <stage-play.json>     (exit 0 PASS, 1 FAIL, 2 usage/parse)
+// v2 deterministic validation gate for Story Director output.
+// BASE: Gemini's validateStoryDirectorOutput (same return shape, codes and message text).
+// Wiggly codes added: SPEAKER_NOT_IN_CAST, MISSING_HIJAB, UNDERAGE_DEPICTION, MULTILINE_STORYBOARD_PROMPT,
+// DIALOGUE_TIMING_BUDGET, WRONG_IMAGE_ENGINE, RUNTIME_EXCEEDS_CAP; banned jargon is the union of both lists.
+// Usage: node check-stage-play.mjs <output.json>   (exit 0 valid, 1 invalid, 2 usage)
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { StagePlay, DIALOGUE_RE } from '../story-director/schema.mjs';
+import { MAX_TOTAL_SECONDS, IMAGE_ENGINE } from '../story-director/schema.mjs';
 
-export const MAX_PART_SECONDS = 30;
-export const MAX_TOTAL_SECONDS = 90;
-export const MIN_SHOT_SECONDS = 2;
-const words = s => (s.trim().match(/\S+/g) ?? []).length;
-/** Whole-second budget for a spoken line: <=6 words 2s, <=12 3s, <=18 4s, longer is not allowed. */
-export function lineBudget(n) { return n <= 6 ? 2 : n <= 12 ? 3 : n <= 18 ? 4 : null; }
-const BANNED = /\b(photorealistic|hyperrealistic|35mm|film grain|live[- ]action|8k|4k|octane|unreal engine|trending on artstation)\b/i;
-const HAIR_VISIBLE = /\b(visible hair|hairline showing|bangs|fringe|loose hair|hair (?:peeks|showing|visible))\b/i;
+export const SKIN_WORDS = ['skin', 'complexion', 'tan', 'pale', 'brown', 'dark', 'warm', 'fair', 'olive', 'ebony'];
+// [label, regex, plain-language suggestion]
+export const BANNED_JARGON = [
+  ['OTS', /\bOTS\b/, 'over his shoulder'],
+  ['MOS', /\bMOS\b/, 'no dialogue in this shot'],
+  ['rack focus', /\brack focus\b/i, 'the focus shifts from her to him'],
+  ['20% ND', /\b20% ND\b/i, 'dim afternoon light'],
+  // Wiggly (live-action / render-engine tokens that pull the look away from 3D animation)
+  ['photorealistic', /\bphotorealistic\b/i, 'feature-quality 3D animated film'],
+  ['hyperrealistic', /\bhyperrealistic\b/i, 'feature-quality 3D animated film'],
+  ['live-action', /\blive[- ]action\b/i, '3D animated'],
+  ['35mm', /\b35\s?mm\b/i, 'describe the framing in plain words'],
+  ['film grain', /\bfilm grain\b/i, 'clean matte animated image'],
+  ['8k', /\b8k\b/i, 'leave resolution out'],
+  ['4k', /\b4k\b/i, 'leave resolution out'],
+  ['octane', /\boctane\b/i, 'leave render engines out'],
+  ['unreal engine', /\bunreal engine\b/i, 'leave render engines out'],
+];
+/** Whole-second budget for a spoken line (Gemini: 3–5 words = 2 s). null = too long for one shot. */
+export function lineBudget(words) { return words <= 5 ? 2 : words <= 12 ? 3 : words <= 18 ? 4 : null; }
+const HAIR_VISIBLE = /\b(visible hair|hairline (?:shows|showing|visible)|bangs|fringe|loose hair|dark band)\b/i;
 
-export function lintStagePlay(raw) {
-  const r = StagePlay.safeParse(raw);
-  if (!r.success) return r.error.issues.map(i => `schema ${i.path.join('.') || '(root)'}: ${i.message}`);
-  const doc = r.data, errs = [];
-  const castIds = new Set(doc.cast.map(c => c.id));
-  const locIds = new Set(doc.locations.map(l => l.id));
-  const used = new Set();
+export function validateStoryDirectorOutput(data) {
+  const issues = [];
+  const err = (code, message, path) => issues.push({ severity: 'error', code, message, ...(path ? { path } : {}) });
+  const warn = (code, message, path) => issues.push({ severity: 'warning', code, message, ...(path ? { path } : {}) });
+  const segments = data?.segments ?? [];
+  const cast = data?.cast ?? [];
+  const tags = new Set(cast.map((c) => c.elementTag));
 
-  // Cast rules
-  for (const c of doc.cast) {
-    const age = Number((c.ageVariant.match(/\d+/) ?? [])[0]);
-    if (age >= 13 && age <= 17) errs.push(`cast ${c.id}: teen shown as ${age}; teens must be depicted as 18`);
-    if (c.minor && age >= 13) errs.push(`cast ${c.id}: minor=true but age ${age} (teens are drawn as 18, minor=false)`);
-    if (c.gender === 'female' && c.family) {
-      if (!/hijab/i.test(c.look)) errs.push(`cast ${c.id}: female family member without hijab in look`);
-      if (HAIR_VISIBLE.test(c.look)) errs.push(`cast ${c.id}: look shows hair under/around the hijab`);
+  if (!segments.length) err('NO_SEGMENTS', 'Output contains no segments.', 'segments');
+  let filmTotal = 0;
+  segments.forEach((seg, si) => {
+    let expectedCurrentTime = 0, segTotal = 0;
+    (seg.shots ?? []).forEach((shot, hi) => {
+      const n = shot.shotNumber ?? hi + 1, p = `segments.${si}.shots.${hi}`;
+      if (!Number.isInteger(shot.startSec) || !Number.isInteger(shot.endSec))
+        err('FRACTIONAL_TIMECODE', `Shot ${n} in segment ${seg.segmentId} has a fractional timecode (${shot.startSec}–${shot.endSec}s). Use whole seconds only.`, p);
+      if (shot.startSec !== expectedCurrentTime)
+        err('TIMECODE_DISCONTINUITY', `Shot ${n} in segment ${seg.segmentId} starts at ${shot.startSec}s but the previous shot ended at ${expectedCurrentTime}s. Timecodes must be strictly consecutive.`, p);
+      const dur = shot.endSec - shot.startSec;
+      if (!(dur > 0)) err('INVALID_SHOT_DURATION', `Shot ${n} in segment ${seg.segmentId} has a non-positive duration (${dur}s).`, p);
+      segTotal += dur; expectedCurrentTime = shot.endSec;
+
+      for (const k of ['dialogue', 'narration']) {
+        const d = shot[k]; if (!d) continue;
+        if (!String(d.speaker ?? '').startsWith('@'))
+          err('UNTAGGED_SPEAKER', `Shot ${n}: speaker '${d.speaker}' must be an @tag.`, `${p}.${k}`);
+        else if (!tags.has(d.speaker))
+          err('SPEAKER_NOT_IN_CAST', `Shot ${n}: speaker ${d.speaker} does not match any cast elementTag.`, `${p}.${k}`);
+        const line = String(d.line ?? '').trim();
+        if (!/^\{.+\}$/.test(line))
+          err('UNBRACKETED_DIALOGUE', `Shot ${n}: dialogue line must be enclosed in curly braces {}.`, `${p}.${k}`);
+        const words = (line.replace(/[{}]/g, '').match(/\S+/g) ?? []).length;
+        const need = lineBudget(words);
+        if (need === null) err('DIALOGUE_TIMING_BUDGET', `Shot ${n}: ${words}-word line is too long for one shot (max 18 words).`, `${p}.${k}`);
+        else if (dur < need) err('DIALOGUE_TIMING_BUDGET', `Shot ${n}: ${words}-word line needs ${need}s but the shot is ${dur}s.`, `${p}.${k}`);
+      }
+      const text = [shot.whatWeSee, shot.whatWeHear, shot.directorsNote, shot.tag].filter(Boolean).join(' ');
+      for (const [label, re, plain] of BANNED_JARGON) if (re.test(text))
+        err('BANNED_JARGON', `Forbidden jargon '${label}' found in shot ${n}. Use plain language instead (e.g. '${plain}')`, p);
+    });
+    if (segTotal > 30) err('EXCEEDS_30S_CEILING', `Segment ${seg.segmentId} runs ${segTotal}s. HARD CEILING IS 30 SECONDS per segment.`, `segments.${si}`);
+    filmTotal += segTotal;
+  });
+  if (filmTotal > MAX_TOTAL_SECONDS) err('RUNTIME_EXCEEDS_CAP', `Film runs ${filmTotal}s; the total cap is ${MAX_TOTAL_SECONDS}s.`, 'segments');
+
+  const sb = data?.storyboardPrompt ?? {};
+  const panels = sb.panels ?? [];
+  if (panels.length !== 8) err('STORYBOARD_PANEL_COUNT', `Storyboard has ${panels.length} panels; it must have exactly 8.`, 'storyboardPrompt.panels');
+  panels.forEach((pn, i) => {
+    const t = String(pn.whatIsInFrame ?? '').toLowerCase();
+    if (!SKIN_WORDS.some((w) => t.includes(w)))
+      err('MISSING_SKIN_TONE_IN_PANEL', `Storyboard panel ${pn.panelNumber ?? i + 1} does not name skin tone.`, `storyboardPrompt.panels.${i}`);
+  });
+  if ((sb.targetEngine ?? IMAGE_ENGINE) !== IMAGE_ENGINE || /gpt[- ]?image/i.test(sb.fullPrompt ?? ''))
+    err('WRONG_IMAGE_ENGINE', `Storyboard must target ${IMAGE_ENGINE} (Google Flow), not '${sb.targetEngine}'.`, 'storyboardPrompt.targetEngine');
+  if (/[\r\n]/.test(sb.fullPrompt ?? ''))
+    err('MULTILINE_STORYBOARD_PROMPT', 'Storyboard fullPrompt must be a single line for Google Flow.', 'storyboardPrompt.fullPrompt');
+
+  if (!cast.length) err('NO_CAST', 'Output contains no cast.', 'cast');
+  cast.forEach((c, i) => {
+    const p = `cast.${i}`;
+    if (!c.signatureAccent || String(c.signatureAccent).length < 5)
+      warn('WEAK_SIGNATURE_ACCENT', `Cast ${c.elementTag ?? c.name}: signature accent is missing or too vague.`, p);
+    if (c.age >= 13 && c.age <= 17)
+      err('UNDERAGE_DEPICTION', `Cast ${c.elementTag ?? c.name} is age ${c.age}; teens are depicted as 18.`, p);
+    if (c.gender === 'female' && c.family !== false) {
+      const d = String(c.physicalDescription ?? '');
+      if (!/hijab/i.test(d) || HAIR_VISIBLE.test(d))
+        err('MISSING_HIJAB', `Cast ${c.elementTag ?? c.name}: female family members wear a hijab with no visible hair, hairline or dark band.`, p);
     }
-  }
+  });
 
-  // Parts / timecodes
-  const partSec = new Map(); let total = 0; const seenShot = new Set();
-  let lastPart = 0;
-  for (const b of doc.beats) {
-    const tag = `beat ${b.beat}`;
-    if (b.part < lastPart) errs.push(`${tag}: part ${b.part} out of order`);
-    lastPart = b.part;
-    partSec.set(b.part, (partSec.get(b.part) ?? 0) + b.durationSeconds);
-    total += b.durationSeconds;
-    let t = 0;
-    const shotDur = new Map();
-    for (const s of b.shots) {
-      const id = `${tag} ${s.id}`;
-      if (seenShot.has(s.id)) errs.push(`${id}: duplicate shot id`);
-      seenShot.add(s.id);
-      if (s.start !== t) errs.push(`${id}: starts at ${s.start}, expected ${t} (${s.start > t ? 'gap' : 'overlap'})`);
-      const d = s.end - s.start;
-      if (d < MIN_SHOT_SECONDS) errs.push(`${id}: ${d}s < ${MIN_SHOT_SECONDS}s minimum`);
-      shotDur.set(s.id, d); t = s.end;
-      if (!locIds.has(s.locationId)) errs.push(`${id}: unknown location ${s.locationId}`);
-      for (const c of s.characterIds) { if (!castIds.has(c)) errs.push(`${id}: unknown cast id ${c}`); used.add(c); }
-    }
-    if (t !== b.durationSeconds) errs.push(`${tag}: shots end at ${t}, expected ${b.durationSeconds}`);
-
-    // Dialogue format, parity, timing budget
-    const perShot = new Map();
-    for (const q of b.dialogue) {
-      const m = q.line.match(DIALOGUE_RE);
-      const [, spk, text] = m;
-      if (!castIds.has(spk)) errs.push(`${tag}: speaker @${spk} not in cast`);
-      used.add(spk);
-      if (!shotDur.has(q.shotId)) { errs.push(`${tag}: dialogue on unknown shot ${q.shotId}`); continue; }
-      const shot = b.shots.find(s => s.id === q.shotId);
-      if (!shot.characterIds.includes(spk)) errs.push(`${tag} ${q.shotId}: @${spk} speaks but is not in frame`);
-      const need = lineBudget(words(text));
-      if (need === null) errs.push(`${tag}: line over 18 words: ${text}`);
-      else if (q.seconds < need) errs.push(`${tag}: line "${text}" given ${q.seconds}s, budget ${need}s`);
-      perShot.set(q.shotId, (perShot.get(q.shotId) ?? 0) + q.seconds);
-    }
-    for (const [sid, need] of perShot) if (need > shotDur.get(sid)) errs.push(`${tag} ${sid}: ${need}s of dialogue in a ${shotDur.get(sid)}s shot`);
-    if (b.narration.includes('/')) errs.push(`${tag}: slash in narration`);
-    if (words(b.narration) / 2.5 > b.durationSeconds) errs.push(`${tag}: narration ${words(b.narration)} words won't fit ${b.durationSeconds}s`);
-  }
-  for (const [p, s] of partSec) if (s > MAX_PART_SECONDS) errs.push(`part ${p}: ${s}s > ${MAX_PART_SECONDS}s segment ceiling`);
-  if (total > MAX_TOTAL_SECONDS) errs.push(`film ${total}s > ${MAX_TOTAL_SECONDS}s total`);
-  for (const id of castIds) if (!used.has(id)) errs.push(`cast ${id}: never appears in any shot or line`);
-
-  if (/[\r\n]/.test(doc.storyboardPrompt)) errs.push('storyboardPrompt must be a single line (Google Flow)');
-  if (/gpt[- ]?image/i.test(doc.storyboardPrompt)) errs.push('storyboardPrompt targets GPT Image; must be Nano Banana 2.1');
-  const { deckHtml, ...rest } = doc;
-  const m = (JSON.stringify(rest) + deckHtml).match(BANNED);
-  if (m) errs.push(`banned jargon: ${m[0]}`);
-  return errs;
+  const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
+  const warnings = issues.filter((i) => i.severity === 'warning').map((i) => i.message);
+  return { isValid: errors.length === 0, errors, warnings, issues };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const file = process.argv[2];
-  if (!file) { console.error('usage: check-stage-play.mjs <file.json>'); process.exit(2); }
+  if (!file) { console.error('usage: check-stage-play.mjs <output.json>'); process.exit(2); }
   let doc;
   try { doc = JSON.parse(readFileSync(file, 'utf8')); } catch (e) { console.error('cannot read JSON: ' + e.message); process.exit(2); }
-  const errs = lintStagePlay(doc);
-  if (errs.length) { console.log(`FAIL (${errs.length})`); for (const e of errs) console.log(' - ' + e); process.exit(1); }
-  const secs = doc.beats.reduce((n, b) => n + b.durationSeconds, 0);
-  console.log(`PASS: ${doc.beats.length} beats, ${new Set(doc.beats.map(b => b.part)).size} parts, ${doc.beats.reduce((n, b) => n + b.shots.length, 0)} shots, ${secs}s total`);
+  const r = validateStoryDirectorOutput(doc);
+  for (const i of r.issues) console.log(`${i.severity.toUpperCase()} ${i.code}: ${i.message}`);
+  if (!r.isValid) { console.log(`FAIL (${r.errors.length} errors, ${r.warnings.length} warnings)`); process.exit(1); }
+  const shots = doc.segments.reduce((n, s) => n + s.shots.length, 0);
+  const secs = doc.segments.reduce((n, s) => n + s.shots.reduce((m, h) => m + h.endSec - h.startSec, 0), 0);
+  console.log(`PASS: ${doc.segments.length} segments, ${shots} shots, ${secs}s total, ${r.warnings.length} warnings`);
 }
