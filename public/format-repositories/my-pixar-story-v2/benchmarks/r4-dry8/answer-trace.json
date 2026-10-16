@@ -1,0 +1,578 @@
+{
+  "facts": [
+    {
+      "id": "F1",
+      "kind": "age",
+      "text": "Was 8 years old",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "kept",
+        "location-scout": "n/a",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F2",
+      "kind": "event",
+      "text": "Wanted to be a scientist",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F3",
+      "kind": "relationship",
+      "text": "Has a mother",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "kept",
+        "location-scout": "n/a",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F4",
+      "kind": "trait",
+      "text": "Didn't talk much",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "kept",
+        "location-scout": "n/a",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F5",
+      "kind": "object",
+      "text": "Wore sunglasses everywhere",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "kept",
+        "location-scout": "dropped",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F6",
+      "kind": "trait",
+      "text": "Loved Yugioh",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "dropped",
+        "location-scout": "n/a",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F7",
+      "kind": "relationship",
+      "text": "Has an older sister",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "kept",
+        "location-scout": "n/a",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F8",
+      "kind": "relationship",
+      "text": "Has a little brother 2 years younger",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "kept",
+        "location-scout": "n/a",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F9",
+      "kind": "relationship",
+      "text": "Has an older sister 7 years older",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "changed",
+        "location-scout": "n/a",
+        "seedance-compiler": "changed"
+      }
+    },
+    {
+      "id": "F10",
+      "kind": "event",
+      "text": "Watched Yugioh GX together with siblings",
+      "statuses": {
+        "story-director": "dropped",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "dropped"
+      }
+    },
+    {
+      "id": "F11",
+      "kind": "object",
+      "text": "Was obsessed with Yugioh cards",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "dropped",
+        "location-scout": "changed",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F12",
+      "kind": "event",
+      "text": "Battled each other with Yugioh cards",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F13",
+      "kind": "age",
+      "text": "Was 17 years old when got license",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "dropped",
+        "location-scout": "n/a",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F14",
+      "kind": "event",
+      "text": "Got driver's license",
+      "statuses": {
+        "story-director": "changed",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F15",
+      "kind": "event",
+      "text": "Didn't have to ask friends for rides anymore",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F16",
+      "kind": "object",
+      "text": "Owned a 2000 Honda Accord Coupe",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "dropped",
+        "location-scout": "kept",
+        "seedance-compiler": "changed"
+      }
+    },
+    {
+      "id": "F17",
+      "kind": "trait",
+      "text": "Car had faded paint",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "dropped",
+        "location-scout": "kept",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F18",
+      "kind": "trait",
+      "text": "Car had no A/C",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "dropped",
+        "location-scout": "n/a",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F19",
+      "kind": "event",
+      "text": "Installed a radio aux cable converter",
+      "statuses": {
+        "story-director": "dropped",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "dropped"
+      }
+    },
+    {
+      "id": "F20",
+      "kind": "event",
+      "text": "Played tunes with friends in car",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F21",
+      "kind": "event",
+      "text": "Graduated from high school early by doubling up on 1st and 2nd semester",
+      "statuses": {
+        "story-director": "changed",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "changed"
+      }
+    },
+    {
+      "id": "F22",
+      "kind": "place",
+      "text": "Went to Mckinney Boyd High School",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F23",
+      "kind": "event",
+      "text": "Went to a coding bootcamp",
+      "statuses": {
+        "story-director": "dropped",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "dropped"
+      }
+    },
+    {
+      "id": "F24",
+      "kind": "event",
+      "text": "Got coding certification in python",
+      "statuses": {
+        "story-director": "changed",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "changed"
+      }
+    },
+    {
+      "id": "F25",
+      "kind": "event",
+      "text": "Got coding certification in Ruby on Rails",
+      "statuses": {
+        "story-director": "changed",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "changed"
+      }
+    },
+    {
+      "id": "F26",
+      "kind": "age",
+      "text": "Was 19 years old",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "dropped",
+        "location-scout": "n/a",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F27",
+      "kind": "event",
+      "text": "Got first software engineering job",
+      "statuses": {
+        "story-director": "changed",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "changed"
+      }
+    },
+    {
+      "id": "F28",
+      "kind": "event",
+      "text": "Got a full salary, benefits, and everything",
+      "statuses": {
+        "story-director": "changed",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "dropped"
+      }
+    },
+    {
+      "id": "F29",
+      "kind": "event",
+      "text": "Salary was 50k",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F30",
+      "kind": "place",
+      "text": "Lived at home with family",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "kept",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F31",
+      "kind": "event",
+      "text": "Met on a dating app for muslims",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F32",
+      "kind": "relationship",
+      "text": "She became his wife",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "dropped",
+        "location-scout": "n/a",
+        "seedance-compiler": "dropped"
+      }
+    },
+    {
+      "id": "F33",
+      "kind": "place",
+      "text": "She was in Chicago",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F34",
+      "kind": "place",
+      "text": "He was in Dallas",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "kept",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F35",
+      "kind": "event",
+      "text": "Were long distance for the majority of it",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "changed"
+      }
+    },
+    {
+      "id": "F36",
+      "kind": "event",
+      "text": "Talked once a week on the phone",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F37",
+      "kind": "date",
+      "text": "She showed up on Facetime every week at 8pm",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "n/a",
+        "seedance-compiler": "changed"
+      }
+    },
+    {
+      "id": "F38",
+      "kind": "trait",
+      "text": "Is naturally a very distant person",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "dropped",
+        "location-scout": "n/a",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F39",
+      "kind": "trait",
+      "text": "Takes a while to catch feelings",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "dropped",
+        "location-scout": "n/a",
+        "seedance-compiler": "kept"
+      }
+    },
+    {
+      "id": "F40",
+      "kind": "event",
+      "text": "She respected his autonomy",
+      "statuses": {
+        "story-director": "kept",
+        "character-architect": "n/a",
+        "location-scout": "dropped",
+        "seedance-compiler": "changed"
+      }
+    }
+  ],
+  "agents": {
+    "story-director": {
+      "counts": {
+        "kept": 31,
+        "changed": 6,
+        "dropped": 3,
+        "na": 0,
+        "unknown": 0
+      },
+      "faithfulness": 0.775,
+      "invented": [
+        {
+          "detail": "Daughter Mia, 6-year-old girl listening on couch",
+          "evidence": "Mia, I love you even when I do not show it.",
+          "severity": "major"
+        },
+        {
+          "detail": "The world is messier than the Disney way.",
+          "evidence": "The world is messier than the Disney way.",
+          "severity": "major"
+        },
+        {
+          "detail": "Good people can do bad things, Mia.",
+          "evidence": "Good people can do bad things, Mia.",
+          "severity": "major"
+        },
+        {
+          "detail": "A mother shows love different than a father does.",
+          "evidence": "A mother shows love different than a father does.",
+          "severity": "major"
+        },
+        {
+          "detail": "You are what you think about. Think good to love, bad to dislike.",
+          "evidence": "You are what you think about. Think good to love, bad to dislike.",
+          "severity": "major"
+        },
+        {
+          "detail": "Men and women are different. Do not let the world convince you.",
+          "evidence": "Men and women are different. Do not let the world convince you.",
+          "severity": "major"
+        },
+        {
+          "detail": "Adult ages not in source: DadShaz 32, Mom 38, Mama 29, Mia 6",
+          "evidence": "Mama's age not given; shown as 29 adult wife",
+          "severity": "minor"
+        }
+      ]
+    },
+    "character-architect": {
+      "counts": {
+        "kept": 6,
+        "changed": 1,
+        "dropped": 10,
+        "na": 23,
+        "unknown": 0
+      },
+      "faithfulness": 0.353,
+      "invented": [
+        {
+          "detail": "Dad Shaz father figure age 32",
+          "evidence": "\"characterId\": \"dad-shaz\"",
+          "severity": "major"
+        },
+        {
+          "detail": "Mama 29-year-old woman",
+          "evidence": "\"characterId\": \"mama\"",
+          "severity": "major"
+        },
+        {
+          "detail": "Mia 6-year-old girl",
+          "evidence": "\"characterId\": \"mia\"",
+          "severity": "major"
+        },
+        {
+          "detail": "Mom age 38 with no source age",
+          "evidence": "\"characterId\": \"mom\"",
+          "severity": "minor"
+        }
+      ]
+    },
+    "location-scout": {
+      "counts": {
+        "kept": 4,
+        "changed": 1,
+        "dropped": 21,
+        "na": 14,
+        "unknown": 0
+      },
+      "faithfulness": 0.154,
+      "invented": [
+        {
+          "detail": "1990s period for family living room",
+          "evidence": "modest 1990s family living room",
+          "severity": "minor"
+        }
+      ]
+    },
+    "seedance-compiler": {
+      "counts": {
+        "kept": 26,
+        "changed": 9,
+        "dropped": 5,
+        "na": 0,
+        "unknown": 0
+      },
+      "faithfulness": 0.65,
+      "invented": [
+        {
+          "detail": "Mia six-year-old daughter character",
+          "evidence": "@Mia = Small six-year-old girl",
+          "severity": "major"
+        },
+        {
+          "detail": "Dad-to-Mia wisdom quotes",
+          "evidence": "{The world is messier than the Disney way.}",
+          "severity": "major"
+        },
+        {
+          "detail": "Dad-to-Mia wisdom quote about good/bad people",
+          "evidence": "{Good people can do bad things, Mia.}",
+          "severity": "major"
+        }
+      ]
+    }
+  },
+  "storyFaithfulness": 0.65,
+  "lostDownstream": [
+    "F9",
+    "F16",
+    "F32",
+    "F35",
+    "F37",
+    "F40"
+  ]
+}

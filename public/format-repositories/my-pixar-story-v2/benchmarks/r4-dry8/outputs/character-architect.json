@@ -1,0 +1,259 @@
+{
+  "mode": "master-render",
+  "characters": [
+    {
+      "characterId": "shaz",
+      "name": "Shaz",
+      "elementTag": "@Shaz",
+      "designSpecs": {
+        "headsTall": 5,
+        "dominantSilhouette": "small upright oval",
+        "exaggeration": "large round serious eyes",
+        "counterpart": "small button nose, narrow mouth, tight rounded jaw",
+        "skinZoning": "light",
+        "signatureAccent": "black sunglasses pushed up on forehead",
+        "isChildProportionRiderApplied": true,
+        "cleanSkinGuarantee": true,
+        "emptyHandsGuarantee": true
+      },
+      "masterRenderPrompt": {
+        "targetEngine": "nano-banana-2.1",
+        "promptText": "A single-character full-body render from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. Eyes: large round dark brown eyes with a large iris taking up about half the opening and a clear band of white sclera on both sides, spherical eyeballs larger than the openings with lids cutting across, thick upper lid band casting a soft shadow onto the eyeball, no dark eyeliner or outline, short blunt sparse lashes. Eyebrows: thick dark groomed eyebrows made of individual hairs sitting level with a soft arch, not a solid shape. Face: large round serious eyes balanced by a small button nose and narrow mouth with a tight rounded jaw, narrow oval face with full cheeks turning cleanly into the jaw, eyeline at the vertical middle of the head, slim neck, soft dimensional closed lips. Subject: an eight-year-old boy with a slim small frame, light olive skin, quiet honest dreamy presence. Skin: matte light zoning with pink nose tip and red translucent ear tips and flushed cheeks and cool purple-grey under the eyes, warm subsurface glow through ears and fingertips, arms wrists and hands completely clean and unmarked with no ink no tattoos and no markings of any kind. Hands: small child hands built from a few large rounded forms with thick blunt fingertips and minimal knuckle detail and soft simple palms. Silhouette: 5 heads tall, small upright oval, Long torso, short legs, low centre of gravity, enlarged head, narrow shoulders. Reads as a small upright oval in black silhouette. Hair: short straight black hair with a soft side-swept fringe across the forehead, darker occluded core at the roots with lit middle clumps and fine flyaway edge strands, directional flow sweeping sideways. Wardrobe: crisp white cotton t-shirt with weight and few large folds, dark slate relaxed trousers with grime in the creases, muted grey sneakers, black sunglasses pushed up on forehead with eyes fully visible as the worn signature accent, bright white main garment against darker pieces in an otherwise muted palette, heavy cloth with weight, few large folds, unbranded. Pose: neutral reference stance, weight on one leg, hip out, head tilted slightly, light closed-lip smile, eyes to camera, hands empty and relaxed at the sides. Nothing mirrored. Camera: 50mm straight on at chest height, full body with feet in frame. Background: flat grey studio backdrop, empty.",
+        "aspectRatio": "1:1"
+      },
+      "age": 8,
+      "gender": "male",
+      "family": true,
+      "skinTone": "light olive",
+      "imageTag": "@Image 1",
+      "outfits": [
+        {
+          "segmentIds": [
+            1
+          ],
+          "description": "Crisp white cotton t-shirt, dark slate relaxed trousers, muted grey sneakers, black sunglasses pushed up on forehead with eyes fully visible",
+          "isMain": true
+        }
+      ]
+    },
+    {
+      "characterId": "dad-shaz",
+      "name": "Dad Shaz",
+      "elementTag": "@DadShaz",
+      "designSpecs": {
+        "headsTall": 7,
+        "dominantSilhouette": "lean upright rectangle",
+        "exaggeration": "heavy square defined jaw and broad chin",
+        "counterpart": "smallish friendly eyes low under a moderate brow",
+        "skinZoning": "light",
+        "signatureAccent": "black sunglasses pushed up on forehead",
+        "isChildProportionRiderApplied": false,
+        "cleanSkinGuarantee": true,
+        "emptyHandsGuarantee": true
+      },
+      "masterRenderPrompt": {
+        "targetEngine": "nano-banana-2.1",
+        "promptText": "A single-character full-body render from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. Eyes: smallish friendly dark brown eyes with iris taking up about a third of the opening and white sclera visible on both sides, spherical eyeballs larger than the openings with lids cutting across, thick upper lid band casting a soft shadow, no dark eyeliner or outline, short blunt sparse lashes. Eyebrows: dark full groomed eyebrows made of individual hairs sitting level with a soft arch, not a solid shape. Face: a heavy square defined jaw and broad chin balanced by a small rounded nose and smallish friendly eyes set low under a moderate brow, eyeline at the vertical middle of the head, lean cheeks with a clear turn into the jaw, sturdy neck, soft dimensional closed lips. Subject: a man in his early thirties with a slim athletic build, light olive skin, warm calm steady storytelling presence. Facial hair: short full dark beard over the jaw and chin and upper lip sitting as a soft matte shell over the skin colour rather than as individual drawn hairs. Skin: matte light zoning with pink nose tip and red translucent ear tips and flushed cheeks and cool purple-grey under the eyes, warm subsurface glow through ears and fingertips, arms wrists and hands completely clean and unmarked with no ink no tattoos and no markings of any kind. Hands: large hands built from a few large rounded forms with thick blunt fingertips and minimal knuckle detail and soft simple palms. Silhouette: 7 heads tall, lean upright rectangle, Adult head-to-body ratio, long legs, broad shoulders, standing square and level. Reads as a lean upright rectangle in black silhouette. Hair: short black hair faded at the sides and swept up on top, darker occluded core at the roots with lit middle clumps and fine flyaway edge strands, directional flow lifting upward. Wardrobe: crisp white cotton t-shirt with weight and few large folds, dark charcoal straight jeans with grime in the creases, muted brown casual shoes, black sunglasses pushed up on forehead with eyes fully visible as the worn signature accent, bright white main garment against darker pieces in an otherwise muted palette, heavy cloth with weight, few large folds, unbranded. Pose: neutral reference stance, weight on one leg, hip out, head tilted slightly, light closed-lip smile, eyes to camera, hands empty and relaxed at the sides. Nothing mirrored. Camera: 50mm straight on at chest height, full body with feet in frame. Background: flat grey studio backdrop, empty.",
+        "aspectRatio": "1:1"
+      },
+      "age": 32,
+      "gender": "male",
+      "family": true,
+      "skinTone": "light olive",
+      "imageTag": "@Image 2",
+      "outfits": [
+        {
+          "segmentIds": [
+            2,
+            3
+          ],
+          "description": "Crisp white cotton t-shirt, dark charcoal straight jeans, muted brown casual shoes, black sunglasses pushed up on forehead with eyes fully visible",
+          "isMain": true
+        }
+      ]
+    },
+    {
+      "characterId": "mom",
+      "name": "Mom",
+      "elementTag": "@Mom",
+      "designSpecs": {
+        "headsTall": 7,
+        "dominantSilhouette": "soft rounded triangle",
+        "exaggeration": "large warm wide eyes",
+        "counterpart": "small button nose, narrow mouth, tight rounded jaw",
+        "skinZoning": "light",
+        "signatureAccent": "deep teal hijab",
+        "isChildProportionRiderApplied": false,
+        "cleanSkinGuarantee": true,
+        "emptyHandsGuarantee": true
+      },
+      "masterRenderPrompt": {
+        "targetEngine": "nano-banana-2.1",
+        "promptText": "A single-character full-body render from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. Eyes: large warm wide dark brown eyes with a large iris and clear white sclera on both sides, spherical eyeballs larger than the openings with lids cutting across, thick upper lid band casting a soft shadow, no dark eyeliner or outline, short blunt sparse lashes. Eyebrows: soft dark groomed eyebrows made of individual hairs sitting level with a soft arch, not a solid shape. Face: large warm wide eyes balanced by a small button nose and narrow mouth with a tight rounded jaw, round face with soft full cheeks turning cleanly into the jaw, eyeline at the vertical middle of the head, medium neck, soft dimensional closed lips. Subject: a woman in her late thirties with a medium build, light olive skin, warm bright cheerful affectionate presence. Skin: matte light zoning with pink nose tip and red translucent ear tips and flushed cheeks and cool purple-grey under the eyes, warm subsurface glow through ears and fingertips, arms wrists and hands completely clean and unmarked with no ink no tattoos and no markings of any kind. Hands: medium hands built from a few large rounded forms with thick blunt fingertips and minimal knuckle detail and soft simple palms. Silhouette: 7 heads tall, soft rounded triangle, Adult head-to-body ratio, long legs, balanced shoulders, standing square and level. Reads as a soft rounded triangle in black silhouette. Hair: none visible; she wears a deep teal hijab fully covering the hair with no visible hair, hairline or dark band at the forehead, the fabric meeting the skin cleanly, soft draped volume around the head and shoulders with a darker occluded core in the folds and lit middle clumps of cloth. Wardrobe: deep teal hijab as the worn signature accent carrying the only saturated colour, cream long tunic with weight and few large folds, dark charcoal loose trousers with grime in the creases, muted flat shoes, bright cream main garment against darker pieces in an otherwise muted palette, heavy cloth with weight, few large folds, unbranded. Pose: neutral reference stance, weight on one leg, hip out, head tilted slightly, light closed-lip smile, eyes to camera, hands empty and relaxed at the sides. Nothing mirrored. Camera: 50mm straight on at chest height, full body with feet in frame. Background: flat grey studio backdrop, empty.",
+        "aspectRatio": "1:1"
+      },
+      "age": 38,
+      "gender": "female",
+      "family": true,
+      "skinTone": "light olive",
+      "imageTag": "@Image 3",
+      "outfits": [
+        {
+          "segmentIds": [
+            1
+          ],
+          "description": "Deep teal hijab fully covering hair, cream long tunic, dark charcoal loose trousers, muted flat shoes",
+          "isMain": true
+        }
+      ]
+    },
+    {
+      "characterId": "sister",
+      "name": "Sister",
+      "elementTag": "@Sister",
+      "designSpecs": {
+        "headsTall": 6.5,
+        "dominantSilhouette": "a tall slim column",
+        "exaggeration": "large wide bright eyes",
+        "counterpart": "small button nose, narrow mouth, tight rounded jaw",
+        "skinZoning": "light",
+        "signatureAccent": "warm mustard hijab",
+        "isChildProportionRiderApplied": false,
+        "cleanSkinGuarantee": true,
+        "emptyHandsGuarantee": true
+      },
+      "masterRenderPrompt": {
+        "targetEngine": "nano-banana-2.1",
+        "promptText": "A single-character full-body render from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. Eyes: large wide dark brown eyes with clear white sclera on sides, spherical eyeballs larger than openings with lids cutting across, thick upper lids casting soft shadow, no dark eyeliner, short blunt sparse lashes. Eyebrows: soft dark groomed eyebrows made of individual hairs, sitting level with soft arch. Face: large wide bright eyes against small button nose, narrow mouth and tight rounded jaw, narrow face with slim chin, eyeline at vertical middle of head, slender neck, dimensional closed lips. Subject: an eighteen-year-old young woman, tall slim build, light olive skin, bright playful warm sister. Skin: matte light zoning with pink nose tip, red translucent ear tips, flushed cheeks, cool purple-grey under eyes, warm subsurface glow through ears and fingertips, arms wrists and hands completely clean and unmarked with no ink no tattoos and no markings of any kind. Hands: slender hands built from few large rounded forms, thick blunt fingertips, minimal knuckle detail, soft simple palms. Silhouette: 6.5 heads tall, a tall slim column, balanced shoulders tapering gently to slim hips, long legs, upright posture, adult head-to-body ratio with balanced torso and standard-size head, reads as a tall slim column in black silhouette. Hair: none visible, she wears a warm mustard hijab fully covering hair and hairline with no visible hair, hairline or dark band, fabric meeting the skin cleanly, soft drape around face and shoulders with core volume at crown, lit middle folds and soft edge drape. Wardrobe: crisp bright white long tunic with weight and few large folds, dark indigo jeans, muted beige flats, warm mustard hijab as the only saturated colour in an otherwise muted palette, heavy cloth with weight, few large folds, grime in creases, unbranded. Pose: neutral reference stance, weight on one leg, hip out, head tilted slightly, light closed-lip smile, eyes to camera, hands empty and relaxed at the sides, open empty hands with nothing held, nothing mirrored. Camera: 50mm straight on at chest height, full body with feet in frame. Background: flat grey studio backdrop, empty.",
+        "aspectRatio": "1:1"
+      },
+      "age": 18,
+      "gender": "female",
+      "family": true,
+      "skinTone": "light olive",
+      "imageTag": "@Image 4",
+      "outfits": [
+        {
+          "segmentIds": [
+            1
+          ],
+          "description": "Crisp bright white long tunic, dark indigo jeans, muted beige flats, warm mustard hijab fully covering hair and hairline",
+          "isMain": true
+        }
+      ]
+    },
+    {
+      "characterId": "brother",
+      "name": "Brother",
+      "elementTag": "@Brother",
+      "designSpecs": {
+        "headsTall": 4.5,
+        "dominantSilhouette": "tiny round circle",
+        "exaggeration": "huge round eager eyes",
+        "counterpart": "small button nose, narrow mouth, tight rounded jaw",
+        "skinZoning": "light",
+        "signatureAccent": "bright green wristband",
+        "isChildProportionRiderApplied": true,
+        "cleanSkinGuarantee": true,
+        "emptyHandsGuarantee": true
+      },
+      "masterRenderPrompt": {
+        "targetEngine": "nano-banana-2.1",
+        "promptText": "A single-character full-body render from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. Eyes: huge round dark brown eager eyes with a very large iris and a thin band of white sclera on both sides, spherical eyeballs larger than the openings with lids cutting across, thick upper lid band casting a soft shadow, no dark eyeliner or outline, short blunt sparse lashes. Eyebrows: soft dark groomed eyebrows made of individual hairs sitting level with a soft arch, not a solid shape. Face: huge round eager eyes balanced by a small button nose and narrow mouth with a tight rounded jaw, round face with soft cheeks turning cleanly into the jaw, eyeline at the vertical middle of the head, short neck, soft dimensional closed lips. Subject: a six-year-old boy with a small frame, light olive skin, loud eager declarative energy. Skin: matte light zoning with pink nose tip and red translucent ear tips and flushed cheeks and cool purple-grey under the eyes, warm subsurface glow through ears and fingertips, arms wrists and hands completely clean and unmarked with no ink no tattoos and no markings of any kind. Hands: tiny child hands built from a few large rounded forms with thick blunt fingertips and minimal knuckle detail and soft simple palms. Silhouette: 4.5 heads tall, tiny round circle, Long torso, short legs, low centre of gravity, enlarged head, narrow shoulders. Reads as a tiny round circle in black silhouette. Hair: short straight black hair cut neat around the head, darker occluded core at the roots with lit middle clumps and fine flyaway edge strands, directional flow forward. Wardrobe: crisp white cotton t-shirt with weight and few large folds, dark navy relaxed shorts with grime in the creases, muted sneakers, bright green wristband worn on the wrist as the attached signature accent carrying the only saturated colour, bright white main garment against darker pieces in an otherwise muted palette, heavy cloth with weight, few large folds, unbranded. Pose: neutral reference stance, weight on one leg, hip out, head tilted slightly, light closed-lip smile, eyes to camera, hands empty and relaxed at the sides. Nothing mirrored. Camera: 50mm straight on at chest height, full body with feet in frame. Background: flat grey studio backdrop, empty.",
+        "aspectRatio": "1:1"
+      },
+      "age": 6,
+      "gender": "male",
+      "family": true,
+      "skinTone": "light olive",
+      "imageTag": "@Image 5",
+      "outfits": [
+        {
+          "segmentIds": [
+            1
+          ],
+          "description": "Crisp white cotton t-shirt, dark navy relaxed shorts, muted sneakers, bright green wristband worn on wrist",
+          "isMain": true
+        }
+      ]
+    },
+    {
+      "characterId": "mama",
+      "name": "Mama",
+      "elementTag": "@Mama",
+      "designSpecs": {
+        "headsTall": 7,
+        "dominantSilhouette": "soft modest oval",
+        "exaggeration": "large soft kind eyes",
+        "counterpart": "small button nose, narrow mouth, tight rounded jaw",
+        "skinZoning": "light",
+        "signatureAccent": "deep plum hijab",
+        "isChildProportionRiderApplied": false,
+        "cleanSkinGuarantee": true,
+        "emptyHandsGuarantee": true
+      },
+      "masterRenderPrompt": {
+        "targetEngine": "nano-banana-2.1",
+        "promptText": "A single-character full-body render from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. Eyes: large soft kind dark brown eyes with a large iris and clear white sclera on both sides, spherical eyeballs larger than the openings with lids cutting across, thick upper lid band casting a soft shadow, no dark eyeliner or outline, short blunt sparse lashes. Eyebrows: soft dark groomed eyebrows made of individual hairs sitting level with a soft arch, not a solid shape. Face: large soft kind eyes balanced by a small button nose and narrow mouth with a tight rounded jaw, oval face with soft cheeks turning cleanly into the jaw, eyeline at the vertical middle of the head, medium neck, soft dimensional closed lips. Subject: a woman in her late twenties with a medium build, light olive skin, soft warm kind reassuring steady presence. Skin: matte light zoning with pink nose tip and red translucent ear tips and flushed cheeks and cool purple-grey under the eyes, warm subsurface glow through ears and fingertips, arms wrists and hands completely clean and unmarked with no ink no tattoos and no markings of any kind. Hands: medium hands built from a few large rounded forms with thick blunt fingertips and minimal knuckle detail and soft simple palms. Silhouette: 7 heads tall, soft modest oval, Adult head-to-body ratio, long legs, balanced shoulders, standing square and level. Reads as a soft modest oval in black silhouette. Hair: none visible; she wears a deep plum hijab fully covering the hair with no visible hair, hairline or dark band at the forehead, the fabric meeting the skin cleanly, soft draped volume around the head and shoulders with a darker occluded core in the folds and lit middle cloth. Wardrobe: deep plum hijab as the worn signature accent carrying the only saturated colour, cream long tunic with weight and few large folds, dark charcoal loose trousers with grime in the creases, muted flat shoes, bright cream main garment against darker pieces in an otherwise muted palette, heavy cloth with weight, few large folds, unbranded. Pose: neutral reference stance, weight on one leg, hip out, head tilted slightly, light closed-lip smile, eyes to camera, hands empty and relaxed at the sides. Nothing mirrored. Camera: 50mm straight on at chest height, full body with feet in frame. Background: flat grey studio backdrop, empty.",
+        "aspectRatio": "1:1"
+      },
+      "age": 29,
+      "gender": "female",
+      "family": true,
+      "skinTone": "light olive",
+      "imageTag": "@Image 6",
+      "outfits": [
+        {
+          "segmentIds": [
+            2
+          ],
+          "description": "Deep plum hijab fully covering hair, cream long tunic, dark charcoal loose trousers, muted flat shoes",
+          "isMain": true
+        }
+      ]
+    },
+    {
+      "characterId": "mia",
+      "name": "Mia",
+      "elementTag": "@Mia",
+      "designSpecs": {
+        "headsTall": 4.5,
+        "dominantSilhouette": "tiny soft oval",
+        "exaggeration": "very large round curious eyes",
+        "counterpart": "small button nose, narrow mouth, tight rounded jaw",
+        "skinZoning": "light",
+        "signatureAccent": "soft rose hijab",
+        "isChildProportionRiderApplied": true,
+        "cleanSkinGuarantee": true,
+        "emptyHandsGuarantee": true
+      },
+      "masterRenderPrompt": {
+        "targetEngine": "nano-banana-2.1",
+        "promptText": "A single-character full-body render from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. Eyes: very large round curious dark brown eyes with a very large iris and a thin band of white sclera on both sides, spherical eyeballs larger than the openings with lids cutting across, thick upper lid band casting a soft shadow, no dark eyeliner or outline, short blunt sparse lashes. Eyebrows: soft dark groomed eyebrows made of individual hairs sitting level with a soft arch, not a solid shape. Face: very large round curious eyes balanced by a small button nose and narrow mouth with a tight rounded jaw, round face with soft cheeks turning cleanly into the jaw, eyeline at the vertical middle of the head, short neck, soft dimensional closed lips. Subject: a six-year-old girl with a small frame, light olive skin, tiny curious sincere quiet presence. Skin: matte light zoning with pink nose tip and red translucent ear tips and flushed cheeks and cool purple-grey under the eyes, warm subsurface glow through ears and fingertips, arms wrists and hands completely clean and unmarked with no ink no tattoos and no markings of any kind. Hands: tiny child hands built from a few large rounded forms with thick blunt fingertips and minimal knuckle detail and soft simple palms. Silhouette: 4.5 heads tall, tiny soft oval, Long torso, short legs, low centre of gravity, enlarged head, narrow shoulders. Reads as a tiny soft oval in black silhouette. Hair: none visible; she wears a soft rose hijab fully covering the hair with no visible hair, hairline or dark band at the forehead, the fabric meeting the skin cleanly, soft draped volume around the head and shoulders with a darker occluded core in the folds and lit middle cloth. Wardrobe: soft rose hijab as the worn signature accent carrying the only saturated colour, cream long dress with weight and few large folds over dark slate leggings with grime in the creases, muted flat shoes, bright cream main garment against darker pieces in an otherwise muted palette, heavy cloth with weight, few large folds, unbranded. Pose: neutral reference stance, weight on one leg, hip out, head tilted slightly, light closed-lip smile, eyes to camera, hands empty and relaxed at the sides. Nothing mirrored. Camera: 50mm straight on at chest height, full body with feet in frame. Background: flat grey studio backdrop, empty.",
+        "aspectRatio": "1:1"
+      },
+      "age": 6,
+      "gender": "female",
+      "family": true,
+      "skinTone": "light olive",
+      "imageTag": "@Image 7",
+      "outfits": [
+        {
+          "segmentIds": [
+            3
+          ],
+          "description": "Soft rose hijab fully covering hair, cream long dress over dark slate leggings, muted flat shoes",
+          "isMain": true
+        }
+      ]
+    }
+  ],
+  "assumptions": [
+    "Approved-assets file is empty so no masterRenderRef bindings apply in master-render mode.",
+    "Sister true age 15 shown as an eighteen-year-old young woman at 6.5 heads with no child rider per teen-as-18 rule; wording avoids teen/teenage and age 15.",
+    "Shaz 8yo is Shaz himself at 5 heads with child rider; Brother 6 and Mia 6 at 4.5 heads with child rider; all adults use adult ratio language with no child-rider tokens.",
+    "All skinTone light olive uses light skin zoning.",
+    "Outfits inferred from living-room/car/desk/couch visual context; each render draws main outfit with crisp white/cream main garment plus one worn saturated signature accent.",
+    "Reference photos studied for Shaz child narrow oval face side-swept fringe and Dad slim athletic faded swept-up hair defined jaw beard; likeness described in text with no photo paths."
+  ]
+}

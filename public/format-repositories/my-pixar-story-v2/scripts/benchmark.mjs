@@ -664,7 +664,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
           process.exit(1);
         }
 
-        const baselineArg = arg('--baseline') ?? 'benchmarks/r4-dry6';
+        const baselineArg = arg('--baseline') ?? 'benchmarks/r4-dry8';
         const isJson = has('--json');
         const outFile = arg('--out');
         const judgeName = arg('--judge');
