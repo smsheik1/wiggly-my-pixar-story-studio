@@ -57,6 +57,20 @@ const AGE_WORDS = /\b(teen|teenage|young|younger|adult|grown|grown-up|older|old|
 const personKey = (c) => norm(c.realPerson ?? String(c.name ?? '').replace(AGE_WORDS, ' ')) || norm(c.name);
 const HAIR_VISIBLE = /\b(visible hair|hairline (?:shows|showing|visible)|bangs|fringe|loose hair|dark band)\b/i;
 
+export const PLATITUDE = /\b(men and women|the world (?:is|will)|life is|love is|family is|always remember|never forget|follow your (?:dreams|heart)|be yourself|everything happens)\b/i;
+const COMMON_CAPS = new Set(['i', 'a', 'the', 'and', 'if', 'my', 'we', 'she', 'he', 'it', 'when', 'to', 'and', 'but', 'so', 'mom', 'dad', 'that', 'this', 'there', 'they', 'our', 'his', 'her', 'in', 'on', 'at', 'for', 'of', 'with', 'yes', 'no']);
+/** Concrete anchors from the answers: capitalized/proper words, numbers, and a few object nouns the maker wrote. */
+export function answerAnchors(answers, exclude = []) {
+  const text = JSON.stringify(answers ?? {});
+  const out = new Set();
+  for (const m of text.matchAll(/(?<![.!?]\s)\b([A-Z][a-zA-Z]{2,}|\d{1,4}(?:pm|am|k)?)\b/g)) out.add(m[1].toLowerCase());
+  for (const m of text.toLowerCase().matchAll(/\b(sunglasses|cards?|car|license|facetime|phone|radio|aux|paint|bootcamp|app|scientist)\b/g)) out.add(m[1]);
+  for (const w of [...COMMON_CAPS, ...exclude.map((x) => String(x).toLowerCase())]) out.delete(w);
+  return out;
+}
+const NUM_WORDS = { eight: '8', seven: '7', nine: '9', nineteen: '19', seventeen: '17', fifty: '50' };
+export const recipientOf = (subject) => /story for ([A-Z][\w-]*)/i.exec(String(subject ?? ''))?.[1] ?? null;
+
 export function validateStoryDirectorOutput(data, input = {}) {
   const issues = [];
   const err = (code, message, path) => issues.push({ severity: 'error', code, message, ...(path ? { path } : {}) });
@@ -131,6 +145,21 @@ export function validateStoryDirectorOutput(data, input = {}) {
     const narr = (last.shots ?? []).filter((h) => h.narration).reduce((n, h) => n + (h.endSec - h.startSec), 0);
     if (narr < FINALE_MIN_NARRATION_SEC)
       err('FINALE_TOO_THIN', `Final part carries only ${narr}s of narration; give the closing wisdom from the answers ${FINALE_MIN_NARRATION_SEC}-20s (setup ~10s).`, `segments.${segments.length - 1}`);
+  }
+  // WIGGLY: the recipient listens on screen in the finale; the last line is specific to these answers.
+  const recipient = recipientOf(input?.subject);
+  if (recipient && segments.length > 1 && last) {
+    const card = cast.find((c) => norm(c.realPerson ?? c.name) === norm(recipient) || norm(c.elementTag).replace(/^@/, '') === norm(recipient));
+    const seen = card && (last.shots ?? []).some((h) => String(h.whatWeSee ?? '').includes(card.elementTag));
+    if (!seen) err('RECIPIENT_NOT_IN_FINALE', `${recipient} (the recipient) is ${card ? `not on screen in the final part; put ${card.elementTag}` : `not in the cast; add a cast card for ${recipient} and put her`} on screen listening in at least one final-part shot (max 2 on screen: the narrator and ${recipient}).`, `segments.${segments.length - 1}`);
+  }
+  const lastLine = [...(last?.shots ?? [])].reverse().map((h) => h.narration?.line ?? h.dialogue?.line).find(Boolean);
+  if (lastLine && input?.answers && Object.keys(input.answers).length) {
+    const words = norm(lastLine.replace(/[{}]/g, '')).split(/\s+/).map((w) => NUM_WORDS[w] ?? w);
+    const anchors = answerAnchors(input.answers, [recipient ?? '', ...cast.map((c) => c.realPerson ?? '')]);
+    const hit = words.find((w) => anchors.has(w) || anchors.has(w.replace(/s$/, '')));
+    if (PLATITUDE.test(lastLine) || (anchors.size && !hit))
+      err('GENERIC_FINAL_LINE', `The film's last line '${lastLine}' is ${PLATITUDE.test(lastLine) ? 'a generic platitude' : 'not tied to anything specific in the answers'}. End on a line that carries one concrete detail only this family lived (e.g. ${[...anchors].sort((a, b) => /^\d/.test(a) - /^\d/.test(b)).slice(0, 6).join(', ')}), and put the general maxims earlier.`, `segments.${segments.length - 1}`);
   }
   if (filmTotal > MAX_TOTAL_SECONDS) err('RUNTIME_EXCEEDS_CAP', `Film runs ${filmTotal}s; the total cap is ${MAX_TOTAL_SECONDS}s.`, 'segments');
 

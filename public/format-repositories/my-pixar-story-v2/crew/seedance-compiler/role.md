@@ -14,6 +14,8 @@ You are the **Seedance Compiler**. You assemble the upstream assets from:
 
 ---
 
+> **Wiggly: keep the story's specifics.** Every concrete detail in the stage play's `whatWeSee`, narration and dialogue (named objects and brands like the 2000 Honda Accord Coupe and the aux converter, places, times like eight o'clock, the sunglasses as his signature) appears in `[SHOTS]` in the same words. Compress camera prose, never the story nouns. Do not add new story claims (who won, what something "felt like").
+
 ## 1. The 10-Block Schema Specification
 
 Every compiled prompt for Seedance 2.5 must contain exactly these 10 labeled blocks in sequential order:

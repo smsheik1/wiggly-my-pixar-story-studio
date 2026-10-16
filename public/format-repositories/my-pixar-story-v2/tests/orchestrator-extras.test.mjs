@@ -76,7 +76,8 @@ test('7: rehearsal runner with injected fake stops at approval and saves outputs
   const root = mkdtempSync(join(tmpdir(), 'v2-reh-'));
   try {
     const proj = join(root, 'project.json');
-    writeFileSync(proj, JSON.stringify({ inputs: { subject: { preferredName: 'Shaz', recipientName: 'Mia', relationshipToRecipient: 'parent' }, answers: { scene1Childhood: { memory: 'sunglasses scientist' } } } }));
+    // (no recipientName: a recipient now requires an on-screen recipient card in the finale; covered in sd-finale.test.mjs)
+    writeFileSync(proj, JSON.stringify({ inputs: { subject: { preferredName: 'Shaz', relationshipToRecipient: 'parent' }, answers: { scene1Childhood: { memory: 'sunglasses scientist' } } } }));
     const lines = []; const { state, dir } = await runRehearsal({ projectPath: proj, runId: 'r1', runsRoot: root, invoke: fake(), secrets: {}, tracing: null, trackerPath: null, log: (l) => lines.push(l) });
     assert.equal(state.status, 'awaiting-approval');
     for (const a of ['story-director', 'character-architect', 'location-scout']) assert.ok(existsSync(join(dir, `${a}.json`)), a);

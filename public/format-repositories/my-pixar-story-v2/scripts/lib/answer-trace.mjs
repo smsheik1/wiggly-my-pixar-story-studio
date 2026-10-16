@@ -49,7 +49,7 @@ const stripPaths = (refs) => (refs ?? []).map(({ path, ...r }) => r);
 export function answersFromInputs(inputs) {
   const a = { answers: inputs.answers ?? {}, subject: inputs.subject ?? '' };
   if (inputs.castDescriptions !== undefined) a.castDescriptions = inputs.castDescriptions;
-  if (inputs.photoReferences !== undefined) a.photoReferences = stripPaths(inputs.photoReferences);
+  if (inputs.photoReferences !== undefined) a.photoReferences = stripPaths(inputs.photoReferences).map(({ photoNote, ...r }) => r); // photo file notes (IMG names, rotation) are not story facts
   return a;
 }
 
