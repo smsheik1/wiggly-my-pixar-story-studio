@@ -1,6 +1,7 @@
 // Writing-tells linter: reads the JSON block in shared/writing-tells.md and checks Story Director and Seedance Compiler outputs.
 // Hard fails (errors): em dash in a spoken/narrated line, forced negation, hard-banned phrase.
-// Warnings: flagged words, stacked finale wisdom lines, zero contractions in speech, filler stage directions, em dashes in prompt prose.
+// Warnings: flagged words, stacked finale wisdom lines, few or zero contractions in speech.
+// Not checked: prompt-prose em dashes (the SC role's camera phrases use them) and filler directions (moving holds are required).
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -13,7 +14,7 @@ export function loadTells(file = TELLS_FILE) {
   if (!m) throw new Error(`writing-tells: no JSON block in ${file}`);
   const j = JSON.parse(m[1]);
   const t = { raw: j, emDash: j.hard.emDash, forcedNegation: j.hard.forcedNegation.map((r) => new RegExp(r, 'i')), phrases: j.hard.phrases.map((p) => p.toLowerCase()),
-    words: j.warn.words.map((w) => new RegExp(`\\b${w}\\b`, 'i')), filler: j.warn.fillerDirections.map((w) => new RegExp(`\\b${w}\\b`, 'i')),
+    words: j.warn.words.map((w) => new RegExp(`\\b${w}\\b`, 'i')),
     wisdom: new RegExp(j.warn.wisdomLine, 'i'), wisdomMax: j.warn.wisdomStackMax, contractable: new RegExp(j.warn.contractable, 'gi'), contraction: new RegExp(j.warn.contraction, 'gi'), minContractable: j.warn.minContractableForWarning };
   if (file === TELLS_FILE) cached = t;
   return t;
@@ -26,8 +27,8 @@ export function doNotWriteList(file = TELLS_FILE) {
 }
 
 const clean = (l) => String(l ?? '').replace(/^\{|\}$/g, '').replace(/[\u2018\u2019]/g, "'");
-/** Check spoken/narrated lines. lines: [{ text, path, finale }]. directions: [{ text, path }]. prose: [{ text, path }] (warn-only em dash). */
-export function checkWritingTells({ lines = [], directions = [], prose = [] }, t = loadTells()) {
+/** Check spoken/narrated lines. lines: [{ text, path, finale }]. directions/prose are extracted for the critic but not code-checked. */
+export function checkWritingTells({ lines = [] }, t = loadTells()) {
   const issues = [];
   const err = (code, message, path) => issues.push({ severity: 'error', code, message, ...(path ? { path } : {}) });
   const warn = (code, message, path) => issues.push({ severity: 'warning', code, message, ...(path ? { path } : {}) });
@@ -53,9 +54,6 @@ export function checkWritingTells({ lines = [], directions = [], prose = [] }, t
     warn('WRITING_TELL_NO_CONTRACTIONS', `Dialogue and narration use no contractions (${contractable.length} stiff forms like '${contractable[0]}'). Spoken lines say "don't", "it's", "I'll".`);
   else if (contractable.length >= t.minContractable && contractable.length > contractions.length * 2)
     warn('WRITING_TELL_FEW_CONTRACTIONS', `Speech has ${contractable.length} uncontracted forms ('${[...new Set(contractable.map((x) => x.toLowerCase()))].slice(0, 4).join("', '")}') vs ${contractions.length} contractions.`);
-  const fillerHits = directions.filter((d) => t.filler.some((r) => r.test(d.text ?? '')));
-  if (fillerHits.length) warn('WRITING_TELL_FILLER_DIRECTION', `${fillerHits.length} of ${directions.length} shot directions use filler ("breathing", "blinking", "shifting weight"). Give each shot a specific action or none.`, fillerHits[0].path);
-  for (const p of prose) if (String(p.text ?? '').includes(t.emDash)) { warn('WRITING_TELL_EM_DASH_PROMPT', `Prompt prose contains em dashes; replace with commas or periods.`, p.path); break; }
   return issues;
 }
 

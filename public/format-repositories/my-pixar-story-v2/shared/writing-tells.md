@@ -36,17 +36,24 @@ Quote each one and rewrite it as a direct positive line before scoring anything 
 - **Forced callbacks.** An earlier object or line is dragged back in only to tie a bow, with no reason in the scene.
 - **Kid dialogue that sounds written.** Children speak in complete, polished, quotable sentences. Real kids interrupt, repeat, mispronounce, brag, and say odd things.
 - **Platitudes.** Sweeping generalisations about life, love, family, men and women, "the world". Keep only wisdom the answers ground in this family.
+- **Setup/reveal and contrast pivot.** "Everyone thought it was just a car. It was freedom." "Different city. Different job. Same Shaz." Say the true thing once.
+- **Manufactured surprise.** "Here's the crazy part", "and that's when it hit me", "all along", "this whole time", "the only thing that mattered was X". Let the moment be the surprise.
+- **Over-explaining.** A line explains what the picture already shows, or a metaphor gets explained or milked across several shots ("the cards were our language... every hand was a sentence").
+- **Parallel restatement.** The same feeling said two or three ways in a row.
+- **Rhetorical Q and A.** "Was it easy? No." Once is fine; twice is a pattern.
+- **Performative reflection.** "I sat with that." "Let that sink in." Show the thought instead.
 - **Generic positive ending.** "And they lived happily." "The best was yet to come." End on something only this family has.
 
 ### B. Line-level and format tells (2 points each)
-- **Any em dash in a line or prompt** (zero tolerance). Use a comma, a period, or two lines.
+- **Any em dash in a spoken or narrated line** (zero tolerance). Use a comma, a period, or two lines.
 - **Zero contractions in dialogue or voiceover.** "I do not", "it is", "I will" in casual speech. Spoken lines use "don't", "it's", "I'll".
-- **Filler stage directions.** "breathing", "blinking", "shifting weight", "smiles softly" used as padding in every shot. Give each shot a specific action or none.
+- **Filler stage directions.** A shot whose only action is "breathing", "blinking", "smiles softly" or "nods slowly". Moving holds (breathing, blinking on a held beat) are required by both roles for the video model and are not a tell; flag only shots with no specific action besides them. Critic only, not a code check.
 - **Colon or "here's the thing" reveals inside dialogue.**
 - **CAPS for emphasis in a line.**
+- **Stiff register.** Formal or written words in casual speech ("purchase", "commence", "individuals"), or "the exact [noun]" claiming precision without giving it.
 
 ### C. Flagged words and phrases (1 point each)
-Phrases: "a testament to", "rich tapestry", "a stark reminder", "at the end of the day", "in the grand scheme of things", "the lesson here", "it's a reminder that", "more than ever", "deeply rooted", "journey" (as life metaphor), "embrace", "cherish every moment", "treasure", "unwavering", "indelible", "heart of the home", "little did I know", "and that changed everything", "that's the whole game".
+Phrases: "a testament to", "rich tapestry", "a stark reminder", "at the end of the day", "in the grand scheme of things", "the lesson here", "it's a reminder that", "more than ever", "deeply rooted", "journey" (as life metaphor), "embrace", "cherish every moment", "treasure", "unwavering", "indelible", "heart of the home", "little did I know", "and that changed everything", "that's the whole game", "in the end, it was", "the journey of life", "family is everything", "home is where the heart is".
 Words: delve, tapestry, testament, profound, resonate, vibrant, nestled, bustling, whimsical, palpable, cornerstone, myriad, embark, journey, cherish, unwavering, indelible, essence, transformative, poignant, bittersweet (as label), heartfelt (as label), genuinely, literally, truly (empty intensifiers).
 
 ### D. Tone tells (3 points each)
@@ -80,12 +87,12 @@ Words: delve, tapestry, testament, profound, resonate, vibrant, nestled, bustlin
 - Stacked wisdom → no more than two advice lines in a row; put a moment between them.
 - Forced callback → only if the scene needs it.
 - Em dash → comma, period or two lines. Missing contractions → add them.
-- Filler stage directions → a specific action, or nothing.
+- Filler stage directions → add one specific action next to the moving hold.
 - Lost detail → put the exact detail from the answers back in.
 
 ## Step 4: output format (the critic returns this)
 ```
-SCORE: <number> — <RATING>
+SCORE: <number> (<RATING>)
 FLAGS:
 | # | Part/shot | Line (quoted) | Tell | Points | Suggested fix |
 TOP 3 PRIORITIES:
@@ -95,32 +102,38 @@ REWRITTEN LINES (only if score >= 16):
 ```
 
 ## Do-not-write list (loaded into the Story Director and Seedance Compiler)
-- No em dashes anywhere in lines or prompts.
+- No em dashes in spoken or narrated lines.
 - No "it's not X, it's Y" or any forced negation.
 - No wrap-up morals, no theme said out loud, no platitudes about life, love, family, men and women or "the world".
 - No more than two wisdom or advice lines in a row in the finale.
 - No three-beat staccato runs ("He showed up. He listened. He stayed.").
 - No characters announcing their feelings ("I'm so proud", "I feel free").
 - No resume voiceover (salary, certifications, dates read as a list).
-- No filler stage directions ("breathing", "blinking", "shifting weight") as padding.
+- Every shot gets one specific action; a moving hold alone (breathing, blinking) is not enough.
 - Use contractions in speech ("don't", "it's", "I'll").
 - Kids talk like kids: short, interrupting, bragging, odd.
 - Keep the answers' oddly specific details exactly as written.
 - None of the flagged words or phrases in section C.
 
+## What the code enforces
+The linter reads the JSON block below. Everything else in this file is for the writers and the critic.
+- **Hard fail (blocks the gate):** an em dash in a spoken or narrated line (`WRITING_TELL_EM_DASH`), forced negation (`WRITING_TELL_FORCED_NEGATION`), a phrase in `hard.phrases` (`WRITING_TELL_BANNED_PHRASE`).
+- **Warning (reported, never blocks):** a word in `warn.words` (`WRITING_TELL_FLAGGED_WORD`), more than `wisdomStackMax` wisdom lines in a row in the finale (`WRITING_TELL_WISDOM_STACK`), no or few contractions in speech (`WRITING_TELL_NO_CONTRACTIONS`, `WRITING_TELL_FEW_CONTRACTIONS`).
+- Not checked by code: em dashes in Seedance prompt prose (the Seedance role's own camera phrases use them and the viewer never hears them) and filler directions (moving holds are required).
+
 ## Machine-readable block (read by crew/linter/writing-tells.mjs)
 <!-- writing-tells:json:start -->
 ```json
 {
-  "version": "film-1.0 (from AI TELLS v2.2)",
+  "version": "film-1.1 (from AI TELLS v2.2)",
   "hard": {
     "emDash": "\u2014",
     "forcedNegation": [
-      "\\b(it|this|that)(?:'s| is| was|'s just)? not (?:about )?[^,.;]{1,40}[,.;]\\s*(?:it|this|that)(?:'s| is| was)\\b",
+      "\\b(?:it|this|that)(?:(?:'s| is| was)(?: just)? not| isn't| wasn't) (?:about )?[^,.;]{1,40}[,.;]\\s*(?:it|this|that)(?:'s| is| was)\\b",
       "\\b(?:these|they) (?:aren't|are not|weren't) [^,.;]{1,40}[,.;]\\s*(?:these|they) (?:are|were)\\b",
-      "\\b(?:didn't|did not) just [^,.;]{1,40}[,.;]?\\s*(?:they|he|she|we|i) [a-z]+",
+      "\\b(?:didn't|did not) just [^,.;]{1,40}[,.;]\\s*(?:they|he|she|we|i) [a-z]+",
       "\\bnot an? [^,.;]{1,30}[,.;]\\s*(?:it's|it is) an?\\b",
-      "\\bnot [^,.;]{1,30}\\s*(?:\u2014|-)\\s*just\\b"
+      "\\bnot [^,.;]{1,30}\\s*(?:\u2014|--)\\s*just\\b"
     ],
     "phrases": [
       "it's a reminder that", "in the end, it was", "the lesson here", "at the end of the day", "in the grand scheme of things",
@@ -132,7 +145,6 @@ REWRITTEN LINES (only if score >= 16):
     "words": ["delve", "tapestry", "testament", "profound", "resonate", "vibrant", "nestled", "bustling", "whimsical", "palpable",
       "cornerstone", "myriad", "embark", "journey", "cherish", "unwavering", "indelible", "essence", "transformative", "poignant",
       "genuinely", "literally", "truly", "embrace"],
-    "fillerDirections": ["breathing", "blinking", "shifting weight", "shifts weight", "smiles softly", "nods slowly"],
     "wisdomLine": "\\b(you (?:are|become|turn into) what|good people|the world|love (?:is|means)|always|never forget|remember that|life|think about|notice the good|people can|be kind|be yourself|in the end)\\b",
     "wisdomStackMax": 2,
     "contractable": "\\b(do not|does not|did not|is not|are not|was not|will not|cannot|can not|i am|it is|that is|you are|we are|they are|i will|you will|i would|let us|i have)\\b",

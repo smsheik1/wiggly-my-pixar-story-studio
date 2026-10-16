@@ -22,14 +22,14 @@ test('hard fails: em dash, forced negation, banned phrase in spoken lines', () =
 test('clean real lines pass silently', () => {
   assert.deepEqual(checkWritingTells({ lines: [L('Pause it! My turn to battle!'), L("I'll go first, okay?"), L('We watched GX together, every afternoon.')], directions: [{ text: 'Shaz slaps a card down on the rug.' }] }), []);
 });
-test('warnings: flagged word, wisdom stack (3+ in finale), filler directions, no contractions, prompt em dash', () => {
+test('warnings: flagged word, wisdom stack (3+ in finale), no contractions; moving holds and prompt em dashes are not flagged', () => {
   const stack = ['Disney made it look simple, but the world turned out messier.', 'Good people can still make bad choices.', 'You turn into what you think about, so notice the good.'].map((s) => L(s, true));
   assert.deepEqual(codes(checkWritingTells({ lines: stack })), ['warning:WRITING_TELL_WISDOM_STACK']);
   assert.deepEqual(codes(checkWritingTells({ lines: stack.slice(0, 2) })), []);
   assert.deepEqual(codes(checkWritingTells({ lines: [L('Our journey began.')] })), ['warning:WRITING_TELL_FLAGGED_WORD']);
   assert.deepEqual(codes(checkWritingTells({ lines: [L('I am here.'), L('It is late.'), L('I will stay.')] })), ['warning:WRITING_TELL_NO_CONTRACTIONS']);
-  assert.deepEqual(codes(checkWritingTells({ directions: [{ text: 'Mia sits, breathing, blinking.' }] })), ['warning:WRITING_TELL_FILLER_DIRECTION']);
-  assert.deepEqual(codes(checkWritingTells({ prose: [{ text: 'Warm light \u2014 soft.' }] })), ['warning:WRITING_TELL_EM_DASH_PROMPT']);
+  // Moving holds and the SC role's own em-dash camera phrases are required, so neither is code-checked.
+  assert.deepEqual(codes(checkWritingTells({ lines: [L('Hi.')], directions: [{ text: 'Mia sits, breathing, blinking.' }], prose: [{ text: 'One continuous move \u2014 the camera never stops.' }] })), []);
   assert.equal(tellsScore([{ severity: 'error', code: 'A' }, { severity: 'warning', code: 'B' }]).score, 5);
 });
 test('extractors: finale = last segment; seedance brace lines are speech', () => {
@@ -46,4 +46,13 @@ test('Story Director and Seedance Compiler skills carry the do-not-write list; o
   assert.ok(loadSkill('story-director').includes('Writing tells: do not write'));
   assert.ok(loadSkill('seedance-compiler').includes('Writing tells: do not write'));
   assert.ok(!loadSkill('location-scout').includes('Writing tells: do not write'));
+});
+test('forced negation: catches isn\'t/wasn\'t and "didn\'t just X, I Y"; ignores normal dialogue', () => {
+  for (const x of ["It isn't a car, it's a rocket.", "It wasn't luck. It was practice.", "I didn't just eat it, I ate the box.", "It's not about the car, it's about us."])
+    assert.deepEqual(codes(checkWritingTells({ lines: [L(x)] })), ['error:WRITING_TELL_FORCED_NEGATION'], x);
+  for (const x of ["We didn't just sit there while he cried.", "Not now - just one more episode!", "I'm not hungry, it's too hot.", 'This is not my deck. Where is it?', 'Not a hand-me-down, just a Honda.'])
+    assert.deepEqual(codes(checkWritingTells({ lines: [L(x)] })), [], x);
+});
+test('rubric follows its own rule: no em dashes outside the JSON escape', () => {
+  assert.ok(!readFileSync(TELLS_FILE, 'utf8').includes('\u2014'));
 });
