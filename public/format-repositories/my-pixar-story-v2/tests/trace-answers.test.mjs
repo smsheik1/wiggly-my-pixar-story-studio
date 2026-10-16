@@ -286,3 +286,9 @@ test('museCall surfaces opencode failure with a clear message', { timeout: 10000
   const spawnFn = spawnFake(['boom\n'], 1);
   await assert.rejects(() => museCall('hi', { spawnFn }), /opencode run failed/);
 });
+
+test('assistantTextFromStream ignores reasoning parts and keeps only text parts', { timeout: 10000 }, async () => {
+  const { assistantTextFromStream } = await import('../scripts/lib/muse-opencode.mjs');
+  const s = [JSON.stringify({ type: 'reasoning', part: { type: 'reasoning', text: 'thinking {not json}' } }), JSON.stringify({ type: 'text', part: { type: 'text', text: '{"facts":[]}' } })].join('\n');
+  assert.equal(assistantTextFromStream(s), '{"facts":[]}');
+});

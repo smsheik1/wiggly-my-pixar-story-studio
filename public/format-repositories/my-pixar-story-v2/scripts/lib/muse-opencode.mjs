@@ -40,6 +40,10 @@ function collectText(node, out) {
 /** Best-effort assistant text from `opencode run --format json` event output. */
 export function assistantTextFromStream(stdout) {
   const raw = String(stdout ?? '');
+  // OpenCode events: only {type:'text', part:{type:'text', text}} is the answer; reasoning/tool parts are not.
+  const textParts = [];
+  for (const line of raw.split('\n')) { try { const ev = JSON.parse(line); if (ev?.type === 'text' && typeof ev.part?.text === 'string') textParts.push(ev.part.text); } catch { /* not JSON */ } }
+  if (textParts.length) return textParts.join('').trim();
   const parts = [];
   let parsed = false;
   for (const line of raw.split('\n')) {
@@ -77,7 +81,7 @@ function runOnce(prompt, { timeoutMs, spawnFn }) {
       let child;
       try {
         // No shell: the prompt travels as one argv element; child is the exact opencode PID.
-        child = spawnFn('opencode', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+        child = spawnFn('opencode', args, { stdio: ['ignore', 'pipe', 'pipe'], cwd: tmpdir() }); // neutral cwd: the judge never sees the repo
       } catch (e) {
         reject(new Error(`opencode CLI spawn failed: ${e.message}. Is 'opencode' installed on PATH?`));
         return;
