@@ -109,7 +109,7 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
       let raw;
       const req = { agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state };
       try { raw = await traced(req); } catch (e) {
-        issues = [{ severity: 'error', code: 'AGENT_RUN_FAILED', message: `model call failed: ${e.message}` }];
+        issues = Array.isArray(e.issues) && e.issues.length ? e.issues : [{ severity: 'error', code: e.code === 'MODEL_TIMEOUT' ? 'MODEL_TIMEOUT' : 'AGENT_RUN_FAILED', message: `model call failed: ${e.message}` }];
         done({ output: null, issues }); continue;
       }
       let out;

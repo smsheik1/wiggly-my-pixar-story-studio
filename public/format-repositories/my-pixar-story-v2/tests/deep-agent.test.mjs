@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { AIMessage } from '@langchain/core/messages';
-import { prepareRunWorkspace, workspaceAgent, makeSubmitTool, deepAgentInvoke, assetPath } from '../graph/deep-agent-node.mjs';
+import { prepareRunWorkspace, workspaceAgent, makeSubmitTool, deepAgentInvoke, assetPath, dropDisallowedNulls } from '../graph/deep-agent-node.mjs';
+import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
 import { buildGraph } from '../graph/graph.mjs';
 
 // Explicit isolated mock (same idea as v1 studio-spike offline-model.ts): proves harness mechanics only.
@@ -71,35 +72,46 @@ test('permissions: writes outside /drafts and reads outside the mounts are denie
   assert.ok(!model.toolNames.includes('task') && !model.toolNames.includes('execute'));
 }));
 
-test('submit tool validates against the agent output schema: invalid args never submit and end the run with the schema error; valid args submit', () => tmp(async (runs) => {
-  const { root } = await prepareRunWorkspace({ runsRoot: runs, runId: 's', agent: 'location-scout', input: {} });
+test('invalid submit returns exact Zod paths to the agent, which resubmits within the same attempt; valid submit ends the run', () => tmp(async (runs) => {
   const bad = json(FIX['location-scout']); bad.locations[0].elementTag = '@Kitchen';
-  const subs = [];
-  const m1 = new ScriptedModel([
+  let seen = '';
+  const m = new ScriptedModel([
     () => call('read_file', { file_path: '/skills/location-scout/SKILL.md' }),
-    (m) => { assert.match(lastText(m), /Location Scout/); return call('submit_location_scout', bad); },
+    () => call('submit_location_scout', bad),
+    (msgs) => { seen = lastText(msgs); return call('submit_location_scout', json(FIX['location-scout'])); },
   ]);
-  const a1 = workspaceAgent(m1, root, 'openai:isolated-scripted-model', 'submit-bad', [makeSubmitTool('location-scout', subs)], 'x');
-  const r1 = await a1.invoke({ messages: [{ role: 'user', content: 'go' }] }, { recursionLimit: 20 });
-  assert.equal(subs.length, 0); assert.match(JSON.stringify(r1.messages.at(-1).content), /@Loc 1/);
-  const m2 = new ScriptedModel([() => call('submit_location_scout', json(FIX['location-scout']))]);
-  const a2 = workspaceAgent(m2, root, 'openai:isolated-scripted-model', 'submit-ok', [makeSubmitTool('location-scout', subs)], 'x');
-  await a2.invoke({ messages: [{ role: 'user', content: 'go' }] }, { recursionLimit: 20 });
-  assert.equal(subs.length, 1); assert.equal(subs[0].locations[0].elementTag, '@Loc 1');
-  assert.equal(m2.calls.length, 1, 'returnDirect: no model turn after a valid submit');
+  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'same' })({ agent: 'location-scout', config: { model: 'isolated-scripted-model' }, input: {}, attempt: 1 });
+  assert.match(seen, /SUBMISSION REJECTED \(1\/3\)/); assert.match(seen, /locations\.0\.elementTag/);
+  assert.equal(out.locations[0].elementTag, '@Loc 1');
+  assert.equal(m.calls.length, 3, 'no model turn after the valid submit');
 }));
 
-test('invalid submit inside the graph becomes retry notes, then the next attempt passes', () => tmp(async (runs) => {
+test('3 invalid submits in one attempt -> attempt fails with the specific Zod issues in retry notes; next attempt passes', () => tmp(async (runs) => {
   let lsRuns = 0; const notes = [];
   const createModel = async (_c, agent) => {
-    let fx = json(FIX[agent]);
-    if (agent === 'location-scout' && lsRuns++ === 0) fx.locations[0].elementTag = '@Kitchen';
-    return new ScriptedModel([(m) => { notes.push([agent, JSON.stringify(m[0].content)]); return call(`submit_${agent.replaceAll('-', '_')}`, fx); }]);
+    const fx = json(FIX[agent]);
+    const name = `submit_${agent.replaceAll('-', '_')}`;
+    if (agent === 'location-scout' && lsRuns++ === 0) { fx.locations[0].elementTag = '@Kitchen'; return new ScriptedModel([0, 1, 2].map(() => () => call(name, fx))); }
+    return new ScriptedModel([(m) => { notes.push([agent, JSON.stringify(m[0].content)]); return call(name, fx); }]);
   };
   const s = await buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'retry' } }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done'); assert.equal(s.attempts['location-scout'], 2);
+  const logged = s.validationErrors.find((v) => v.node === 'location-scout').errors;
+  assert.ok(logged.every((i) => i.code === 'SCHEMA_REJECTED')); assert.ok(logged.some((i) => i.path === 'locations.0.elementTag'));
   const ln = notes.filter(([a]) => a === 'location-scout').map(([, t]) => t);
-  assert.ok(ln.some((t) => /AGENT_RUN_FAILED/.test(t) && /@Loc/.test(t)));
+  assert.ok(ln.some((t) => /SCHEMA_REJECTED/.test(t) && /locations\.0\.elementTag/.test(t)));
+}));
+
+test('r4-dry1 regression: Muse sent null for optional shot fields; tool schema accepts it and the submit validates', () => tmp(async () => {
+  const args = json('r4-dry1-story-director-submit-args.json');
+  assert.equal(StoryDirectorOutputSchema.safeParse(args).success, false, 'raw args fail Zod (null on optional fields)');
+  const subs = []; const t = makeSubmitTool('story-director', subs);
+  assert.match(await t.invoke(args), /submitted/); assert.equal(subs.length, 1);
+  assert.ok(!('tag' in subs[0].segments[0].shots[0]));
+  const shot = t.schema.properties.segments.items.properties.shots.items.properties;
+  assert.ok(shot.tag.anyOf.some((b) => b.type === 'null') && shot.dialogue.anyOf.some((b) => b.type === 'null'));
+  // nullable fields keep their null (Seedance extendsFrom)
+  assert.equal(dropDisallowedNulls({ a: null, b: null }, { properties: { a: { type: ['integer', 'null'] }, b: { type: 'string' } } }).a, null);
 }));
 
 test('graph happy path through the deep-agent node (scripted model, zero network)', () => tmp(async (runs) => {

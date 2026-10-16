@@ -11,7 +11,8 @@ import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createDeepAgent, FilesystemBackend, CompositeBackend, registerHarnessProfile } from 'deepagents';
-import { tool } from 'langchain';
+import { toJsonSchema } from '@langchain/core/utils/json_schema';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
 import { CharacterArchitectOutputSchema } from '../crew/character-architect/schema.mjs';
 import { LocationScoutOutputSchema } from '../crew/location-scout/schema.mjs';
@@ -75,16 +76,77 @@ export function workspaceAgent(model, root, profileKey, name, tools, systemPromp
 }
 
 /** submit_<agent>: args are validated by the agent's output schema; returnDirect ends the agent run. */
-export function makeSubmitTool(agent, submissions) {
+const acceptsNull = (js) => !!js && (js.type === 'null' || (Array.isArray(js.type) && js.type.includes('null')) || (js.anyOf ?? js.oneOf ?? []).some(acceptsNull));
+const nonNull = (js) => (js?.anyOf ?? js?.oneOf)?.find((b) => b.type !== 'null') ?? js;
+/** Advertised tool schema: optional (non-required) properties also accept null, since models send null for "absent". */
+export function nullTolerant(js) {
+  if (!js || typeof js !== 'object') return js;
+  if (Array.isArray(js)) return js.map(nullTolerant);
+  const out = Object.fromEntries(Object.entries(js).map(([k, v]) => [k, k === 'properties' ? v : nullTolerant(v)]));
+  if (js.properties) {
+    const req = new Set(js.required ?? []);
+    out.properties = Object.fromEntries(Object.entries(js.properties).map(([k, v]) => {
+      const t = nullTolerant(v);
+      return [k, req.has(k) || acceptsNull(v) ? t : { anyOf: [t, { type: 'null' }], ...(v.description ? { description: v.description } : {}) }];
+    }));
+  }
+  return out;
+}
+/** Drop nulls the contract does not allow (null on an optional field means "absent"); keep nulls on nullable fields. */
+export function dropDisallowedNulls(v, js) {
+  js = nonNull(js);
+  if (Array.isArray(v)) return v.map((x) => dropDisallowedNulls(x, js?.items));
+  if (v && typeof v === 'object') {
+    const props = js?.properties ?? {};
+    return Object.fromEntries(Object.entries(v).filter(([k, x]) => x !== null || acceptsNull(props[k])).map(([k, x]) => [k, dropDisallowedNulls(x, props[k])]));
+  }
+  return v;
+}
+export const zodIssues = (issues) => issues.map((i) => ({ severity: 'error', code: 'SCHEMA_REJECTED', path: (i.path ?? []).join('.'), message: i.message }));
+const issueText = (issues, max = 40) => issues.slice(0, max).map((i) => `- ${i.path || '(root)'}: ${i.message}`).join('\n') + (issues.length > max ? `\n- …and ${issues.length - max} more` : '');
+
+export class SubmitRejectedError extends Error {
+  constructor(agent, issues) { super(`${agent}: submit rejected by the output schema (${issues.length} issue${issues.length === 1 ? '' : 's'}):\n${issueText(issues, 15)}`); this.issues = issues; this.code = 'SCHEMA_REJECTED'; }
+}
+
+/**
+ * The wrapper's own input check only says "did not match expected schema" and never reaches our code, so the
+ * agent cannot see what to fix (the r4-dry1 failure). The model still gets the full JSON schema at bind time;
+ * at call time we validate in code with Zod and return exact paths/messages.
+ */
+class CodeValidatedTool extends DynamicStructuredTool {
+  async call(arg, configArg, tags) {
+    const advertised = this.schema;
+    this.schema = { type: 'object' };
+    try { return await super.call(arg, configArg, tags); } finally { this.schema = advertised; }
+  }
+}
+
+/**
+ * Typed submit tool. Validation happens in code (not by the tool wrapper) so an invalid submit returns the
+ * exact Zod paths/messages to the agent, which fixes and resubmits inside the same attempt.
+ * onSubmitted() ends the run on a valid submit; after maxInvalid bad submits onGiveUp(err) ends it with the issues.
+ */
+export function makeSubmitTool(agent, submissions, { onSubmitted = () => {}, onGiveUp = () => {}, maxInvalid = 3 } = {}) {
   const schema = OUTPUT_SCHEMAS[agent];
   // Seedance Compiler: compiledPrompt is assembled in code from tenBlocks, so the tool takes the blocks only.
-  const toolSchema = agent === 'seedance-compiler' ? SeedanceSubmitSchema : schema;
+  const toolZod = agent === 'seedance-compiler' ? SeedanceSubmitSchema : schema;
   const prep = agent === 'seedance-compiler' ? withAssembledPrompts : (x) => x;
-  return tool(async (args) => { const v = schema.parse(prep(args)); submissions.push(v); return JSON.stringify({ submitted: true }); }, {
+  const js = toJsonSchema(toolZod);
+  let invalid = 0;
+  const t = new CodeValidatedTool({ func: async (args) => {
+    const r = schema.safeParse(prep(dropDisallowedNulls(args, js)));
+    if (r.success) { submissions.push(r.data); onSubmitted(r.data); return JSON.stringify({ submitted: true }); }
+    const issues = zodIssues(r.error.issues);
+    t.lastIssues = issues;
+    if (++invalid >= maxInvalid) { onGiveUp(new SubmitRejectedError(agent, issues)); return 'Submission rejected again; stopping this attempt.'; }
+    return `SUBMISSION REJECTED (${invalid}/${maxInvalid}): fix exactly these fields and call ${t.name} again with the complete corrected output. Omit optional fields you do not use (do not send null).\n${issueText(issues)}`;
+  },
     name: `submit_${agent.replaceAll('-', '_')}`,
-    description: `Submit the final ${agent} output. Arguments must match the JSON contract in your SKILL.md exactly.`,
-    schema: toolSchema, returnDirect: true,
+    description: `Submit the final ${agent} output. Arguments must match the JSON contract in your SKILL.md exactly. If rejected, fix the listed fields and resubmit.`,
+    schema: nullTolerant(js),
   });
+  return t;
 }
 
 export const systemPromptFor = (agent, retryNotes = '') => [
@@ -108,27 +170,28 @@ export async function openRouterModel(config, _agent, { apiKey = process.env.OPE
  * Build the graph's invoke({ agent, config, input, attempt, retryNotes, state }) as a Deep Agent run.
  * createModel(config, agent) -> BaseChatModel (inject a fake in tests). Returns the submitted object.
  */
-export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60 } = {}) {
+export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60, maxInvalidSubmits = 3 } = {}) {
   return async ({ agent, config, input, attempt = 1, retryNotes = '', state = {}, signal }) => {
     const { root } = await prepareRunWorkspace({ runsRoot, runId: `${runId}/attempt-${attempt}`, agent, input, approvedAssets: state.approvedAssets ?? {}, assetFiles });
     const submissions = [];
+    const done = new AbortController(); // ends the agent loop on a valid submit (or give-up)
+    let giveUp = null;
+    const submit = makeSubmitTool(agent, submissions, { maxInvalid: maxInvalidSubmits,
+      onSubmitted: () => done.abort(new Error('submitted')), onGiveUp: (e) => { giveUp = e; done.abort(e); } });
     const model = await createModel(config, agent);
-    const agentRun = workspaceAgent(model, root, `openai:${config.model}`, `wiggly-v2-${agent}`, [makeSubmitTool(agent, submissions)], systemPromptFor(agent, retryNotes));
-    const res = await agentRun.invoke({ messages: [{ role: 'user', content: `Produce the ${agent} output for this run.` }] }, { recursionLimit, ...(signal ? { signal } : {}), runName: `${agent} deep agent`, tags: [`agent:${agent}`, `attempt:${attempt}`] });
-    if (!submissions.length) {
-      // An invalid submit_<agent> call fails schema validation; returnDirect ends the run with the tool error,
-      // which the graph feeds into the next attempt's retry notes.
-      const last = res?.messages?.at(-1);
-      const txt = typeof last?.content === 'string' ? last.content : JSON.stringify(last?.content ?? '');
-      if (last?.type === 'tool' && /Error invoking tool 'submit_/.test(txt))
-      {
-        // Drop the echoed kwargs (the whole submission) and keep the validation error.
-        const k = txt.search(/\b(?:with error|because|Received tool input did not match)/);
-        const reason = (k >= 0 ? txt.slice(k) : txt.slice(-1500)).slice(0, 2000);
-        throw new Error(`${agent}: submit rejected by the output schema: ${reason}`);
-      }
-      throw new Error(`${agent}: the deep agent finished without calling submit`);
+    const agentRun = workspaceAgent(model, root, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], systemPromptFor(agent, retryNotes));
+    const sig = signal ? AbortSignal.any([signal, done.signal]) : done.signal;
+    try {
+      await agentRun.invoke({ messages: [{ role: 'user', content: `Produce the ${agent} output for this run.` }] }, { recursionLimit, signal: sig, runName: `${agent} deep agent`, tags: [`agent:${agent}`, `attempt:${attempt}`] });
+    } catch (e) {
+      if (submissions.length) return submissions.at(-1);
+      if (giveUp) throw giveUp;
+      if (signal?.aborted) throw signal.reason ?? e;
+      throw e;
     }
-    return submissions.at(-1);
+    if (submissions.length) return submissions.at(-1);
+    if (giveUp) throw giveUp;
+    if (submit.lastIssues) throw new SubmitRejectedError(agent, submit.lastIssues);
+    throw new Error(`${agent}: the deep agent finished without calling submit`);
   };
 }
