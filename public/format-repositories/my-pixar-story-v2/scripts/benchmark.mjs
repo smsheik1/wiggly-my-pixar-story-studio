@@ -184,7 +184,7 @@ export async function scoreRun({ outputs = {}, inputs = {}, approvedAssets, runD
     } catch (e) {
       agentRecords[agent] = {
         status: 'fail',
-        errors: [{ code: 'INPUT_SELECTOR_FAILED', path: '', message: e.message }],
+        errors: [{ code: 'INPUT_SELECTOR_FAILED', path: '', message: Array.isArray(e.issues) ? e.issues.slice(0, 3).map((i) => `${(i.path ?? []).join('.')}: ${i.message}`).join('; ') + (e.issues.length > 3 ? ` (+${e.issues.length - 3} more)` : '') : String(e.message).split('\n')[0].slice(0, 300) }],
         warnings: [],
         codeCounts: { INPUT_SELECTOR_FAILED: 1 },
       };
@@ -528,9 +528,10 @@ export function benchmarkMarkdown(comparison, { candidateName = 'candidate', bas
   }
   if (newCodeMessages.length > 0) {
     lines.push('### New code messages');
-    for (const msg of newCodeMessages) {
-      lines.push(msg);
-    }
+    // Group by agent+code: first 3 messages, then a count (old-schema runs can produce hundreds).
+    const groups = new Map();
+    for (const msg of newCodeMessages) { const k = (/^- \[[^\]]+\] \[[^\]]+\]/.exec(msg) ?? [msg])[0]; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(msg); }
+    for (const [, msgs] of groups) { lines.push(...msgs.slice(0, 3)); if (msgs.length > 3) lines.push(`  …and ${msgs.length - 3} more of this code`); }
     lines.push('');
   }
 
