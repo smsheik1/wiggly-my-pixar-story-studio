@@ -130,7 +130,7 @@ Before sending the compiled payload to Seedance 2.5 via Replicate (bytedance/see
 - **Timecodes** are copied from the stage play: whole seconds, contiguous from 0, last one equals `"durationSec"`.
 - **Shot count:** [GOAL] states it as "A six-shot, thirty-second segment…".
 - **No `35mm`** (or any lens jargon) anywhere in the prompt.
-- **Family rules:** every female family member wears a hijab with **no visible hair, hairline or dark band**, written in [CONTINUITY] in every segment she appears in. **Teens are depicted as 18**; never write teen, teenage, minor or an age of 13–17. Shaz has no son: the 8-year-old is Shaz himself.
+- **Family rules:** a character wears a hijab only when the user's notes or photos say so, carried through her character card; never assume one, and never add one to a character whose card shows her hair. A character who does wear one wears it with **no visible hair, hairline or dark band**, written in [CONTINUITY] in every segment she appears in. **Teens are depicted as 18**; never write teen, teenage, minor or an age of 13–17. Shaz has no son: the 8-year-old is Shaz himself.
 - **Total runtime** of all segments is at most 180 seconds.
 - Any guess goes in `"assumptions"`; no clarifying questions.
 
