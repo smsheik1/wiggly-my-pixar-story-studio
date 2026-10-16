@@ -15,7 +15,7 @@ export const V2_MODELS = Object.freeze({
     targetEngines: { plate: 'nano-banana-2.1' },
     parallelWith: ['character-architect'],
     contract: { output: 'crew/location-scout/schema.mjs', input: 'crew/location-scout/input.mjs', gate: 'crew/linter/check-location-plates.mjs' } },
-  'seedance-compiler': { role: 'Seedance Compiler', upstreamAgents: ['character-architect', 'location-scout'], downstreamAgents: ['vera', 'linter'], maxTokens: 32000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
+  'seedance-compiler': { role: 'Seedance Compiler', upstreamAgents: ['character-architect', 'location-scout'], downstreamAgents: ['vera', 'linter'], maxTokens: 64000, /* r4-dry6/r4-dry8: compile calls hit the 32k cap */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     video: { provider: 'replicate', model: 'bytedance/seedance-2.5', resolution: '480p', enabled: false,
              note: 'not yet enabled: Seedance testing only after all upstream agents are proven' },
     targetEngines: { video: 'seedance-2.5' }, segmentMaxSec: 30, continuation: 'extend',

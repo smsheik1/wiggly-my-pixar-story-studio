@@ -4,7 +4,7 @@
 // Wiggly codes added: SPEAKER_NOT_IN_CAST, UNDERAGE_DEPICTION, MULTILINE_STORYBOARD_PROMPT,
 // DIALOGUE_TIMING_BUDGET, WRONG_IMAGE_ENGINE, RUNTIME_EXCEEDS_CAP; banned jargon is the union of both lists.
 // Usage: node check-stage-play.mjs <output.json>   (exit 0 valid, 1 invalid, 2 usage)
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { countWords, secondsNeeded, budgetMessage, MAX_LINE_WORDS } from './speech.mjs';
 import { fileURLToPath } from 'node:url';
 import { MAX_TOTAL_SECONDS, IMAGE_ENGINE } from '../story-director/schema.mjs';
@@ -57,6 +57,20 @@ const AGE_WORDS = /\b(teen|teenage|young|younger|adult|grown|grown-up|older|old|
 const personKey = (c) => norm(c.realPerson ?? String(c.name ?? '').replace(AGE_WORDS, ' ')) || norm(c.name);
 const HAIR_VISIBLE = /\b(visible hair|hairline (?:shows|showing|visible)|bangs|fringe|loose hair|dark band)\b/i;
 
+/** Sweeping generalisations banned from every finale line. */
+export const FINALE_PLATITUDE = /\b(men and women|women and men|boys and girls|life is|love is|family is|always remember|never forget|follow your (?:dreams|heart)|be yourself|everything happens|(?:do not|don't) let the world)\b/i;
+/** Brace-quoted example lines (3+ words) from every crew role file; a last line may not repeat one. */
+export function roleExampleLines(dir = new URL('../', import.meta.url)) {
+  const out = [];
+  for (const d of readdirSync(dir, { withFileTypes: true })) {
+    if (!d.isDirectory()) continue;
+    const f = new URL(`${d.name}/role.md`, dir);
+    if (!existsSync(f)) continue;
+    for (const m of readFileSync(f, 'utf8').matchAll(/\{([^{}"\n:]{3,200})\}/g)) if ((m[1].match(/\S+/g) ?? []).length >= 3) out.push(m[1]);
+  }
+  return out;
+}
+let EXAMPLES = null;
 export const PLATITUDE = /\b(men and women|the world (?:is|will)|life is|love is|family is|always remember|never forget|follow your (?:dreams|heart)|be yourself|everything happens)\b/i;
 const COMMON_CAPS = new Set(['i', 'a', 'the', 'and', 'if', 'my', 'we', 'she', 'he', 'it', 'when', 'to', 'and', 'but', 'so', 'mom', 'dad', 'that', 'this', 'there', 'they', 'our', 'his', 'her', 'in', 'on', 'at', 'for', 'of', 'with', 'yes', 'no']);
 /** Concrete anchors from the answers: capitalized/proper words, numbers, and a few object nouns the maker wrote. */
@@ -158,9 +172,17 @@ export function validateStoryDirectorOutput(data, input = {}) {
     const words = norm(lastLine.replace(/[{}]/g, '')).split(/\s+/).map((w) => NUM_WORDS[w] ?? w);
     const anchors = answerAnchors(input.answers, [recipient ?? '', ...cast.map((c) => c.realPerson ?? '')]);
     const hit = words.find((w) => anchors.has(w) || anchors.has(w.replace(/s$/, '')));
-    if (PLATITUDE.test(lastLine) || (anchors.size && !hit))
+    EXAMPLES ??= roleExampleLines().map(norm).filter((x) => x.split(' ').length >= 3);
+    const ln = norm(lastLine.replace(/[{}]/g, ''));
+    const copied = EXAMPLES.find((x) => ln === x || (x.split(' ').length >= 5 && ln.includes(x)));
+    if (copied) err('GENERIC_FINAL_LINE', `The film's last line '${lastLine}' copies an example from the role files ('${copied}'). Write a new line from these answers.`, `segments.${segments.length - 1}`);
+    else if (PLATITUDE.test(lastLine) || (anchors.size && !hit))
       err('GENERIC_FINAL_LINE', `The film's last line '${lastLine}' is ${PLATITUDE.test(lastLine) ? 'a generic platitude' : 'not tied to anything specific in the answers'}. End on a line that carries one concrete detail only this family lived (e.g. ${[...anchors].sort((a, b) => /^\d/.test(a) - /^\d/.test(b)).slice(0, 6).join(', ')}), and put the general maxims earlier.`, `segments.${segments.length - 1}`);
   }
+  if (segments.length > 1 && last) (last.shots ?? []).forEach((h, hi) => {
+    for (const k of ['dialogue', 'narration']) if (h[k]?.line && FINALE_PLATITUDE.test(h[k].line))
+      err('FINALE_PLATITUDE', `Final part, shot ${h.shotNumber ?? hi + 1}: '${h[k].line}' is a sweeping generalisation. Cut it; keep only wisdom tied to this family's life.`, `segments.${segments.length - 1}.shots.${hi}.${k}`);
+  });
   if (filmTotal > MAX_TOTAL_SECONDS) err('RUNTIME_EXCEEDS_CAP', `Film runs ${filmTotal}s; the total cap is ${MAX_TOTAL_SECONDS}s.`, 'segments');
 
   const sb = data?.storyboardPrompt ?? {};
