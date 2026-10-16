@@ -111,3 +111,12 @@ test('attempt with a cut-off call and no submit gets MAX_TOKENS_NO_SUBMIT', { ti
     { id: 'l', parent_run_id: 'a', name: 'ChatOpenAI', run_type: 'llm', start_time: '2026-10-16T00:00:00Z', end_time: '2026-10-16T00:01:00Z', extra: { metadata: meta } }]);
   assert.equal(m3.rejected[0].issues[0].code, 'MAX_TOKENS_NO_SUBMIT'); assert.equal(m3.agents['story-director'].wastedTotal, 1);
 });
+
+test('budget: per-agent peak vs cap and a warning at >=75% of the output budget', { timeout: 10000 }, () => {
+  const llm = (id, out) => ({ id, parent_run_id: 'r', name: 'ChatOpenAI', run_type: 'llm', start_time: '2026-10-16T00:00:00Z', end_time: '2026-10-16T00:01:00Z',
+    extra: { metadata: { agent: 'location-scout', attempt: 1, ls_max_tokens: 32000, ls_model_name: 'meta/muse-spark-1.3-contributor', usage_metadata: { input_tokens: 10, output_tokens: out, output_token_details: { reasoning: 100 } } } } });
+  const m4 = auditTrace([{ id: 'r', name: 'wiggly-v2 rehearsal', run_type: 'chain', start_time: '2026-10-16T00:00:00Z', end_time: '2026-10-16T00:02:00Z', tags: ['runId:x'] }, llm('a', 24000), llm('b', 1000)]);
+  assert.equal(m4.peaks['location-scout'].output, 24000); assert.equal(m4.peaks['location-scout'].pct, 0.75);
+  assert.equal(m4.budgetWarnings.length, 1); assert.equal(m4.truncated.length, 0);
+  const md = auditMarkdown(m4); assert.ok(md.includes('## Output budget')); assert.ok(md.includes('24.0k / 32.0k (75%)')); assert.ok(auditHtml(m4).includes('Output budget'));
+});

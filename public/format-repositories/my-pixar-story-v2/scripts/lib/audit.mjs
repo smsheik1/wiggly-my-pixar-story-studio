@@ -4,6 +4,8 @@ import { AGENT_SPECS, isTransient } from '../../graph/graph.mjs';
 import { AGENTS } from './report.mjs';
 
 /** OpenRouter USD per token (meta/muse-spark-1.3-contributor, 2026-10-16). Unknown models fall back to the response's own cost. */
+/** Warn when one call uses this share of its output budget (max_tokens). */
+export const BUDGET_WARN = 0.75;
 export const PRICES = { 'meta/muse-spark-1.3-contributor': { prompt: 1e-7, cacheRead: 2e-9, completion: 2e-7 } };
 const ms = (r) => (r.start_time && r.end_time ? Date.parse(z(r.end_time)) - Date.parse(z(r.start_time)) : 0);
 const z = (t) => (/[zZ]|[+-]\d\d:\d\d$/.test(t) ? t : `${t}Z`);
@@ -58,8 +60,8 @@ export function auditTrace(runs, { specs = AGENT_SPECS, validationErrors = [] } 
     const u = llmUsage(r); tokens += u.total; cost += u.cost;
     const a = agents[agentOf(r)];
     if (a) { a.tokens += u.total; a.cost += u.cost; a.llmCalls++; for (const t of r.extra?.options?.tools ?? []) a.toolsBound.add(t.function?.name ?? t.name); }
-    const maxT = r.extra?.metadata?.ls_max_tokens; const truncated = !!maxT && u.output >= maxT * 0.98;
-    steps.push({ kind: 'llm', truncated, maxTokens: maxT ?? null, name: `${agentOf(r) ?? '?'} #${attemptOf(r) ?? '?'} model call`, agent: agentOf(r), attempt: attemptOf(r), ms: ms(r), tokens: u.total, input: u.input, output: u.output, reasoning: u.reasoning });
+    const maxT = r.extra?.metadata?.ls_max_tokens; const truncated = !!maxT && u.output >= maxT * 0.98; const budgetPct = maxT ? u.output / maxT : null;
+    steps.push({ kind: 'llm', truncated, budgetPct, maxTokens: maxT ?? null, name: `${agentOf(r) ?? '?'} #${attemptOf(r) ?? '?'} model call`, agent: agentOf(r), attempt: attemptOf(r), ms: ms(r), tokens: u.total, input: u.input, output: u.output, reasoning: u.reasoning });
   }
   for (const r of runs.filter((x) => x.run_type === 'tool')) {
     const ag = agentOf(r); const a = agents[ag];
@@ -111,7 +113,9 @@ export function auditTrace(runs, { specs = AGENT_SPECS, validationErrors = [] } 
   void byId;
   return { traceId: root?.trace_id ?? root?.id, runId: (root?.tags ?? []).find((t) => t.startsWith('runId:'))?.slice(6) ?? root?.extra?.metadata?.runId ?? null,
     status: root?.status, start: root?.start_time ? z(root.start_time) : null, wallMs: ms(root ?? {}), tokens, cost, llmCalls: llms.length, agents,
-    slowest: top('ms'), heaviest: top('tokens'), rejected, truncated: steps.filter((s) => s.truncated) };
+    slowest: top('ms'), heaviest: top('tokens'), rejected, truncated: steps.filter((s) => s.truncated), budgetWarnings: steps.filter((s) => s.budgetPct != null && s.budgetPct >= BUDGET_WARN),
+    peaks: Object.fromEntries(Object.keys(agents).map((k) => { const c = steps.filter((s) => s.kind === 'llm' && s.agent === k); const p = c.sort((x, y) => (y.output ?? 0) - (x.output ?? 0))[0]; return [k, p ? { output: p.output, reasoning: p.reasoning, maxTokens: p.maxTokens, pct: p.budgetPct } : null]; })),
+    calls: steps.filter((s) => s.kind === 'llm') };
 }
 
 const fmtMs = (n) => { const s = Math.round(n / 1000); return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`; };
@@ -126,6 +130,11 @@ export function auditMarkdown(m) {
   for (const a of Object.values(m.agents)) L.push(`| ${a.label} | ${a.attempts} | ${fmtMs(a.ms)} | ${fmtK(a.tokens)} | ${fmtUsd(a.cost)} | ${a.wastedTotal} (${W.map((k) => a.wasted[k]).join('/')}) | ${a.inAttemptSchemaRejects} |`);
   L.push('', '## Top 3 slowest steps', '', ...m.slowest.map((s, i) => `${i + 1}. ${s.name}: ${fmtMs(s.ms)}`));
   L.push('', '## Top 3 token-heaviest steps', '', ...m.heaviest.map((s, i) => `${i + 1}. ${s.name}: ${fmtK(s.tokens)} (in ${fmtK(s.input)} / out ${fmtK(s.output)}, reasoning ${fmtK(s.reasoning)})`));
+  const pct = (x) => (x == null ? '-' : `${Math.round(x * 100)}%`);
+  L.push('', '## Output budget (tokens used vs cap)', '', '| Agent | Peak call output | Reasoning | Cap | Used |', '|---|---|---|---|---|');
+  for (const [k, p] of Object.entries(m.peaks ?? {})) if (p) L.push(`| ${m.agents[k].label} | ${fmtK(p.output)} | ${fmtK(p.reasoning)} | ${p.maxTokens ? fmtK(p.maxTokens) : '-'} | ${pct(p.pct)}${p.pct >= BUDGET_WARN ? ' ⚠' : ''} |`);
+  if ((m.budgetWarnings ?? []).length) L.push('', `**Warning:** ${m.budgetWarnings.length} call(s) used ≥${BUDGET_WARN * 100}% of their output budget:`, ...m.budgetWarnings.map((s) => `- ${s.name}: ${fmtK(s.output)} / ${fmtK(s.maxTokens)} (${pct(s.budgetPct)}, reasoning ${fmtK(s.reasoning)})`));
+  L.push('', '<details><summary>Every model call: output vs cap</summary>', '', ...((m.calls ?? []).map((s) => `- ${s.name}: ${fmtK(s.output)} / ${s.maxTokens ? fmtK(s.maxTokens) : '?'} (${pct(s.budgetPct)})`)), '', '</details>');
   L.push('', '## Model calls cut off at max tokens', '', ...((m.truncated ?? []).length ? m.truncated.map((s) => `- ${s.name}: ${fmtK(s.output)} out of ${fmtK(s.maxTokens)} (reasoning ${fmtK(s.reasoning)})`) : ['None.']));
   L.push('', '## Rejected attempts', '');
   if (!m.rejected.length) L.push('None.');
@@ -145,6 +154,7 @@ export function auditHtml(m) {
 <p><b>${fmtK(m.tokens)}</b> tokens · <b>${fmtUsd(m.cost)}</b> · <b>${fmtMs(m.wallMs)}</b> wall-clock · ${m.llmCalls} model calls</p>
 <table style='border-collapse:collapse;font-size:13px' cellpadding='4'><tr><th>Agent</th><th>Attempts</th><th>Time</th><th>Tokens</th><th>Cost</th><th>Wasted</th><th>Unused tools</th></tr>${Object.values(m.agents).map(row).join('')}</table>
 <p><b>Slowest:</b> ${m.slowest.map((s) => `${esc(s.name)} ${fmtMs(s.ms)}`).join(' · ')}<br><b>Token-heaviest:</b> ${m.heaviest.map((s) => `${esc(s.name)} ${fmtK(s.tokens)}`).join(' · ')}</p>
+${(m.budgetWarnings ?? []).length ? `<p style='color:#fbbf24'><b>Output budget ≥${BUDGET_WARN * 100}%:</b> ${m.budgetWarnings.map((s) => `${esc(s.name)} ${fmtK(s.output)}/${fmtK(s.maxTokens)}`).join(' · ')}</p>` : ''}
 ${(m.truncated ?? []).length ? `<p style='color:#f87171'><b>Cut off at max tokens:</b> ${m.truncated.map((s) => esc(s.name)).join(' · ')}</p>` : ''}
 <details><summary style='cursor:pointer;color:#9cc4ff'>Rejected attempts (${m.rejected.length})</summary><ul>${rej}</ul></details></section>${AUDIT_END}`;
 }

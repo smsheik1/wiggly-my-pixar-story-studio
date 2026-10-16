@@ -112,7 +112,8 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const has = (k) => process.argv.includes(k);
   runRehearsal({ projectPath: arg('--project'), ...(arg('--run-id') ? { runId: arg('--run-id') } : {}), ...(arg('--secrets') ? { secretsPath: arg('--secrets') } : {}),
     usePlaceholderAssets: has('--placeholder-assets'), ...(arg('--photo-refs') ? { photoRefsPath: arg('--photo-refs') } : {}),
-    timeouts: { ...(arg('--first-token-timeout-sec') ? { firstTokenMs: +arg('--first-token-timeout-sec') * 1000 } : {}), ...(arg('--idle-timeout-sec') ? { idleMs: +arg('--idle-timeout-sec') * 1000 } : {}), ...(arg('--stall-warn-sec') ? { stallMs: +arg('--stall-warn-sec') * 1000 } : {}) },
+    // CLI default: 900s first-token/idle, 600s stall warning (xhigh reasoning can think silently for minutes; r4-dry7 timed out at 180s).
+    timeouts: { firstTokenMs: 900_000, idleMs: 900_000, stallMs: 600_000, ...(arg('--first-token-timeout-sec') ? { firstTokenMs: +arg('--first-token-timeout-sec') * 1000 } : {}), ...(arg('--idle-timeout-sec') ? { idleMs: +arg('--idle-timeout-sec') * 1000 } : {}), ...(arg('--stall-warn-sec') ? { stallMs: +arg('--stall-warn-sec') * 1000 } : {}) },
     ...(arg('--heartbeat-sec') ? { heartbeatMs: +arg('--heartbeat-sec') * 1000 } : {}), ...(has('--no-tracker') ? { trackerPath: null } : {}) })
     .then(({ state }) => { process.exitCode = state.status === 'failed' ? 2 : 0; })
     .catch((e) => { console.error(`rehearsal failed: ${e.message}`); process.exitCode = 1; });
