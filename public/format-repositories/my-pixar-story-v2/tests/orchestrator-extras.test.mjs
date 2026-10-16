@@ -94,3 +94,12 @@ test('7: rehearsal prints escalating agent and gate errors; no fallback story', 
     assert.equal(inputsFromProject({ inputs: { subject: { preferredName: 'Shaz', recipientName: 'Mia' }, answers: { a: 1 } } }).subject, 'Shaz, story for Mia');
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+test('transient network error retries the same attempt (no attempt burned); persistent ones still fail', async () => {
+  let n = 0;
+  const s = await buildGraph({ invoke: fake({ 'story-director': () => { if (n++ < 2) throw new Error('Network connection lost.'); return JSON.stringify(json(FIX['story-director'])); } }) })
+    .invoke(initial({ approvedAssets: json('good-approved-assets.json') }));
+  assert.equal(s.status, 'done'); assert.equal(s.attempts['story-director'], 1); assert.equal(s.retryCounts['story-director'], 0);
+  let m = 0;
+  const s2 = await buildGraph({ invoke: fake({ 'story-director': () => { m++; throw new Error('Network connection lost.'); } }) }).invoke(initial());
+  assert.equal(s2.status, 'failed'); assert.equal(m, 9);
+});

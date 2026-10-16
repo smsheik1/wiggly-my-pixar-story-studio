@@ -23,6 +23,10 @@ import { validateCharacterArchitectOutput } from '../crew/linter/check-character
 import { validateSeedancePrompts } from '../crew/linter/check-seedance-prompts.mjs';
 
 export const MAX_ATTEMPTS = 3;
+export const MAX_TRANSIENT_RETRIES = 2;
+/** Network drops / provider 5xx are infrastructure, not the agent's fault: retry the same attempt. */
+export const isTransient = (e) => e?.code !== 'MODEL_TIMEOUT' && !e?.issues
+  && /network connection lost|ECONNRESET|ETIMEDOUT|EPIPE|socket hang up|fetch failed|terminated|other side closed|\b(502|503|504|520|524)\b|overloaded|rate limit|429/i.test(String(e?.message ?? e));
 
 // ---- Character Architect: per-character gating, name-prefixed errors, keep valid characters across retries ----
 const charIndex = (path = '') => { const m = /^characters\.(\d+)/.exec(path); return m ? +m[1] : -1; };
@@ -108,7 +112,14 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
       const done = (o) => ev({ type: 'attempt-result', attempt, ...o });
       let raw;
       const req = { agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state };
-      try { raw = await traced(req); } catch (e) {
+      let transient = 0;
+      for (;;) {
+        try { raw = await traced(req); break; } catch (e) {
+          if (isTransient(e) && transient < MAX_TRANSIENT_RETRIES) { transient++; ev({ type: 'transient-retry', attempt, message: e.message }); continue; }
+          raw = { __error: e }; break;
+        }
+      }
+      try { if (raw && raw.__error) throw raw.__error; } catch (e) {
         issues = Array.isArray(e.issues) && e.issues.length ? e.issues : [{ severity: 'error', code: e.code === 'MODEL_TIMEOUT' ? 'MODEL_TIMEOUT' : 'AGENT_RUN_FAILED', message: `model call failed: ${e.message}` }];
         done({ output: null, issues }); continue;
       }
