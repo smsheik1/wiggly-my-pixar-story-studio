@@ -60,9 +60,7 @@ export const CastCardSchema = z.object({
   skinTone: z.string().min(3).describe('Plain-words skin tone; repeated in every panel and shot that shows them'),
   gender: z.enum(['female', 'male']),
   family: z.boolean().default(true).describe('Member of the maker’s family (hijab rule applies to female family)'),
-}).refine((c) => !(c.age >= 13 && c.age <= 17), { message: 'Teens are depicted as 18: age 13-17 is not allowed', path: ['age'] })
-  .refine((c) => !(c.gender === 'female' && c.family) || /hijab/i.test(c.physicalDescription),
-    { message: 'Female family members must wear a hijab (state it in physicalDescription)', path: ['physicalDescription'] });
+}).refine((c) => !(c.age >= 13 && c.age <= 17), { message: 'Teens are depicted as 18: age 13-17 is not allowed', path: ['age'] });
 
 export const StoryboardPanelSchema = z.object({
   panelNumber: z.number().int().min(1).max(8),

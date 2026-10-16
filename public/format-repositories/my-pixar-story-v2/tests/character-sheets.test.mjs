@@ -88,11 +88,9 @@ test('PROMPT_LENGTH on Wiggly sheets (3,500-5,000)', () => {
   hasCode(run((d) => { C(d, '@Shaz').modelSheetPrompt.promptText += ' Soft warm light.'.repeat(90); }), 'PROMPT_LENGTH');
 });
 test('MISSING_SKIN_TONE', () => hasCode(run((d) => { const m = C(d, '@Sister').masterRenderPrompt; m.promptText = m.promptText.replaceAll('light warm brown', 'natural'); }), 'MISSING_SKIN_TONE'));
-test('MISSING_HIJAB and HAIR_VISIBLE; non-family exempt', () => {
-  hasCode(run((d) => { const m = C(d, '@Mom').masterRenderPrompt; m.promptText = m.promptText.replace(', with no visible hair, hairline or dark band at the forehead', ''); }), 'MISSING_HIJAB');
-  hasCode(run((d) => { const m = C(d, '@Mom').modelSheetPrompt; m.promptText = m.promptText.replace('Stylized proportions', 'Soft bangs peek out at the front. Stylized proportions'); }), 'HAIR_VISIBLE');
-  const r = validateOne({ ...C(sheets(), '@Sister'), family: false, masterRenderPrompt: { ...C(sheets(), '@Sister').masterRenderPrompt, promptText: C(sheets(), '@Sister').masterRenderPrompt.promptText.replaceAll('hijab', 'scarf').replace(/no visible hair, hairline or dark band/, 'a neat wrap') } });
-  assert.ok(!r.issues.some((i) => i.code === 'MISSING_HIJAB'));
+test('no hijab code check: missing hijab wording / visible hair are not blocking', () => {
+  const r = run((d) => { const m = C(d, '@Mom').masterRenderPrompt; m.promptText = m.promptText.replace(', with no visible hair, hairline or dark band at the forehead', '') + ' Soft bangs peek out at the front.'; });
+  assert.ok(!r.issues.some((i) => /HIJAB|HAIR_VISIBLE/.test(i.code)));
 });
 test('UNDERAGE_DEPICTION by age and wording; Shaz at 8 is fine', () => {
   hasCode(run((d) => { C(d, '@Sister').age = 16; }), 'UNDERAGE_DEPICTION');

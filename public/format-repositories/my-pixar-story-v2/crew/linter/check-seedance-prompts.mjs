@@ -8,7 +8,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { VIDEO_ENGINE, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX_TOTAL_SECONDS, BLOCK_HEADERS, headerPositions } from '../seedance-compiler/schema.mjs';
-import { HIJAB_LINE } from './check-character-sheets.mjs';
 
 export const WORDS_PER_SECOND = 3;
 export const DIALOGUE_EXCLUSION = 'The only spoken words in the entire segment are the lines in braces';
@@ -169,8 +168,6 @@ export function validateSeedancePrompts(data, input) {
     for (const tag of present) {
       if (!bound.has(tag)) err('MISSING_CAST_REFERENCE', `${p}: ${tag} appears or speaks but has no bound reference.`, `${p}.references`);
       const c = cast.get(tag);
-      if (c?.gender === 'female' && c.family !== false && (!/hijab/i.test(t) || !HIJAB_LINE.test(t)))
-        err('MISSING_HIJAB', `${p}: ${tag} needs a hijab with 'no visible hair, hairline or dark band' in the prompt.`, `${p}.compiledPrompt`);
       if (c && c.age >= 13 && c.age <= 17) err('UNDERAGE_DEPICTION', `${p}: ${tag} has age ${c.age}; teens are depicted as 18.`, `${p}.references`);
     }
   });

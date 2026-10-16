@@ -48,11 +48,10 @@ test('SPEAKER_NOT_IN_CAST (dialogue and narration)', () => {
   hasCode(run((d) => { d.segments[0].shots[1].dialogue.speaker = '@Dad'; }), 'SPEAKER_NOT_IN_CAST');
   hasCode(run((d) => { d.segments[1].shots[0].narration.speaker = '@Narrator'; }), 'SPEAKER_NOT_IN_CAST');
 });
-test('MISSING_HIJAB for female family; not for non-family', () => {
-  hasCode(run((d) => { d.cast[1].physicalDescription = 'Kind round face, long modest dress, gentle eyes.'; }), 'MISSING_HIJAB');
-  hasCode(run((d) => { d.cast[1].physicalDescription += ' Bangs peek out at the front.'; }), 'MISSING_HIJAB');
-  const r = run((d) => { d.cast[2].family = false; d.cast[2].physicalDescription = 'Neighbour in a long coat and scarf.'; });
-  assert.ok(!r.issues.some((i) => i.code === 'MISSING_HIJAB'));
+test('no hijab code check: female family without hijab wording is not blocked (rule lives in role.md only)', () => {
+  const r = run((d) => { d.cast[1].physicalDescription = 'Kind round face, long modest dress, gentle eyes.'; });
+  assert.ok(!r.issues.some((i) => /HIJAB/.test(i.code)));
+  assert.doesNotThrow(() => parseStagePlay(JSON.stringify((() => { const d = JSON.parse(readFileSync(new URL('./fixtures/good-stage-play.json', import.meta.url), 'utf8')); d.cast[1].physicalDescription = 'Kind round face, long modest dress, gentle eyes.'; return d; })())));
 });
 test('UNDERAGE_DEPICTION for 13-17; 8 and 18 fine', () => {
   hasCode(run((d) => { d.cast[2].age = 16; }), 'UNDERAGE_DEPICTION');
@@ -83,7 +82,6 @@ test('schema: parse failures throw StagePlayParseError with paths', () => {
   bad((d) => { d.storyboardPrompt.targetEngine = 'gpt-image-2'; }, /targetEngine/);
   bad((d) => { d.storyboardPrompt.fullPrompt += '\nx'; }, /single line/);
   bad((d) => { delete d.cast[0].skinTone; }, /skinTone/);
-  bad((d) => { d.cast[1].physicalDescription = 'Kind round face, long modest dress.'; }, /hijab/);
   bad((d) => { d.cast[2].age = 15; }, /depicted as 18/);
   bad((d) => { d.segments[0].shots[1].dialogue.speaker = '@Dad'; }, /not a cast elementTag/);
   bad((d) => { d.segments[0].shots[0].startSec = 1; }, /start at 0/);

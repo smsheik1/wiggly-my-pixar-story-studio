@@ -89,10 +89,7 @@ export function validateCharacterArchitectOutput(c, { pathPrefix = '' } = {}) {
     err('CHILD_RIDER_MISSING', 'Child Proportion Rider is MANDATORY for young characters (<= 5.0 heads tall) to prevent adult long legs', 'designSpecs.isChildProportionRiderApplied');
   if (c?.skinTone) for (const [k, t] of prompts)
     if (!t.toLowerCase().includes(c.skinTone.toLowerCase())) err('MISSING_SKIN_TONE', `${k} does not name skin tone '${c.skinTone}'.`, `${k}.promptText`);
-  if (c?.gender === 'female' && c?.family !== false) for (const [k, t] of prompts) {
-    if (!/hijab/i.test(t) || !HIJAB_LINE.test(t)) err('MISSING_HIJAB', `${c.elementTag}: female family member needs a hijab with 'no visible hair, hairline or dark band' (${k}).`, `${k}.promptText`);
-    if (HAIR_VISIBLE.test(t)) err('HAIR_VISIBLE', `${c.elementTag}: ${k} shows hair under or around the hijab.`, `${k}.promptText`);
-  }
+  // Hijab is a creative rule in role.md only; no code check (Shaz, Oct 15).
   if ((c?.age >= 13 && c?.age <= 17) || prompts.some(([, t]) => TEEN_WORDS.test(t)))
     err('UNDERAGE_DEPICTION', `${c?.elementTag ?? 'character'}: teens are depicted as eighteen; found age ${c?.age} or teen wording.`, 'age');
 

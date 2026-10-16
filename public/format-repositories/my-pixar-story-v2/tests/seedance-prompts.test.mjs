@@ -95,7 +95,7 @@ test('WRONG_RESOLUTION / WRONG_ENGINE in prompt text', () => {
   hasCode(gate(T(out(), (t) => t + ' Send to Higgsfield / Volcano Engine.')), 'WRONG_ENGINE');
 });
 test('URL_IN_PROMPT', () => { for (const x of ['https://cdn.example.com/shaz.png', '/Users/shaz/Photos/mom.jpg', 'kitchen_plate.png']) hasCode(gate(T(out(), (t) => `${t}\n${x}`)), 'URL_IN_PROMPT'); });
-test('MISSING_HIJAB', () => hasCode(gate(T(out(), (t) => t.replaceAll('with no visible hair, hairline or dark band', 'neatly'))), 'MISSING_HIJAB'));
+test('no hijab code check in the Seedance gate', () => assert.ok(!gate(T(out(), (t) => t.replaceAll('with no visible hair, hairline or dark band', 'neatly'))).issues.some((i) => /HIJAB/.test(i.code))));
 test('UNDERAGE_DEPICTION', () => {
   hasCode(gate(T(out(), (t) => t.replace('@Sister is eighteen', '@Sister is a teenager'))), 'UNDERAGE_DEPICTION');
   const i = input(); i.cast[2].age = 16; hasCode(validate(out(), i), 'UNDERAGE_DEPICTION');

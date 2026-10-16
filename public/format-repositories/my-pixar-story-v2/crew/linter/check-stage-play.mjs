@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // v2 deterministic validation gate for Story Director output.
 // BASE: Gemini's validateStoryDirectorOutput (same return shape, codes and message text).
-// Wiggly codes added: SPEAKER_NOT_IN_CAST, MISSING_HIJAB, UNDERAGE_DEPICTION, MULTILINE_STORYBOARD_PROMPT,
+// Wiggly codes added: SPEAKER_NOT_IN_CAST, UNDERAGE_DEPICTION, MULTILINE_STORYBOARD_PROMPT,
 // DIALOGUE_TIMING_BUDGET, WRONG_IMAGE_ENGINE, RUNTIME_EXCEEDS_CAP; banned jargon is the union of both lists.
 // Usage: node check-stage-play.mjs <output.json>   (exit 0 valid, 1 invalid, 2 usage)
 import { readFileSync } from 'node:fs';
@@ -95,11 +95,6 @@ export function validateStoryDirectorOutput(data) {
       warn('WEAK_SIGNATURE_ACCENT', `Cast ${c.elementTag ?? c.name}: signature accent is missing or too vague.`, p);
     if (c.age >= 13 && c.age <= 17)
       err('UNDERAGE_DEPICTION', `Cast ${c.elementTag ?? c.name} is age ${c.age}; teens are depicted as 18.`, p);
-    if (c.gender === 'female' && c.family !== false) {
-      const d = String(c.physicalDescription ?? '');
-      if (!/hijab/i.test(d) || HAIR_VISIBLE.test(d))
-        err('MISSING_HIJAB', `Cast ${c.elementTag ?? c.name}: female family members wear a hijab with no visible hair, hairline or dark band.`, p);
-    }
   });
 
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
