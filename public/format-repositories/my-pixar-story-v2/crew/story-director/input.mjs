@@ -37,7 +37,8 @@ export const StoryDirectorInput = z.object({
 export function selectStoryDirectorInput(state = {}) {
   const p = state.project ?? state;
   const inputs = p.inputs ?? {};
-  const castDescriptions = (p.castDescriptions ?? inputs.castDescriptions ?? [])
+  // The graph's top-level castDescriptions defaults to [], so `??` silently dropped inputs.castDescriptions (r4-dry11/12). Merge both.
+  const castDescriptions = [...(p.castDescriptions ?? []), ...(inputs.castDescriptions ?? [])]
     .map(({ id, name, description }) => ({ id, name, description }));
   return StoryDirectorInput.parse({
     subject: inputs.subject ?? '',

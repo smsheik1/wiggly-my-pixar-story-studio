@@ -30,3 +30,13 @@ test('SD cast card text reaches the CA unchanged', () => {
   const ca = selectCharacterArchitectInput({ project: { storyDirector: { cast: [card], segments: [{ segmentId: 1, title: 't', shots: [] }] } } });
   assert.ok(ca.cast[0].physicalDescription.includes(NOTE));
 });
+
+test('notes in inputs.castDescriptions survive the graph default (top-level castDescriptions: [])', async () => {
+  const { PipelineAnnotation } = await import('../graph/state.mjs');
+  const { StateGraph, START, END } = await import('@langchain/langgraph');
+  let seen;
+  const g = new StateGraph(PipelineAnnotation).addNode('sd', (s) => { seen = selectStoryDirectorInput(s); return {}; }).addEdge(START, 'sd').addEdge('sd', END).compile();
+  const inputs = inputsFromProject({ inputs: { subject: 'Shaz', answers: { scene1Childhood: 'x' }, castDescriptions: [{ id: 'sister', name: 'Sister', description: NOTE }] } });
+  await g.invoke({ inputs });
+  assert.deepEqual(seen.castDescriptions, [{ id: 'sister', name: 'Sister', description: NOTE }]);
+});
