@@ -32,13 +32,12 @@ export const BANNED_JARGON = [
 // Shared 3 words/sec rate (crew/linter/speech.mjs); same rule as the Seedance Compiler gate.
 export function lineBudget(words) { return words > MAX_LINE_WORDS ? null : secondsNeeded(words); }
 // WIGGLY storyboard sheets -------------------------------------------------------
-const PANEL_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
-/** The opening phrase a sheet of n panels must use, e.g. 'An eight-panel ... two even rows of four panels'. */
-export function sheetLayout(n) {
-  const w = PANEL_WORDS[n] ?? String(n);
-  const layout = n === 8 ? 'two even rows of four panels' : n >= 5 ? `two rows, four panels on the top row and ${PANEL_WORDS[n - 4]} on the bottom row` : n === 1 ? 'a single panel' : `a single row of ${w} panels`;
-  return { countWord: `${w}-panel`, layout };
-}
+export const SHEET_OPENING = "An eight-panel colour storyboard sheet";
+export const SHEET_LAYOUT = 'two even rows of four panels';
+/** The exact text a real panel line starts with, e.g. 'Panel 4, labelled "1.4":'. */
+export const panelLabel = (k, seg, shot) => `Panel ${k}, labelled "${seg}.${shot}":`;
+/** The exact line for an unused slot on an eight-panel sheet. */
+export const emptyPanelLine = (k) => `Panel ${k} [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text.`;
 /** Every shot in exactly one panel, in story order; max 8 per sheet; labels use the real part + shot numbers. */
 export function checkStoryboardSheets(data, err) {
   const sheets = storyboardSheetsOf(data);
@@ -61,14 +60,19 @@ export function checkStoryboardSheets(data, err) {
       const t = String(pn.whatIsInFrame ?? '').toLowerCase();
       if (!SKIN_WORDS.some((w) => t.includes(w)))
         err('MISSING_SKIN_TONE_IN_PANEL', `Storyboard sheet ${si + 1} panel ${pn.panelNumber ?? i + 1} does not name skin tone.`, `${p}.panels.${i}`);
-      if (!fp.includes(`Panel ${i + 1} [Part ${sh.segmentId}, shot ${pn.shotNumberRef}]`))
-        err('STORYBOARD_PANEL_LABEL', `Storyboard sheet ${si + 1}: fullPrompt must label panel ${i + 1} as 'Panel ${i + 1} [Part ${sh.segmentId}, shot ${pn.shotNumberRef}]' (the real part and shot number).`, `${p}.fullPrompt`);
+      if (!fp.includes(panelLabel(i + 1, sh.segmentId, pn.shotNumberRef)))
+        err('STORYBOARD_PANEL_LABEL', `Storyboard sheet ${si + 1}: fullPrompt must label panel ${i + 1} as '${panelLabel(i + 1, sh.segmentId, pn.shotNumberRef)}' (the real part.shot).`, `${p}.fullPrompt`);
     });
-    const extra = [...fp.matchAll(/Panel (\d+) \[/g)].map((m) => +m[1]).filter((n) => n > panels.length);
-    if (extra.length) err('STORYBOARD_PANEL_LABEL', `Storyboard sheet ${si + 1}: fullPrompt has panel ${extra[0]} but the sheet has only ${panels.length} panels; leave unused slots out.`, `${p}.fullPrompt`);
-    const { countWord, layout } = sheetLayout(panels.length);
-    if (panels.length && !(fp.toLowerCase().includes(countWord) && fp.includes(layout)))
-      err('STORYBOARD_SHEET_SIZE_TEXT', `Storyboard sheet ${si + 1} has ${panels.length} panels, so its fullPrompt must say '${countWord}' and '${layout}'.`, `${p}.fullPrompt`);
+    for (let k = panels.length + 1; k <= MAX_PANELS_PER_SHEET; k++)
+      if (!fp.includes(emptyPanelLine(k)))
+        err('STORYBOARD_EMPTY_SLOT', `Storyboard sheet ${si + 1} has ${panels.length} shots, so slot ${k} must be written exactly as '${emptyPanelLine(k)}'.`, `${p}.fullPrompt`);
+    const lines = [...fp.matchAll(/Panel (\d+)(, labelled "\d+\.\d+":| \[empty\]:)/g)].map((m) => +m[1]);
+    if (lines.join() !== Array.from({ length: MAX_PANELS_PER_SHEET }, (_, i) => i + 1).join())
+      err('STORYBOARD_PANEL_LABEL', `Storyboard sheet ${si + 1}: fullPrompt must have exactly ${MAX_PANELS_PER_SHEET} panel lines, Panel 1 to Panel ${MAX_PANELS_PER_SHEET} in order (real shots labelled like 'Panel 1, labelled "1.1":', then empty slots).`, `${p}.fullPrompt`);
+    if (/Panel \d+ \[(Part|shot)|\bP\d+S\d+\b/.test(fp))
+      err('STORYBOARD_PANEL_LABEL', `Storyboard sheet ${si + 1}: fullPrompt uses an old bracket label or a code like P1S4; use 'Panel K, labelled "P.S":'.`, `${p}.fullPrompt`);
+    if (panels.length && !(fp.includes(SHEET_OPENING) && fp.includes(SHEET_LAYOUT)))
+      err('STORYBOARD_SHEET_SIZE_TEXT', `Storyboard sheet ${si + 1}: every sheet is eight panels, so its fullPrompt must say '${SHEET_OPENING}' and '${SHEET_LAYOUT}'.`, `${p}.fullPrompt`);
     if ((sh.targetEngine ?? IMAGE_ENGINE) !== IMAGE_ENGINE || /gpt[- ]?image/i.test(fp))
       err('WRONG_IMAGE_ENGINE', `Storyboard must target ${IMAGE_ENGINE} (Google Flow), not '${sh.targetEngine}'.`, `${p}.targetEngine`);
     if (/[\r\n]/.test(fp))
