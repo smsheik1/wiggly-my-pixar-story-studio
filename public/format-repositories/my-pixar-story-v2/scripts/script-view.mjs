@@ -6,12 +6,12 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { RUNS_ROOT } from '../graph/deep-agent-node.mjs';
 import { defaultTrackerPath } from './lib/report.mjs';
-import { scriptViewHtml, upsertScriptView } from './lib/script-view.mjs';
+import { readableViewsHtml, upsertScriptView } from './lib/script-view.mjs';
 
 const put = (path, section, report) => { if (!existsSync(path)) return false; writeFileSync(`${path}.tmp`, upsertScriptView(readFileSync(path, 'utf8'), section, { report })); renameSync(`${path}.tmp`, path); return true; };
 export function applyScriptView({ runId, runsRoot = RUNS_ROOT, trackerPath = defaultTrackerPath() }) {
-  const f = join(runsRoot, runId, 'outputs', 'story-director.json');
-  const section = scriptViewHtml(existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null);
+  const read = (a) => { const f = join(runsRoot, runId, 'outputs', `${a}.json`); return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null; };
+  const section = readableViewsHtml({ sd: read('story-director'), ca: read('character-architect'), ls: read('location-scout'), sc: read('seedance-compiler') });
   put(join(runsRoot, runId, 'report.html'), section, true);
   if (trackerPath) { try { put(trackerPath, section, false); } catch { /* optional */ } }
   return section;

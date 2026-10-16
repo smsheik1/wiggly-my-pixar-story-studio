@@ -58,3 +58,63 @@ export function upsertScriptView(html, section, { report = true } = {}) {
   if (html.includes('<!-- v2-dry-run:start -->')) return html.replace('<!-- v2-dry-run:start -->', `${section}\n<!-- v2-dry-run:start -->`);
   return upsertSection(html, section, { start: SCRIPT_START, end: SCRIPT_END, after: null });
 }
+
+// ---- Character Architect, Location Scout, Seedance Compiler readable views ----
+const card = (inner) => `<div style='background:#0b0f16;border-radius:8px;padding:10px 12px;margin:8px 0'>${inner}</div>`;
+const row = (label, v) => (v ? `<div><span style='color:#9cc4ff'>${label}:</span> ${esc(v)}</div>` : '');
+const cap = (s) => { s = String(s ?? '').trim(); return s ? s[0].toUpperCase() + s.slice(1) : s; };
+const sceneLabel = (id) => { const [p, s] = String(id).split('.'); return `Part ${p} shot ${s}`; };
+
+export function charactersHtml(ca, sd) {
+  const chars = ca?.characters ?? [];
+  if (!chars.length) return `<h2 style='color:#fff'>Characters</h2><p class='muted'>No Character Architect output for this run.</p>`;
+  const sdCast = Object.fromEntries((sd?.cast ?? []).map((c) => [c.elementTag, c]));
+  const N = namer(sd?.cast?.length ? sd.cast : chars);
+  return `<h2 style='color:#fff'>Characters</h2>` + chars.map((c) => {
+    const s = sdCast[c.elementTag] ?? {}; const d = c.designSpecs ?? {};
+    const main = (c.outfits ?? []).find((o) => o.isMain) ?? (c.outfits ?? [])[0];
+    const look = s.physicalDescription ?? [d.dominantSilhouette && `Built as ${d.dominantSilhouette}`, d.exaggeration && `with ${d.exaggeration}`, d.counterpart].filter(Boolean).join(', ');
+    const outfits = (c.outfits ?? []).map((o) => `${o.description}${o.segmentIds?.length ? ` (part ${o.segmentIds.join(', ')})` : ''}`).join('; ');
+    return card(`<div style='font-size:18px;color:#fff'><b>${esc(N.name(c.elementTag))}</b> <span style='color:#888'>· age ${esc(c.age)}${s.ageNote ? ` (${esc(s.ageNote)})` : ''} · ${esc(c.skinTone ?? '')} skin</span></div>
+${row('Look', cap(look))}${row('Outfit', outfits || main?.description)}${row('Signature item', d.signatureAccent ?? s.signatureAccent)}${row('Voice', s.voiceDescription)}${row('Based on', s.photoRef ? `photo ${s.photoRef}` : 'from notes')}`);
+  }).join('');
+}
+
+export function locationsHtml(ls, sd) {
+  const locs = ls?.locations ?? [];
+  if (!locs.length) return `<h2 style='color:#fff'>Locations</h2><p class='muted'>No Location Scout output for this run.</p>`;
+  return `<h2 style='color:#fff'>Locations</h2>` + locs.map((l) => {
+    const la = l.lightingAnchor ?? {}, cs = l.cameraStaging ?? {};
+    const p = String(l.locationPlatePrompt?.promptText ?? '');
+    const desc = (/Room \/ Environment:\s*([^.]+\.)/.exec(p)?.[1]) ?? (sd?.locations ?? []).find((x) => x.name?.toLowerCase() === String(l.settingName ?? l.name).toLowerCase())?.description;
+    const props = /(?:Midground|Props?)[^:]*?:?\s*([^.]+\.)/.exec(p.replace(/^.*?Room \/ Environment:[^.]+\./, ''))?.[1];
+    const lighting = [la.sourceDescription, la.keyLightDirection, la.shadowCharacteristics].filter(Boolean).join(', ');
+    return card(`<div style='font-size:18px;color:#fff'><b>${esc(l.name)}</b> <span style='color:#888'>· ${esc(l.timeOfDay ?? '')}</span></div>
+${row('What it is', cap(desc))}${row('Light and mood', cap(lighting))}${row('Key props and layout', cap(props ?? cs.stagingCoordinates))}${row('Camera', cs.lensMm ? `${cs.lensMm}mm lens, ${cs.cameraElevation ?? ''}` : cs.cameraElevation)}${row('Used in', (l.sceneIds ?? []).map(sceneLabel).join(', '))}`);
+  }).join('');
+}
+
+export function seedanceHtml(sc, sd, ls) {
+  const segs = sc?.segments ?? [];
+  if (!segs.length) return `<h2 style='color:#fff'>Seedance prompts</h2><p class='muted'>No Seedance Compiler output for this run.</p>`;
+  const N = namer(sd?.cast ?? []);
+  const locByLoc = Object.fromEntries((ls?.locations ?? []).map((l) => [l.elementTag, l.name]));
+  return `<h2 style='color:#fff'>Seedance prompts <span style='color:#888;font-weight:normal'>(${esc(sc.totalRuntimeSec ?? '')}s)</span></h2>` + segs.map((g) => {
+    const refName = {};
+    for (const r of g.references ?? []) refName[r.tag] = r.kind === 'location' ? (locByLoc[r.sourceTag] ?? r.tag.slice(1).replace(/_/g, ' ')) : N.name(r.tag);
+    const txt = (t) => String(t ?? '').replace(/@[\w_]+/g, (tag) => refName[tag] ?? N.name(tag));
+    const chars = (g.references ?? []).filter((r) => r.kind === 'character').map((r) => refName[r.tag]);
+    const places = (g.references ?? []).filter((r) => r.kind === 'location').map((r) => refName[r.tag]);
+    const shots = (g.shots ?? []).map((h) => `<li>${clock(h.startSec ?? 0)}–${clock(h.endSec ?? 0)}: ${esc(txt(h.action))}${h.dialogue?.line ? ` <b>“${esc(pretty(h.dialogue.line))}”</b>` : ''}</li>`).join('');
+    return card(`<div style='font-size:18px;color:#fff'><b>${esc(String(g.title ?? '').replace(/^Part \d+:\s*/, '') || `Segment ${g.segmentId}`)}</b> <span style='color:#888'>· segment ${esc(g.segmentId)} · ${esc(g.totalDurationSec)}s · ${g.extendsFrom ? `continues segment ${esc(g.extendsFrom)}` : 'opening segment'}</span></div>
+${row('Summary', txt(g.tenBlocks?.block3_goal))}${row('Characters', chars.join(', '))}${row('Places', places.join(', '))}
+<div style='color:#9cc4ff;margin-top:6px'>Shots</div><ul style='list-style:disc;padding-left:20px;margin:4px 0'>${shots}</ul>
+<details><summary style='cursor:pointer;color:#9cc4ff'>Full prompt sent to Seedance</summary><pre style='white-space:pre-wrap;font-size:12px;background:#000;padding:10px;border-radius:6px'>${esc(g.compiledPrompt ?? '')}</pre></details>`);
+  }).join('');
+}
+
+/** All four readable views, Story Director script first. */
+export function readableViewsHtml({ sd, ca, ls, sc }) {
+  const script = scriptViewHtml(sd).replace(SCRIPT_START, '').replace(SCRIPT_END, '').replace(/<\/section>$/, '');
+  return `${SCRIPT_START}${script}${charactersHtml(ca, sd)}${locationsHtml(ls, sd)}${seedanceHtml(sc, sd, ls)}</section>${SCRIPT_END}`;
+}

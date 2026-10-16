@@ -38,3 +38,21 @@ test('applyScriptView patches report.html and tracker from the run outputs', { t
     assert.ok(readFileSync(tr, 'utf8').includes(SCRIPT_START));
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+const load = (a) => JSON.parse(readFileSync(new URL(`../benchmarks/r4-dry6/outputs/${a}.json`, import.meta.url), 'utf8'));
+test('readable views for all four agents: script first, then characters, locations, seedance; no JSON or field names', { timeout: 10000 }, async () => {
+  const { readableViewsHtml } = await import('../scripts/lib/script-view.mjs');
+  const h = readableViewsHtml({ sd, ca: load('character-architect'), ls: load('location-scout'), sc: load('seedance-compiler') });
+  const iScript = h.indexOf('Script view'), iChar = h.indexOf('>Characters<'), iLoc = h.indexOf('>Locations<'), iSc = h.indexOf('Seedance prompts');
+  assert.ok(iScript >= 0 && iScript < iChar && iChar < iLoc && iLoc < iSc);
+  const t = h.replace(/<[^>]+>/g, ' ');
+  for (const s of ['Signature item', 'Voice', 'Based on', 'photo shaz-child', 'from notes', 'Light and mood', 'Used in', 'Part 1 shot 1', 'Full prompt sent to Seedance', 'Characters:', 'Places:', 'Family Living Room']) assert.ok(t.includes(s), s);
+  const visible = h.replace(/<pre[\s\S]*?<\/pre>/g, '');
+  for (const bad of ['designSpecs', 'lightingAnchor', 'tenBlocks', 'compiledPrompt', 'elementTag', 'sceneIds', '{"', '@Loc ', '@family_living_room', '@DadShaz']) assert.ok(!visible.includes(bad), bad);
+  assert.equal(h.split(SCRIPT_START).length, 2);
+});
+test('readable views tolerate missing agent outputs', { timeout: 10000 }, async () => {
+  const { readableViewsHtml } = await import('../scripts/lib/script-view.mjs');
+  const h = readableViewsHtml({ sd: null, ca: null, ls: null, sc: null });
+  for (const s of ['No Story Director output', 'No Character Architect output', 'No Location Scout output', 'No Seedance Compiler output']) assert.ok(h.includes(s), s);
+});
