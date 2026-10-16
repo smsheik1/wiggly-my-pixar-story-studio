@@ -5,6 +5,7 @@
 import { RunnableLambda } from '@langchain/core/runnables';
 import { StateGraph, START, END, interrupt } from '@langchain/langgraph';
 import { PipelineAnnotation } from './state.mjs';
+import { withWatchdog } from './liveness.mjs';
 import { deepAgentInvoke } from './deep-agent-node.mjs';
 import { V2_MODELS, loadSkill } from '../config/models.mjs';
 import { selectStoryDirectorInput } from '../crew/story-director/input.mjs';
@@ -80,13 +81,14 @@ export function retryNotes(issues = []) {
 }
 
 /** Build one agent node around an injectable invoke({ agent, config, skill, input, attempt, retryNotes }) -> string|object. */
-export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs = AGENT_SPECS, skill = loadSkill, now = () => new Date().toISOString(), onEvent = () => {}, runTag } = {}) {
+export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs = AGENT_SPECS, skill = loadSkill, now = () => new Date().toISOString(), onEvent = () => {}, runTag, liveness, timeouts = {} } = {}) {
   const spec = specs[agent];
   return async (state) => {
     let input;
     const ev = (e) => { try { onEvent({ agent, ...e }); } catch { /* observers never break a run */ } };
     // Each attempt is its own traced child run (inherits the node's run via async context).
-    const traced = (req) => RunnableLambda.from(async (r) => invoke(r)).invoke(req, {
+    const call = (r) => (liveness ? withWatchdog((signal) => invoke({ ...r, signal }), { liveness, agent, attempt: r.attempt, ...timeouts }) : invoke(r));
+    const traced = (req) => RunnableLambda.from(async (r) => call(r)).invoke(req, {
       runName: `${agent} attempt ${req.attempt}`, tags: [`agent:${agent}`, `attempt:${req.attempt}`, ...(runTag ? [`runId:${runTag}`] : [])],
       metadata: { agent, attempt: req.attempt, runId: runTag } });
     ev({ type: 'start' });
@@ -160,10 +162,10 @@ export function makeApprovalNode({ useInterrupt = false, autoApprove } = {}) {
 const halted = (s) => ['escalated', 'failed', 'awaiting-approval'].includes(s.status);
 
 /** Build and compile the v2 graph. Default invoke runs each agent as a Deep Agent; inject a fake invoke in tests. */
-export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer, onEvent, runTag, autoApprove } = {}) {
+export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer, onEvent, runTag, autoApprove, liveness, timeouts } = {}) {
   if (invoke === undefined) invoke = deepAgentInvoke(deepAgent);
   if (typeof invoke !== 'function') throw new Error('buildGraph: invoke must be a function');
-  const node = (a) => makeAgentNode(a, invoke, { maxAttempts, onEvent, runTag });
+  const node = (a) => makeAgentNode(a, invoke, { maxAttempts, onEvent, runTag, liveness, timeouts });
   const g = new StateGraph(PipelineAnnotation)
     .addNode('story-director', node('story-director'))
     .addNode('character-architect', node('character-architect'))

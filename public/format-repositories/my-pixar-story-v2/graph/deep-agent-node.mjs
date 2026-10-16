@@ -101,7 +101,7 @@ export async function openRouterModel(config, _agent, { apiKey = process.env.OPE
   const { ChatOpenAI } = await import('@langchain/openai');
   if (!apiKey) throw new Error('openRouterModel: OPENROUTER_API_KEY is not set');
   return new ChatOpenAI({ model: config.model, apiKey, maxTokens: config.maxTokens,
-    configuration: { baseURL: 'https://openrouter.ai/api/v1' }, modelKwargs: { reasoning: { effort: config.effort } } });
+    streaming: true, configuration: { baseURL: 'https://openrouter.ai/api/v1' }, modelKwargs: { reasoning: { effort: config.effort }, include_reasoning: true } });
 }
 
 /**
@@ -109,12 +109,12 @@ export async function openRouterModel(config, _agent, { apiKey = process.env.OPE
  * createModel(config, agent) -> BaseChatModel (inject a fake in tests). Returns the submitted object.
  */
 export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60 } = {}) {
-  return async ({ agent, config, input, attempt = 1, retryNotes = '', state = {} }) => {
+  return async ({ agent, config, input, attempt = 1, retryNotes = '', state = {}, signal }) => {
     const { root } = await prepareRunWorkspace({ runsRoot, runId: `${runId}/attempt-${attempt}`, agent, input, approvedAssets: state.approvedAssets ?? {}, assetFiles });
     const submissions = [];
     const model = await createModel(config, agent);
     const agentRun = workspaceAgent(model, root, `openai:${config.model}`, `wiggly-v2-${agent}`, [makeSubmitTool(agent, submissions)], systemPromptFor(agent, retryNotes));
-    const res = await agentRun.invoke({ messages: [{ role: 'user', content: `Produce the ${agent} output for this run.` }] }, { recursionLimit, runName: `${agent} deep agent`, tags: [`agent:${agent}`, `attempt:${attempt}`] });
+    const res = await agentRun.invoke({ messages: [{ role: 'user', content: `Produce the ${agent} output for this run.` }] }, { recursionLimit, ...(signal ? { signal } : {}), runName: `${agent} deep agent`, tags: [`agent:${agent}`, `attempt:${attempt}`] });
     if (!submissions.length) {
       // An invalid submit_<agent> call fails schema validation; returnDirect ends the run with the tool error,
       // which the graph feeds into the next attempt's retry notes.

@@ -3,6 +3,7 @@
 // Stops at asset approval unless --placeholder-assets. Saves outputs + report.html under runs/<runId>/,
 // updates the 'v2 dry run' section of ~/wiggly-progress.html live, traces to LangSmith when a key is present.
 // Usage: node scripts/run-rehearsal.mjs --project <project.json> [--secrets <secrets.env>] [--placeholder-assets] [--run-id <id>] [--no-tracker]
+//   [--first-token-timeout-sec 300] [--idle-timeout-sec 180] [--stall-warn-sec 90] [--heartbeat-sec 5]
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -11,6 +12,7 @@ import { buildGraph, placeholderAssets } from '../graph/graph.mjs';
 import { RUNS_ROOT, openRouterModel } from '../graph/deep-agent-node.mjs';
 import { loadSecrets, defaultSecretsPath } from './lib/secrets.mjs';
 import { makeTracing } from './lib/tracing.mjs';
+import { createLiveness, LivenessHandler, DEFAULT_TIMEOUTS } from '../graph/liveness.mjs';
 import { createRecorder, upsertTracker, reportHtml, defaultTrackerPath } from './lib/report.mjs';
 
 const OUTPUT_KEYS = { 'story-director': (s) => s.storyDirector, 'character-architect': (s) => s.characterArchitect?.output,
@@ -36,19 +38,27 @@ const summarize = (agent, o) => {
 };
 
 export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUID().slice(0, 8)}`, runsRoot = RUNS_ROOT, invoke, log = console.log,
-  secretsPath = defaultSecretsPath(), secrets, usePlaceholderAssets = false, trackerPath = defaultTrackerPath(), tracing } = {}) {
+  secretsPath = defaultSecretsPath(), secrets, usePlaceholderAssets = false, trackerPath = defaultTrackerPath(), tracing,
+  timeouts = {}, heartbeatMs = 5000, now = Date.now } = {}) {
   if (!projectPath) throw new Error('--project <path to project/answers json> is required');
   const inputs = inputsFromProject(JSON.parse(await readFile(projectPath, 'utf8')));
   const sec = secrets ?? loadSecrets(secretsPath);
   if (!invoke && !sec.OPENROUTER_API_KEY) throw new Error(`OPENROUTER_API_KEY not found in ${secretsPath}`);
   const tr = tracing === undefined ? await makeTracing(sec) : tracing;
-  const rec = createRecorder({ runId, placeholderAssets: usePlaceholderAssets, onChange: (m) => { if (trackerPath) { try { upsertTracker(m, trackerPath); } catch { /* tracker is optional */ } } } });
+  const t = { ...DEFAULT_TIMEOUTS, ...timeouts };
+  const liveness = createLiveness({ now, stallMs: t.stallMs });
+  const rec = createRecorder({ runId, placeholderAssets: usePlaceholderAssets, tracingProject: tr?.projectName ?? null, onChange: (m) => { if (trackerPath) { try { upsertTracker(m, trackerPath); } catch { /* tracker is optional */ } } } });
   const graph = buildGraph({ ...(invoke ? { invoke } : { deepAgent: { runId, runsRoot, createModel: (c, a) => openRouterModel(c, a, { apiKey: sec.OPENROUTER_API_KEY }) } }),
-    onEvent: rec.onEvent, runTag: runId, ...(usePlaceholderAssets ? { autoApprove: placeholderAssets } : {}) });
+    onEvent: rec.onEvent, runTag: runId, liveness, timeouts: { firstTokenMs: t.firstTokenMs, idleMs: t.idleMs, ...(t.pollMs ? { pollMs: t.pollMs } : {}), now }, ...(usePlaceholderAssets ? { autoApprove: placeholderAssets } : {}) });
   if (usePlaceholderAssets) log('PLACEHOLDER ASSETS: asset approval auto-filled with fake keys (no images generated)');
   const config = { runName: 'wiggly-v2 rehearsal', tags: [`runId:${runId}`, 'wiggly-v2', ...(usePlaceholderAssets ? ['placeholder-assets'] : [])],
-    metadata: { runId, placeholderAssets: usePlaceholderAssets }, recursionLimit: 50, ...(tr ? { callbacks: tr.callbacks, runId: tr.rootRunId } : {}) };
-  const state = await graph.invoke({ inputs }, config);
+    metadata: { runId, placeholderAssets: usePlaceholderAssets }, recursionLimit: 50, callbacks: [new LivenessHandler(liveness), ...(tr?.callbacks ?? [])], ...(tr ? { runId: tr.rootRunId } : {}) };
+  if (tr) log(`LangSmith: tracing to ${tr.projectName}`);
+  const beat = () => { const live = liveness.active().map((e) => ({ agent: e.agent, attempt: e.attempt, text: liveness.line(e), stalled: liveness.status(e).stalled }));
+    for (const x of live) log(`[heartbeat] ${x.text}`); rec.heartbeat(live); };
+  const hb = heartbeatMs > 0 ? setInterval(beat, heartbeatMs) : null;
+  let state;
+  try { state = await graph.invoke({ inputs }, config); } finally { if (hb) clearInterval(hb); }
   if (tr) await tr.flush?.();
   const url = tr ? await tr.url() : null;
   rec.finish(state, url);
@@ -77,7 +87,9 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
   const has = (k) => process.argv.includes(k);
   runRehearsal({ projectPath: arg('--project'), ...(arg('--run-id') ? { runId: arg('--run-id') } : {}), ...(arg('--secrets') ? { secretsPath: arg('--secrets') } : {}),
-    usePlaceholderAssets: has('--placeholder-assets'), ...(has('--no-tracker') ? { trackerPath: null } : {}) })
+    usePlaceholderAssets: has('--placeholder-assets'),
+    timeouts: { ...(arg('--first-token-timeout-sec') ? { firstTokenMs: +arg('--first-token-timeout-sec') * 1000 } : {}), ...(arg('--idle-timeout-sec') ? { idleMs: +arg('--idle-timeout-sec') * 1000 } : {}), ...(arg('--stall-warn-sec') ? { stallMs: +arg('--stall-warn-sec') * 1000 } : {}) },
+    ...(arg('--heartbeat-sec') ? { heartbeatMs: +arg('--heartbeat-sec') * 1000 } : {}), ...(has('--no-tracker') ? { trackerPath: null } : {}) })
     .then(({ state }) => { process.exitCode = state.status === 'failed' ? 2 : 0; })
     .catch((e) => { console.error(`rehearsal failed: ${e.message}`); process.exitCode = 1; });
 }

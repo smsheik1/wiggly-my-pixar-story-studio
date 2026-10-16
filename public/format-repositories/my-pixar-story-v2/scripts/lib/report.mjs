@@ -7,8 +7,8 @@ export const AGENTS = [['story-director', 'Story Director'], ['character-archite
 export const defaultTrackerPath = () => process.env.WIGGLY_PROGRESS_FILE || join(homedir(), 'wiggly-progress.html');
 const START = '<!-- v2-dry-run:start -->', END = '<!-- v2-dry-run:end -->';
 
-export function createRecorder({ runId, placeholderAssets = false, onChange = () => {} }) {
-  const model = { runId, status: 'running', placeholderAssets, langsmithUrl: null, startedAt: new Date().toISOString(),
+export function createRecorder({ runId, placeholderAssets = false, tracingProject = null, onChange = () => {} }) {
+  const model = { runId, tracingProject, live: [], status: 'running', placeholderAssets, langsmithUrl: null, startedAt: new Date().toISOString(),
     agents: Object.fromEntries(AGENTS.map(([k]) => [k, { status: 'waiting', attempts: [] }])) };
   const onEvent = (e) => {
     const a = model.agents[e.agent]; if (!a) return;
@@ -19,7 +19,7 @@ export function createRecorder({ runId, placeholderAssets = false, onChange = ()
     if (e.type === 'failed') { a.status = 'failed'; if (!a.attempts.length) a.attempts.push({ attempt: 0, input: null, output: null, issues: e.issues ?? [], isValid: false }); }
     onChange(model);
   };
-  return { model, onEvent, finish: (state, url) => { model.status = state.status; model.langsmithUrl = url ?? null; model.pending = state.pendingApproval ?? [];
+  return { model, onEvent, heartbeat: (live) => { model.live = live; onChange(model); }, finish: (state, url) => { model.live = []; model.status = state.status; model.langsmithUrl = url ?? null; model.pending = state.pendingApproval ?? [];
     for (const [k, a] of Object.entries(model.agents)) if (a.status === 'running') a.status = 'failed';
     onChange(model); } };
 }
@@ -40,11 +40,14 @@ function cards(model, { max, sideBySide }) {
         : cols.map(([h, t]) => `<details data-k='${esc(`${model.runId}:${k}:${at.attempt}:${h}`)}'><summary>${h}</summary><pre>${esc(t)}</pre></details>`).join('');
       return `<details class='dl' data-k='${esc(`${model.runId}:${k}:${at.attempt}`)}'${sideBySide ? ' open' : ''}><summary>${esc(head)}</summary>${body}</details>`;
     }).join('');
-    return `<li class='${a.status === 'running' ? 'active' : a.status === 'waiting' ? 'pending' : 'done'}'><div class='row'>${ic}<b>${label}</b><span class='tag' style='background:${COLORS[a.status]}'>${a.status}</span></div>${atts}</li>`;
+    const live = (model.live ?? []).filter((x) => x.agent === k).map((x) => `<div class='sub live'${x.stalled ? " style='color:#f87171'" : ''}><span class='spin sm'></span>${esc(x.text)}</div>`).join('');
+    return `<li class='${a.status === 'running' ? 'active' : a.status === 'waiting' ? 'pending' : 'done'}'><div class='row'>${ic}<b>${label}</b><span class='tag' style='background:${COLORS[a.status]}'>${a.status}</span></div>${live}${atts}</li>`;
   }).join('');
 }
 const header = (m) => `<p class='muted'>Run <b>${esc(m.runId)}</b> · status <b>${esc(m.status)}</b>${m.placeholderAssets ? " · <span class='tag' style='background:#b45309'>placeholder assets (not real images)</span>" : ''}${m.pending?.length ? ` · awaiting approval: ${esc(m.pending.join(', '))}` : ''}</p>`
-  + (m.langsmithUrl ? `<p><a style='color:#9cc4ff' href='${esc(m.langsmithUrl)}'>LangSmith trace</a></p>` : "<p class='muted'>LangSmith: not traced</p>");
+  + (m.langsmithUrl ? `<p><a style='color:#9cc4ff' href='${esc(m.langsmithUrl)}'>LangSmith trace</a></p>`
+    : m.tracingProject ? (m.status === 'running' ? `<p class='muted'>LangSmith: tracing to ${esc(m.tracingProject)}…</p>` : `<p class='muted'>LangSmith: traced to ${esc(m.tracingProject)} (link unavailable)</p>`)
+    : "<p class='muted'>LangSmith: not traced</p>");
 
 export function trackerSection(model) {
   const live = model.status === 'running';
