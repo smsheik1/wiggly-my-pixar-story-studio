@@ -18,8 +18,15 @@ test('role.md keeps Gemini base text (kindergarten examples) and Wiggly addition
   assert.ok(!/GPT Image 2/.test(role));
 });
 test('role.md diverges from Gemini only by additions + engine swap', () => {
-  const norm = (s) => s.replaceAll('GPT Image 2', 'Nano Banana 2.1');
+  // Approved swaps: engine, and storyboard style painted -> 3D Pixar render (Shaz, 2026-10-16).
+  const norm = (s) => s.replaceAll('GPT Image 2', 'Nano Banana 2.1')
+    .replaceAll('Painted digital storyboard art — soft loose brushwork, simplified appealing character shapes, minimal facial detail,',
+      'Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination,');
   const roleNorm = norm(role);
   const missing = norm(gemini).split('\n').filter((l) => l.trim() && !l.startsWith('description:') && !roleNorm.includes(l));
   assert.deepEqual(missing, []);
+});
+test('storyboard default style is 3D Pixar render, not painted', () => {
+  assert.ok(role.includes('polished 3D Pixar-style animated film render'));
+  assert.ok(!/loose brushwork/.test(role));
 });

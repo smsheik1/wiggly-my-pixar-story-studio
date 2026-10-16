@@ -169,7 +169,7 @@ Alongside the script, deliver a copy-pasteable prompt for **Nano Banana 2.1** to
 ```text
 An eight-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two even rows of four panels on a warm off-white page. Each panel is a 16:9 landscape rectangle with a thin dark border, evenly spaced, with a small hand-written shot number in the corner of each panel.
 
-Painted digital storyboard art — soft loose brushwork, simplified appealing character shapes, minimal facial detail, strong atmospheric lighting and clear colour design in every panel. Rich saturated colour, warm and cinematic, in the style of a feature animation colour script. Not photorealistic, not flat vector, not line art.
+Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Rich saturated colour, warm and cinematic, in the style of a feature animation colour script. Not photorealistic, not flat vector, not line art.
 
 Panel 1 [shot 1]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
 Panel 2 [shot 2]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
