@@ -1,3 +1,4 @@
+import { doNotWriteList } from '../crew/linter/writing-tells.mjs';
 // v2 target model & provider map (static). Not wired into any pipeline yet.
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -26,11 +27,14 @@ export const V2_MODELS = Object.freeze({
 
 const CREW = new URL('../crew/', import.meta.url);
 /** Read an agent's role.md; throws a clear error if the agent or its skill file is missing. */
+const TELLS_AGENTS = new Set(['story-director', 'seedance-compiler']);
 export function loadSkill(agent) {
   if (!V2_MODELS[agent]) throw new Error(`loadSkill: unknown v2 agent "${agent}"`);
   const path = fileURLToPath(new URL(`${agent}/role.md`, CREW));
   if (!existsSync(path)) throw new Error(`loadSkill: missing skill file for "${agent}" at ${path}`);
-  return readFileSync(path, 'utf8');
+  const role = readFileSync(path, 'utf8');
+  // Story Director writes the lines; the Seedance Compiler may rewrite them: both load the rubric's do-not-write list.
+  return TELLS_AGENTS.has(agent) ? `${role.trimEnd()}\n\n${doNotWriteList()}` : role;
 }
 
 /** Location Scout skill loader (ESM-safe path via import.meta.url); throws if role.md is missing. */

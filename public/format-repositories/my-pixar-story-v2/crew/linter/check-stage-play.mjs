@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { validateWritingTells } from './writing-tells.mjs';
 // v2 deterministic validation gate for Story Director output.
 // BASE: Gemini's validateStoryDirectorOutput (same return shape, codes and message text).
 // Wiggly codes added: SPEAKER_NOT_IN_CAST, UNDERAGE_DEPICTION, MULTILINE_STORYBOARD_PROMPT,
@@ -229,6 +230,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
       err('SUNGLASSES_OVER_EYES', `Storyboard panel ${pn.panelNumber ?? i + 1}: sunglasses must sit pushed up on the forehead.`, `storyboardPrompt.panels.${i}`);
   });
 
+  issues.push(...validateWritingTells('story-director', data));
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
   const warnings = issues.filter((i) => i.severity === 'warning').map((i) => i.message);
   return { isValid: errors.length === 0, errors, warnings, issues };

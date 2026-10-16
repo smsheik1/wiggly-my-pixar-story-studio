@@ -22,7 +22,8 @@ const one = (d) => validateOne(d.segments[0]);
 
 // ---- ours ----
 test('good family fixture parses and passes the gate with no warnings', () => {
-  const r = gate(parseSeedancePrompts(out())); assert.equal(r.isValid, true, r.errors.join('\n')); assert.deepEqual(r.warnings, []);
+  const r = gate(parseSeedancePrompts(out())); assert.equal(r.isValid, true, r.errors.join('\n')); // Writing-tell findings are advisory warnings (see writing-tells.test.mjs); no other warnings allowed.
+  assert.deepEqual(r.issues.filter((i) => i.severity !== 'error' && !i.code.startsWith('WRITING_TELL_')).map((i) => i.message), []);
 });
 test('selector: element-name references, voice registry, video settings, inherits locations, drops photos/prompts', () => {
   const i = input();

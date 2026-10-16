@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { validateWritingTells } from './writing-tells.mjs';
 // v2 deterministic gate for Seedance Compiler output.
 // BASE: Gemini's per-segment checks (gemini-sc-gate.md), his codes. validateSeedanceSegment() runs them on one segment.
 // WIGGLY: validateSeedancePrompts() adds approved-asset binding, cast/location coverage, stage-play verbatim dialogue,
@@ -177,6 +178,7 @@ export function validateSeedancePrompts(data, input) {
   });
   for (const id of srcSegs.keys()) if (!segs.some((s) => s.segmentId === id)) err('MISSING_SEGMENT', `Stage-play segment ${id} has no compiled prompt.`, 'segments');
   if (total > MAX_TOTAL_SECONDS) err('RUNTIME_CAP', `Total runtime ${total}s exceeds ${MAX_TOTAL_SECONDS}s.`, 'segments');
+  issues.push(...validateWritingTells('seedance-compiler', data));
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
   const warnings = issues.filter((i) => i.severity === 'warning').map((i) => i.message);
   return { isValid: errors.length === 0, errors, warnings, issues };
