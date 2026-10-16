@@ -9,6 +9,12 @@ export const StoryDirectorInput = z.object({
   castDescriptions: z.array(z.object({
     id: z.string(), name: z.string(), description: z.string(),
   })).default([]),
+  // WIGGLY: main characters with real reference photos. Text only (no paths/bytes); use these looks, never guess.
+  photoCharacters: z.array(z.object({
+    id: z.string().min(1), name: z.string().min(1), realPerson: z.string().min(1),
+    age: z.number().int().positive().nullable().default(null),
+    skinTone: z.string().min(3), description: z.string().min(10),
+  }).strict()).default([]),
   format: z.object({
     maxPartSeconds: z.number().int().max(30).default(30),
     // Reconciled with targetTotalRuntimeSec and the schema cap: target 90s, hard cap 180s.
@@ -37,6 +43,8 @@ export function selectStoryDirectorInput(state = {}) {
     subject: inputs.subject ?? '',
     answers: inputs.answers ?? {},
     castDescriptions,
+    photoCharacters: (inputs.photoReferences ?? p.photoReferences ?? [])
+      .map(({ id, name, realPerson, age, skinTone, description }) => ({ id, name, realPerson: realPerson ?? name, age: age ?? null, skinTone, description })),
     format: p.format ?? {},
     ...pick(inputs, ['targetTotalRuntimeSec', 'settingSeed', 'voiceNoteTranscript', 'toneDirectives']),
   });

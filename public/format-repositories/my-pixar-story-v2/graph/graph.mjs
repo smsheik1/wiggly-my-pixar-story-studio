@@ -59,7 +59,7 @@ export function mergeCharacters(kept, out, state) {
 /** Per-agent wiring: selector, parser, gate, and how the output is written back to state. */
 export const AGENT_SPECS = {
   'story-director': {
-    select: selectStoryDirectorInput, parse: parseStagePlay, gate: (out) => validateStoryDirectorOutput(out),
+    select: selectStoryDirectorInput, parse: parseStagePlay, gate: (out, input) => validateStoryDirectorOutput(out, input),
     write: (out) => ({ storyDirector: out }),
   },
   'character-architect': {

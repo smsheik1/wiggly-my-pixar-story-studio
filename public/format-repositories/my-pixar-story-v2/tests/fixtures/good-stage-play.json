@@ -23,12 +23,14 @@
    "elementTag": "@Shaz",
    "age": 8,
    "oneWordRole": "scientist",
-   "physicalDescription": "Small round-faced boy, short black hair, dark sunglasses worn indoors, plain red t-shirt.",
-   "signatureAccent": "red plastic sunglasses",
+   "physicalDescription": "Small round-faced boy, short black hair, red plastic sunglasses pushed up on his forehead, plain red t-shirt.",
+   "signatureAccent": "red plastic sunglasses pushed up on his forehead",
    "voiceDescription": "Eight-year-old boy, flat declarative delivery, total conviction, quick pace.",
    "skinTone": "warm medium brown",
    "gender": "male",
-   "family": true
+   "family": true,
+   "realPerson": "Shaz",
+   "photoRef": null
   },
   {
    "name": "Mom",
@@ -40,7 +42,9 @@
    "voiceDescription": "Warm adult woman, gentle teasing tone, slow pace, quiet laugh.",
    "skinTone": "warm medium brown",
    "gender": "female",
-   "family": true
+   "family": true,
+   "realPerson": "Mom",
+   "photoRef": null
   },
   {
    "name": "Sister",
@@ -52,7 +56,9 @@
    "voiceDescription": "Eighteen-year-old, dry deadpan delivery, unimpressed, clipped lines.",
    "skinTone": "light warm brown",
    "gender": "female",
-   "family": true
+   "family": true,
+   "realPerson": "Sister",
+   "photoRef": null
   }
  ],
  "segments": [
@@ -70,29 +76,36 @@
      "shotNumber": 1,
      "startSec": 0,
      "endSec": 5,
-     "whatWeSee": "Wide shot of the kitchen table; Shaz slaps a card down across from his sister.",
+     "whatWeSee": "@Shaz slaps a card down across the kitchen table from @Sister.",
      "isContinuousMove": false,
      "location": "Kitchen",
-     "whatWeHear": "Card slap, fridge hum."
+     "whatWeHear": "Card slap, fridge hum.",
+     "framing": "wide",
+     "cameraAngle": "eye level",
+     "cameraMove": "static"
     },
     {
      "shotNumber": 2,
      "startSec": 5,
      "endSec": 9,
-     "whatWeSee": "Medium on Shaz lowering his sunglasses very slowly.",
+     "whatWeSee": "@Shaz pushes his sunglasses higher up his forehead very slowly.",
      "isContinuousMove": false,
      "dialogue": {
       "speaker": "@Shaz",
       "line": "{I am a scientist.}",
       "isVoiceover": false,
       "isOffCamera": false
-     }
+     },
+     "location": "Kitchen",
+     "framing": "medium",
+     "cameraAngle": "eye level",
+     "cameraMove": "slow push in"
     },
     {
      "shotNumber": 3,
      "startSec": 9,
      "endSec": 14,
-     "whatWeSee": "Close-up on Sister, unimpressed, one slow blink.",
+     "whatWeSee": "@Sister stays unimpressed, one slow blink.",
      "isContinuousMove": false,
      "dialogue": {
       "speaker": "@Sister",
@@ -100,41 +113,57 @@
       "isVoiceover": false,
       "isOffCamera": false
      },
-     "directorsNote": "Play it completely straight; it is the ruler for the third beat."
+     "directorsNote": "Play it completely straight; it is the ruler for the third beat.",
+     "location": "Kitchen",
+     "framing": "close-up",
+     "cameraAngle": "eye level",
+     "cameraMove": "static"
     },
     {
      "shotNumber": 4,
      "startSec": 14,
      "endSec": 20,
-     "whatWeSee": "Medium on Shaz pushing sunglasses up and slapping a second card.",
+     "whatWeSee": "@Shaz taps his sunglasses up on his forehead and slaps a second card.",
      "isContinuousMove": false,
      "dialogue": {
       "speaker": "@Shaz",
       "line": "{A scientist. Not even kidding.}",
       "isVoiceover": false,
       "isOffCamera": false
-     }
+     },
+     "location": "Kitchen",
+     "framing": "medium",
+     "cameraAngle": "eye level",
+     "cameraMove": "static"
     },
     {
      "shotNumber": 5,
      "startSec": 20,
      "endSec": 24,
-     "whatWeSee": "Mom appears in the doorway holding a tea towel, watching.",
+     "whatWeSee": "@Mom appears in the doorway holding a tea towel, watching.",
      "isContinuousMove": false,
-     "whatWeHear": "No dialogue in this shot; kettle starts to whistle."
+     "whatWeHear": "No dialogue in this shot; kettle starts to whistle.",
+     "location": "Kitchen",
+     "framing": "wide",
+     "cameraAngle": "eye level",
+     "cameraMove": "static"
     },
     {
      "shotNumber": 6,
      "startSec": 24,
      "endSec": 30,
-     "whatWeSee": "Close-up on Mom: she nods seriously, holding back a smile, breathing.",
+     "whatWeSee": "@Mom nods seriously, holding back a smile, breathing.",
      "isContinuousMove": false,
      "dialogue": {
       "speaker": "@Mom",
       "line": "{Then go do science, habibi.}",
       "isVoiceover": false,
       "isOffCamera": false
-     }
+     },
+     "location": "Kitchen",
+     "framing": "close-up",
+     "cameraAngle": "eye level",
+     "cameraMove": "static"
     }
    ]
   },
@@ -151,28 +180,40 @@
      "shotNumber": 1,
      "startSec": 0,
      "endSec": 6,
-     "whatWeSee": "Wide: Shaz marches to the window, sunglasses on, holding a cup of water like a beaker.",
+     "whatWeSee": "@Shaz marches to the window holding a cup of water like a beaker.",
      "isContinuousMove": false,
      "narration": {
       "speaker": "@Shaz",
       "line": "{She never once laughed at me.}"
-     }
+     },
+     "location": "Kitchen",
+     "framing": "wide",
+     "cameraAngle": "eye level",
+     "cameraMove": "pan right to follow"
     },
     {
      "shotNumber": 2,
      "startSec": 6,
      "endSec": 10,
-     "whatWeSee": "Close-up on Sister sliding her sunglasses on too.",
+     "whatWeSee": "@Sister pushes a pair of sunglasses up onto her forehead too.",
      "isContinuousMove": false,
-     "whatWeHear": "No dialogue in this shot; chair creak."
+     "whatWeHear": "No dialogue in this shot; chair creak.",
+     "location": "Kitchen",
+     "framing": "close-up",
+     "cameraAngle": "eye level",
+     "cameraMove": "static"
     },
     {
      "shotNumber": 3,
      "startSec": 10,
      "endSec": 16,
-     "whatWeSee": "Wide held image: the three of them in afternoon light, slow breathing, sunglasses glinting.",
+     "whatWeSee": "Held image: the three of them in afternoon light, slow breathing, sunglasses glinting on foreheads.",
      "isContinuousMove": true,
-     "whatWeHear": "Soft music swell."
+     "whatWeHear": "Soft music swell.",
+     "location": "Kitchen",
+     "framing": "wide",
+     "cameraAngle": "slightly high angle",
+     "cameraMove": "slow pull back"
     }
    ]
   }
@@ -243,5 +284,11 @@
  "clarifyingQuestion": null,
  "assumptions": [
   "Assumed the card battles happened at the kitchen table."
+ ],
+ "locations": [
+  {
+   "name": "Kitchen",
+   "description": "Modest lived-in family kitchen, afternoon: scuffed wooden table, fridge, window over the sink."
+  }
  ]
 }

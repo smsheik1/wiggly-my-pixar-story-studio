@@ -11,10 +11,10 @@ const state = { project: {
 
 test('selector keeps only answers, cast text, format', () => {
   const s = selectStoryDirectorInput(state);
-  assert.deepEqual(Object.keys(s).sort(), ['answers', 'castDescriptions', 'format', 'subject', 'targetTotalRuntimeSec', 'toneDirectives']);
+  assert.deepEqual(Object.keys(s).sort(), ['answers', 'castDescriptions', 'format', 'photoCharacters', 'subject', 'targetTotalRuntimeSec', 'toneDirectives']);
   assert.deepEqual(s.castDescriptions, [{ id: 'mom', name: 'Mom', description: 'hijab' }]);
   const flat = JSON.stringify(s);
-  for (const bad of ['photo', 'videoUrl', 'secret', 'OPENROUTER', 'characterSheets', 'clips', 'stagePlay', '.jpg'])
+  for (const bad of ['"photos"', 'photoPath', 'videoUrl', 'secret', 'OPENROUTER', 'characterSheets', 'clips', 'stagePlay', '.jpg'])
     assert.ok(!flat.includes(bad), `leaked ${bad}`);
   assert.equal(s.format.maxTotalSeconds, 180); assert.equal(s.format.targetTotalSeconds, 90);
 });

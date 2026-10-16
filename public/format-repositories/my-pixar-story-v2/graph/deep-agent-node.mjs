@@ -42,7 +42,7 @@ export const assetPath = (assetKey, ext = '.json') => `/references/assets/${SAFE
  * Prepare runs/<runId>/<agent>/. approvedAssets: { '@Image N'|'@Loc N': assetKey }.
  * assetFiles (optional): { assetKey: absolute local file } copied into references/assets (local only; runs/ is gitignored).
  */
-export async function prepareRunWorkspace({ runsRoot = RUNS_ROOT, runId, agent, input, approvedAssets = {}, assetFiles = {} }) {
+export async function prepareRunWorkspace({ runsRoot = RUNS_ROOT, runId, agent, input, approvedAssets = {}, assetFiles = {}, photoFiles = {} }) {
   const root = join(runsRoot, SAFE(runId), SAFE(agent));
   for (const d of ['drafts', 'references/assets', 'versions', `skills/${agent}`]) await mkdir(join(root, d), { recursive: true });
   await writeFile(join(root, `skills/${agent}/SKILL.md`), loadSkill(agent));
@@ -62,6 +62,13 @@ export async function prepareRunWorkspace({ runsRoot = RUNS_ROOT, runId, agent, 
     manifest.push({ tag, assetKey, path });
   }
   await writeFile(join(root, 'references/approved-assets.json'), JSON.stringify(manifest, null, 2));
+  // WIGGLY: reference photos (read-only mount; runs/ is gitignored, photos are never committed).
+  for (const [virtual, src] of Object.entries(photoFiles)) {
+    if (!/^\/references\/photos\/[\w.-]+$/.test(virtual)) throw new Error(`prepareRunWorkspace: bad photo path ${virtual}`);
+    if (!existsSync(src)) throw new Error(`prepareRunWorkspace: reference photo missing for ${virtual}`);
+    await mkdir(join(root, 'references/photos'), { recursive: true });
+    await copyFile(src, join(root, virtual.slice(1)));
+  }
   return { root, manifest };
 }
 
@@ -149,10 +156,25 @@ export function makeSubmitTool(agent, submissions, { onSubmitted = () => {}, onG
   return t;
 }
 
-export const systemPromptFor = (agent, retryNotes = '') => [
+/** Only the Character Architect receives reference photos: { virtualPath: hostPath } for photoNotes with a photoFile. */
+export function photoFilesFor(agent, input, state = {}) {
+  if (agent !== 'character-architect') return {};
+  const refs = state.inputs?.photoReferences ?? [];
+  const out = {};
+  for (const n of input?.photoNotes ?? []) {
+    if (!n.photoFile) continue;
+    const id = n.photoFile.split('/').pop().replace(/\.[^.]+$/, '');
+    const r = refs.find((x) => String(x.id).replace(/[^\w-]/g, '_') === id);
+    if (r?.path) out[n.photoFile] = r.path;
+  }
+  return out;
+}
+
+export const systemPromptFor = (agent, retryNotes = '', { photos = false } = {}) => [
   `You are the Wiggly v2 ${agent}. Load your skill from /skills/${agent}/SKILL.md first.`,
   'Read your input slice from /references/input.json and approved references from /references/approved-assets.json.',
-  'Bind references by their approved asset keys only; never write URLs or file paths into prompts. Photos are never available.',
+  'Bind references by their approved asset keys only; never write URLs or file paths into prompts.',
+  photos ? 'Read-only reference photos of the real people are in /references/photos/ (see photoNotes[].photoFile in input.json). Match their likeness, skin tone, hair and face shape; never copy a photo path into a prompt.' : 'Photos are not available to you.',
   'You may write scratch notes only under /drafts/. No delegation, no media generation.',
   `Finish by calling submit_${agent.replaceAll('-', '_')} with the full JSON output.`,
   retryNotes,
@@ -172,14 +194,15 @@ export async function openRouterModel(config, _agent, { apiKey = process.env.OPE
  */
 export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60, maxInvalidSubmits = 3 } = {}) {
   return async ({ agent, config, input, attempt = 1, retryNotes = '', state = {}, signal }) => {
-    const { root } = await prepareRunWorkspace({ runsRoot, runId: `${runId}/attempt-${attempt}`, agent, input, approvedAssets: state.approvedAssets ?? {}, assetFiles });
+    const photoFiles = photoFilesFor(agent, input, state);
+    const { root } = await prepareRunWorkspace({ runsRoot, runId: `${runId}/attempt-${attempt}`, agent, input, approvedAssets: state.approvedAssets ?? {}, assetFiles, photoFiles });
     const submissions = [];
     const done = new AbortController(); // ends the agent loop on a valid submit (or give-up)
     let giveUp = null;
     const submit = makeSubmitTool(agent, submissions, { maxInvalid: maxInvalidSubmits,
       onSubmitted: () => done.abort(new Error('submitted')), onGiveUp: (e) => { giveUp = e; done.abort(e); } });
     const model = await createModel(config, agent);
-    const agentRun = workspaceAgent(model, root, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], systemPromptFor(agent, retryNotes));
+    const agentRun = workspaceAgent(model, root, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], systemPromptFor(agent, retryNotes, { photos: Object.keys(photoFiles).length > 0 }));
     const sig = signal ? AbortSignal.any([signal, done.signal]) : done.signal;
     try {
       await agentRun.invoke({ messages: [{ role: 'user', content: `Produce the ${agent} output for this run.` }] }, { recursionLimit, signal: sig, runName: `${agent} deep agent`, tags: [`agent:${agent}`, `attempt:${attempt}`] });

@@ -30,9 +30,30 @@ export const BANNED_JARGON = [
 /** Whole-second budget for a spoken line (Gemini: 3–5 words = 2 s). null = too long for one shot. */
 // Shared 3 words/sec rate (crew/linter/speech.mjs); same rule as the Seedance Compiler gate.
 export function lineBudget(words) { return words > MAX_LINE_WORDS ? null : secondsNeeded(words); }
+// WIGGLY shot hygiene -------------------------------------------------------------
+const STOP = new Set('a an the and or of with in on at to his her their its is are wearing wears who that for from by as into over under no'.split(' '));
+const norm = (t) => String(t ?? '').toLowerCase().replace(/@[\w_]+/g, ' ').replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim();
+/** Distinctive look phrases for a cast card: its skinTone and every 3-word run of its physicalDescription with ≥2 non-stopwords. */
+export function lookPhrases(c) {
+  const out = new Set();
+  const tone = norm(c?.skinTone); if (tone.split(' ').length >= 2) out.add(tone);
+  for (const clause of String(c?.physicalDescription ?? '').split(/[.;,]/)) {
+    const w = norm(clause).split(' ').filter(Boolean);
+    for (let i = 0; i + 3 <= w.length; i++) {
+      const g = w.slice(i, i + 3);
+      if (g.filter((x) => !STOP.has(x)).length >= 2) out.add(g.join(' '));
+    }
+  }
+  return [...out];
+}
+/** Sunglasses must sit pushed up on the forehead, never over the eyes. */
+export const SUNGLASSES_OVER_EYES = /sunglasses[^.;]{0,40}\b(over|covering|covers|cover|hid(?:e|es|ing)|shield(?:s|ing)?|block(?:s|ing)?|on)\s+(?:his |her |the |both )?(eyes|face|nose)\b|(?:behind|through)\s+(?:his |her |the |dark |black )*sunglasses|\b(?:eyes|face)\b[^.;]{0,20}\b(?:hidden|covered)\b[^.;]{0,20}sunglasses|sunglasses (?:on|down)\b(?![^.;]{0,20}forehead)|(?:puts?|slides?|sliding|putting|pulls?|pulling|lowers?|lowering|drops?|dropping) (?:on )?(?:his |her |the )?sunglasses(?: on| down)?\b(?![^.;]{0,30}(?:forehead|up))|wearing (?:dark |black |matte black |his |her )*sunglasses(?![^.;]{0,30}(?:forehead|pushed up))/i;
+export const MAX_CARDS_PER_PERSON = 2;
+const AGE_WORDS = /\b(teen|teenage|young|younger|adult|grown|grown-up|older|old|dad|father|kid|child|little|baby|boy|man)\b/gi;
+const personKey = (c) => norm(c.realPerson ?? String(c.name ?? '').replace(AGE_WORDS, ' ')) || norm(c.name);
 const HAIR_VISIBLE = /\b(visible hair|hairline (?:shows|showing|visible)|bangs|fringe|loose hair|dark band)\b/i;
 
-export function validateStoryDirectorOutput(data) {
+export function validateStoryDirectorOutput(data, input = {}) {
   const issues = [];
   const err = (code, message, path) => issues.push({ severity: 'error', code, message, ...(path ? { path } : {}) });
   const warn = (code, message, path) => issues.push({ severity: 'warning', code, message, ...(path ? { path } : {}) });
@@ -40,6 +61,8 @@ export function validateStoryDirectorOutput(data) {
   const cast = data?.cast ?? [];
   const tags = new Set(cast.map((c) => c.elementTag));
 
+  const locNames = new Set((data?.locations ?? []).map((l) => l.name));
+  if (!locNames.size) err('NO_LOCATIONS', 'Output has no locations list. Define every background once in locations[] and name one on every shot.', 'locations');
   if (!segments.length) err('NO_SEGMENTS', 'Output contains no segments.', 'segments');
   let filmTotal = 0;
   segments.forEach((seg, si) => {
@@ -68,7 +91,25 @@ export function validateStoryDirectorOutput(data) {
         if (need === null) err('DIALOGUE_TIMING_BUDGET', `Shot ${n}: ${words}-word line is too long for one shot (max ${MAX_LINE_WORDS} words); split it across two shots.`, `${p}.${k}`);
         else if (dur < need) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`Segment ${seg.segmentId ?? si + 1}, shot ${n} (${shot.startSec}s-${shot.endSec}s)`, words, dur), `${p}.${k}`);
       }
+      // WIGGLY: camera direction + defined location on every shot.
+      for (const k of ['framing', 'cameraAngle', 'cameraMove']) if (!String(shot[k] ?? '').trim())
+        err('MISSING_CAMERA_DIRECTION', `Shot ${n} in segment ${seg.segmentId} has no ${k}. Every shot needs framing, cameraAngle and cameraMove ('static' if it does not move).`, `${p}.${k}`);
+      if (!String(shot.location ?? '').trim())
+        err('MISSING_LOCATION', `Shot ${n} in segment ${seg.segmentId} has no location. Name one of the locations list on every shot.`, `${p}.location`);
+      else if (locNames.size && !locNames.has(shot.location))
+        err('UNKNOWN_LOCATION', `Shot ${n} in segment ${seg.segmentId}: location '${shot.location}' is not in the locations list (${[...locNames].join(', ')}).`, `${p}.location`);
+      // WIGGLY: refer to people by @tag only; looks live in the cast cards.
+      const seeN = ` ${norm(shot.whatWeSee)} `;
+      for (const c of cast) {
+        const hit = lookPhrases(c).find((ph) => seeN.includes(` ${ph} `));
+        if (hit) err('REDESCRIBED_CHARACTER', `Shot ${n} in segment ${seg.segmentId} re-describes ${c.elementTag} ('${hit}'). Write just ${c.elementTag}; the look lives in the cast card.`, `${p}.whatWeSee`);
+        const bare = String(c.elementTag ?? '').slice(1).replace(/_/g, ' ');
+        if (bare && new RegExp(`(?<![@\\w])${bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(String(shot.whatWeSee ?? '').replace(/@[\w_]+/g, '')))
+          err('UNTAGGED_CHARACTER', `Shot ${n} in segment ${seg.segmentId} names '${bare}' without the tag. Write ${c.elementTag}.`, `${p}.whatWeSee`);
+      }
       const text = [shot.whatWeSee, shot.whatWeHear, shot.directorsNote, shot.tag].filter(Boolean).join(' ');
+      if (SUNGLASSES_OVER_EYES.test(text))
+        err('SUNGLASSES_OVER_EYES', `Shot ${n} in segment ${seg.segmentId}: sunglasses cover the eyes. @Shaz's sunglasses sit pushed up on his forehead, never over his eyes.`, p);
       for (const [label, re, plain] of BANNED_JARGON) if (re.test(text))
         err('BANNED_JARGON', `Forbidden jargon '${label}' found in shot ${n}. Use plain language instead (e.g. '${plain}')`, p);
     });
@@ -97,6 +138,26 @@ export function validateStoryDirectorOutput(data) {
       warn('WEAK_SIGNATURE_ACCENT', `Cast ${c.elementTag ?? c.name}: signature accent is missing or too vague.`, p);
     if (c.age >= 13 && c.age <= 17)
       err('UNDERAGE_DEPICTION', `Cast ${c.elementTag ?? c.name} is age ${c.age}; teens are depicted as 18.`, p);
+    if ([c.physicalDescription, c.signatureAccent].some((look) => /sunglasses/i.test(look ?? '') && (SUNGLASSES_OVER_EYES.test(look) || !/forehead/i.test(look))))
+      err('SUNGLASSES_OVER_EYES', `Cast ${c.elementTag ?? c.name}: sunglasses must be described as pushed up on the forehead, never over the eyes.`, p);
+    const ph = (input?.photoCharacters ?? []).find((x) => x.id === c.photoRef);
+    if (c.photoRef && !ph && (input?.photoCharacters ?? []).length)
+      err('UNKNOWN_PHOTO_REF', `Cast ${c.elementTag}: photoRef '${c.photoRef}' is not one of the photoCharacters ids.`, p);
+    if (ph && !norm(c.skinTone).includes(norm(ph.skinTone)))
+      err('SKIN_TONE_NOT_FROM_PHOTO', `Cast ${c.elementTag}: skinTone must be the photo's '${ph.skinTone}', not '${c.skinTone}'.`, p);
+  });
+  // WIGGLY: at most 2 cards (age variants) per real person.
+  const people = new Map();
+  for (const c of cast) { const k = personKey(c); people.set(k, [...(people.get(k) ?? []), c.elementTag]); }
+  for (const [k, tagsOf] of people) if (tagsOf.length > MAX_CARDS_PER_PERSON)
+    err('TOO_MANY_AGE_VARIANTS', `${tagsOf.length} cast cards depict the same person '${k}' (${tagsOf.join(', ')}); max ${MAX_CARDS_PER_PERSON} (main age + one other).`, 'cast');
+  // WIGGLY: photo characters are never guessed.
+  if ((input?.photoCharacters ?? []).length) for (const [i, a] of (data?.assumptions ?? []).entries())
+    if (/skin ?tone|complexion/i.test(a) && /assum|guess|no photo|without photo|not provided/i.test(a))
+      err('GUESSED_SKIN_TONE', `Assumption ${i + 1} guesses skin tone ('${a.slice(0, 80)}'). Photo characters use their photo's skin tone; family resemblance follows them. Do not list it as an assumption.`, `assumptions.${i}`);
+  (data?.storyboardPrompt?.panels ?? []).forEach((pn, i) => {
+    if (SUNGLASSES_OVER_EYES.test(pn.whatIsInFrame ?? ''))
+      err('SUNGLASSES_OVER_EYES', `Storyboard panel ${pn.panelNumber ?? i + 1}: sunglasses must sit pushed up on the forehead.`, `storyboardPrompt.panels.${i}`);
   });
 
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);

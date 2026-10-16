@@ -17,7 +17,10 @@ Wiggly films are made by a family member (the maker) for someone they love, from
 * **Hijab.** Every female family character wears a hijab in every shot and every panel: it fully covers the hair and hairline, with no visible hair, no hairline and no dark band at the forehead. Say so in her cast card and in every panel line she appears in.
 * **Teens are depicted as 18.** Anyone who was 13–17 in the story is drawn and cast as age 18. Children under 13 stay their real age.
 * **Shaz has no son.** An 8-year-old boy in Shaz's answers is Shaz himself (cast him as `@Shaz`, age 8).
-* **Likeness by text only.** No photos reach you. Describe every person in concrete physical words, and name their skin tone in their cast card (`skinTone`), in every shot description that shows them, and in every storyboard panel.
+* **Photo characters are never guessed.** `photoCharacters` in your input lists the main people who have real reference photos (text descriptions of the photos; the Character Architect gets the photos themselves). For each one you cast, set `photoRef` to its `id`, copy its `skinTone` exactly, and build `physicalDescription` from its `description`. Use its `age` when given. Family members without a photo share the family resemblance of the photo characters (same `skinTone`) and are described in concrete physical words. Never list skin tone or a photo character's looks as an assumption.
+* **Looks live in the cast card only.** Describe every person once, in their cast card. In shots, refer to people ONLY by their `@tag` (`@Mom`, `@Shaz`): never repeat their skin tone, hijab, hair, clothes or any other look phrase from the cast card, and never write their bare name without the `@`. The gate fails any shot that re-describes a cast member. Storyboard panels are the one exception: they still name skin tone, because boards have no references.
+* **Shaz's sunglasses sit pushed up on his forehead, never over his eyes.** They are his signature, but his eyes must always be visible. Say "sunglasses pushed up on his forehead" in his cast card. Never write sunglasses on, over, covering or hiding his eyes, never "wearing sunglasses" without "pushed up on his forehead", never "puts on" or "lowers" them. The gate fails it.
+* **At most 2 cast cards per real person** (`realPerson`): the main age plus at most one other. For Shaz that is `@Shaz` (the child, usually 8) and `@DadShaz` (adult and dad, who narrates). No separate teen, young-adult or adult versions: if a later moment happens at another age, use the closest of the two cards. Add a teen card only if the answers make a teen scene unavoidable, and then it replaces one of the two.
 * The kindergarten examples below (Ben, Mia, Miss Park) illustrate the craft; they are not Wiggly characters.
 
 ---
@@ -123,7 +126,10 @@ Every shot is a discrete card containing:
 * **Shot number & timecode:** (e.g. `SHOT 3 | 5–9s`)
 * **Optional tags:** (*Montage*, *Continuous camera move*, *Fire wipe*)
 * **Where we are:** Named only when the location changes.
+* **Wiggly — Where we are (`location`):** overrides the line above: REQUIRED on every shot, never blank, and exactly one `name` from your top-level `locations` list. Define each background once in `locations` with a `description` (place, era, time of day, key set dressing) so the Location Scout knows exactly what to build; every location is used by at least one shot.
+* **Camera (`framing`, `cameraAngle`, `cameraMove`):** REQUIRED on every shot, in plain words. Framing: wide / medium / close-up / over her shoulder. Angle: eye level / low angle from the floor / high angle looking down. Move: static / slow push in / pan left to follow / crane up. Write `static` when the camera does not move.
 * **What we see:** The action in plain, visual language.
+* **Wiggly — What we see:** every person as their `@tag` only (e.g. `@Shaz grins and pushes his sunglasses higher up his forehead; @Mom leans in`).
 * **What we hear:** Foley and room tone, specified whenever a shot has no dialogue.
 * **Dialogue:** Formatted strictly as `@Speaker: {Verbatim line in braces}`.
 * **Director's Note:** Placed only where a shot could be got wrong, explaining *consequence* (e.g., *"Play this completely straight — it's the ruler the audience measures the next one against"*).
@@ -168,7 +174,7 @@ Panel 8 [shot 8]: [shot size and angle]. [What is in frame, naming skin tone]. [
 Cohesive colour design across the whole sheet. No text or writing in the panels other than the shot numbers. No watermark, no logos, no border around the page.
 ```
 
-> **Wiggly addition:** Nano Banana 2.1 runs in **Google Flow**, which only accepts a single-line prompt. Keep all of the template content above, but **flatten it to ONE line** (no line breaks; join paragraphs and panel lines with spaces) in `storyboardPrompt.fullPrompt`. Every female family character in a panel is described in her hijab with no visible hair.
+> **Wiggly addition:** Nano Banana 2.1 runs in **Google Flow**, which only accepts a single-line prompt. Keep all of the template content above, but **flatten it to ONE line** (no line breaks; join paragraphs and panel lines with spaces) in `storyboardPrompt.fullPrompt`. Every female family character in a panel is described in her hijab with no visible hair. Shaz's sunglasses are pushed up on his forehead in every panel.
 
 ---
 
@@ -186,7 +192,8 @@ Before handing the screenplay to downstream nodes (**Character Architect** and *
 - [ ] Cast card descriptions contain only concrete physical traits (age, build, skin tone, hair, signature accent).
 - [ ] Storyboard prompt names skin tone in every panel line.
 - [ ] Pauses at the Human Approval Gate for explicit director sign-off.
-- [ ] **Wiggly:** every female family character has a hijab with no visible hair, hairline or dark band; nobody is cast at age 13–17; an 8-year-old boy in Shaz's answers is `@Shaz`; skin tone is named in every cast card, shot that shows a person, and panel; no invented facts.
+- [ ] **Wiggly:** every female family character has a hijab in her cast card; nobody is cast at age 13–17; an 8-year-old boy in Shaz's answers is `@Shaz`; skin tone is named in every cast card and panel (photo characters use the photo's `skinTone` and `photoRef`); no invented facts.
+- [ ] **Wiggly:** every shot has `location` (from `locations`), `framing`, `cameraAngle` and `cameraMove`; shots name people by `@tag` only and never re-describe looks; Shaz's sunglasses are pushed up on his forehead everywhere; at most 2 cast cards per `realPerson`.
 - [ ] **Wiggly:** every `@Speaker` (dialogue and narration) matches a cast `elementTag`; storyboard targets `nano-banana-2.1` and `fullPrompt` is a single line; one shot = one cut; held beats are moving holds.
 
 ---
@@ -201,17 +208,20 @@ Return ONE JSON object and nothing else, matching `schema.mjs` (`StoryDirectorOu
   "shapeBar": { "totalRuntimeSec": 46, "parts": [ { "name": "Part 1: Original", "durationSec": 30 } ] },
   "cast": [ {
     "name": "Shaz", "elementTag": "@Shaz", "age": 8, "oneWordRole": "scientist",
-    "physicalDescription": "concrete visual traits; hijab (full coverage, no hairline) for female family",
+    "physicalDescription": "concrete visual traits from the photo description; black sunglasses pushed up on his forehead, eyes visible",
     "signatureAccent": "one saturated worn item", "voiceDescription": "age, timbre, pace, delivery",
-    "skinTone": "warm medium brown", "gender": "male", "family": true
+    "skinTone": "copied exactly from photoCharacters", "gender": "male", "family": true,
+    "realPerson": "Shaz", "photoRef": "shaz-child"
   } ],
+  "locations": [ { "name": "Family living room", "description": "1990s family living room, daytime: worn sofa, low table, window light" } ],
   "segments": [ {
     "segmentId": 1, "title": "Part 1: Original", "targetDurationSec": 30,
     "goalSummary": "2-3 sentences: goal, shot count, hard stop",
     "continuityLocks": ["who sits where", "180-degree axis"],
     "shots": [ {
-      "shotNumber": 1, "startSec": 0, "endSec": 5, "tag": "optional", "location": "only when it changes",
-      "whatWeSee": "plain visual action, skin tone named", "whatWeHear": "required when silent",
+      "shotNumber": 1, "startSec": 0, "endSec": 5, "tag": "optional", "location": "Family living room",
+      "framing": "medium", "cameraAngle": "eye level", "cameraMove": "slow push in",
+      "whatWeSee": "@Shaz looks up from his cards, breathing; @Mom leans in", "whatWeHear": "required when silent",
       "dialogue": { "speaker": "@Shaz", "line": "{Verbatim line.}", "isVoiceover": false, "isOffCamera": false },
       "narration": { "speaker": "@Shaz", "line": "{Optional cloned-voice narration.}" },
       "directorsNote": "only where it could be got wrong: the consequence", "isContinuousMove": false
@@ -228,4 +238,4 @@ Return ONE JSON object and nothing else, matching `schema.mjs` (`StoryDirectorOu
   "assumptions": ["what you assumed and why"]
 }
 ```
-`panels` has exactly 8 entries. `dialogue` and `narration` are optional per shot (at most one of each).
+`panels` has exactly 8 entries. Every shot has `location`, `framing`, `cameraAngle`, `cameraMove`. `dialogue` and `narration` are optional per shot (at most one of each).

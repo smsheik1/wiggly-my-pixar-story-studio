@@ -6,6 +6,7 @@
 //   [--first-token-timeout-sec 300] [--idle-timeout-sec 180] [--stall-warn-sec 90] [--heartbeat-sec 5]
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { buildGraph, placeholderAssets } from '../graph/graph.mjs';
@@ -26,7 +27,20 @@ export function inputsFromProject(project) {
   const s = inp.subject;
   const subject = typeof s === 'string' ? s
     : [s?.preferredName ?? s?.fullName, s?.recipientName && `story for ${s.recipientName}`, s?.relationshipToRecipient && `(${s.relationshipToRecipient})`].filter(Boolean).join(', ');
-  return { subject, answers, ...(inp.castDescriptions ? { castDescriptions: inp.castDescriptions } : {}) };
+  return { subject, answers, ...(inp.castDescriptions ? { castDescriptions: inp.castDescriptions } : {}),
+    ...(inp.photoReferences ? { photoReferences: inp.photoReferences } : {}) };
+}
+
+/** Photo references sidecar: --photo-refs <file>, else <project>-photo-refs.json next to the project. Never inside the repo. */
+export const defaultPhotoRefsPath = (projectPath) => projectPath.replace(/\.json$/i, '') + '-photo-refs.json';
+export async function loadPhotoReferences(file) {
+  if (!file || !existsSync(file)) return [];
+  const refs = JSON.parse(await readFile(file, 'utf8'));
+  for (const r of refs) {
+    for (const k of ['id', 'name', 'skinTone', 'description']) if (!r[k]) throw new Error(`photo ref ${r.id ?? '?'} is missing ${k}`);
+    if (r.path && !existsSync(r.path)) throw new Error(`photo ref ${r.id}: photo file not found`);
+  }
+  return refs;
 }
 
 const summarize = (agent, o) => {
@@ -39,9 +53,11 @@ const summarize = (agent, o) => {
 
 export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUID().slice(0, 8)}`, runsRoot = RUNS_ROOT, invoke, log = console.log,
   secretsPath = defaultSecretsPath(), secrets, usePlaceholderAssets = false, trackerPath = defaultTrackerPath(), tracing,
-  timeouts = {}, heartbeatMs = 5000, now = Date.now } = {}) {
+  timeouts = {}, heartbeatMs = 5000, now = Date.now, photoRefsPath } = {}) {
   if (!projectPath) throw new Error('--project <path to project/answers json> is required');
   const inputs = inputsFromProject(JSON.parse(await readFile(projectPath, 'utf8')));
+  const refs = await loadPhotoReferences(photoRefsPath === undefined ? defaultPhotoRefsPath(projectPath) : photoRefsPath);
+  if (refs.length) { inputs.photoReferences = refs; log(`photo references: ${refs.map((r) => `${r.id}${r.path ? ' (photo)' : ''}`).join(', ')}`); }
   const sec = secrets ?? loadSecrets(secretsPath);
   if (!invoke && !sec.OPENROUTER_API_KEY) throw new Error(`OPENROUTER_API_KEY not found in ${secretsPath}`);
   const tr = tracing === undefined ? await makeTracing(sec) : tracing;
@@ -87,7 +103,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
   const has = (k) => process.argv.includes(k);
   runRehearsal({ projectPath: arg('--project'), ...(arg('--run-id') ? { runId: arg('--run-id') } : {}), ...(arg('--secrets') ? { secretsPath: arg('--secrets') } : {}),
-    usePlaceholderAssets: has('--placeholder-assets'),
+    usePlaceholderAssets: has('--placeholder-assets'), ...(arg('--photo-refs') ? { photoRefsPath: arg('--photo-refs') } : {}),
     timeouts: { ...(arg('--first-token-timeout-sec') ? { firstTokenMs: +arg('--first-token-timeout-sec') * 1000 } : {}), ...(arg('--idle-timeout-sec') ? { idleMs: +arg('--idle-timeout-sec') * 1000 } : {}), ...(arg('--stall-warn-sec') ? { stallMs: +arg('--stall-warn-sec') * 1000 } : {}) },
     ...(arg('--heartbeat-sec') ? { heartbeatMs: +arg('--heartbeat-sec') * 1000 } : {}), ...(has('--no-tracker') ? { trackerPath: null } : {}) })
     .then(({ state }) => { process.exitCode = state.status === 'failed' ? 2 : 0; })

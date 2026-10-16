@@ -14,7 +14,9 @@ export const CharacterArchitectInput = z.object({
     locations: z.array(z.string()),
     visualContext: z.array(z.string()).describe('whatWeSee per shot (wardrobe/action context only)'),
   }).strict()).min(1),
-  photoNotes: z.array(z.object({ elementTag: z.string().regex(/^@[\w_]+$/), notes: z.string().min(1) }).strict()).default([]),
+  photoNotes: z.array(z.object({ elementTag: z.string().regex(/^@[\w_]+$/), notes: z.string().min(1),
+    // WIGGLY: read-only reference photo inside the workspace (virtual path, never a host path or URL).
+    photoFile: z.string().regex(/^\/references\/photos\/[\w.-]+$/).optional() }).strict()).default([]),
   mode: z.enum(['master-render', 'model-sheet']).default('master-render'),
   // Approved master render per character, as a LOCAL project asset key (never a URL or photo path).
   masterRenderRef: z.record(z.string().regex(/^@[\w_]+$/), z.string().regex(ASSET_KEY, 'masterRenderRef must be a local asset key, not a URL or file path')).optional(),
@@ -29,6 +31,9 @@ export const CharacterArchitectInput = z.object({
 const URLISH = /\b(?:https?:\/\/|file:\/\/)\S+|(?:\/Users|\/home|~)\/\S+|\b\S+\.(?:jpe?g|png|heic|webp)\b/gi;
 const scrub = (s) => String(s ?? '').replace(URLISH, '[removed]');
 
+/** Virtual workspace path for a photo reference (the bytes are copied there by the deep-agent node). */
+export const photoVirtualPath = (r) => `/references/photos/${String(r.id).replace(/[^\w-]/g, '_')}${(/\.[a-z0-9]+$/i.exec(r.path ?? '')?.[0] ?? '.jpg').toLowerCase()}`;
+
 /** Filter shared pipeline state to the Character Architect slice. */
 export function selectCharacterArchitectInput(state = {}) {
   const p = state.project ?? state;
@@ -42,6 +47,13 @@ export function selectCharacterArchitectInput(state = {}) {
   }));
   const photoNotes = (p.photoNotes ?? p.inputs?.photoNotes ?? [])
     .map(({ elementTag, notes }) => ({ elementTag, notes: scrub(notes) }));
+  // WIGGLY: cast cards drawn from a reference photo get the photo (copied read-only into /references/photos/).
+  const refs = p.inputs?.photoReferences ?? p.photoReferences ?? [];
+  for (const c of sd.cast ?? []) {
+    const r = c.photoRef && refs.find((x) => x.id === c.photoRef);
+    if (!r) continue;
+    photoNotes.push({ elementTag: c.elementTag, notes: scrub(`${r.description} Skin tone: ${r.skinTone}.${r.photoNote ? ' ' + r.photoNote : ''}`), ...(r.path ? { photoFile: photoVirtualPath(r) } : {}) });
+  }
   const ca = p.characterArchitect?.options ?? {}; // options only; the CA output lives at characterArchitect.output
   const opt = {};
   for (const k of ['mode', 'masterRenderRef', 'variationDirectives']) if (ca[k] !== undefined) opt[k] = ca[k];

@@ -25,6 +25,7 @@ export const LightingAnchorInput = z.object({
 }).strict();
 export const SettingSchema = z.object({
   name: z.string().min(1),
+  description: z.string().optional().describe("Story Director's description of what this background must contain"),
   sceneIds: z.array(z.string().regex(SCENE_ID)).min(1),
   paletteRestrictions: PaletteRestrictions.prefault({}),
   stagingRequirements: StagingRequirements.optional(),
@@ -70,7 +71,11 @@ export function selectLocationScoutInput(state = {}) {
   const settings = [];
   for (const s of scenes) {
     let e = settings.find((x) => x.name === s.location);
-    if (!e) settings.push(e = { name: s.location, sceneIds: [] });
+    if (!e) {
+      settings.push(e = { name: s.location, sceneIds: [] });
+      const d = (sd.locations ?? []).find((l) => l.name === s.location)?.description;
+      if (d) e.description = scrub(d);
+    }
     e.sceneIds.push(s.sceneId);
   }
   // Optional overrides: state.locationScout.hints[<name>] = { paletteRestrictions, stagingRequirements, lightingAnchor, singleSignText }

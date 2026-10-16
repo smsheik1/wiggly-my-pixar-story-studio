@@ -16,7 +16,7 @@ const hasCode = (r, code) => {
   assert.ok(r.issues.some((i) => i.code === code), `expected ${code} in:\n${r.issues.map((i) => i.code + ': ' + i.message).join('\n')}`);
   if (r.issues.find((i) => i.code === code).severity === 'error') assert.equal(r.isValid, false);
 };
-const twoRooms = () => { const s = story(); s.segments[1].shots[0].location = 'Back Garden'; return s; };
+const twoRooms = () => { const s = story(); s.segments[1].shots.forEach((h) => { h.location = 'Back Garden'; }); s.locations = [...(s.locations ?? []), { name: 'Back Garden', description: 'Small walled back garden behind the house, afternoon.' }]; return s; };
 const parseOne = (l) => parseLocationPlates({ locations: [l] });
 
 // ---- ours: contract + coverage ----

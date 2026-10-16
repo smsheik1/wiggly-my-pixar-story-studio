@@ -18,7 +18,8 @@
       "physicalDescription": "8-year-old boy with warm medium brown skin, short black hair, round cheeks, small frame, wearing oversized dark sunglasses indoors",
       "signatureAccent": "oversized black sunglasses worn in every indoor scene",
       "skinTone": "warm medium brown",
-      "voiceDescription": "8-year-old American boy, soft low volume, flat steady tone, slow careful pace, short declarative sentences with long pauses"
+      "voiceDescription": "8-year-old American boy, soft low volume, flat steady tone, slow careful pace, short declarative sentences with long pauses",
+      "realPerson": "Shaz"
     },
     {
       "age": 38,
@@ -30,7 +31,8 @@
       "physicalDescription": "Adult woman with warm medium brown skin, dark brown eyes, wearing a dusty rose hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, long modest dress",
       "signatureAccent": "dusty rose hijab with soft folds",
       "skinTone": "warm medium brown",
-      "voiceDescription": "Middle-aged American woman, bright warm tone, slightly high register, quick excited pace, cheerful laugh when proud, clear encouraging delivery"
+      "voiceDescription": "Middle-aged American woman, bright warm tone, slightly high register, quick excited pace, cheerful laugh when proud, clear encouraging delivery",
+      "realPerson": "Mom"
     },
     {
       "age": 18,
@@ -42,7 +44,8 @@
       "physicalDescription": "Young woman age 18 with warm medium brown skin, slim build, wearing a teal hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, long modest sleeves",
       "signatureAccent": "teal hijab with neat wrap",
       "skinTone": "warm medium brown",
-      "voiceDescription": "18-year-old American teen girl, lively mid-range voice, fast playful pace, teasing delivery that softens when kind"
+      "voiceDescription": "18-year-old American teen girl, lively mid-range voice, fast playful pace, teasing delivery that softens when kind",
+      "realPerson": "Older Sister"
     },
     {
       "age": 6,
@@ -54,7 +57,8 @@
       "physicalDescription": "6-year-old boy with warm medium brown skin, short black hair, small round face, little frame sitting cross-legged on carpet",
       "signatureAccent": "small red T-shirt with faded collar",
       "skinTone": "warm medium brown",
-      "voiceDescription": "6-year-old American boy, high clear voice, fast excited pace, short shouted declarations, giggles between lines"
+      "voiceDescription": "6-year-old American boy, high clear voice, fast excited pace, short shouted declarations, giggles between lines",
+      "realPerson": "Little Brother"
     },
     {
       "age": 18,
@@ -66,7 +70,8 @@
       "physicalDescription": "18-year-old young man with warm medium brown skin, short black hair, lean build, light mustache shadow, plain T-shirt and jeans",
       "signatureAccent": "black aux cable looped from pocket",
       "skinTone": "warm medium brown",
-      "voiceDescription": "18-year-old American teen boy, mid-range relaxed voice, unhurried confident pace, quiet pride when showing friends, short sentences"
+      "voiceDescription": "18-year-old American teen boy, mid-range relaxed voice, unhurried confident pace, quiet pride when showing friends, short sentences",
+      "realPerson": "Teen Shaz"
     },
     {
       "age": 19,
@@ -78,7 +83,8 @@
       "physicalDescription": "19-year-old young man with warm medium brown skin, short black hair, lean build, clean shave, plain button shirt",
       "signatureAccent": "silver laptop held under arm",
       "skinTone": "warm medium brown",
-      "voiceDescription": "19-year-old American man, calm low storyteller voice, steady slow pace, warm sincere delivery that grows tender at the end"
+      "voiceDescription": "19-year-old American man, calm low storyteller voice, steady slow pace, warm sincere delivery that grows tender at the end",
+      "realPerson": "Adult Shaz"
     },
     {
       "age": 26,
@@ -90,7 +96,8 @@
       "physicalDescription": "Adult woman with warm medium brown skin, calm dark eyes, wearing a soft sage hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, modest long top",
       "signatureAccent": "deep emerald phone case held in hand",
       "skinTone": "warm medium brown",
-      "voiceDescription": "Adult American woman in her twenties, gentle mid-range voice, slow steady pace, consistent reassuring delivery, soft smile in tone"
+      "voiceDescription": "Adult American woman in her twenties, gentle mid-range voice, slow steady pace, consistent reassuring delivery, soft smile in tone",
+      "realPerson": "Wife"
     }
   ],
   "clarifyingQuestion": "Should Mia appear on screen, and if so, what age should we draw her for depiction, or should she stay off-screen as the listener?",
@@ -114,7 +121,7 @@
           "directorsNote": "Play this completely ordinary — if the room feels special, the later payoff has nothing to stand out against.",
           "endSec": 4,
           "isContinuousMove": false,
-          "location": "Living room, daytime",
+          "location": "Home",
           "narration": {
             "line": "{When I was eight, I barely talked at all.}",
             "speaker": "@Shaz_Adult"
@@ -123,7 +130,10 @@
           "startSec": 0,
           "tag": null,
           "whatWeHear": null,
-          "whatWeSee": "Warm living room with a small TV showing a card battle cartoon. Eight-year-old Shaz with warm medium brown skin sits center on the couch wearing oversized black sunglasses, breathing quietly and blinking with head down. Older sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair sits left, little brother age 6 with warm medium brown skin sits right holding cards, all watching."
+          "whatWeSee": "Warm living room with a small TV showing a card battle cartoon. Eight-year-old Shaz with warm medium brown skin sits center on the couch wearing oversized black sunglasses, breathing quietly and blinking with head down. Older sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair sits left, little brother age 6 with warm medium brown skin sits right holding cards, all watching.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         },
         {
           "dialogue": {
@@ -135,13 +145,16 @@
           "directorsNote": "Hold his small upright pose with no big gestures — if he acts big, his quiet ladder breaks.",
           "endSec": 8,
           "isContinuousMove": false,
-          "location": null,
+          "location": "Home",
           "narration": null,
           "shotNumber": 2,
           "startSec": 4,
           "tag": null,
           "whatWeHear": null,
-          "whatWeSee": "Shaz with warm medium brown skin lifts his chin from under the oversized sunglasses, chest rising and falling as he breathes, and sits upright in one clear pose. Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair leans in from the kitchen doorway, hands still, watching him and breathing calmly."
+          "whatWeSee": "Shaz with warm medium brown skin lifts his chin from under the oversized sunglasses, chest rising and falling as he breathes, and sits upright in one clear pose. Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair leans in from the kitchen doorway, hands still, watching him and breathing calmly.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         },
         {
           "dialogue": {
@@ -153,20 +166,23 @@
           "directorsNote": null,
           "endSec": 11,
           "isContinuousMove": false,
-          "location": null,
+          "location": "Home",
           "narration": null,
           "shotNumber": 3,
           "startSec": 8,
           "tag": null,
           "whatWeHear": null,
-          "whatWeSee": "Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair claps both hands once, shoulders lifting as she breathes and smiles. Shaz with warm medium brown skin stays seated behind sunglasses, blinking, chest moving with breath."
+          "whatWeSee": "Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair claps both hands once, shoulders lifting as she breathes and smiles. Shaz with warm medium brown skin stays seated behind sunglasses, blinking, chest moving with breath.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         },
         {
           "dialogue": null,
           "directorsNote": null,
           "endSec": 15,
           "isContinuousMove": false,
-          "location": null,
+          "location": "Home",
           "narration": {
             "line": "{We watched Yu-Gi-Oh GX together. Every battle counted.}",
             "speaker": "@Shaz_Adult"
@@ -175,14 +191,17 @@
           "startSec": 11,
           "tag": null,
           "whatWeHear": null,
-          "whatWeSee": "On the carpet, little brother age 6 with warm medium brown skin and big sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair kneel facing each other, breathing and shifting weight, placing Yugioh cards down. Shaz with warm medium brown skin watches from the couch edge with sunglasses on, legs swinging slightly as he breathes."
+          "whatWeSee": "On the carpet, little brother age 6 with warm medium brown skin and big sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair kneel facing each other, breathing and shifting weight, placing Yugioh cards down. Shaz with warm medium brown skin watches from the couch edge with sunglasses on, legs swinging slightly as he breathes.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         },
         {
           "dialogue": null,
           "directorsNote": null,
           "endSec": 19,
           "isContinuousMove": false,
-          "location": "Outside a faded old coupe, daytime",
+          "location": "Home",
           "narration": {
             "line": "{My first freedom was my old Honda with no A-C.}",
             "speaker": "@Shaz_Adult"
@@ -191,7 +210,10 @@
           "startSec": 15,
           "tag": null,
           "whatWeHear": null,
-          "whatWeSee": "A faded coupe with dull paint parked at the curb with windows down. Teen Shaz age 18 with warm medium brown skin stands by the open driver door, breathing steadily, hand resting on the roof, looking at the car with steady eyes."
+          "whatWeSee": "A faded coupe with dull paint parked at the curb with windows down. Teen Shaz age 18 with warm medium brown skin stands by the open driver door, breathing steadily, hand resting on the roof, looking at the car with steady eyes.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         },
         {
           "dialogue": {
@@ -203,20 +225,23 @@
           "directorsNote": null,
           "endSec": 24,
           "isContinuousMove": false,
-          "location": null,
+          "location": "Home",
           "narration": null,
           "shotNumber": 6,
           "startSec": 19,
           "tag": null,
           "whatWeHear": "Warm guitar riff from car speakers, soft engine hum.",
-          "whatWeSee": "Inside the coupe, Teen Shaz age 18 with warm medium brown skin sits in the driver seat, plugging a black aux cable into the radio, chest rising as he breathes, eyes steady on the dial."
+          "whatWeSee": "Inside the coupe, Teen Shaz age 18 with warm medium brown skin sits in the driver seat, plugging a black aux cable into the radio, chest rising as he breathes, eyes steady on the dial.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         },
         {
           "dialogue": null,
           "directorsNote": "End on forward motion only — if you stop the car early, Part 2 job payoff starts flat.",
           "endSec": 30,
           "isContinuousMove": true,
-          "location": null,
+          "location": "Home",
           "narration": {
             "line": "{It was mine, and that meant everything.}",
             "speaker": "@Shaz_Adult"
@@ -225,7 +250,10 @@
           "startSec": 24,
           "tag": "Continuous camera move",
           "whatWeHear": null,
-          "whatWeSee": "From the side of the sunny street, the faded coupe rolls slowly forward with windows down. Teen Shaz age 18 with warm medium brown skin holds the wheel with both hands, breathing calmly, hair shifting in the wind, eyes forward."
+          "whatWeSee": "From the side of the sunny street, the faded coupe rolls slowly forward with windows down. Teen Shaz age 18 with warm medium brown skin holds the wheel with both hands, breathing calmly, hair shifting in the wind, eyes forward.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         }
       ],
       "targetDurationSec": 30,
@@ -244,7 +272,7 @@
           "directorsNote": null,
           "endSec": 4,
           "isContinuousMove": false,
-          "location": "Small desk at home, evening",
+          "location": "Home",
           "narration": {
             "line": "{I doubled up, graduated early, and learned to code.}",
             "speaker": "@Shaz_Adult"
@@ -253,7 +281,10 @@
           "startSec": 0,
           "tag": null,
           "whatWeHear": null,
-          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin sits at a small desk with a silver laptop open, breathing steadily and blinking, fingers pausing over the keys. A soft lamp glows behind on a plain wall."
+          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin sits at a small desk with a silver laptop open, breathing steadily and blinking, fingers pausing over the keys. A soft lamp glows behind on a plain wall.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         },
         {
           "dialogue": {
@@ -265,7 +296,7 @@
           "directorsNote": null,
           "endSec": 9,
           "isContinuousMove": false,
-          "location": null,
+          "location": "Home",
           "narration": {
             "line": "{Fifty K at home felt like six figures.}",
             "speaker": "@Shaz_Adult"
@@ -274,14 +305,17 @@
           "startSec": 4,
           "tag": null,
           "whatWeHear": null,
-          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin stands in the modest living room holding the laptop to his chest, breathing with lift, body upright in one clear pose. Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair stands nearby with hands clasped, breathing and watching."
+          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin stands in the modest living room holding the laptop to his chest, breathing with lift, body upright in one clear pose. Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair stands nearby with hands clasped, breathing and watching.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         },
         {
           "dialogue": null,
           "directorsNote": null,
           "endSec": 14,
           "isContinuousMove": false,
-          "location": "Living room couch, night, phone glow",
+          "location": "Home",
           "narration": {
             "line": "{We met far apart, Dallas to Chicago, once a week.}",
             "speaker": "@Shaz_Adult"
@@ -290,7 +324,10 @@
           "startSec": 9,
           "tag": null,
           "whatWeHear": null,
-          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin sits on the couch edge at night, breathing slowly, holding a phone with both hands, eyes on the screen, blinking in the glow."
+          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin sits on the couch edge at night, breathing slowly, holding a phone with both hands, eyes on the screen, blinking in the glow.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         },
         {
           "dialogue": {
@@ -302,20 +339,23 @@
           "directorsNote": "Play her arrival completely steady — if she acts surprised, the consistency love story loses its meaning.",
           "endSec": 19,
           "isContinuousMove": false,
-          "location": null,
+          "location": "Home",
           "narration": null,
           "shotNumber": 4,
           "startSec": 14,
           "tag": null,
           "whatWeHear": null,
-          "whatWeSee": "The phone screen shows Wife with warm medium brown skin in soft sage hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, breathing calmly and blinking with a soft smile. The thumb of Adult Shaz with warm medium brown skin holds the edge steady."
+          "whatWeSee": "The phone screen shows Wife with warm medium brown skin in soft sage hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, breathing calmly and blinking with a soft smile. The thumb of Adult Shaz with warm medium brown skin holds the edge steady.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         },
         {
           "dialogue": null,
           "directorsNote": null,
           "endSec": 25,
           "isContinuousMove": false,
-          "location": null,
+          "location": "Home",
           "narration": {
             "line": "{She never rushed me, so I wanted to lean closer.}",
             "speaker": "@Shaz_Adult"
@@ -324,14 +364,17 @@
           "startSec": 19,
           "tag": null,
           "whatWeHear": null,
-          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin rests back on the couch, breathing slow, shoulders lowering in one clear relaxed pose, eyes soft on the phone. Wife with warm medium brown skin in soft sage hijab fully covering hair with no visible hair stays small on the screen, breathing and listening."
+          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin rests back on the couch, breathing slow, shoulders lowering in one clear relaxed pose, eyes soft on the phone. Wife with warm medium brown skin in soft sage hijab fully covering hair with no visible hair stays small on the screen, breathing and listening.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         },
         {
           "dialogue": null,
           "directorsNote": "Keep this tender and still with no joke — if you push funny here, the whole letter to Mia breaks.",
           "endSec": 30,
           "isContinuousMove": true,
-          "location": null,
+          "location": "Home",
           "narration": {
             "line": "{Mia, I love you. Think good things and love grows.}",
             "speaker": "@Shaz_Adult"
@@ -340,7 +383,10 @@
           "startSec": 25,
           "tag": "Continuous camera move",
           "whatWeHear": null,
-          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin sits upright with hands resting still in his lap, breathing calmly with slight chest rise, eyes forward with honest gaze. Gentle daylight fills the room."
+          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin sits upright with hands resting still in his lap, breathing calmly with slight chest rise, eyes forward with honest gaze. Gentle daylight fills the room.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
         }
       ],
       "targetDurationSec": 30,
@@ -421,5 +467,11 @@
       }
     ],
     "targetEngine": "nano-banana-2.1"
-  }
+  },
+  "locations": [
+    {
+      "name": "Home",
+      "description": "Modest family home interior, daytime, lived-in furniture."
+    }
+  ]
 }
