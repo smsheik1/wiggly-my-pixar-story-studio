@@ -20,6 +20,8 @@ export const CharacterArchitectInput = z.object({
   mode: z.enum(['master-render', 'model-sheet']).default('master-render'),
   // Approved master render per character, as a LOCAL project asset key (never a URL or photo path).
   masterRenderRef: z.record(z.string().regex(/^@[\w_]+$/), z.string().regex(ASSET_KEY, 'masterRenderRef must be a local asset key, not a URL or file path')).optional(),
+  // WIGGLY: model-sheet mode only; the approved master render prompt text per character, so the sheet rebuilds the same design.
+  masterRenderPrompts: z.record(z.string().regex(/^@[\w_]+$/), z.string().min(1)).optional(),
   variationDirectives: z.object({ focusTrait: z.string().min(1).optional() }).strict().optional(),
 }).strict().superRefine((d, ctx) => {
   if (d.mode !== 'model-sheet') return;
@@ -56,6 +58,6 @@ export function selectCharacterArchitectInput(state = {}) {
   }
   const ca = p.characterArchitect?.options ?? {}; // options only; the CA output lives at characterArchitect.output
   const opt = {};
-  for (const k of ['mode', 'masterRenderRef', 'variationDirectives']) if (ca[k] !== undefined) opt[k] = ca[k];
+  for (const k of ['mode', 'masterRenderRef', 'masterRenderPrompts', 'variationDirectives']) if (ca[k] !== undefined) opt[k] = ca[k];
   return CharacterArchitectInput.parse({ cast: sd.cast ?? [], segments, photoNotes, ...opt });
 }
