@@ -31,7 +31,7 @@ export function inputsFromProject(project) {
 
 const summarize = (agent, o) => {
   if (!o) return 'not run';
-  if (agent === 'story-director') return `${o.title ?? 'untitled'}: ${o.scenes?.length ?? 0} scenes, cast ${(o.cast ?? []).map((c) => c.name).join(', ')}`;
+  if (agent === 'story-director') return `${o.masthead?.title ?? o.title ?? 'untitled'}: ${o.segments?.length ?? 0} segments, ${(o.segments ?? []).reduce((n, g) => n + (g.shots?.length ?? 0), 0)} shots, cast ${(o.cast ?? []).map((c) => c.name).join(', ')}`;
   if (agent === 'character-architect') return `${o.characters?.length ?? 0} characters: ${(o.characters ?? []).map((c) => `${c.imageTag} ${c.name}`).join(', ')}`;
   if (agent === 'location-scout') return `${o.locations?.length ?? 0} locations: ${(o.locations ?? []).map((l) => `${l.elementTag} ${l.name}`).join(', ')}`;
   return `${o.segments?.length ?? 0} segments, ${o.totalRuntimeSec}s`;
