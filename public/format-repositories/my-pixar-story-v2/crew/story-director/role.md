@@ -74,6 +74,7 @@ Dialogue directly calculates shot duration $\Delta t$:
 * **Two-Line Exchange:** Budget **4 seconds** (e.g. `Miss Park: {Well done, Ben!}` [2s] + `Ben: {Thank you, Miss Park.}` [2s]).
 * **Silent Reaction / Business Beat:** Budget **2 to 3 seconds** (e.g. Mia scrubbing crayon onto paper).
 * **Closing Line & Camera Rise:** Budget **3 to 4 seconds**.
+* **Wiggly speech-rate rule (checked by the gate, same rule the Seedance Compiler uses):** spoken lines run at **3 words per second**. A shot carrying a line must last at least `ceil(words / 3)` whole seconds: 1–3 words → 1s, 4–6 → 2s, 7–9 → 3s, 10–12 → 4s, 13–15 → 5s, 16–18 → 6s. Lines longer than 18 words must be split across shots. Count the words of every line before you set the shot's timecodes; when a shot is too short, lengthen it and shift the following timecodes rather than trimming the user's words.
 
 ---
 

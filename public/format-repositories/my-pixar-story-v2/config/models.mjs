@@ -4,23 +4,23 @@ import { fileURLToPath } from 'node:url';
 export const NANO_BANANA = Object.freeze({ provider: 'google-flow', model: 'nano-banana-2.1', promptLines: 'single' });
 
 export const V2_MODELS = Object.freeze({
-  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 32000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
+  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 32000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     imageSteps: { storyboard: NANO_BANANA } },
-  'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 24000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
+  'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 24000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     imageSteps: { character: NANO_BANANA },
     targetEngines: { masterRender: 'nano-banana-2.1', modelSheet: 'nano-banana-2.1' },
     contract: { output: 'crew/character-architect/schema.mjs', input: 'crew/character-architect/input.mjs', gate: 'crew/linter/check-character-sheets.mjs' } },
-  'location-scout': { role: 'Location Scout & Environment Plate Architect', downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 8192, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
+  'location-scout': { role: 'Location Scout & Environment Plate Architect', downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 8192, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     imageSteps: { location: NANO_BANANA },
     targetEngines: { plate: 'nano-banana-2.1' },
     parallelWith: ['character-architect'],
     contract: { output: 'crew/location-scout/schema.mjs', input: 'crew/location-scout/input.mjs', gate: 'crew/linter/check-location-plates.mjs' } },
-  'seedance-compiler': { role: 'Seedance Compiler', upstreamAgents: ['character-architect', 'location-scout'], downstreamAgents: ['vera', 'linter'], maxTokens: 16000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max',
+  'seedance-compiler': { role: 'Seedance Compiler', upstreamAgents: ['character-architect', 'location-scout'], downstreamAgents: ['vera', 'linter'], maxTokens: 16000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     video: { provider: 'replicate', model: 'bytedance/seedance-2.5', resolution: '480p', enabled: false,
              note: 'not yet enabled: Seedance testing only after all upstream agents are proven' },
     targetEngines: { video: 'seedance-2.5' }, segmentMaxSec: 30, continuation: 'extend',
     contract: { output: 'crew/seedance-compiler/schema.mjs', input: 'crew/seedance-compiler/input.mjs', gate: 'crew/linter/check-seedance-prompts.mjs' } },
-  vera: { downstreamAgents: [], maxTokens: 8000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'max' },
+  vera: { downstreamAgents: [], maxTokens: 8000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh' },
   linter: { downstreamAgents: [], maxTokens: 0, kind: 'code', provider: 'none', model: 'none' },
 });
 

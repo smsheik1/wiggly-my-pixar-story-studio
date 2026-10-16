@@ -5,6 +5,7 @@
 // DIALOGUE_TIMING_BUDGET, WRONG_IMAGE_ENGINE, RUNTIME_EXCEEDS_CAP; banned jargon is the union of both lists.
 // Usage: node check-stage-play.mjs <output.json>   (exit 0 valid, 1 invalid, 2 usage)
 import { readFileSync } from 'node:fs';
+import { countWords, secondsNeeded, budgetMessage, MAX_LINE_WORDS } from './speech.mjs';
 import { fileURLToPath } from 'node:url';
 import { MAX_TOTAL_SECONDS, IMAGE_ENGINE } from '../story-director/schema.mjs';
 
@@ -27,7 +28,8 @@ export const BANNED_JARGON = [
   ['unreal engine', /\bunreal engine\b/i, 'leave render engines out'],
 ];
 /** Whole-second budget for a spoken line (Gemini: 3–5 words = 2 s). null = too long for one shot. */
-export function lineBudget(words) { return words <= 5 ? 2 : words <= 12 ? 3 : words <= 18 ? 4 : null; }
+// Shared 3 words/sec rate (crew/linter/speech.mjs); same rule as the Seedance Compiler gate.
+export function lineBudget(words) { return words > MAX_LINE_WORDS ? null : secondsNeeded(words); }
 const HAIR_VISIBLE = /\b(visible hair|hairline (?:shows|showing|visible)|bangs|fringe|loose hair|dark band)\b/i;
 
 export function validateStoryDirectorOutput(data) {
@@ -61,10 +63,10 @@ export function validateStoryDirectorOutput(data) {
         const line = String(d.line ?? '').trim();
         if (!/^\{.+\}$/.test(line))
           err('UNBRACKETED_DIALOGUE', `Shot ${n}: dialogue line must be enclosed in curly braces {}.`, `${p}.${k}`);
-        const words = (line.replace(/[{}]/g, '').match(/\S+/g) ?? []).length;
+        const words = countWords(line);
         const need = lineBudget(words);
-        if (need === null) err('DIALOGUE_TIMING_BUDGET', `Shot ${n}: ${words}-word line is too long for one shot (max 18 words).`, `${p}.${k}`);
-        else if (dur < need) err('DIALOGUE_TIMING_BUDGET', `Shot ${n}: ${words}-word line needs ${need}s but the shot is ${dur}s.`, `${p}.${k}`);
+        if (need === null) err('DIALOGUE_TIMING_BUDGET', `Shot ${n}: ${words}-word line is too long for one shot (max ${MAX_LINE_WORDS} words); split it across two shots.`, `${p}.${k}`);
+        else if (dur < need) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`Segment ${seg.segmentId ?? si + 1}, shot ${n} (${shot.startSec}s-${shot.endSec}s)`, words, dur), `${p}.${k}`);
       }
       const text = [shot.whatWeSee, shot.whatWeHear, shot.directorsNote, shot.tag].filter(Boolean).join(' ');
       for (const [label, re, plain] of BANNED_JARGON) if (re.test(text))

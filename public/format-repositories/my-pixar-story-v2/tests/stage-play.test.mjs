@@ -62,9 +62,9 @@ test('MULTILINE_STORYBOARD_PROMPT and WRONG_IMAGE_ENGINE', () => {
   hasCode(run((d) => { d.storyboardPrompt.targetEngine = 'gpt-image-2'; }), 'WRONG_IMAGE_ENGINE');
 });
 test('DIALOGUE_TIMING_BUDGET', () => {
-  assert.equal(lineBudget(5), 2); assert.equal(lineBudget(6), 3); assert.equal(lineBudget(18), 4); assert.equal(lineBudget(19), null);
+  assert.equal(lineBudget(3), 1); assert.equal(lineBudget(6), 2); assert.equal(lineBudget(7), 3); assert.equal(lineBudget(18), 6); assert.equal(lineBudget(19), null); // 3 words/sec, shared with Seedance gate
   hasCode(run((d) => { const s = d.segments[0].shots; s[1].endSec = 7; s[2].startSec = 7;
-    s[1].dialogue.line = '{I am a scientist and nobody here can stop me now}'; }), 'DIALOGUE_TIMING_BUDGET', 'needs 3s but the shot is 2s');
+    s[1].dialogue.line = '{I am a scientist and nobody here can stop me now}'; }), 'DIALOGUE_TIMING_BUDGET', '11-word line needs 4s at 3 words/sec but the shot is 2s. Fix: lengthen this shot to 4s');
   hasCode(run((d) => { d.segments[0].shots[1].dialogue.line = '{' + 'word '.repeat(19).trim() + '}'; }), 'DIALOGUE_TIMING_BUDGET', 'max 18');
 });
 test('BANNED_JARGON union includes Wiggly live-action tokens', () =>
@@ -93,4 +93,9 @@ test('schema: defaults (family true, clarifyingQuestion null, assumptions [])', 
   const p = parseStagePlay(d);
   assert.equal(p.cast[0].family, true); assert.equal(p.clarifyingQuestion, null); assert.deepEqual(p.assumptions, []);
   assert.equal(p.storyboardPrompt.targetEngine, 'nano-banana-2.1');
+});
+test('speech rate is one rule across SD and SC: any shot length the SD gate accepts also passes the SC budget', async () => {
+  const { WORDS_PER_SECOND } = await import('../crew/linter/check-seedance-prompts.mjs');
+  for (let w = 1; w <= 18; w++) assert.ok(w <= WORDS_PER_SECOND * lineBudget(w), `${w} words`);
+  assert.equal(WORDS_PER_SECOND, 3);
 });

@@ -34,7 +34,7 @@ test('happy path: all four agents run, Muse Spark 1.3 max, status done, outputs 
   const s = await buildGraph({ invoke }).invoke(initial({ approvedAssets: assets() }));
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
   assert.deepEqual(invoke.calls.map((c) => c.agent).sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director']);
-  assert.ok(invoke.calls.every((c) => c.model === 'meta/muse-spark-1.3-contributor' && c.effort === 'max' && c.skill > 500));
+  assert.ok(invoke.calls.every((c) => c.model === 'meta/muse-spark-1.3-contributor' && c.effort === 'xhigh' && c.skill > 500));
   assert.ok(s.storyDirector.segments.length === 2 && s.characterArchitect.output.characters.length === 3);
   assert.equal(s.locationScout.output.locations[0].elementTag, '@Loc 1');
   assert.equal(s.seedanceCompiler.output.segments[0].generationPayload.resolution, '480p');

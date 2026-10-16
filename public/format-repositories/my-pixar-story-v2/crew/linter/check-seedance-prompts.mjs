@@ -9,7 +9,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { VIDEO_ENGINE, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX_TOTAL_SECONDS, BLOCK_HEADERS, headerPositions } from '../seedance-compiler/schema.mjs';
 
-export const WORDS_PER_SECOND = 3;
+import { WORDS_PER_SECOND, budgetMessage } from './speech.mjs';
+export { WORDS_PER_SECOND };
 export const DIALOGUE_EXCLUSION = 'The only spoken words in the entire segment are the lines in braces';
 export const REFERENCE_CLOSING = 'Each reference is one person or one object and appears once';
 const SHOT_HEADER = /SHOT\s+(\d+)\s*\|\s*([0-9.]+)[–-]([0-9.]+)s/g;
@@ -160,7 +161,7 @@ export function validateSeedancePrompts(data, input) {
         present.add(s.dialogue.speaker);
         if (!cast.has(s.dialogue.speaker)) err('SPEAKER_NOT_IN_CAST', `${sp}: speaker ${s.dialogue.speaker} is not in the stage-play cast.`, `${sp}.dialogue.speaker`);
         const secs = s.endSec - s.startSec, n = words(s.dialogue.line);
-        if (n > WORDS_PER_SECOND * secs) err('DIALOGUE_TIMING_BUDGET', `${sp}: ${n} words in ${secs}s exceeds ${WORDS_PER_SECOND} words/second.`, `${sp}.dialogue.line`);
+        if (n > WORDS_PER_SECOND * secs) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`${sp} (${s.startSec}s-${s.endSec}s)`, n, secs), `${sp}.dialogue.line`);
         if (!t.includes(s.dialogue.line)) err('DIALOGUE_NOT_VERBATIM', `${sp}: line ${s.dialogue.line} is not in the prompt.`, `${sp}.dialogue`);
       }
     });

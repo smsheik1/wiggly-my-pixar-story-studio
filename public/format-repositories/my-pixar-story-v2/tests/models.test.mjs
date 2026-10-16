@@ -8,9 +8,9 @@ test('every v2 crew agent has a model entry', () => {
   assert.ok(agents.length >= 6);
   for (const a of agents) assert.ok(V2_MODELS[a], `missing model entry for ${a}`);
 });
-test('story director: OpenRouter Muse Spark 1.3 contributor at max', () => {
+test('story director: OpenRouter Muse Spark 1.3 contributor at xhigh', () => {
   assert.deepEqual([V2_MODELS['story-director'].provider, V2_MODELS['story-director'].model, V2_MODELS['story-director'].effort],
-    ['openrouter', 'meta/muse-spark-1.3-contributor', 'max']);
+    ['openrouter', 'meta/muse-spark-1.3-contributor', 'xhigh']);
 });
 test('every image step is Nano Banana 2.1 via Google Flow', () => {
   let n = 0;
@@ -38,18 +38,18 @@ test('loadSkill reads role.md and throws clearly when missing', () => {
   assert.match(loadSkill('story-director'), /Story Director/);
   assert.throws(() => loadSkill('nobody'), /unknown v2 agent "nobody"/);
 });
-test('character architect: muse max, Nano Banana sheets, feeds vera + compiler, contract files exist', async () => {
+test('character architect: muse xhigh, Nano Banana sheets, feeds vera + compiler, contract files exist', async () => {
   const c = V2_MODELS['character-architect'];
-  assert.deepEqual([c.provider, c.model, c.effort], ['openrouter', 'meta/muse-spark-1.3-contributor', 'max']);
+  assert.deepEqual([c.provider, c.model, c.effort], ['openrouter', 'meta/muse-spark-1.3-contributor', 'xhigh']);
   assert.equal(c.imageSteps.character.model, 'nano-banana-2.1');
   assert.ok(c.downstreamAgents.includes('seedance-compiler') && c.downstreamAgents.includes('vera'));
   assert.deepEqual(c.targetEngines, { masterRender: 'nano-banana-2.1', modelSheet: 'nano-banana-2.1' });
   const { existsSync } = await import('node:fs');
   for (const f of Object.values(c.contract)) assert.ok(existsSync(new URL('../' + f, import.meta.url)), f);
 });
-test('location scout: muse max, Nano Banana plates, parallel with CA, feeds compiler, contract files exist', async () => {
+test('location scout: muse xhigh, Nano Banana plates, parallel with CA, feeds compiler, contract files exist', async () => {
   const c = V2_MODELS['location-scout'];
-  assert.deepEqual([c.provider, c.model, c.effort], ['openrouter', 'meta/muse-spark-1.3-contributor', 'max']);
+  assert.deepEqual([c.provider, c.model, c.effort], ['openrouter', 'meta/muse-spark-1.3-contributor', 'xhigh']);
   assert.equal(c.imageSteps.location.model, 'nano-banana-2.1');
   assert.deepEqual(c.targetEngines, { plate: 'nano-banana-2.1' });
   assert.ok(c.downstreamAgents.includes('seedance-compiler'));
@@ -64,9 +64,9 @@ test('location scout: Gemini role label, 8192 tokens, loadLocationScoutSkill', a
   assert.deepEqual(c.downstreamAgents, ['vera', 'seedance-compiler']);
   assert.match(loadLocationScoutSkill(), /Location Scout & Environment Plate Architect/);
 });
-test('seedance compiler: muse max, Seedance 2.5 480p disabled, upstream CA + LS, downstream vera, contract files exist', async () => {
+test('seedance compiler: muse xhigh, Seedance 2.5 480p disabled, upstream CA + LS, downstream vera, contract files exist', async () => {
   const c = V2_MODELS['seedance-compiler'];
-  assert.deepEqual([c.provider, c.model, c.effort], ['openrouter', 'meta/muse-spark-1.3-contributor', 'max']);
+  assert.deepEqual([c.provider, c.model, c.effort], ['openrouter', 'meta/muse-spark-1.3-contributor', 'xhigh']);
   assert.deepEqual([c.video.model, c.video.resolution, c.video.enabled], ['bytedance/seedance-2.5', '480p', false]);
   assert.deepEqual(c.targetEngines, { video: 'seedance-2.5' }); assert.equal(c.segmentMaxSec, 30); assert.equal(c.continuation, 'extend');
   assert.deepEqual(c.upstreamAgents, ['character-architect', 'location-scout']);

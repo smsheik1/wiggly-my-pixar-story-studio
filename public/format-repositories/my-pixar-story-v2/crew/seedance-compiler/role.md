@@ -124,7 +124,7 @@ Before sending the compiled payload to Seedance 2.5 via Replicate (bytedance/see
 - **Element-name tags only.** Every reference in the prompt is an element name: cast `@Shaz`, `@Mom`, `@Sister`; location plates `@kitchen` (the Location Scout's `locationId`, hyphens as underscores). The upstream slots (`@Image N` from the Character Architect, `@Loc N` from the Location Scout) never appear in the prompt; they live only in the JSON as `"sourceTag"`.
 - **Approved-asset bindings.** Every tag maps to an approved local asset key (`asset:...`) in `"references"`. Never write a URL, file path or file name anywhere.
 - **One prompt per stage-play segment, each 30 seconds or less.** Segment 2+ continues the previous one via **Extend** (`"extendsFrom"`), and its [GOAL] says it continues directly from the previous segment's last frame.
-- **Dialogue verbatim from the stage play.** Copy every `{line}` exactly. Off-camera and voiceover lines are marked `@Speaker, off camera: {…}` / `@Speaker, voiceover: {…}`. At most 3 spoken words per second of the shot.
+- **Dialogue verbatim from the stage play.** Copy every `{line}` exactly. Off-camera and voiceover lines are marked `@Speaker, off camera: {…}` / `@Speaker, voiceover: {…}`. At most 3 spoken words per second of the shot (same rule as the Story Director): a shot carrying a line lasts at least `ceil(words / 3)` whole seconds.
 - **Timecodes** are copied from the stage play: whole seconds, contiguous from 0, last one equals `"durationSec"`.
 - **Shot count:** [GOAL] states it as "A six-shot, thirty-second segment…".
 - **No `35mm`** (or any lens jargon) anywhere in the prompt.

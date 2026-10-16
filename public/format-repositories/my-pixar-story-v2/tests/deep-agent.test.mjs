@@ -128,7 +128,7 @@ test('graph happy path through the deep-agent node (scripted model, zero network
   const s = await g.invoke({ inputs: { subject: 'Shaz', answers: { scene1Childhood: 'sunglasses scientist' } }, approvedAssets: assets() });
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
   assert.deepEqual(seen.map((x) => x[0]).sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director']);
-  assert.ok(seen.every((x) => x[1] === 'meta/muse-spark-1.3-contributor' && x[2] === 'max'));
+  assert.ok(seen.every((x) => x[1] === 'meta/muse-spark-1.3-contributor' && x[2] === 'xhigh'));
   assert.equal(s.seedanceCompiler.output.segments.length, 2);
   const m = JSON.parse(await readFile(join(runs, 'happy_attempt-1', 'seedance-compiler', 'references/approved-assets.json'), 'utf8'));
   assert.equal(m.length, 4);
