@@ -49,6 +49,10 @@ export function lookPhrases(c) {
 /** Sunglasses must sit pushed up on the forehead, never over the eyes. */
 export const SUNGLASSES_OVER_EYES = /sunglasses[^.;]{0,40}\b(over|covering|covers|cover|hid(?:e|es|ing)|shield(?:s|ing)?|block(?:s|ing)?|on)\s+(?:his |her |the |both )?(eyes|face|nose)\b|(?:behind|through)\s+(?:his |her |the |dark |black )*sunglasses|\b(?:eyes|face)\b[^.;]{0,20}\b(?:hidden|covered)\b[^.;]{0,20}sunglasses|sunglasses (?:on|down)\b(?![^.;]{0,20}forehead)|(?:puts?|slides?|sliding|putting|pulls?|pulling|lowers?|lowering|drops?|dropping) (?:on )?(?:his |her |the )?sunglasses(?: on| down)?\b(?![^.;]{0,30}(?:forehead|up))|wearing (?:dark |black |matte black |his |her )*sunglasses(?![^.;]{0,30}(?:forehead|pushed up))/i;
 export const MAX_CARDS_PER_PERSON = 2;
+export const MAX_ON_SCREEN = 2;
+export const FINALE_MIN_NARRATION_SEC = 15;
+/** Resume facts in spoken in-scene dialogue (they belong in narration). */
+export const RESUME_LINE = /\b(salary|salaries|\d+\s?k\b|\$\s?\d|benefits|certifications?|bootcamp|graduated|semester|years? old|full[- ]time|promotion|job offer)\b/i;
 const AGE_WORDS = /\b(teen|teenage|young|younger|adult|grown|grown-up|older|old|dad|father|kid|child|little|baby|boy|man)\b/gi;
 const personKey = (c) => norm(c.realPerson ?? String(c.name ?? '').replace(AGE_WORDS, ' ')) || norm(c.name);
 const HAIR_VISIBLE = /\b(visible hair|hairline (?:shows|showing|visible)|bangs|fringe|loose hair|dark band)\b/i;
@@ -107,6 +111,11 @@ export function validateStoryDirectorOutput(data, input = {}) {
         if (bare && new RegExp(`(?<![@\\w])${bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(String(shot.whatWeSee ?? '').replace(/@[\w_]+/g, '')))
           err('UNTAGGED_CHARACTER', `Shot ${n} in segment ${seg.segmentId} names '${bare}' without the tag. Write ${c.elementTag}.`, `${p}.whatWeSee`);
       }
+      const onScreen = new Set((String(shot.whatWeSee ?? '').match(/@[\w_]+/g) ?? []).filter((t) => tags.has(t)));
+      if (onScreen.size > MAX_ON_SCREEN)
+        err('TOO_MANY_ON_SCREEN', `Shot ${n} in segment ${seg.segmentId} shows ${onScreen.size} characters (${[...onScreen].join(', ')}); max ${MAX_ON_SCREEN} on screen. Others are heard off-camera (whatWeHear / isOffCamera dialogue) or get their own shot.`, `${p}.whatWeSee`);
+      if (shot.dialogue && RESUME_LINE.test(shot.dialogue.line ?? ''))
+        err('RESUME_DIALOGUE', `Shot ${n} in segment ${seg.segmentId}: in-scene dialogue states resume facts ('${shot.dialogue.line}'). Use subtext in the scene; put facts in the narration.`, `${p}.dialogue`);
       const text = [shot.whatWeSee, shot.whatWeHear, shot.directorsNote, shot.tag].filter(Boolean).join(' ');
       if (SUNGLASSES_OVER_EYES.test(text))
         err('SUNGLASSES_OVER_EYES', `Shot ${n} in segment ${seg.segmentId}: sunglasses cover the eyes. @Shaz's sunglasses sit pushed up on his forehead, never over his eyes.`, p);
@@ -116,6 +125,13 @@ export function validateStoryDirectorOutput(data, input = {}) {
     if (segTotal > 30) err('EXCEEDS_30S_CEILING', `Segment ${seg.segmentId} runs ${segTotal}s. HARD CEILING IS 30 SECONDS per segment.`, `segments.${si}`);
     filmTotal += segTotal;
   });
+  // WIGGLY: the emotional core gets its weight: >=15s of narration in the final part.
+  const last = segments.at(-1);
+  if (segments.length > 1 && last) {
+    const narr = (last.shots ?? []).filter((h) => h.narration).reduce((n, h) => n + (h.endSec - h.startSec), 0);
+    if (narr < FINALE_MIN_NARRATION_SEC)
+      err('FINALE_TOO_THIN', `Final part carries only ${narr}s of narration; give the closing wisdom from the answers ${FINALE_MIN_NARRATION_SEC}-20s (setup ~10s).`, `segments.${segments.length - 1}`);
+  }
   if (filmTotal > MAX_TOTAL_SECONDS) err('RUNTIME_EXCEEDS_CAP', `Film runs ${filmTotal}s; the total cap is ${MAX_TOTAL_SECONDS}s.`, 'segments');
 
   const sb = data?.storyboardPrompt ?? {};
@@ -140,6 +156,8 @@ export function validateStoryDirectorOutput(data, input = {}) {
       err('UNDERAGE_DEPICTION', `Cast ${c.elementTag ?? c.name} is age ${c.age}; teens are depicted as 18.`, p);
     if ([c.physicalDescription, c.signatureAccent].some((look) => /sunglasses/i.test(look ?? '') && (SUNGLASSES_OVER_EYES.test(look) || !/forehead/i.test(look))))
       err('SUNGLASSES_OVER_EYES', `Cast ${c.elementTag ?? c.name}: sunglasses must be described as pushed up on the forehead, never over the eyes.`, p);
+    if (c.age === 18 && !c.ageNote)
+      err('MISSING_TRUE_AGE', `Cast ${c.elementTag}: shown as 18; record the true age from the answers math in ageNote (e.g. 'true age 15, 7 years older than Shaz at 8').`, p);
     const ph = (input?.photoCharacters ?? []).find((x) => x.id === c.photoRef);
     if (c.photoRef && !ph && (input?.photoCharacters ?? []).length)
       err('UNKNOWN_PHOTO_REF', `Cast ${c.elementTag}: photoRef '${c.photoRef}' is not one of the photoCharacters ids.`, p);

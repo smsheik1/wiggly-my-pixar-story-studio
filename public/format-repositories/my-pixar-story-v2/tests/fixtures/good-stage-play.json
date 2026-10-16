@@ -58,7 +58,8 @@
    "gender": "female",
    "family": true,
    "realPerson": "Sister",
-   "photoRef": null
+   "photoRef": null,
+   "ageNote": "true age 15 (7 years older than Shaz at 8); shown as 18"
   }
  ],
  "segments": [
@@ -201,7 +202,11 @@
      "location": "Kitchen",
      "framing": "close-up",
      "cameraAngle": "eye level",
-     "cameraMove": "static"
+     "cameraMove": "static",
+     "narration": {
+      "speaker": "@Shaz",
+      "line": "{Good people can still do bad things.}"
+     }
     },
     {
      "shotNumber": 3,
@@ -213,7 +218,11 @@
      "location": "Kitchen",
      "framing": "wide",
      "cameraAngle": "slightly high angle",
-     "cameraMove": "slow pull back"
+     "cameraMove": "slow pull back",
+     "narration": {
+      "speaker": "@Shaz",
+      "line": "{You are what you think about.}"
+     }
     }
    ]
   }

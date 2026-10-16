@@ -113,3 +113,21 @@ test('prepareRunWorkspace copies reference photos read-only into references/phot
     await assert.rejects(loadPhotoReferences(f), /not found/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+test('TOO_MANY_ON_SCREEN: max 2 @tags in whatWeSee', () => {
+  const d = good(); shot0(d).whatWeSee = '@Shaz slaps a card down; @Sister blinks; @Mom watches.';
+  assert.ok(codes(d).includes('TOO_MANY_ON_SCREEN'));
+  shot0(d).whatWeSee = '@Shaz slaps a card down; @Sister blinks.'; assert.ok(!codes(d).includes('TOO_MANY_ON_SCREEN'));
+});
+test('MISSING_TRUE_AGE: an 18-year-old card records the true age', () => {
+  const d = good(); d.cast[2].ageNote = null; assert.ok(codes(d).includes('MISSING_TRUE_AGE'));
+});
+test('RESUME_DIALOGUE: facts go in narration, not in-scene dialogue', () => {
+  const d = good(); const s = d.segments[0].shots.find((h) => h.dialogue);
+  s.dialogue.line = '{I got a 50k salary!}'; assert.ok(codes(d).includes('RESUME_DIALOGUE'));
+  const e = good(); const n = e.segments[1].shots[0]; n.narration.line = '{I was nineteen, 50k a year.}';
+  assert.ok(!codes(e).includes('RESUME_DIALOGUE'));
+});
+test('FINALE_TOO_THIN: final part needs >=15s of narration', () => {
+  const d = good(); d.segments.at(-1).shots.slice(1).forEach((h) => { delete h.narration; });
+  assert.ok(codes(d).includes('FINALE_TOO_THIN'));
+});
