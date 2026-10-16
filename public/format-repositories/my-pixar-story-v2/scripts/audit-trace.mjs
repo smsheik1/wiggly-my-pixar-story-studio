@@ -12,7 +12,7 @@ import { V2_PROJECT } from './lib/tracing.mjs';
 import { defaultTrackerPath } from './lib/report.mjs';
 import { auditTrace, auditMarkdown, auditHtml, upsertSection, slimRun } from './lib/audit.mjs';
 
-const ROOT_NAME = 'wiggly-v2 rehearsal';
+const ROOT_NAMES = new Set(['wiggly-v2 rehearsal', 'wiggly-v2 ca-sheets']);
 /** Trace id recorded in runs/<id>/report.html (the run that actually produced the outputs), if any. */
 export function traceIdFromReport(runsRoot, runId) {
   const f = join(runsRoot, runId, 'report.html');
@@ -30,7 +30,7 @@ export async function findRoot(client, { projectName, runId, traceId, runsRoot =
   const tid = traceId ?? (runId ? traceIdFromReport(runsRoot, runId) : null);
   if (tid) return client.readRun(tid);
   const filter = runId ? `has(tags, "runId:${runId.replace(/"/g, '')}")` : undefined;
-  for await (const r of client.listRuns({ projectName, isRoot: true, limit: 1, ...(filter ? { filter } : {}) })) if (r.name === ROOT_NAME || !runId) return r;
+  for await (const r of client.listRuns({ projectName, isRoot: true, limit: 1, ...(filter ? { filter } : {}) })) if (ROOT_NAMES.has(r.name) || !runId) return r;
   throw new Error(runId ? `no LangSmith trace tagged runId:${runId} in ${projectName}` : `no traces in ${projectName}`);
 }
 
