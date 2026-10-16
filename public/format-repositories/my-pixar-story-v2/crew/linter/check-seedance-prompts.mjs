@@ -11,6 +11,7 @@ import { VIDEO_ENGINE, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX_TOTAL_SECONDS,
 
 import { WORDS_PER_SECOND, budgetMessage } from './speech.mjs';
 export { WORDS_PER_SECOND };
+const heardOnly = (d) => !!(d?.isVoiceover || d?.isOffCamera || /^(voiceover|off[- _]?camera)$/i.test(d?.mode ?? ''));
 export const DIALOGUE_EXCLUSION = 'The only spoken words in the entire segment are the lines in braces';
 export const REFERENCE_CLOSING = 'Each reference is one person or one object and appears once';
 const SHOT_HEADER = /SHOT\s+(\d+)\s*\|\s*([0-9.]+)[–-]([0-9.]+)s/g;
@@ -158,14 +159,16 @@ export function validateSeedancePrompts(data, input) {
           err('DIALOGUE_NOT_VERBATIM', `${sp}: stage-play line ${srcShot[k].line} is missing verbatim from the prompt.`, `${sp}.dialogue`);
       }
       if (s.dialogue) {
-        present.add(s.dialogue.speaker);
+        // Voiceover / off-camera speakers are heard, not seen: they need no image reference.
+        if (!heardOnly(s.dialogue)) present.add(s.dialogue.speaker);
         if (!cast.has(s.dialogue.speaker)) err('SPEAKER_NOT_IN_CAST', `${sp}: speaker ${s.dialogue.speaker} is not in the stage-play cast.`, `${sp}.dialogue.speaker`);
         const secs = s.endSec - s.startSec, n = words(s.dialogue.line);
         if (n > WORDS_PER_SECOND * secs) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`${sp} (${s.startSec}s-${s.endSec}s)`, n, secs), `${sp}.dialogue.line`);
         if (!t.includes(s.dialogue.line)) err('DIALOGUE_NOT_VERBATIM', `${sp}: line ${s.dialogue.line} is not in the prompt.`, `${sp}.dialogue`);
       }
     });
-    for (const sh of src?.shots ?? []) for (const k of ['dialogue', 'narration']) if (sh[k]) present.add(sh[k].speaker);
+    // On-camera stage-play speakers must be bound; narration and voiceover are audio only.
+    for (const sh of src?.shots ?? []) if (sh.dialogue && !heardOnly(sh.dialogue)) present.add(sh.dialogue.speaker);
     for (const tag of present) {
       if (!bound.has(tag)) err('MISSING_CAST_REFERENCE', `${p}: ${tag} appears or speaks but has no bound reference.`, `${p}.references`);
       const c = cast.get(tag);

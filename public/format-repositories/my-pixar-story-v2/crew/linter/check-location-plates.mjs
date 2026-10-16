@@ -11,7 +11,14 @@ import { IMAGE_ENGINE, PLATE_MIN, PLATE_MAX, EMPTY_PHRASE } from '../location-sc
 
 export const HOUSE_STYLE = 'feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon';
 export const PLATE_OPENING = `A background plate from a ${HOUSE_STYLE}. 16:9 widescreen environment plate, ${EMPTY_PHRASE}.`;
-const SAFE_PHRASES = [/\bchildren'?s\s+\w+/gi, /\bteacher'?s\s+(desk|chair|table|stool|lectern|binder)\b/gi, /\bchild[- ](sized|scale|height)\b/gi,
+// WIGGLY false-positive fixes: negated lists ("no people, figures or crowds"), possessive room names
+// ("sister's bedroom", "dad's car"), objects ("action figures", "baby blue", "family photos" are not people).
+const HUMAN_WORDS = 'people|persons?|humans?|figures?|children|child|kids?|crowds?|silhouettes?|pedestrians?|mannequins?|characters?|family members?|men|women|anyone|one';
+const NEGATED_LIST = new RegExp(`\\b(?:no|without|free of|devoid of|absent of)\\s+(?:(?:other|visible|any)\\s+)?(?:${HUMAN_WORDS})(?:\\s*(?:,|or|and|/|nor)\\s*(?:no\\s+)?(?:${HUMAN_WORDS}))*\\b`, 'gi');
+const WIGGLY_SAFE = [NEGATED_LIST, /\b\w+'s\s+(?:bed)?(?:room|bedroom|kitchen|car|desk|chair|bed|house|home|office|study|corner|side|shelf|garage|garden)\b/gi,
+  /\b(?:kids'|children's|boys'|girls')\s+\w+/gi, /\baction figures?\b/gi, /\bfigurines?\b/gi, /\bbaby (?:blue|pink|grand)\b/gi, /\bman-made\b/gi,
+  /\b(?:family|people)\s+(?:photos?|photographs?|portraits?|pictures?)\b/gi, /\bfamily (?:room|car|home|kitchen|living room)\b/gi];
+const SAFE_PHRASES = [...WIGGLY_SAFE, /\bchildren'?s\s+\w+/gi, /\bteacher'?s\s+(desk|chair|table|stool|lectern|binder)\b/gi, /\bchild[- ](sized|scale|height)\b/gi,
   /\bno\s+(people|humans|figures|children|silhouettes|crowds|pedestrians|mannequins)\b/gi, /\b(completely\s+)?empty of people\b/gi];
 const HUMAN = /\b(person|people|child|children|teacher|student|pedestrian|silhouette|mannequin|crowd)\b/i;
 // WIGGLY: family-story words and element tags (other than @Loc N).
@@ -21,7 +28,10 @@ const WALL_TEXT = ['alphabet strip', 'alphabet chart', 'motivational poster', 'b
 const CONTEXT_SIGN = /\b(reading|reads|says|saying|labeled|banner|sign|plaque|board)\s+(?:reading\s+)?["']([^"']{1,40})["']/gi;
 const QUOTED = /["']([^"']{1,35})["']/g;
 const LIGHT_SOURCES = ['sunlight', 'window light', 'streaming from', 'key light', 'morning light', 'afternoon light'];
-const PALETTE = /\b(neon\s+(yellow|pink|green|blue|orange)|fluorescent\s+\w+|hot\s+pink\s+walls?)\b/i;
+// WIGGLY: night, car and interior practicals are valid key sources too (was a false positive on night/car plates).
+const LIGHT_SOURCE_RE = /\b(sun(?:light|set|rise|beams?)?|golden hour|moon(?:light|lit)?|lamp(?:s|light)?|streetlights?|street lamps?|headlights?|tail ?lights?|dashboard (?:glow|lights?)|(?:tv|television|screen|monitor) (?:glow|light)|overhead (?:lights?|lamp|fluorescents?)|ceiling (?:lights?|lamp)|pendant (?:lights?|lamp)|fluorescent (?:tubes?|lights?|panels?)|candle(?:s|light)?|fire(?:light|place)|skylight|(?:from|through) (?:a|the) (?:\w+ )?windows?|neon sign|porch light|lantern|light from|lit by|glow from)\b/i;
+// Fluorescent *colours* overpower the cast; fluorescent *tube lighting* is a light source, not a palette (false positive fixed).
+const PALETTE = /\b(neon\s+(yellow|pink|green|blue|orange)|fluorescent\s+(yellow|pink|green|blue|orange|red|purple|colou?rs?|paint|walls?)|hot\s+pink\s+walls?)\b/i;
 const FOCAL = ['35mm', '50mm', 'wide shot', 'master shot', 'establishing shot'];
 const LIVE_ACTION = [['photorealistic', /photorealistic/i], ['film stock', /film stock/i], ['film grain', /film grain/i], ['kodak', /\bkodak\b/i],
   ['35mm grain', /35\s?mm grain/i], ['lens flare', /lens flare/i],
@@ -68,7 +78,7 @@ export function validateLocationScoutOutput(l, { pathPrefix = '' } = {}) {
   if (signs.length > 1) err('MULTIPLE_SIGNS_DETECTED', `Single-Sign Law: ${signs.length} signs found (${signs.join(', ')}); max one.`, pp);
   if (!sr.hasSign && signs.length > 0) err('UNEXPECTED_SIGN_PRESENT', `singleSignRule.hasSign is false but the prompt has a sign (${signs.join(', ')}).`, pp);
   if (sr.hasSign && (!sr.signText || !t.includes(sr.signText))) err('SIGN_TEXT_MISSING', 'hasSign needs signText, written verbatim in the prompt.', 'singleSignRule.signText'); // WIGGLY
-  if (!LIGHT_SOURCES.some((s) => t.toLowerCase().includes(s))) err('MISSING_LIGHTING_SOURCE', `Lighting Anchor: name the key light source (${LIGHT_SOURCES.join(', ')}).`, pp);
+  if (!LIGHT_SOURCES.some((s) => t.toLowerCase().includes(s)) && !LIGHT_SOURCE_RE.test(t)) err('MISSING_LIGHTING_SOURCE', `Lighting Anchor: name the key light source (${LIGHT_SOURCES.join(', ')}).`, pp);
   if (!/shadow/i.test(t)) warn('MISSING_SHADOW_DESCRIPTION', 'Lighting Anchor: describe the shadows.', pp);
   if (PALETTE.test(t)) err('PALETTE_DISCIPLINE_VIOLATION', `Palette Discipline: "${t.match(PALETTE)[0]}" overpowers the cast.`, pp);
   if (!FOCAL.some((f) => t.toLowerCase().includes(f))) warn('MISSING_CAMERA_STAGING_FOCAL', `Camera: name a focal/shot (${FOCAL.join(', ')}).`, pp);

@@ -158,3 +158,13 @@ test('MISSING_SCHEMA_BLOCK and MISSING_REFERENCE_CLOSING_LAW', () => {
   hasCode(one(T(cls(), (t) => t.replace('Each reference is one person or one object and appears once.', ''))), 'MISSING_REFERENCE_CLOSING_LAW');
   assert.equal(BLOCK_KEYS.length, 10);
 });
+test('narration (voiceover) speaker is heard, not seen: no image reference required (r4 rehearsal fix)', () => {
+  const d = out(); const seg = d.segments[1]; // stage-play segment 2 opens with @Shaz narration only
+  seg.references = seg.references.filter((r) => r.tag !== '@Shaz');
+  for (const sh of seg.shots) sh.cast = (sh.cast ?? []).filter((c) => c !== '@Shaz');
+  const miss = gate(d).issues.filter((i) => i.code === 'MISSING_CAST_REFERENCE' && i.message.includes('@Shaz'));
+  assert.deepEqual(miss, []);
+  // an on-camera speaker still must be bound
+  const d2 = out(); d2.segments[0].references = d2.segments[0].references.filter((r) => r.tag !== '@Mom');
+  assert.ok(gate(d2).issues.some((i) => i.code === 'MISSING_CAST_REFERENCE' && i.message.includes('@Mom')));
+});

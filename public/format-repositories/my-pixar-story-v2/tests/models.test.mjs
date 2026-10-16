@@ -57,10 +57,10 @@ test('location scout: muse xhigh, Nano Banana plates, parallel with CA, feeds co
   const { existsSync } = await import('node:fs');
   for (const f of Object.values(c.contract)) assert.ok(existsSync(new URL('../' + f, import.meta.url)), f);
 });
-test('location scout: Gemini role label, 8192 tokens, loadLocationScoutSkill', async () => {
+test('location scout: Gemini role label, 32000 tokens (8192 truncated xhigh reasoning), loadLocationScoutSkill', async () => {
   const { loadLocationScoutSkill } = await import('../config/models.mjs');
   const c = V2_MODELS['location-scout'];
-  assert.equal(c.role, 'Location Scout & Environment Plate Architect'); assert.equal(c.maxTokens, 8192);
+  assert.equal(c.role, 'Location Scout & Environment Plate Architect'); assert.equal(c.maxTokens, 32000);
   assert.deepEqual(c.downstreamAgents, ['vera', 'seedance-compiler']);
   assert.match(loadLocationScoutSkill(), /Location Scout & Environment Plate Architect/);
 });

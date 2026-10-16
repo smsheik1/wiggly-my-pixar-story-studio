@@ -152,3 +152,22 @@ test('G14 schema: hasSign true with empty signText -> signText REQUIRED', () => 
   const c = classroom(); c.singleSignRule.signText = ''; assert.throws(() => parseOne(c), /signText is REQUIRED/);
 });
 test('SIGN_TEXT_MISSING (gate, raw object)', () => { const c = classroom(); c.singleSignRule.signText = 'LAB'; hasCode(validateOne(c), 'SIGN_TEXT_MISSING'); });
+// ---- r4 rehearsal false positives (Wiggly) ----
+const lp = (f) => CP((t) => f(t));
+const codes = (r) => r.issues.map((i) => i.code);
+test('people check: negated lists, possessive rooms, action figures, family photos are not people', () => {
+  for (const add of [' No people, figures or crowds anywhere.', " The sister's bedroom door is ajar.", ' Yu-Gi-Oh action figures on the shelf.', ' Framed family photos on the wall.', ' A baby blue blanket.', " Dad's car keys on a hook."])
+    assert.ok(!codes(validateOne(lp((t) => t + add))).includes('HUMAN_FIGURE_IN_BACKGROUND'), add);
+  for (const add of [' A boy sits on the rug.', ' A woman waits by the door.', ' Mom stands at the stove.'])
+    assert.ok(codes(validateOne(lp((t) => t + add))).includes('HUMAN_FIGURE_IN_BACKGROUND'), add);
+});
+test('night / car / interior practical key lights count as a lighting source; flat ambient still fails', () => {
+  const swap = (s) => lp((t) => t.replace(/Lighting & Atmosphere: .*?floor\./, `Lighting & Atmosphere: ${s}`));
+  for (const s of ['night, warm streetlights through the windshield and a soft dashboard glow.', 'night, a single bedside lamp casting long shadows.', 'evening, cool moonlight through the window.', 'overhead fluorescent tubes hum above the desks.'])
+    assert.ok(!codes(validateOne(swap(s))).includes('MISSING_LIGHTING_SOURCE'), s);
+  assert.ok(codes(validateOne(swap('flat even ambient illumination everywhere.'))).includes('MISSING_LIGHTING_SOURCE'));
+});
+test('palette: fluorescent tube lighting is fine; fluorescent colours still fail', () => {
+  assert.ok(!codes(validateOne(lp((t) => t + ' Overhead fluorescent tubes.'))).includes('PALETTE_DISCIPLINE_VIOLATION'));
+  assert.ok(codes(validateOne(lp((t) => t + ' Fluorescent green walls.'))).includes('PALETTE_DISCIPLINE_VIOLATION'));
+});
