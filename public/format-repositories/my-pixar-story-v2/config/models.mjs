@@ -6,7 +6,7 @@ export const NANO_BANANA = Object.freeze({ provider: 'google-flow', model: 'nano
 export const V2_MODELS = Object.freeze({
   'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 64000, /* r4-dry7: xhigh reasoning used all 32k (31998 reasoning tokens) 3x and never submitted */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     imageSteps: { storyboard: NANO_BANANA } },
-  'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 24000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
+  'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 64000, /* r4-dry9: CA used 23.5k of 24k */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     imageSteps: { character: NANO_BANANA },
     targetEngines: { masterRender: 'nano-banana-2.1', modelSheet: 'nano-banana-2.1' },
     contract: { output: 'crew/character-architect/schema.mjs', input: 'crew/character-architect/input.mjs', gate: 'crew/linter/check-character-sheets.mjs' } },

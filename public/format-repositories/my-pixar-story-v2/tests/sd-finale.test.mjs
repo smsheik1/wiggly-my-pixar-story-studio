@@ -51,5 +51,5 @@ test('FINALE_PLATITUDE covers every finale line, not just the last', { timeout: 
 });
 test('Seedance Compiler and Story Director: 64k output budget at xhigh', { timeout: 10000 }, async () => {
   const { V2_MODELS } = await import('../config/models.mjs');
-  for (const a of ['story-director', 'seedance-compiler']) { assert.equal(V2_MODELS[a].maxTokens, 64000); assert.equal(V2_MODELS[a].effort, 'xhigh'); }
+  for (const a of ['story-director', 'character-architect', 'seedance-compiler']) { assert.equal(V2_MODELS[a].maxTokens, 64000); assert.equal(V2_MODELS[a].effort, 'xhigh'); }
 });
