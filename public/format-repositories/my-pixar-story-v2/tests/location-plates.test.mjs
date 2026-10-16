@@ -156,9 +156,9 @@ test('SIGN_TEXT_MISSING (gate, raw object)', () => { const c = classroom(); c.si
 const lp = (f) => CP((t) => f(t));
 const codes = (r) => r.issues.map((i) => i.code);
 test('people check: negated lists, possessive rooms, action figures, family photos are not people', () => {
-  for (const add of [' No people, figures or crowds anywhere.', " The sister's bedroom door is ajar.", ' Yu-Gi-Oh action figures on the shelf.', ' Framed family photos on the wall.', ' A baby blue blanket.', " Dad's car keys on a hook."])
+  for (const add of [' A classroom with simple student desks in rows.', ' Kid chairs and teacher desks.', ' No people, figures or crowds anywhere.', " The sister's bedroom door is ajar.", ' Yu-Gi-Oh action figures on the shelf.', ' Framed family photos on the wall.', ' A baby blue blanket.', " Dad's car keys on a hook."])
     assert.ok(!codes(validateOne(lp((t) => t + add))).includes('HUMAN_FIGURE_IN_BACKGROUND'), add);
-  for (const add of [' A boy sits on the rug.', ' A woman waits by the door.', ' Mom stands at the stove.'])
+  for (const add of [' A student sits at a desk.', ' A boy sits on the rug.', ' A woman waits by the door.', ' Mom stands at the stove.'])
     assert.ok(codes(validateOne(lp((t) => t + add))).includes('HUMAN_FIGURE_IN_BACKGROUND'), add);
 });
 test('night / car / interior practical key lights count as a lighting source; flat ambient still fails', () => {

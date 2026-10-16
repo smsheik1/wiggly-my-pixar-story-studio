@@ -18,7 +18,9 @@ const NEGATED_LIST = new RegExp(`\\b(?:no|without|free of|devoid of|absent of)\\
 const WIGGLY_SAFE = [NEGATED_LIST, /\b\w+'s\s+(?:bed)?(?:room|bedroom|kitchen|car|desk|chair|bed|house|home|office|study|corner|side|shelf|garage|garden)\b/gi,
   /\b(?:kids'|children's|boys'|girls')\s+\w+/gi, /\baction figures?\b/gi, /\bfigurines?\b/gi, /\bbaby (?:blue|pink|grand)\b/gi, /\bman-made\b/gi,
   /\b(?:family|people)\s+(?:photos?|photographs?|portraits?|pictures?)\b/gi, /\bfamily (?:room|car|home|kitchen|living room)\b/gi];
-const SAFE_PHRASES = [...WIGGLY_SAFE, /\bchildren'?s\s+\w+/gi, /\bteacher'?s\s+(desk|chair|table|stool|lectern|binder)\b/gi, /\bchild[- ](sized|scale|height)\b/gi,
+// Furniture/objects named for who uses them ("student desks", "kid chairs") are props, not people.
+const USER_OBJECTS = /\b(?:students?|teachers?|kids?|child(?:ren)?|baby|people|guests?|office|staff)'?s?\s+(?:desks?|chairs?|tables?|lockers?|stools?|cubbies|seats?|benches?|drawings?|artwork|art|cots?|cribs?|mats?|backpacks?|bags?|coats?|shoes|books?|notebooks?|cubicles?|workstations?|monitors?|keyboards?)\b/gi;
+const SAFE_PHRASES = [...WIGGLY_SAFE, USER_OBJECTS, /\bchildren'?s\s+\w+/gi, /\bteacher'?s\s+(desk|chair|table|stool|lectern|binder)\b/gi, /\bchild[- ](sized|scale|height)\b/gi,
   /\bno\s+(people|humans|figures|children|silhouettes|crowds|pedestrians|mannequins)\b/gi, /\b(completely\s+)?empty of people\b/gi];
 const HUMAN = /\b(person|people|child|children|teacher|student|pedestrian|silhouette|mannequin|crowd)\b/i;
 // WIGGLY: family-story words and element tags (other than @Loc N).
