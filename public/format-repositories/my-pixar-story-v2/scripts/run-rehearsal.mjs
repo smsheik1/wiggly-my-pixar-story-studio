@@ -14,6 +14,7 @@ import { RUNS_ROOT, openRouterModel } from '../graph/deep-agent-node.mjs';
 import { loadSecrets, defaultSecretsPath } from './lib/secrets.mjs';
 import { makeTracing } from './lib/tracing.mjs';
 import { createLiveness, LivenessHandler, DEFAULT_TIMEOUTS } from '../graph/liveness.mjs';
+import { auditRun } from './audit-trace.mjs';
 import { createRecorder, upsertTracker, reportHtml, defaultTrackerPath } from './lib/report.mjs';
 
 const OUTPUT_KEYS = { 'story-director': (s) => s.storyDirector, 'character-architect': (s) => s.characterArchitect?.output,
@@ -53,7 +54,7 @@ const summarize = (agent, o) => {
 
 export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUID().slice(0, 8)}`, runsRoot = RUNS_ROOT, invoke, log = console.log,
   secretsPath = defaultSecretsPath(), secrets, usePlaceholderAssets = false, trackerPath = defaultTrackerPath(), tracing,
-  timeouts = {}, heartbeatMs = 5000, now = Date.now, photoRefsPath } = {}) {
+  timeouts = {}, heartbeatMs = 5000, now = Date.now, photoRefsPath, audit = auditRun, auditDelayMs = 5000 } = {}) {
   if (!projectPath) throw new Error('--project <path to project/answers json> is required');
   const inputs = inputsFromProject(JSON.parse(await readFile(projectPath, 'utf8')));
   const refs = await loadPhotoReferences(photoRefsPath === undefined ? defaultPhotoRefsPath(projectPath) : photoRefsPath);
@@ -94,6 +95,11 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
     for (const i of (e.issues ?? []).filter((x) => x.severity === 'error')) log(`  - [${i.code}] ${i.message}`);
   }
   if (state.status === 'awaiting-approval') log(`awaiting approval for: ${(state.pendingApproval ?? []).join(', ')}`);
+  // Trace audit (non-fatal): LangSmith ingests asynchronously, so wait briefly before reading the trace back.
+  if (tr && audit) {
+    try { if (auditDelayMs) await new Promise((r) => setTimeout(r, auditDelayMs)); await audit({ runId, traceId: tr.rootRunId, runsRoot, secrets: sec, trackerPath, log }); }
+    catch (e) { log(`audit skipped: ${e.message}`); }
+  }
   log(`outputs saved to ${dir}`); log(`report: ${report}`);
   log(url ? `LangSmith: ${url}` : 'LangSmith: not traced (no LANGSMITH_API_KEY)');
   return { state, dir, runId, report, url, model: rec.model };
