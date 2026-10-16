@@ -227,68 +227,85 @@
    ]
   }
  ],
- "storyboardPrompt": {
-  "targetEngine": "nano-banana-2.1",
-  "fullPrompt": "An eight-panel colour storyboard sheet from a feature animation studio's pre-production, two even rows of four 16:9 panels on a warm off-white page, each with a small hand-written shot number. Panel 1 [shot 1]: wide shot; a warm medium brown boy in red sunglasses and a light warm brown young woman in a grey hijab with no visible hair at a kitchen table. Window light from the left. No text other than shot numbers.",
-  "panels": [
-   {
-    "panelNumber": 1,
-    "shotNumberRef": 1,
-    "shotSizeAndAngle": "Medium shot at eye level",
-    "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-    "lightAndPalette": "Soft window light from the left, warm amber shadows"
-   },
-   {
-    "panelNumber": 2,
-    "shotNumberRef": 2,
-    "shotSizeAndAngle": "Medium shot at eye level",
-    "whatIsInFrame": "Light warm brown young woman in a grey hijab, unimpressed",
-    "lightAndPalette": "Soft window light from the left, warm amber shadows"
-   },
-   {
-    "panelNumber": 3,
-    "shotNumberRef": 3,
-    "shotSizeAndAngle": "Medium shot at eye level",
-    "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-    "lightAndPalette": "Soft window light from the left, warm amber shadows"
-   },
-   {
-    "panelNumber": 4,
-    "shotNumberRef": 4,
-    "shotSizeAndAngle": "Medium shot at eye level",
-    "whatIsInFrame": "Light warm brown young woman in a grey hijab, unimpressed",
-    "lightAndPalette": "Soft window light from the left, warm amber shadows"
-   },
-   {
-    "panelNumber": 5,
-    "shotNumberRef": 5,
-    "shotSizeAndAngle": "Medium shot at eye level",
-    "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-    "lightAndPalette": "Soft window light from the left, warm amber shadows"
-   },
-   {
-    "panelNumber": 6,
-    "shotNumberRef": 6,
-    "shotSizeAndAngle": "Medium shot at eye level",
-    "whatIsInFrame": "Light warm brown young woman in a grey hijab, unimpressed",
-    "lightAndPalette": "Soft window light from the left, warm amber shadows"
-   },
-   {
-    "panelNumber": 7,
-    "shotNumberRef": 1,
-    "shotSizeAndAngle": "Medium shot at eye level",
-    "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-    "lightAndPalette": "Soft window light from the left, warm amber shadows"
-   },
-   {
-    "panelNumber": 8,
-    "shotNumberRef": 2,
-    "shotSizeAndAngle": "Medium shot at eye level",
-    "whatIsInFrame": "Light warm brown young woman in a grey hijab, unimpressed",
-    "lightAndPalette": "Soft window light from the left, warm amber shadows"
-   }
-  ]
- },
+ "storyboardSheets": [
+  {
+   "segmentId": 1,
+   "targetEngine": "nano-banana-2.1",
+   "fullPrompt": "A six-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two rows, four panels on the top row and two on the bottom row on a warm off-white page, each 16:9 panel with a small hand-written shot number. Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Panel 1 [Part 1, shot 1]: Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 2 [Part 1, shot 2]: Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 3 [Part 1, shot 3]: Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 4 [Part 1, shot 4]: Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 5 [Part 1, shot 5]: Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 6 [Part 1, shot 6]: Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. No text other than shot numbers.",
+   "panels": [
+    {
+     "panelNumber": 1,
+     "shotNumberRef": 1,
+     "shotSizeAndAngle": "Medium shot at eye level",
+     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+     "lightAndPalette": "Soft window light from the left, warm amber shadows"
+    },
+    {
+     "panelNumber": 2,
+     "shotNumberRef": 2,
+     "shotSizeAndAngle": "Medium shot at eye level",
+     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+     "lightAndPalette": "Soft window light from the left, warm amber shadows"
+    },
+    {
+     "panelNumber": 3,
+     "shotNumberRef": 3,
+     "shotSizeAndAngle": "Medium shot at eye level",
+     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+     "lightAndPalette": "Soft window light from the left, warm amber shadows"
+    },
+    {
+     "panelNumber": 4,
+     "shotNumberRef": 4,
+     "shotSizeAndAngle": "Medium shot at eye level",
+     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+     "lightAndPalette": "Soft window light from the left, warm amber shadows"
+    },
+    {
+     "panelNumber": 5,
+     "shotNumberRef": 5,
+     "shotSizeAndAngle": "Medium shot at eye level",
+     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+     "lightAndPalette": "Soft window light from the left, warm amber shadows"
+    },
+    {
+     "panelNumber": 6,
+     "shotNumberRef": 6,
+     "shotSizeAndAngle": "Medium shot at eye level",
+     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+     "lightAndPalette": "Soft window light from the left, warm amber shadows"
+    }
+   ]
+  },
+  {
+   "segmentId": 2,
+   "targetEngine": "nano-banana-2.1",
+   "fullPrompt": "A three-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in a single row of three panels on a warm off-white page, each 16:9 panel with a small hand-written shot number. Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Panel 1 [Part 2, shot 1]: Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 2 [Part 2, shot 2]: Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 3 [Part 2, shot 3]: Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. No text other than shot numbers.",
+   "panels": [
+    {
+     "panelNumber": 1,
+     "shotNumberRef": 1,
+     "shotSizeAndAngle": "Medium shot at eye level",
+     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+     "lightAndPalette": "Soft window light from the left, warm amber shadows"
+    },
+    {
+     "panelNumber": 2,
+     "shotNumberRef": 2,
+     "shotSizeAndAngle": "Medium shot at eye level",
+     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+     "lightAndPalette": "Soft window light from the left, warm amber shadows"
+    },
+    {
+     "panelNumber": 3,
+     "shotNumberRef": 3,
+     "shotSizeAndAngle": "Medium shot at eye level",
+     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+     "lightAndPalette": "Soft window light from the left, warm amber shadows"
+    }
+   ]
+  }
+ ],
  "htmlScriptDocument": "<!doctype html><html><head><link href=\"https://fonts.googleapis.com/css2?family=Fraunces&family=Karla&family=Space+Mono\" rel=\"stylesheet\"><style>body{background:#E4E6D9;color:#22272A;font-family:Karla}.card{background:#F2F3EA}</style></head><body><h1>The Sunglasses Scientist</h1><p>Draft 1</p></body></html>",
  "clarifyingQuestion": null,
  "assumptions": [

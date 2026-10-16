@@ -54,7 +54,7 @@ test('SUNGLASSES_OVER_EYES: shots, cast and panels', () => {
     assert.ok(!SUNGLASSES_OVER_EYES.test(t), t);
   let d = good(); shot0(d).whatWeSee = '@Shaz slaps a card down, sunglasses over his eyes.'; assert.ok(codes(d).includes('SUNGLASSES_OVER_EYES'));
   d = good(); d.cast[0].physicalDescription = 'Small boy, short black hair, matte black sunglasses, red t-shirt.'; assert.ok(codes(d).includes('SUNGLASSES_OVER_EYES'));
-  d = good(); d.storyboardPrompt.panels[0].whatIsInFrame = 'Warm brown boy wearing dark sunglasses'; assert.ok(codes(d).includes('SUNGLASSES_OVER_EYES'));
+  d = good(); d.storyboardSheets[0].panels[0].whatIsInFrame = 'Warm brown boy wearing dark sunglasses'; assert.ok(codes(d).includes('SUNGLASSES_OVER_EYES'));
 });
 test('TOO_MANY_AGE_VARIANTS: max 2 cards per real person (by realPerson, or name minus age words)', () => {
   const d = good(); const base = d.cast[0];

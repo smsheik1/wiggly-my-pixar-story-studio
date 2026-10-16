@@ -156,9 +156,11 @@ Never use insider jargon. Say the plain outcome:
 
 Alongside the script, deliver a copy-pasteable prompt for **Nano Banana 2.1** to generate an **8-panel painted color board sheet**.
 
+> **Wiggly addition (one sheet per part):** our films run 19 to 24 shots, so one sheet is not enough. Write **one storyboard sheet per part** (`storyboardSheets`, one entry per sheet). **Every shot in the story appears in exactly one panel, in story order.** A part with more than 8 shots continues on extra sheets of up to 8 panels. Leave unused panel slots out: a part with 6 shots gets a six-panel sheet. Panels are numbered 1 to N on each sheet and labelled with the real part and shot number.
+
 ### Storyboard Rules:
 * **Painted Color Boards, Not Rough Line Art:** These double as the film's color script, checking lighting and palette progression across the whole short.
-* **Grid Layout:** Exactly 8 panels per sheet, arranged in two even rows of four ($2 \times 4$ in 16:9).
+* **Grid Layout:** At most 8 panels per sheet. 8 panels: two even rows of four ($2 \times 4$ in 16:9). 5 to 7 panels: two rows, four on the top row and the rest on the bottom row. 4 or fewer: a single row.
 * **Skin Tone Named Every Time:** Boards have no reference images attached. An unspecified character defaults to Caucasian. Name skin tone in every single panel a character appears in.
 * **Two Sentences Per Panel:**
   * *Sentence 1 (Staging):* Shot size, angle, who is in frame, what they are doing.
@@ -167,23 +169,24 @@ Alongside the script, deliver a copy-pasteable prompt for **Nano Banana 2.1** to
 
 ### Storyboard Prompt Template:
 ```text
-An eight-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two even rows of four panels on a warm off-white page. Each panel is a 16:9 landscape rectangle with a thin dark border, evenly spaced, with a small hand-written shot number in the corner of each panel.
+An [N-word]-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in [LAYOUT] on a warm off-white page. Each panel is a 16:9 landscape rectangle with a thin dark border, evenly spaced, with a small hand-written shot number in the corner of each panel.
 
 Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Rich saturated colour, warm and cinematic, in the style of a feature animation colour script. Not photorealistic, not flat vector, not line art.
 
-Panel 1 [shot 1]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
-Panel 2 [shot 2]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
-Panel 3 [shot 3]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
-Panel 4 [shot 4]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
-Panel 5 [shot 5]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
-Panel 6 [shot 6]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
-Panel 7 [shot 7]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
-Panel 8 [shot 8]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
+Panel 1 [Part P, shot S]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
+Panel 2 [Part P, shot S]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
+... one line per shot, up to Panel N (N is at most 8) ...
+Panel N [Part P, shot S]: [shot size and angle]. [What is in frame, naming skin tone]. [Light and palette].
 
 Cohesive colour design across the whole sheet. No text or writing in the panels other than the shot numbers. No watermark, no logos, no border around the page.
 ```
 
-> **Wiggly addition:** Nano Banana 2.1 runs in **Google Flow**, which only accepts a single-line prompt. Keep all of the template content above, but **flatten it to ONE line** (no line breaks; join paragraphs and panel lines with spaces) in `storyboardPrompt.fullPrompt`. Every character who wears a hijab (per her cast card) is described in her hijab with no visible hair; characters without one are drawn with their hair as the cast card says. Shaz's sunglasses are pushed up on his forehead in every panel.
+Fill the brackets exactly (the gate checks them):
+* **[N-word]** is the panel count as a word: one, two, ... eight (an eight-panel sheet starts "An eight-panel", otherwise "A six-panel" etc.).
+* **[LAYOUT]** is `two even rows of four panels` for 8 panels; `two rows, four panels on the top row and [N−4 as a word] on the bottom row` for 5 to 7 (e.g. "two rows, four panels on the top row and two on the bottom row"); `a single row of [N-word] panels` for 2 to 4; `a single panel` for 1.
+* **[Part P, shot S]** is that shot's real `segmentId` and `shotNumber`, e.g. `Panel 3 [Part 2, shot 3]`. Never write a panel for a shot that is not on this sheet.
+
+> **Wiggly addition:** Nano Banana 2.1 runs in **Google Flow**, which only accepts a single-line prompt. Keep all of the template content above, but **flatten it to ONE line** (no line breaks; join paragraphs and panel lines with spaces) in each sheet's `fullPrompt`. Every character who wears a hijab (per her cast card) is described in her hijab with no visible hair; characters without one are drawn with their hair as the cast card says. Shaz's sunglasses are pushed up on his forehead in every panel.
 
 ---
 
@@ -203,7 +206,7 @@ Before handing the screenplay to downstream nodes (**Character Architect** and *
 - [ ] Pauses at the Human Approval Gate for explicit director sign-off.
 - [ ] **Wiggly:** a hijab appears in a cast card only when the user's notes or photos say so, and every `castDescriptions` note is in its cast card; nobody is cast at age 13–17; an 8-year-old boy in Shaz's answers is `@Shaz`; skin tone is named in every cast card and panel (photo characters use the photo's `skinTone` and `photoRef`); no invented facts.
 - [ ] **Wiggly:** every shot has `location` (from `locations`), `framing`, `cameraAngle` and `cameraMove`; shots name people by `@tag` only and never re-describe looks; Shaz's sunglasses are pushed up on his forehead everywhere; at most 2 cast cards per `realPerson`.
-- [ ] **Wiggly:** every `@Speaker` (dialogue and narration) matches a cast `elementTag`; storyboard targets `nano-banana-2.1` and `fullPrompt` is a single line; one shot = one cut; held beats are moving holds.
+- [ ] **Wiggly:** every `@Speaker` (dialogue and narration) matches a cast `elementTag`; one storyboard sheet per part (max 8 panels, extra sheets for longer parts), every shot in exactly one panel in order, each sheet targets `nano-banana-2.1` and its `fullPrompt` is a single line; one shot = one cut; held beats are moving holds.
 
 ---
 
@@ -236,15 +239,16 @@ Return ONE JSON object and nothing else, matching `schema.mjs` (`StoryDirectorOu
       "directorsNote": "only where it could be got wrong: the consequence", "isContinuousMove": false
     } ]
   } ],
-  "storyboardPrompt": {
+  "storyboardSheets": [ {
+    "segmentId": 1,
     "targetEngine": "nano-banana-2.1",
-    "fullPrompt": "the template above flattened to ONE line, all 8 panel lines, skin tone in each",
+    "fullPrompt": "the template above for this sheet flattened to ONE line, one panel line per shot, skin tone in each",
     "panels": [ { "panelNumber": 1, "shotNumberRef": 1, "shotSizeAndAngle": "Wide shot at eye level",
                   "whatIsInFrame": "who, skin tone, doing what", "lightAndPalette": "key light, shadow warmth, colours" } ]
-  },
+  } ],
   "htmlScriptDocument": "<!doctype html>... the full card deck",
   "clarifyingQuestion": null,
   "assumptions": ["what you assumed and why"]
 }
 ```
-`panels` has exactly 8 entries. Every shot has `location`, `framing`, `cameraAngle`, `cameraMove`. `dialogue` and `narration` are optional per shot (at most one of each).
+`storyboardSheets` has one sheet per part (more if a part has over 8 shots); each sheet has 1 to 8 `panels`, and together the panels cover every shot exactly once, in order. Every shot has `location`, `framing`, `cameraAngle`, `cameraMove`. `dialogue` and `narration` are optional per shot (at most one of each).

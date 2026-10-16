@@ -406,68 +406,113 @@
     ],
     "totalRuntimeSec": 60
   },
-  "storyboardPrompt": {
-    "fullPrompt": "An eight-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two even rows of four panels on a warm off-white page. Each panel is a 16:9 landscape rectangle with a thin dark border, evenly spaced, with a small hand-written shot number in the corner of each panel. Painted digital storyboard art — soft loose brushwork, simplified appealing character shapes, minimal facial detail, strong atmospheric lighting and clear colour design in every panel. Rich saturated colour, warm and cinematic, in the style of a feature animation colour script. Not photorealistic, not flat vector, not line art. Panel 1 [shot 1]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 2 [shot 2]: Medium close-up at eye level. Shaz age 8 with warm medium brown skin lifting chin under sunglasses, mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair leaning in doorway. Warm lamp key from right, soft warm shadows, creamy walls with rose accent. Panel 3 [shot 4]: Low view at carpet level. Little brother age 6 with warm medium brown skin and big sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair kneeling with cards, Shaz with warm medium brown skin watching. Overhead soft daylight, warm shadows, beige carpet with bright blue and red card pops. Panel 4 [shot 5]: Wide exterior at eye level. Teen Shaz age 18 with warm medium brown skin standing by faded coupe, hand on roof. Bright noon sun from above right, short warm shadows, pale street with dull gray car. Panel 5 [shot 6]: Interior view at dashboard level. Teen Shaz age 18 with warm medium brown skin in driver seat plugging black aux cable, breathing calmly. Sun streak key through windshield, warm glow shadows, gray interior with black cable pop. Panel 6 [shot 9]: Medium view at eye level. Adult Shaz age 19 with warm medium brown skin holding laptop to chest, mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair nearby. Warm evening lamp key from left, soft warm shadows, muted walls with silver laptop glow. Panel 7 [shot 11]: Close view on phone screen at slight angle. Wife with warm medium brown skin in soft sage hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, smiling softly on screen, adult thumb with warm medium brown skin at edge. Cool phone glow key, soft dark shadows, dark room with sage and emerald accents. Panel 8 [shot 13]: Medium close-up at eye level. Adult Shaz age 19 with warm medium brown skin sitting upright with hands still, breathing calmly, honest eyes forward. Soft morning window key from left, warm gentle shadows, pale room with warm skin glow. Cohesive colour design across the whole sheet. No text or writing in the panels other than the shot numbers. No watermark, no logos, no border around the page.",
-    "panels": [
-      {
-        "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
-        "panelNumber": 1,
-        "shotNumberRef": 1,
-        "shotSizeAndAngle": "Wide shot at eye level",
-        "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
-      },
-      {
-        "lightAndPalette": "Warm lamp key from right, soft warm shadows, creamy walls with rose accent",
-        "panelNumber": 2,
-        "shotNumberRef": 2,
-        "shotSizeAndAngle": "Medium close-up at eye level",
-        "whatIsInFrame": "Shaz age 8 with warm medium brown skin lifting chin under sunglasses, mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair leaning in doorway"
-      },
-      {
-        "lightAndPalette": "Overhead soft daylight, warm shadows, beige carpet with bright blue and red card pops",
-        "panelNumber": 3,
-        "shotNumberRef": 4,
-        "shotSizeAndAngle": "Low view at carpet level",
-        "whatIsInFrame": "Little brother age 6 with warm medium brown skin and big sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair kneeling with cards, Shaz with warm medium brown skin watching"
-      },
-      {
-        "lightAndPalette": "Bright noon sun from above right, short warm shadows, pale street with dull gray car",
-        "panelNumber": 4,
-        "shotNumberRef": 5,
-        "shotSizeAndAngle": "Wide exterior at eye level",
-        "whatIsInFrame": "Teen Shaz age 18 with warm medium brown skin standing by faded coupe, hand on roof"
-      },
-      {
-        "lightAndPalette": "Sun streak key through windshield, warm glow shadows, gray interior with black cable pop",
-        "panelNumber": 5,
-        "shotNumberRef": 6,
-        "shotSizeAndAngle": "Interior view at dashboard level",
-        "whatIsInFrame": "Teen Shaz age 18 with warm medium brown skin in driver seat plugging black aux cable, breathing calmly"
-      },
-      {
-        "lightAndPalette": "Warm evening lamp key from left, soft warm shadows, muted walls with silver laptop glow",
-        "panelNumber": 6,
-        "shotNumberRef": 9,
-        "shotSizeAndAngle": "Medium view at eye level",
-        "whatIsInFrame": "Adult Shaz age 19 with warm medium brown skin holding laptop to chest, mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair nearby"
-      },
-      {
-        "lightAndPalette": "Cool phone glow key, soft dark shadows, dark room with sage and emerald accents",
-        "panelNumber": 7,
-        "shotNumberRef": 11,
-        "shotSizeAndAngle": "Close view on phone screen at slight angle",
-        "whatIsInFrame": "Wife with warm medium brown skin in soft sage hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, smiling softly on screen, adult thumb with warm medium brown skin at edge"
-      },
-      {
-        "lightAndPalette": "Soft morning window key from left, warm gentle shadows, pale room with warm skin glow",
-        "panelNumber": 8,
-        "shotNumberRef": 13,
-        "shotSizeAndAngle": "Medium close-up at eye level",
-        "whatIsInFrame": "Adult Shaz age 19 with warm medium brown skin sitting upright with hands still, breathing calmly, honest eyes forward"
-      }
-    ],
-    "targetEngine": "nano-banana-2.1"
-  },
+  "storyboardSheets": [
+    {
+      "segmentId": 1,
+      "targetEngine": "nano-banana-2.1",
+      "fullPrompt": "A seven-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two rows, four panels on the top row and three on the bottom row on a warm off-white page, each 16:9 panel with a small hand-written shot number. Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Panel 1 [Part 1, shot 1]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 2 [Part 1, shot 2]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 3 [Part 1, shot 3]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 4 [Part 1, shot 4]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 5 [Part 1, shot 5]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 6 [Part 1, shot 6]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 7 [Part 1, shot 7]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. No text other than shot numbers.",
+      "panels": [
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 1,
+          "shotNumberRef": 1,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 2,
+          "shotNumberRef": 2,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 3,
+          "shotNumberRef": 3,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 4,
+          "shotNumberRef": 4,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 5,
+          "shotNumberRef": 5,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 6,
+          "shotNumberRef": 6,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 7,
+          "shotNumberRef": 7,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        }
+      ]
+    },
+    {
+      "segmentId": 2,
+      "targetEngine": "nano-banana-2.1",
+      "fullPrompt": "A six-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two rows, four panels on the top row and two on the bottom row on a warm off-white page, each 16:9 panel with a small hand-written shot number. Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Panel 1 [Part 2, shot 1]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 2 [Part 2, shot 2]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 3 [Part 2, shot 3]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 4 [Part 2, shot 4]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 5 [Part 2, shot 5]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 6 [Part 2, shot 6]: Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. No text other than shot numbers.",
+      "panels": [
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 1,
+          "shotNumberRef": 1,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 2,
+          "shotNumberRef": 2,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 3,
+          "shotNumberRef": 3,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 4,
+          "shotNumberRef": 4,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 5,
+          "shotNumberRef": 5,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 6,
+          "shotNumberRef": 6,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        }
+      ]
+    }
+  ],
   "locations": [
     {
       "name": "Home",

@@ -70,12 +70,29 @@ export const CastCardSchema = z.object({
 }).refine((c) => !(c.age >= 13 && c.age <= 17), { message: 'Teens are depicted as 18: age 13-17 is not allowed', path: ['age'] });
 
 export const StoryboardPanelSchema = z.object({
-  panelNumber: z.number().int().min(1).max(8),
-  shotNumberRef: z.number().int().positive(),
+  panelNumber: z.number().int().min(1).max(8).describe('Position on this sheet, 1..N'),
+  shotNumberRef: z.number().int().positive().describe("The real shotNumber within this sheet's segment"),
   shotSizeAndAngle: z.string().min(3).describe("e.g. 'Wide shot at adult chest height'"),
   whatIsInFrame: z.string().min(10).describe('Who is in frame, naming skin tone explicitly, and what they are doing'),
   lightAndPalette: z.string().min(10).describe('Direction of key light, shadow warmth, and color tones'),
 });
+
+export const MAX_PANELS_PER_SHEET = 8;
+// WIGGLY: was a single 8-panel storyboardPrompt (first 8 shots only). Now one sheet per part.
+export const StoryboardSheetSchema = z.object({
+  segmentId: z.number().int().positive().describe('The part (segment) every panel on this sheet comes from'),
+  targetEngine: z.literal(IMAGE_ENGINE).default(IMAGE_ENGINE), // WIGGLY (was gpt-image-2)
+  fullPrompt: z.string().min(100).refine((s) => !/[\r\n]/.test(s), 'fullPrompt must be a single line (Google Flow)')
+    .describe('Copy-pasteable N-panel colour board prompt for Nano Banana 2.1 in Google Flow, one line'),
+  panels: z.array(StoryboardPanelSchema).min(1).max(MAX_PANELS_PER_SHEET, `A storyboard sheet has at most ${MAX_PANELS_PER_SHEET} panels`),
+});
+
+/** Read storyboard sheets from new outputs, or from old single-sheet `storyboardPrompt` run outputs (segment 1). */
+export function storyboardSheetsOf(d) {
+  if (Array.isArray(d?.storyboardSheets)) return d.storyboardSheets;
+  if (d?.storyboardPrompt) return [{ segmentId: d.segments?.[0]?.segmentId ?? 1, ...d.storyboardPrompt }];
+  return [];
+}
 
 // WIGGLY: the defined set of story locations; every shot names one of these exactly.
 export const StoryLocationSchema = z.object({
@@ -96,12 +113,8 @@ export const StoryDirectorOutputSchema = z.object({
   cast: z.array(CastCardSchema).min(1),
   locations: z.array(StoryLocationSchema).min(1).describe('WIGGLY: every background the film needs, each used by at least one shot'),
   segments: z.array(ScriptSegmentSchema).min(1),
-  storyboardPrompt: z.object({
-    targetEngine: z.literal(IMAGE_ENGINE).default(IMAGE_ENGINE), // WIGGLY (was gpt-image-2)
-    fullPrompt: z.string().min(100).refine((s) => !/[\r\n]/.test(s), 'fullPrompt must be a single line (Google Flow)')
-      .describe('Copy-pasteable 8-panel painted color board prompt for Nano Banana 2.1 in Google Flow, one line'),
-    panels: z.array(StoryboardPanelSchema).length(8, 'Storyboard MUST contain exactly 8 panels'),
-  }),
+  // WIGGLY: one storyboard sheet (max 8 panels) per part, extra sheets when a part has >8 shots; every shot drawn once.
+  storyboardSheets: z.array(StoryboardSheetSchema).min(1),
   htmlScriptDocument: z.string().min(200).describe('Rendered HTML card deck formatted in Fraunces, Karla, Space Mono and warm paper palette'),
   // WIGGLY
   clarifyingQuestion: z.string().min(1).nullable().default(null),

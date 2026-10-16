@@ -8,7 +8,7 @@ import { validateWritingTells } from './writing-tells.mjs';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { countWords, secondsNeeded, budgetMessage, MAX_LINE_WORDS } from './speech.mjs';
 import { fileURLToPath } from 'node:url';
-import { MAX_TOTAL_SECONDS, IMAGE_ENGINE } from '../story-director/schema.mjs';
+import { MAX_TOTAL_SECONDS, IMAGE_ENGINE, MAX_PANELS_PER_SHEET, storyboardSheetsOf } from '../story-director/schema.mjs';
 
 export const SKIN_WORDS = ['skin', 'complexion', 'tan', 'pale', 'brown', 'dark', 'warm', 'fair', 'olive', 'ebony'];
 // [label, regex, plain-language suggestion]
@@ -31,6 +31,56 @@ export const BANNED_JARGON = [
 /** Whole-second budget for a spoken line (Gemini: 3–5 words = 2 s). null = too long for one shot. */
 // Shared 3 words/sec rate (crew/linter/speech.mjs); same rule as the Seedance Compiler gate.
 export function lineBudget(words) { return words > MAX_LINE_WORDS ? null : secondsNeeded(words); }
+// WIGGLY storyboard sheets -------------------------------------------------------
+const PANEL_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+/** The opening phrase a sheet of n panels must use, e.g. 'An eight-panel ... two even rows of four panels'. */
+export function sheetLayout(n) {
+  const w = PANEL_WORDS[n] ?? String(n);
+  const layout = n === 8 ? 'two even rows of four panels' : n >= 5 ? `two rows, four panels on the top row and ${PANEL_WORDS[n - 4]} on the bottom row` : n === 1 ? 'a single panel' : `a single row of ${w} panels`;
+  return { countWord: `${w}-panel`, layout };
+}
+/** Every shot in exactly one panel, in story order; max 8 per sheet; labels use the real part + shot numbers. */
+export function checkStoryboardSheets(data, err) {
+  const sheets = storyboardSheetsOf(data);
+  const segs = data?.segments ?? [];
+  const want = segs.flatMap((sg) => (sg.shots ?? []).map((h, hi) => `${sg.segmentId}.${h.shotNumber ?? hi + 1}`));
+  const known = new Set(want);
+  if (!sheets.length) err('NO_STORYBOARD', 'Output has no storyboardSheets.', 'storyboardSheets');
+  const seen = new Map(); const order = [];
+  sheets.forEach((sh, si) => {
+    const p = `storyboardSheets.${si}`, panels = sh.panels ?? [], fp = String(sh.fullPrompt ?? '');
+    if (panels.length > MAX_PANELS_PER_SHEET || panels.length < 1)
+      err('STORYBOARD_PANEL_COUNT', `Storyboard sheet ${si + 1} has ${panels.length} panels; a sheet has 1 to ${MAX_PANELS_PER_SHEET}.`, `${p}.panels`);
+    panels.forEach((pn, i) => {
+      const key = `${sh.segmentId}.${pn.shotNumberRef}`;
+      if (pn.panelNumber !== i + 1)
+        err('STORYBOARD_PANEL_NUMBERING', `Storyboard sheet ${si + 1}: panel ${i + 1} is numbered ${pn.panelNumber}; number panels 1 to ${panels.length} in order.`, `${p}.panels.${i}.panelNumber`);
+      if (!known.has(key)) err('STORYBOARD_UNKNOWN_SHOT', `Storyboard sheet ${si + 1} panel ${i + 1} points at Part ${sh.segmentId} shot ${pn.shotNumberRef}, which does not exist.`, `${p}.panels.${i}.shotNumberRef`);
+      else if (seen.has(key)) err('STORYBOARD_DUPLICATE_SHOT', `Part ${sh.segmentId} shot ${pn.shotNumberRef} is drawn twice (sheet ${seen.get(key) + 1} and sheet ${si + 1}); every shot gets exactly one panel.`, `${p}.panels.${i}`);
+      else { seen.set(key, si); order.push(key); }
+      const t = String(pn.whatIsInFrame ?? '').toLowerCase();
+      if (!SKIN_WORDS.some((w) => t.includes(w)))
+        err('MISSING_SKIN_TONE_IN_PANEL', `Storyboard sheet ${si + 1} panel ${pn.panelNumber ?? i + 1} does not name skin tone.`, `${p}.panels.${i}`);
+      if (!fp.includes(`Panel ${i + 1} [Part ${sh.segmentId}, shot ${pn.shotNumberRef}]`))
+        err('STORYBOARD_PANEL_LABEL', `Storyboard sheet ${si + 1}: fullPrompt must label panel ${i + 1} as 'Panel ${i + 1} [Part ${sh.segmentId}, shot ${pn.shotNumberRef}]' (the real part and shot number).`, `${p}.fullPrompt`);
+    });
+    const extra = [...fp.matchAll(/Panel (\d+) \[/g)].map((m) => +m[1]).filter((n) => n > panels.length);
+    if (extra.length) err('STORYBOARD_PANEL_LABEL', `Storyboard sheet ${si + 1}: fullPrompt has panel ${extra[0]} but the sheet has only ${panels.length} panels; leave unused slots out.`, `${p}.fullPrompt`);
+    const { countWord, layout } = sheetLayout(panels.length);
+    if (panels.length && !(fp.toLowerCase().includes(countWord) && fp.includes(layout)))
+      err('STORYBOARD_SHEET_SIZE_TEXT', `Storyboard sheet ${si + 1} has ${panels.length} panels, so its fullPrompt must say '${countWord}' and '${layout}'.`, `${p}.fullPrompt`);
+    if ((sh.targetEngine ?? IMAGE_ENGINE) !== IMAGE_ENGINE || /gpt[- ]?image/i.test(fp))
+      err('WRONG_IMAGE_ENGINE', `Storyboard must target ${IMAGE_ENGINE} (Google Flow), not '${sh.targetEngine}'.`, `${p}.targetEngine`);
+    if (/[\r\n]/.test(fp))
+      err('MULTILINE_STORYBOARD_PROMPT', 'Storyboard fullPrompt must be a single line for Google Flow.', `${p}.fullPrompt`);
+  });
+  const missing = want.filter((k) => !seen.has(k));
+  if (sheets.length && missing.length)
+    err('STORYBOARD_SHOT_MISSING', `${missing.length} shot(s) have no storyboard panel: ${missing.map((k) => `Part ${k.replace('.', ' shot ')}`).join(', ')}. Every shot gets exactly one panel, one sheet (max ${MAX_PANELS_PER_SHEET}) per part.`, 'storyboardSheets');
+  else if (order.join() !== want.filter((k) => seen.has(k)).join())
+    err('STORYBOARD_SHOT_ORDER', 'Storyboard panels must follow story order: part by part, shot by shot.', 'storyboardSheets');
+}
+
 // WIGGLY shot hygiene -------------------------------------------------------------
 const STOP = new Set('a an the and or of with in on at to his her their its is are wearing wears who that for from by as into over under no'.split(' '));
 const norm = (t) => String(t ?? '').toLowerCase().replace(/@[\w_]+/g, ' ').replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -186,18 +236,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
   });
   if (filmTotal > MAX_TOTAL_SECONDS) err('RUNTIME_EXCEEDS_CAP', `Film runs ${filmTotal}s; the total cap is ${MAX_TOTAL_SECONDS}s.`, 'segments');
 
-  const sb = data?.storyboardPrompt ?? {};
-  const panels = sb.panels ?? [];
-  if (panels.length !== 8) err('STORYBOARD_PANEL_COUNT', `Storyboard has ${panels.length} panels; it must have exactly 8.`, 'storyboardPrompt.panels');
-  panels.forEach((pn, i) => {
-    const t = String(pn.whatIsInFrame ?? '').toLowerCase();
-    if (!SKIN_WORDS.some((w) => t.includes(w)))
-      err('MISSING_SKIN_TONE_IN_PANEL', `Storyboard panel ${pn.panelNumber ?? i + 1} does not name skin tone.`, `storyboardPrompt.panels.${i}`);
-  });
-  if ((sb.targetEngine ?? IMAGE_ENGINE) !== IMAGE_ENGINE || /gpt[- ]?image/i.test(sb.fullPrompt ?? ''))
-    err('WRONG_IMAGE_ENGINE', `Storyboard must target ${IMAGE_ENGINE} (Google Flow), not '${sb.targetEngine}'.`, 'storyboardPrompt.targetEngine');
-  if (/[\r\n]/.test(sb.fullPrompt ?? ''))
-    err('MULTILINE_STORYBOARD_PROMPT', 'Storyboard fullPrompt must be a single line for Google Flow.', 'storyboardPrompt.fullPrompt');
+  checkStoryboardSheets(data, err);
 
   if (!cast.length) err('NO_CAST', 'Output contains no cast.', 'cast');
   cast.forEach((c, i) => {
@@ -225,10 +264,10 @@ export function validateStoryDirectorOutput(data, input = {}) {
   if ((input?.photoCharacters ?? []).length) for (const [i, a] of (data?.assumptions ?? []).entries())
     if (/skin ?tone|complexion/i.test(a) && /assum|guess|no photo|without photo|not provided/i.test(a))
       err('GUESSED_SKIN_TONE', `Assumption ${i + 1} guesses skin tone ('${a.slice(0, 80)}'). Photo characters use their photo's skin tone; family resemblance follows them. Do not list it as an assumption.`, `assumptions.${i}`);
-  (data?.storyboardPrompt?.panels ?? []).forEach((pn, i) => {
+  storyboardSheetsOf(data).forEach((sh, si) => (sh.panels ?? []).forEach((pn, i) => {
     if (SUNGLASSES_OVER_EYES.test(pn.whatIsInFrame ?? ''))
-      err('SUNGLASSES_OVER_EYES', `Storyboard panel ${pn.panelNumber ?? i + 1}: sunglasses must sit pushed up on the forehead.`, `storyboardPrompt.panels.${i}`);
-  });
+      err('SUNGLASSES_OVER_EYES', `Storyboard sheet ${si + 1} panel ${pn.panelNumber ?? i + 1}: sunglasses must sit pushed up on the forehead.`, `storyboardSheets.${si}.panels.${i}`);
+  }));
 
   issues.push(...validateWritingTells('story-director', data));
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
