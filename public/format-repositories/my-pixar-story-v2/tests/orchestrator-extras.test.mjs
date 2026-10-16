@@ -77,7 +77,7 @@ test('7: rehearsal runner with injected fake stops at approval and saves outputs
   try {
     const proj = join(root, 'project.json');
     writeFileSync(proj, JSON.stringify({ inputs: { subject: { preferredName: 'Shaz', recipientName: 'Mia', relationshipToRecipient: 'parent' }, answers: { scene1Childhood: { memory: 'sunglasses scientist' } } } }));
-    const lines = []; const { state, dir } = await runRehearsal({ projectPath: proj, runId: 'r1', runsRoot: root, invoke: fake(), log: (l) => lines.push(l) });
+    const lines = []; const { state, dir } = await runRehearsal({ projectPath: proj, runId: 'r1', runsRoot: root, invoke: fake(), secrets: {}, tracing: null, trackerPath: null, log: (l) => lines.push(l) });
     assert.equal(state.status, 'awaiting-approval');
     for (const a of ['story-director', 'character-architect', 'location-scout']) assert.ok(existsSync(join(dir, `${a}.json`)), a);
     assert.ok(!existsSync(join(dir, 'seedance-compiler.json')));
@@ -88,7 +88,7 @@ test('7: rehearsal prints escalating agent and gate errors; no fallback story', 
   const root = mkdtempSync(join(tmpdir(), 'v2-reh-'));
   try {
     const proj = join(root, 'p.json'); writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: { a: 'x' } } }));
-    const lines = []; await runRehearsal({ projectPath: proj, runId: 'r2', runsRoot: root, invoke: fake({ 'story-director': () => '{bad' }), log: (l) => lines.push(l) });
+    const lines = []; await runRehearsal({ projectPath: proj, runId: 'r2', runsRoot: root, invoke: fake({ 'story-director': () => '{bad' }), secrets: {}, tracing: null, trackerPath: null, log: (l) => lines.push(l) });
     assert.ok(lines.some((l) => l.startsWith('ESCALATED story-director'))); assert.ok(lines.some((l) => /\[SCHEMA_REJECTED\]/.test(l)));
     assert.throws(() => inputsFromProject({ inputs: { subject: 'Shaz' } }), /no questionnaire answers/);
     assert.equal(inputsFromProject({ inputs: { subject: { preferredName: 'Shaz', recipientName: 'Mia' }, answers: { a: 1 } } }).subject, 'Shaz, story for Mia');

@@ -2,6 +2,7 @@
 //   START -> story-director -> [character-architect || location-scout] -> join -> asset-approval -> seedance-compiler -> END
 // Each agent node: selector -> invoke(model) -> schema parse -> linter gate; gate/parse issues feed the retry prompt;
 // after MAX_ATTEMPTS failures the node escalates (status 'escalated') and the graph stops.
+import { RunnableLambda } from '@langchain/core/runnables';
 import { StateGraph, START, END, interrupt } from '@langchain/langgraph';
 import { PipelineAnnotation } from './state.mjs';
 import { deepAgentInvoke } from './deep-agent-node.mjs';
@@ -79,12 +80,19 @@ export function retryNotes(issues = []) {
 }
 
 /** Build one agent node around an injectable invoke({ agent, config, skill, input, attempt, retryNotes }) -> string|object. */
-export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs = AGENT_SPECS, skill = loadSkill, now = () => new Date().toISOString() } = {}) {
+export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs = AGENT_SPECS, skill = loadSkill, now = () => new Date().toISOString(), onEvent = () => {}, runTag } = {}) {
   const spec = specs[agent];
   return async (state) => {
     let input;
+    const ev = (e) => { try { onEvent({ agent, ...e }); } catch { /* observers never break a run */ } };
+    // Each attempt is its own traced child run (inherits the node's run via async context).
+    const traced = (req) => RunnableLambda.from(async (r) => invoke(r)).invoke(req, {
+      runName: `${agent} attempt ${req.attempt}`, tags: [`agent:${agent}`, `attempt:${req.attempt}`, ...(runTag ? [`runId:${runTag}`] : [])],
+      metadata: { agent, attempt: req.attempt, runId: runTag } });
+    ev({ type: 'start' });
     try { input = spec.select(state); } catch (e) {
       const issues = [{ severity: 'error', code: 'INPUT_SELECTOR_FAILED', message: e.message }];
+      ev({ type: 'failed', attempt: 0, issues });
       return { status: 'failed', gateIssues: { [agent]: issues }, retryCounts: { [agent]: 0 },
         validationErrors: [{ node: agent, attempt: 1, errors: issues, timestamp: now() }],
         escalations: [{ agent, reason: 'input selector failed', attempts: 0, issues }] };
@@ -94,23 +102,28 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
     const log = [];
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       if (attempt > 1) log.push({ node: agent, attempt: attempt - 1, errors: issues, timestamp: now() });
+      ev({ type: 'attempt', attempt, input });
+      const done = (o) => ev({ type: 'attempt-result', attempt, ...o });
       let raw;
-      try { raw = await invoke({ agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state }); } catch (e) {
+      const req = { agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state };
+      try { raw = await traced(req); } catch (e) {
         issues = [{ severity: 'error', code: 'AGENT_RUN_FAILED', message: `model call failed: ${e.message}` }];
-        continue;
+        done({ output: null, issues }); continue;
       }
       let out;
       try { out = spec.parse(raw); } catch (e) {
         issues = (e.issues ?? [{ path: [], message: e.message }]).map((i) => ({ severity: 'error', code: 'SCHEMA_REJECTED', message: i.message, path: (i.path ?? []).join('.') }));
-        continue;
+        done({ output: raw, issues }); continue;
       }
       if (spec.merge) out = spec.merge(kept, out, state);
       const r = spec.gate(out, input, state);
-      if (r.isValid) return { ...spec.write(out), attempts: { [agent]: attempt }, retryCounts: { [agent]: attempt - 1 }, gateIssues: { [agent]: r.issues }, validationErrors: log };
+      done({ output: out, issues: r.issues, isValid: r.isValid });
+      if (r.isValid) { ev({ type: 'passed', attempt }); return { ...spec.write(out), attempts: { [agent]: attempt }, retryCounts: { [agent]: attempt - 1 }, gateIssues: { [agent]: r.issues }, validationErrors: log }; }
       issues = r.issues;
       if (spec.carry) kept = { ...(kept ?? {}), ...spec.carry(out, issues) };
     }
     log.push({ node: agent, attempt: maxAttempts, errors: issues, timestamp: now() });
+    ev({ type: 'failed', attempt: maxAttempts, issues });
     return { status: 'failed', attempts: { [agent]: maxAttempts }, retryCounts: { [agent]: maxAttempts - 1 }, gateIssues: { [agent]: issues }, validationErrors: log,
       escalations: [{ agent, reason: `failed the gate ${maxAttempts} times`, attempts: maxAttempts, issues }] };
   };
@@ -124,11 +137,15 @@ export function requiredAssetTags(state) {
 }
 
 /** Human approval gate. With useInterrupt, pauses via LangGraph interrupt() and resumes with { approvedAssets }. */
-export function makeApprovalNode({ useInterrupt = false } = {}) {
+/** Placeholder approvals for dry runs: fake asset keys, no image model calls. Clearly marked. */
+export const placeholderAssets = (tags) => Object.fromEntries(tags.map((t) => [t, `placeholder:${t.startsWith('@Loc') ? 'location-plate' : 'master-render'}:${t.slice(1).replace(/\s+/g, '-').toLowerCase()}`]));
+
+export function makeApprovalNode({ useInterrupt = false, autoApprove } = {}) {
   return async (state) => {
     const need = requiredAssetTags(state);
     let approved = state.approvedAssets ?? {};
     let missing = need.filter((t) => !approved[t]);
+    if (missing.length && autoApprove) return { approvedAssets: { ...approved, ...autoApprove(missing) }, pendingApproval: [] };
     if (missing.length && useInterrupt) {
       const resume = interrupt({ kind: 'asset-approval', missing });
       approved = { ...approved, ...(resume?.approvedAssets ?? {}) };
@@ -143,16 +160,16 @@ export function makeApprovalNode({ useInterrupt = false } = {}) {
 const halted = (s) => ['escalated', 'failed', 'awaiting-approval'].includes(s.status);
 
 /** Build and compile the v2 graph. Default invoke runs each agent as a Deep Agent; inject a fake invoke in tests. */
-export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer } = {}) {
+export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer, onEvent, runTag, autoApprove } = {}) {
   if (invoke === undefined) invoke = deepAgentInvoke(deepAgent);
   if (typeof invoke !== 'function') throw new Error('buildGraph: invoke must be a function');
-  const node = (a) => makeAgentNode(a, invoke, { maxAttempts });
+  const node = (a) => makeAgentNode(a, invoke, { maxAttempts, onEvent, runTag });
   const g = new StateGraph(PipelineAnnotation)
     .addNode('story-director', node('story-director'))
     .addNode('character-architect', node('character-architect'))
     .addNode('location-scout', node('location-scout'))
     .addNode('join', async () => ({}))
-    .addNode('asset-approval', makeApprovalNode({ useInterrupt }))
+    .addNode('asset-approval', makeApprovalNode({ useInterrupt, autoApprove }))
     .addNode('seedance-compiler', node('seedance-compiler'))
     .addNode('finish', async (s) => (halted(s) ? {} : { status: 'done' }))
     .addEdge(START, 'story-director')

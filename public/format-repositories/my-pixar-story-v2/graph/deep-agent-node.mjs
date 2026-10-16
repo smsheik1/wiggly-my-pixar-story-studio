@@ -97,10 +97,10 @@ export const systemPromptFor = (agent, retryNotes = '') => [
 ].filter(Boolean).join('\n');
 
 /** Default production model: OpenRouter via ChatOpenAI (lazy; never constructed in tests). */
-export async function openRouterModel(config) {
+export async function openRouterModel(config, _agent, { apiKey = process.env.OPENROUTER_API_KEY } = {}) {
   const { ChatOpenAI } = await import('@langchain/openai');
-  if (!process.env.OPENROUTER_API_KEY) throw new Error('openRouterModel: OPENROUTER_API_KEY is not set');
-  return new ChatOpenAI({ model: config.model, apiKey: process.env.OPENROUTER_API_KEY, maxTokens: config.maxTokens,
+  if (!apiKey) throw new Error('openRouterModel: OPENROUTER_API_KEY is not set');
+  return new ChatOpenAI({ model: config.model, apiKey, maxTokens: config.maxTokens,
     configuration: { baseURL: 'https://openrouter.ai/api/v1' }, modelKwargs: { reasoning: { effort: config.effort } } });
 }
 
@@ -114,7 +114,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     const submissions = [];
     const model = await createModel(config, agent);
     const agentRun = workspaceAgent(model, root, `openai:${config.model}`, `wiggly-v2-${agent}`, [makeSubmitTool(agent, submissions)], systemPromptFor(agent, retryNotes));
-    const res = await agentRun.invoke({ messages: [{ role: 'user', content: `Produce the ${agent} output for this run.` }] }, { recursionLimit });
+    const res = await agentRun.invoke({ messages: [{ role: 'user', content: `Produce the ${agent} output for this run.` }] }, { recursionLimit, runName: `${agent} deep agent`, tags: [`agent:${agent}`, `attempt:${attempt}`] });
     if (!submissions.length) {
       // An invalid submit_<agent> call fails schema validation; returnDirect ends the run with the tool error,
       // which the graph feeds into the next attempt's retry notes.
