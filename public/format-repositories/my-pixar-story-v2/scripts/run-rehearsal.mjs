@@ -15,6 +15,7 @@ import { loadSecrets, defaultSecretsPath } from './lib/secrets.mjs';
 import { makeTracing } from './lib/tracing.mjs';
 import { createLiveness, LivenessHandler, DEFAULT_TIMEOUTS } from '../graph/liveness.mjs';
 import { auditRun } from './audit-trace.mjs';
+import { applyScriptView } from './script-view.mjs';
 import { createRecorder, upsertTracker, reportHtml, defaultTrackerPath } from './lib/report.mjs';
 
 const OUTPUT_KEYS = { 'story-director': (s) => s.storyDirector, 'character-architect': (s) => s.characterArchitect?.output,
@@ -95,6 +96,7 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
     for (const i of (e.issues ?? []).filter((x) => x.severity === 'error')) log(`  - [${i.code}] ${i.message}`);
   }
   if (state.status === 'awaiting-approval') log(`awaiting approval for: ${(state.pendingApproval ?? []).join(', ')}`);
+  try { applyScriptView({ runId, runsRoot, trackerPath }); } catch (e) { log(`script view skipped: ${e.message}`); }
   // Trace audit (non-fatal): LangSmith ingests asynchronously, so wait briefly before reading the trace back.
   if (tr && audit) {
     try { if (auditDelayMs) await new Promise((r) => setTimeout(r, auditDelayMs)); await audit({ runId, traceId: tr.rootRunId, runsRoot, secrets: sec, trackerPath, log }); }
