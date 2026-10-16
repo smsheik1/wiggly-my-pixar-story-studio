@@ -10,12 +10,13 @@ import { IMAGE_ENGINE, SHEET_MIN, SHEET_MAX, SHEET_EXPRESSIONS } from '../charac
 
 export const MASTER_OPENING = 'A single-character full-body render from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon.';
 export const TEMPLATE_LABELS = ['Eyes:', 'Eyebrows:', 'Face:', 'Subject:', 'Skin:', 'Hands:', 'Silhouette:', 'Hair:', 'Wardrobe:', 'Pose:', 'Camera:', 'Background:'];
-const HELD = /\b(holds?|holding|clutching|grasping)\s+(a|an|the|his|her)\s+(?!only\b|weight\b|shape\b|pose\b)/i;
+export const HELD = /\b(holds?|holding|clutching|grasping)\s+(a|an|the|his|her)\s+(?!only\b|weight\b|shape\b|pose\b)/i;
 const CARRY = /\b(carries|carrying)\s+(?:a|an|the|his|her)?\s*(?:\w+\s+){0,2}(axe|cup|mug|bag|backpack|tool|toy|umbrella|book|phone|box|ball|doll|cane)s?\b/i;
 const IN_HANDS = /\b(?:in|with)\s+(?:his|her|their|both)\s+hands\b/i;
 const INK = /\b(tattoo|tattoos|biro mark|pen mark|ink on skin)\b/i;
 const INK_NEGATION = /\b(no|without|never|zero)\s+(ink|tattoos?|markings?|pen marks?|biro marks?)\b/gi;
-const CHILD_TOKENS = ['enlarged head', 'narrow shoulders', 'short legs', 'long torso'];
+// Source of truth for BOBBLEHEAD_ADULT_VIOLATION. crew/character-architect/role.md must list every token (tests/ca-gate-rules.test.mjs).
+export const CHILD_TOKENS = ['enlarged head', 'narrow shoulders', 'short legs', 'long torso'];
 // Gemini's skin-zoning regex included bare 'black', which false-positives on clothing ("black hijab", "black boots").
 // WIGGLY deviation: only skin phrases count.
 const DARK_SKIN = /\b(?:dark|brown|warm brown|deep brown|ebony|black)(?:[- ]skin(?:ned)?)\b|\bskin(?: tone)?(?: is)?(?: an?)? (?:(?:warm|deep|dark|rich|medium|light)\s+){0,3}(?:brown|ebony|dark|black)\b/i;

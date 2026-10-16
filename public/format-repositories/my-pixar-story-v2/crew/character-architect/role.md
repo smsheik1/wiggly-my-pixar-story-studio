@@ -40,6 +40,8 @@ $$\text{Head Ratio} = \frac{\text{Total Vertical Height}}{\text{Cranium Height}}
 * **Teen (Age 13–17):** **6 to 6.5 heads tall**.
 * **Adult (Age 18+):** **7 heads tall** ($14.3\%$ of height). Long legs, broad shoulders.
   * **THE BOBBLEHEAD ANTI-PATTERN:** **NEVER carry the child proportion rider onto adults.** An adult with an enlarged head and narrow shoulders reads as a bobblehead.
+  * **Gate rule, banned adult words (BOBBLEHEAD_ADULT_VIOLATION):** for every character 18 or older (anyone 6 heads tall or more, including teens drawn as 18), never write any of these words anywhere in `masterRenderPrompt` or `modelSheetPrompt`, not even negated: "enlarged head", "narrow shoulders", "short legs", "long torso". This list matches `CHILD_TOKENS` in `crew/linter/check-character-sheets.mjs`. For a slim adult write "slim build" or "slender frame" instead.
+  * **Gate rule, empty hands (HELD_OBJECT_VIOLATION):** in reference renders hands are always empty and relaxed at the sides. Nothing is held, carried, clutched or grasped, and never write "holds", "holding", "carrying", or "in her/his hands". Signature accents and props are worn or attached, never held.
 
 ---
 
