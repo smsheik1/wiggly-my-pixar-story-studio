@@ -58,7 +58,8 @@ export function auditTrace(runs, { specs = AGENT_SPECS, validationErrors = [] } 
     const u = llmUsage(r); tokens += u.total; cost += u.cost;
     const a = agents[agentOf(r)];
     if (a) { a.tokens += u.total; a.cost += u.cost; a.llmCalls++; for (const t of r.extra?.options?.tools ?? []) a.toolsBound.add(t.function?.name ?? t.name); }
-    steps.push({ kind: 'llm', name: `${agentOf(r) ?? '?'} #${attemptOf(r) ?? '?'} model call`, agent: agentOf(r), attempt: attemptOf(r), ms: ms(r), tokens: u.total, input: u.input, output: u.output, reasoning: u.reasoning });
+    const maxT = r.extra?.metadata?.ls_max_tokens; const truncated = !!maxT && u.output >= maxT * 0.98;
+    steps.push({ kind: 'llm', truncated, maxTokens: maxT ?? null, name: `${agentOf(r) ?? '?'} #${attemptOf(r) ?? '?'} model call`, agent: agentOf(r), attempt: attemptOf(r), ms: ms(r), tokens: u.total, input: u.input, output: u.output, reasoning: u.reasoning });
   }
   for (const r of runs.filter((x) => x.run_type === 'tool')) {
     const ag = agentOf(r); const a = agents[ag];
@@ -105,7 +106,7 @@ export function auditTrace(runs, { specs = AGENT_SPECS, validationErrors = [] } 
   void byId;
   return { traceId: root?.trace_id ?? root?.id, runId: (root?.tags ?? []).find((t) => t.startsWith('runId:'))?.slice(6) ?? root?.extra?.metadata?.runId ?? null,
     status: root?.status, start: root?.start_time ? z(root.start_time) : null, wallMs: ms(root ?? {}), tokens, cost, llmCalls: llms.length, agents,
-    slowest: top('ms'), heaviest: top('tokens'), rejected };
+    slowest: top('ms'), heaviest: top('tokens'), rejected, truncated: steps.filter((s) => s.truncated) };
 }
 
 const fmtMs = (n) => { const s = Math.round(n / 1000); return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`; };
@@ -120,6 +121,7 @@ export function auditMarkdown(m) {
   for (const a of Object.values(m.agents)) L.push(`| ${a.label} | ${a.attempts} | ${fmtMs(a.ms)} | ${fmtK(a.tokens)} | ${fmtUsd(a.cost)} | ${a.wastedTotal} (${W.map((k) => a.wasted[k]).join('/')}) | ${a.inAttemptSchemaRejects} |`);
   L.push('', '## Top 3 slowest steps', '', ...m.slowest.map((s, i) => `${i + 1}. ${s.name}: ${fmtMs(s.ms)}`));
   L.push('', '## Top 3 token-heaviest steps', '', ...m.heaviest.map((s, i) => `${i + 1}. ${s.name}: ${fmtK(s.tokens)} (in ${fmtK(s.input)} / out ${fmtK(s.output)}, reasoning ${fmtK(s.reasoning)})`));
+  L.push('', '## Model calls cut off at max tokens', '', ...((m.truncated ?? []).length ? m.truncated.map((s) => `- ${s.name}: ${fmtK(s.output)} out of ${fmtK(s.maxTokens)} (reasoning ${fmtK(s.reasoning)})`) : ['None.']));
   L.push('', '## Rejected attempts', '');
   if (!m.rejected.length) L.push('None.');
   for (const r of m.rejected) { L.push(`- **${m.agents[r.agent].label} attempt ${r.attempt}** (${r.kind}, ${fmtMs(r.ms)})`); for (const i of r.issues.slice(0, 8)) L.push(`  - [${i.code}] ${i.message}`); if (r.issues.length > 8) L.push(`  - …and ${r.issues.length - 8} more`); }
@@ -138,6 +140,7 @@ export function auditHtml(m) {
 <p><b>${fmtK(m.tokens)}</b> tokens · <b>${fmtUsd(m.cost)}</b> · <b>${fmtMs(m.wallMs)}</b> wall-clock · ${m.llmCalls} model calls</p>
 <table style='border-collapse:collapse;font-size:13px' cellpadding='4'><tr><th>Agent</th><th>Attempts</th><th>Time</th><th>Tokens</th><th>Cost</th><th>Wasted</th><th>Unused tools</th></tr>${Object.values(m.agents).map(row).join('')}</table>
 <p><b>Slowest:</b> ${m.slowest.map((s) => `${esc(s.name)} ${fmtMs(s.ms)}`).join(' · ')}<br><b>Token-heaviest:</b> ${m.heaviest.map((s) => `${esc(s.name)} ${fmtK(s.tokens)}`).join(' · ')}</p>
+${(m.truncated ?? []).length ? `<p style='color:#f87171'><b>Cut off at max tokens:</b> ${m.truncated.map((s) => esc(s.name)).join(' · ')}</p>` : ''}
 <details><summary style='cursor:pointer;color:#9cc4ff'>Rejected attempts (${m.rejected.length})</summary><ul>${rej}</ul></details></section>${AUDIT_END}`;
 }
 
@@ -154,7 +157,7 @@ export function slimRun(r) {
   let inputs; if (keepIn && r.inputs) { inputs = { input: r.inputs.input, state: r.inputs.state }; if (inputs.state?.inputs?.photoReferences) inputs.state = { ...inputs.state, inputs: { ...inputs.state.inputs, photoReferences: inputs.state.inputs.photoReferences.map(({ path, ...x }) => x) } }; }
   const out = { id: r.id, trace_id: r.trace_id, parent_run_id: r.parent_run_id ?? null, name: r.name, run_type: r.run_type, status: r.status, error: r.error ?? null,
     start_time: r.start_time, end_time: r.end_time, tags: r.tags, total_tokens: r.total_tokens, prompt_tokens: r.prompt_tokens, completion_tokens: r.completion_tokens, total_cost: r.total_cost ?? null,
-    extra: { metadata: { agent: r.extra?.metadata?.agent, attempt: r.extra?.metadata?.attempt, runId: r.extra?.metadata?.runId, ls_model_name: r.extra?.metadata?.ls_model_name, usage_metadata: r.extra?.metadata?.usage_metadata },
+    extra: { metadata: { agent: r.extra?.metadata?.agent, attempt: r.extra?.metadata?.attempt, runId: r.extra?.metadata?.runId, ls_model_name: r.extra?.metadata?.ls_model_name, ls_max_tokens: r.extra?.metadata?.ls_max_tokens, usage_metadata: r.extra?.metadata?.usage_metadata },
       ...(r.run_type === 'llm' ? { options: { tools: (r.extra?.options?.tools ?? []).map((t) => ({ function: { name: t.function?.name ?? t.name } })) } } : {}) } };
   if (inputs) out.inputs = inputs;
   if (keepIn) out.outputs = r.outputs;

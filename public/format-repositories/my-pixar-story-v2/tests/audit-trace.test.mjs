@@ -96,3 +96,10 @@ test('rehearsal: audit runs only when traced and never fails the run', async () 
     assert.equal(called, 0);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+test('truncated model calls (output at max tokens) are flagged', { timeout: 10000 }, () => {
+  const llm = (out) => ({ id: String(out), parent_run_id: 'r', name: 'ChatOpenAI', run_type: 'llm', start_time: '2026-10-16T00:00:00Z', end_time: '2026-10-16T00:01:00Z', tags: ['agent:story-director', 'attempt:1'],
+    extra: { metadata: { agent: 'story-director', attempt: 1, ls_max_tokens: 32000, ls_model_name: 'meta/muse-spark-1.3-contributor', usage_metadata: { input_tokens: 10, output_tokens: out, output_token_details: { reasoning: out - 5 } } } } });
+  const m2 = auditTrace([{ id: 'r', name: 'wiggly-v2 rehearsal', run_type: 'chain', start_time: '2026-10-16T00:00:00Z', end_time: '2026-10-16T00:02:00Z', tags: ['runId:x'] }, llm(32217), llm(3000)]);
+  assert.equal(m2.truncated.length, 1); assert.ok(auditMarkdown(m2).includes('32.2k out of 32.0k'));
+});
