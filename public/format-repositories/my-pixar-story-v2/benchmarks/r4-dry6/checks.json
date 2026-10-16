@@ -1,0 +1,307 @@
+{
+  "agents": {
+    "story-director": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "MISSING_TRUE_AGE",
+          "path": "cast.3",
+          "message": "Cast @Sister: shown as 18; record the true age from the answers math in ageNote (e.g. 'true age 15, 7 years older than Shaz at 8')."
+        }
+      ],
+      "warnings": [],
+      "codeCounts": {
+        "MISSING_TRUE_AGE": 1
+      }
+    },
+    "character-architect": {
+      "status": "pass",
+      "errors": [],
+      "warnings": [],
+      "codeCounts": {}
+    },
+    "location-scout": {
+      "status": "pass",
+      "errors": [],
+      "warnings": [],
+      "codeCounts": {}
+    },
+    "seedance-compiler": {
+      "status": "pass",
+      "errors": [],
+      "warnings": [],
+      "codeCounts": {}
+    }
+  },
+  "totals": {
+    "passed": 3,
+    "failed": 1,
+    "missing": 0,
+    "errors": 1,
+    "warnings": 0
+  },
+  "structural": {
+    "castCount": 6,
+    "characterCount": 6,
+    "locationCount": 4,
+    "plateCount": 4,
+    "segmentCount": 3,
+    "shotCount": 19,
+    "shotsPerSegment": [
+      7,
+      6,
+      6
+    ],
+    "runtimeSec": 90,
+    "compiledRuntimeSec": 90,
+    "shotFieldCompleteness": {
+      "mean": 0.851,
+      "min": 0.833,
+      "incompleteShots": [
+        {
+          "segmentId": 1,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 3,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 7,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 1,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 1,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 3,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "segmentId": 1,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 3,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 7,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 1,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 1,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 3,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        }
+      ]
+    },
+    "dialogueLines": 7,
+    "narrationLines": 10
+  },
+  "judges": {}
+}

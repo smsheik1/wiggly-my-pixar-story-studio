@@ -1,0 +1,593 @@
+{
+  "segments": [
+    {
+      "segmentId": 1,
+      "title": "Part 1: Original",
+      "totalDurationSec": 30,
+      "shotCount": 7,
+      "attachedElements": [
+        "@Shaz",
+        "@DadShaz",
+        "@Mom",
+        "@Sister",
+        "@Brother",
+        "@family_living_room"
+      ],
+      "tenBlocks": {
+        "block1_referenceMaterials": "@Shaz = Slim eight-year-old boy with narrow oval face, short straight black hair with side-swept fringe, dark brown eyes, black sunglasses pushed up on forehead with eyes visible, cream white t-shirt, navy knee shorts, white socks and dark slip-on sneakers.\n@DadShaz = Slim athletic adult man with short black faded hair swept up, short full dark beard, dark brown eyes, black sunglasses pushed up on forehead with eyes visible, white crew t-shirt, charcoal jeans and brown boots.\n@Mom = Adult woman with medium build, light olive skin, dark brown eyes, soft round face, deep teal cotton hijab fully covering hair and hairline with no visible hair, cream long tunic, slate trousers and flat shoes.\n@Sister = Young woman shown as 18 with slim build, light olive skin, dark brown eyes, oval face, muted plum cotton hijab fully covering hair and hairline with no visible hair, white long-sleeve top, slate wide-leg trousers and beige sneakers.\n@Brother = Six-year-old boy with small round face, short straight black hair, dark brown eyes, light olive skin, white t-shirt, navy shorts, white socks, dark sneakers and red wristband.\n@family_living_room = Empty family living room with sofa facing TV, rug with scattered cards, wood floor, tall unseen windows on left giving soft warm morning daylight with gentle shadows to right.\nEach reference is one person or one object and appears once. No duplicates.",
+        "block2_voices": "@Shaz VOICE: \"8-year-old American boy, clear light timbre, slow deliberate pace, flat declarative delivery with total conviction, brightens when proud\"\n@DadShaz VOICE: \"Early-30s American man, warm low storyteller timbre, unhurried steady pace, gentle dry humor, softens with tenderness when emotional\"\n@Mom VOICE: \"Late-30s American woman, warm bright timbre, eager encouraging pace, cheerful proud delivery that lifts when delighted\"\n@Sister VOICE: \"18-year-old American girl, bright clear timbre, quick playful pace, confident teasing delivery with warm competitive edge\"\n@Brother VOICE: \"6-year-old American boy, high clear timbre, fast excited pace, loud declarative delivery with total conviction\"",
+        "block3_goal": "A seven-shot, thirty-second segment inside a three-part animated family comedy. It establishes an ordinary living-room world and escalates a card-battle gag between brothers and sister to a proud scientist beat. It ends the instant DadShaz voiceover finishes saying scientist made Mom light up — do not continue, do not resolve anything, do not add an ending. The comedy is played completely straight. Nobody in frame knows anything is funny.",
+        "block4_continuity": "Location: the room in @family_living_room, morning, throughout. Never leave it. The camera stays on the same side of the action as in @family_living_room for the whole segment and never crosses to the other side. @Shaz sits center on rug, @Brother left and @Sister right when present, @Mom beside @Shaz, and this never flips. 180-degree axis from TV toward sofa locked for all shots. No background characters appear; only the named cast are present with zero face repeats. Costume is fixed for the whole segment and never changes. @Mom wears deep teal hijab with no visible hair, hairline or dark band, @Sister wears muted plum hijab with no visible hair, hairline or dark band. Yugioh cards stay scattered on rug throughout.",
+        "block5_shots": "SHOT 1 | 0–3s\nWide shot from sofa side toward TV in @family_living_room, @Shaz center and @Brother left sitting on rug facing TV among scattered cards, breathing and blinking as they watch.\nHard cut.\n\nSHOT 2 | 3–7s\nMedium shot on @Brother holding a card out toward @Shaz in @family_living_room, both breathing and shifting.\n@Brother: {I call first! You lost last time!}\nHard cut.\n\nSHOT 3 | 7–11s\nClose shot on @Shaz looking down arranging cards quietly in @family_living_room, breathing and blinking with straight honest face.\n@Shaz: {Okay. I will be a scientist.}\nHard cut.\n\nSHOT 4 | 11–15s\nMedium shot with @Sister leaning in gesturing while @Shaz clamps cards to chest breathing in @family_living_room.\n@Sister: {My turn! No one beats my dragon!}\nHard cut.\n\nSHOT 5 | 15–19s\nMedium shot of @Shaz on knees bobbing up and down while @Sister reacts breathing in @family_living_room.\n@Shaz: {Not even! I win this one!}\nHard cut.\n\nSHOT 6 | 19–23s\nClose shot of @Mom leaning toward @Shaz in @family_living_room, both breathing and blinking.\n@Mom: {My scientist! I am so proud of you!}\nHard cut.\n\nSHOT 7 | 23–30s\nMedium close shot of @Shaz holding cards up while @Mom smiles beside him breathing calmly in @family_living_room.\n@DadShaz, voiceover: {I was eight. I did not talk much. Saying scientist made Mom light up.}\nHard cut.",
+        "block6_visualStyle": "Feature-quality 3D animated film, production CG, stylized cinematic warmth, not flat cartoon. Warm morning daylight through tall windows, soft subsurface glow through ears and skin, tactile fabric, wood and card materials. Depth of field as a natural in-camera optical artifact with soft background falloff. Clean family comedy staging with rich readable silhouettes.",
+        "block7_cameraAndPerformance": "Seven shots with six hard cuts in thirty seconds. The body plays broad. The face stays honest. No mugging, no pulled faces, no comic reactions. Anticipation winds opposite before moves. Snap and Settle with fast transitions and overshoot on arrival. Moving Holds breathe and micro-shift, never frozen. Overlap and Secondary Action with hair, cloth and cards arriving late. Eye Life with micro-saccades, catchlights and natural blinks, eyes never glaze.",
+        "block8_audio": "Foley of plastic cards shuffling and soft taps on rug, light footsteps and fabric rustle. Quiet living-room atmosphere with faint cartoon battle music from TV. Subtle pizzicato strings for comedic timing accents, warm swell under proud beat, then gentle fade. Room tone stays soft and continuous.",
+        "block9_exclusions": "The only spoken words in the entire segment are the lines in braces. Nothing else written anywhere in this prompt is dialogue, and nobody speaks who is not named on a line. No extra cuts anywhere. No unison movement. No subtitles, no watermark, no logo. No new characters, no new locations, no costume changes.",
+        "block10_maintainConsistency": "Maintain five characters @Shaz, @Brother, @Sister, @Mom, @DadShaz and one location @family_living_room with fixed faces and heights. Toddler equals 4 heads tall. Child equals 4.5 to 5 heads tall with long torso and short legs for @Shaz and @Brother. Adult equals 7 heads tall for @DadShaz and @Mom, with @Sister shown as 18 with adult-like proportions. Costumes, hijabs, sunglasses and beards never change. No face repeats."
+      },
+      "compiledPrompt": "[REFERENCE MATERIALS]\n@Shaz = Slim eight-year-old boy with narrow oval face, short straight black hair with side-swept fringe, dark brown eyes, black sunglasses pushed up on forehead with eyes visible, cream white t-shirt, navy knee shorts, white socks and dark slip-on sneakers.\n@DadShaz = Slim athletic adult man with short black faded hair swept up, short full dark beard, dark brown eyes, black sunglasses pushed up on forehead with eyes visible, white crew t-shirt, charcoal jeans and brown boots.\n@Mom = Adult woman with medium build, light olive skin, dark brown eyes, soft round face, deep teal cotton hijab fully covering hair and hairline with no visible hair, cream long tunic, slate trousers and flat shoes.\n@Sister = Young woman shown as 18 with slim build, light olive skin, dark brown eyes, oval face, muted plum cotton hijab fully covering hair and hairline with no visible hair, white long-sleeve top, slate wide-leg trousers and beige sneakers.\n@Brother = Six-year-old boy with small round face, short straight black hair, dark brown eyes, light olive skin, white t-shirt, navy shorts, white socks, dark sneakers and red wristband.\n@family_living_room = Empty family living room with sofa facing TV, rug with scattered cards, wood floor, tall unseen windows on left giving soft warm morning daylight with gentle shadows to right.\nEach reference is one person or one object and appears once. No duplicates.\n\n[VOICES]\n@Shaz VOICE: \"8-year-old American boy, clear light timbre, slow deliberate pace, flat declarative delivery with total conviction, brightens when proud\"\n@DadShaz VOICE: \"Early-30s American man, warm low storyteller timbre, unhurried steady pace, gentle dry humor, softens with tenderness when emotional\"\n@Mom VOICE: \"Late-30s American woman, warm bright timbre, eager encouraging pace, cheerful proud delivery that lifts when delighted\"\n@Sister VOICE: \"18-year-old American girl, bright clear timbre, quick playful pace, confident teasing delivery with warm competitive edge\"\n@Brother VOICE: \"6-year-old American boy, high clear timbre, fast excited pace, loud declarative delivery with total conviction\"\n\n[GOAL]\nA seven-shot, thirty-second segment inside a three-part animated family comedy. It establishes an ordinary living-room world and escalates a card-battle gag between brothers and sister to a proud scientist beat. It ends the instant DadShaz voiceover finishes saying scientist made Mom light up — do not continue, do not resolve anything, do not add an ending. The comedy is played completely straight. Nobody in frame knows anything is funny.\n\n[CONTINUITY]\nLocation: the room in @family_living_room, morning, throughout. Never leave it. The camera stays on the same side of the action as in @family_living_room for the whole segment and never crosses to the other side. @Shaz sits center on rug, @Brother left and @Sister right when present, @Mom beside @Shaz, and this never flips. 180-degree axis from TV toward sofa locked for all shots. No background characters appear; only the named cast are present with zero face repeats. Costume is fixed for the whole segment and never changes. @Mom wears deep teal hijab with no visible hair, hairline or dark band, @Sister wears muted plum hijab with no visible hair, hairline or dark band. Yugioh cards stay scattered on rug throughout.\n\n[SHOTS]\nSHOT 1 | 0–3s\nWide shot from sofa side toward TV in @family_living_room, @Shaz center and @Brother left sitting on rug facing TV among scattered cards, breathing and blinking as they watch.\nHard cut.\n\nSHOT 2 | 3–7s\nMedium shot on @Brother holding a card out toward @Shaz in @family_living_room, both breathing and shifting.\n@Brother: {I call first! You lost last time!}\nHard cut.\n\nSHOT 3 | 7–11s\nClose shot on @Shaz looking down arranging cards quietly in @family_living_room, breathing and blinking with straight honest face.\n@Shaz: {Okay. I will be a scientist.}\nHard cut.\n\nSHOT 4 | 11–15s\nMedium shot with @Sister leaning in gesturing while @Shaz clamps cards to chest breathing in @family_living_room.\n@Sister: {My turn! No one beats my dragon!}\nHard cut.\n\nSHOT 5 | 15–19s\nMedium shot of @Shaz on knees bobbing up and down while @Sister reacts breathing in @family_living_room.\n@Shaz: {Not even! I win this one!}\nHard cut.\n\nSHOT 6 | 19–23s\nClose shot of @Mom leaning toward @Shaz in @family_living_room, both breathing and blinking.\n@Mom: {My scientist! I am so proud of you!}\nHard cut.\n\nSHOT 7 | 23–30s\nMedium close shot of @Shaz holding cards up while @Mom smiles beside him breathing calmly in @family_living_room.\n@DadShaz, voiceover: {I was eight. I did not talk much. Saying scientist made Mom light up.}\nHard cut.\n\n[VISUAL STYLE]\nFeature-quality 3D animated film, production CG, stylized cinematic warmth, not flat cartoon. Warm morning daylight through tall windows, soft subsurface glow through ears and skin, tactile fabric, wood and card materials. Depth of field as a natural in-camera optical artifact with soft background falloff. Clean family comedy staging with rich readable silhouettes.\n\n[CAMERA AND PERFORMANCE]\nSeven shots with six hard cuts in thirty seconds. The body plays broad. The face stays honest. No mugging, no pulled faces, no comic reactions. Anticipation winds opposite before moves. Snap and Settle with fast transitions and overshoot on arrival. Moving Holds breathe and micro-shift, never frozen. Overlap and Secondary Action with hair, cloth and cards arriving late. Eye Life with micro-saccades, catchlights and natural blinks, eyes never glaze.\n\n[AUDIO]\nFoley of plastic cards shuffling and soft taps on rug, light footsteps and fabric rustle. Quiet living-room atmosphere with faint cartoon battle music from TV. Subtle pizzicato strings for comedic timing accents, warm swell under proud beat, then gentle fade. Room tone stays soft and continuous.\n\n[EXCLUSIONS]\nThe only spoken words in the entire segment are the lines in braces. Nothing else written anywhere in this prompt is dialogue, and nobody speaks who is not named on a line. No extra cuts anywhere. No unison movement. No subtitles, no watermark, no logo. No new characters, no new locations, no costume changes.\n\n[MAINTAIN CONSISTENCY]\nMaintain five characters @Shaz, @Brother, @Sister, @Mom, @DadShaz and one location @family_living_room with fixed faces and heights. Toddler equals 4 heads tall. Child equals 4.5 to 5 heads tall with long torso and short legs for @Shaz and @Brother. Adult equals 7 heads tall for @DadShaz and @Mom, with @Sister shown as 18 with adult-like proportions. Costumes, hijabs, sunglasses and beards never change. No face repeats.",
+      "generationPayload": {
+        "engine": "seedance-2.5",
+        "durationSec": 30,
+        "resolution": "480p",
+        "aspectRatio": "16:9",
+        "fps": 24
+      },
+      "segmentIndex": 1,
+      "extendsFrom": null,
+      "references": [
+        {
+          "tag": "@Shaz",
+          "kind": "character",
+          "sourceTag": "@Image 1",
+          "assetKey": "placeholder:master-render:image-1"
+        },
+        {
+          "tag": "@DadShaz",
+          "kind": "character",
+          "sourceTag": "@Image 2",
+          "assetKey": "placeholder:master-render:image-2"
+        },
+        {
+          "tag": "@Mom",
+          "kind": "character",
+          "sourceTag": "@Image 3",
+          "assetKey": "placeholder:master-render:image-3"
+        },
+        {
+          "tag": "@Sister",
+          "kind": "character",
+          "sourceTag": "@Image 4",
+          "assetKey": "placeholder:master-render:image-4"
+        },
+        {
+          "tag": "@Brother",
+          "kind": "character",
+          "sourceTag": "@Image 5",
+          "assetKey": "placeholder:master-render:image-5"
+        },
+        {
+          "tag": "@family_living_room",
+          "kind": "location",
+          "sourceTag": "@Loc 1",
+          "assetKey": "placeholder:location-plate:loc-1"
+        }
+      ],
+      "shots": [
+        {
+          "shotNumber": 1,
+          "startSec": 0,
+          "endSec": 3,
+          "sceneId": "1.1",
+          "locationTag": "@family_living_room",
+          "cast": [
+            "@Shaz",
+            "@Brother"
+          ],
+          "action": "Wide shot from sofa side toward TV showing @Shaz center and @Brother left sitting on rug among scattered cards watching TV breathing and blinking",
+          "sfx": [
+            "cartoon battle music",
+            "room tone",
+            "cards shuffling"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 2,
+          "startSec": 3,
+          "endSec": 7,
+          "sceneId": "1.2",
+          "locationTag": "@family_living_room",
+          "cast": [
+            "@Brother",
+            "@Shaz"
+          ],
+          "action": "Medium shot on @Brother holding a card out toward @Shaz while both breathe and shift on rug",
+          "dialogue": {
+            "speaker": "@Brother",
+            "line": "{I call first! You lost last time!}",
+            "mode": "on-camera"
+          },
+          "sfx": [
+            "card flick",
+            "room tone"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 3,
+          "startSec": 7,
+          "endSec": 11,
+          "sceneId": "1.3",
+          "locationTag": "@family_living_room",
+          "cast": [
+            "@Shaz"
+          ],
+          "action": "Close shot on @Shaz looking down arranging cards quietly breathing and blinking with straight honest face",
+          "dialogue": {
+            "speaker": "@Shaz",
+            "line": "{Okay. I will be a scientist.}",
+            "mode": "on-camera"
+          },
+          "sfx": [
+            "cards shuffling",
+            "room tone"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 4,
+          "startSec": 11,
+          "endSec": 15,
+          "sceneId": "1.4",
+          "locationTag": "@family_living_room",
+          "cast": [
+            "@Sister",
+            "@Shaz"
+          ],
+          "action": "Medium shot with @Sister leaning in gesturing while @Shaz clamps cards to chest breathing",
+          "dialogue": {
+            "speaker": "@Sister",
+            "line": "{My turn! No one beats my dragon!}",
+            "mode": "on-camera"
+          },
+          "sfx": [
+            "fabric rustle",
+            "room tone"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 5,
+          "startSec": 15,
+          "endSec": 19,
+          "sceneId": "1.5",
+          "locationTag": "@family_living_room",
+          "cast": [
+            "@Shaz",
+            "@Sister"
+          ],
+          "action": "Medium shot of @Shaz on knees bobbing up and down while @Sister reacts breathing beside him",
+          "dialogue": {
+            "speaker": "@Shaz",
+            "line": "{Not even! I win this one!}",
+            "mode": "on-camera"
+          },
+          "sfx": [
+            "knees shifting on rug",
+            "room tone"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 6,
+          "startSec": 19,
+          "endSec": 23,
+          "sceneId": "1.6",
+          "locationTag": "@family_living_room",
+          "cast": [
+            "@Mom",
+            "@Shaz"
+          ],
+          "action": "Close shot of @Mom leaning toward @Shaz both breathing and blinking with warm proud expression",
+          "dialogue": {
+            "speaker": "@Mom",
+            "line": "{My scientist! I am so proud of you!}",
+            "mode": "on-camera"
+          },
+          "sfx": [
+            "soft room tone"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 7,
+          "startSec": 23,
+          "endSec": 30,
+          "sceneId": "1.7",
+          "locationTag": "@family_living_room",
+          "cast": [
+            "@Shaz",
+            "@Mom"
+          ],
+          "action": "Medium close shot of @Shaz holding cards up while @Mom smiles beside him breathing calmly",
+          "dialogue": {
+            "speaker": "@DadShaz",
+            "line": "{I was eight. I did not talk much. Saying scientist made Mom light up.}",
+            "mode": "voiceover"
+          },
+          "sfx": [
+            "soft room tone",
+            "gentle score swell"
+          ],
+          "cut": "Hard cut."
+        }
+      ]
+    },
+    {
+      "segmentId": 2,
+      "title": "Part 2: Sequel",
+      "totalDurationSec": 30,
+      "shotCount": 6,
+      "attachedElements": [
+        "@DadShaz",
+        "@family_driveway",
+        "@home_bedroom_office"
+      ],
+      "tenBlocks": {
+        "block1_referenceMaterials": "@DadShaz = Slim athletic adult man with short black faded hair swept up, short full dark beard, dark brown eyes, black sunglasses pushed up on forehead with eyes visible, white crew t-shirt, charcoal jeans and brown boots.\n@family_driveway = Empty family driveway with faded coupe parked in same spot, concrete, low warm late-summer afternoon sun from upper right with long soft shadows to left.\n@home_bedroom_office = Empty home bedroom office with desk, laptop and lamp, warm practical lamplight in evening from desk lamp on right with soft shadows to left.\nEach reference is one person or one object and appears once. No duplicates.",
+        "block2_voices": "@DadShaz VOICE: \"Early-30s American man, warm low storyteller timbre, unhurried steady pace, gentle dry humor, softens with tenderness when emotional\"",
+        "block3_goal": "A six-shot, thirty-second segment inside a three-part animated family comedy that continues directly from the previous segment's last frame. It traces first freedom in the faded coupe and the early-finish leap to first job with bootcamp work. It ends the instant the felt-like-six-figures pride line finishes — do not continue, do not resolve anything, do not add an ending. The comedy is played completely straight. Nobody in frame knows anything is funny.",
+        "block4_continuity": "Location: @family_driveway in afternoon then @home_bedroom_office in evening, throughout. Never leave these two places. The camera stays on the same side of the action as in @family_driveway and then @home_bedroom_office for the whole segment and never crosses to the other side. @DadShaz stays driver side of coupe in driveway shots, then at desk in bedroom, and this never flips. 180-degree axis along driveway locked, then along desk locked. No background characters appear; only @DadShaz is present with zero face repeats. Costume is fixed for the whole segment and never changes. Faded coupe with no air conditioning stays parked in same spot.",
+        "block5_shots": "SHOT 1 | 0–5s\nWide shot of @DadShaz standing by car door in @family_driveway, breathing and blinking calmly.\n@DadShaz, voiceover: {At seventeen I got my license. I did not have to ask for rides.}\nHard cut.\n\nSHOT 2 | 5–9s\nMedium shot of @DadShaz leaning into car tapping dashboard in @family_driveway, breathing with proud energy.\n@DadShaz: {Put my song on! This is ours!}\nHard cut.\n\nSHOT 3 | 9–13s\nClose shot of @DadShaz crouching plugging cable in beside car in @family_driveway, breathing steadily.\nHard cut.\n\nSHOT 4 | 13–18s\nMedium shot of @DadShaz sitting at desk typing in @home_bedroom_office, breathing and blinking in lamplight.\n@DadShaz, voiceover: {I finished early at McKinney Boyd. I doubled up and kept going.}\nHard cut.\n\nSHOT 5 | 18–24s\nClose shot of @DadShaz staring at laptop screen in @home_bedroom_office, breathing and nodding slowly.\n@DadShaz, voiceover: {Bootcamp taught me Python and Ruby on Rails. At nineteen I got my first job.}\nHard cut.\n\nSHOT 6 | 24–30s\nMedium shot of @DadShaz leaning back exhaling in @home_bedroom_office, breathing calmly with quiet pride.\n@DadShaz, voiceover: {Fifty thousand felt like six figures at home. For the first time I did it.}\nHard cut.",
+        "block6_visualStyle": "Feature-quality 3D animated film, production CG, stylized cinematic warmth, not flat cartoon. Low warm late-summer afternoon sun then warm practical lamplight in evening, soft subsurface glow through ears and skin, tactile metal, fabric and wood materials. Depth of field as a natural in-camera optical artifact with soft background falloff.",
+        "block7_cameraAndPerformance": "Six shots with five hard cuts in thirty seconds. The body plays broad. The face stays honest. No mugging, no pulled faces, no comic reactions. Anticipation winds opposite before moves. Snap and Settle with fast transitions and overshoot on arrival. Moving Holds breathe and micro-shift, never frozen. Overlap and Secondary Action with hair, cloth and attachments arriving late. Eye Life with micro-saccades, catchlights and natural blinks, eyes never glaze.",
+        "block8_audio": "Foley of car door movement, dashboard taps, cable click, keyboard typing and chair shifts. Driveway ambience with summer cicadas and soft wind, then quiet bedroom office tone with laptop hum. Tinny guitar riff from car speakers, subtle warm score under pride beat. Room tone stays continuous.",
+        "block9_exclusions": "The only spoken words in the entire segment are the lines in braces. Nothing else written anywhere in this prompt is dialogue, and nobody speaks who is not named on a line. No extra cuts anywhere. No unison movement. No subtitles, no watermark, no logo. No new characters, no new locations, no costume changes.",
+        "block10_maintainConsistency": "Maintain one character @DadShaz and two locations @family_driveway and @home_bedroom_office with fixed face and height. Adult equals 7 heads tall. Toddler equals 4 heads tall. Child equals 4.5 to 5 heads tall with long torso and short legs as scale reference. Costume, sunglasses and beard never change. Car position and desk setup never change. No face repeats."
+      },
+      "compiledPrompt": "[REFERENCE MATERIALS]\n@DadShaz = Slim athletic adult man with short black faded hair swept up, short full dark beard, dark brown eyes, black sunglasses pushed up on forehead with eyes visible, white crew t-shirt, charcoal jeans and brown boots.\n@family_driveway = Empty family driveway with faded coupe parked in same spot, concrete, low warm late-summer afternoon sun from upper right with long soft shadows to left.\n@home_bedroom_office = Empty home bedroom office with desk, laptop and lamp, warm practical lamplight in evening from desk lamp on right with soft shadows to left.\nEach reference is one person or one object and appears once. No duplicates.\n\n[VOICES]\n@DadShaz VOICE: \"Early-30s American man, warm low storyteller timbre, unhurried steady pace, gentle dry humor, softens with tenderness when emotional\"\n\n[GOAL]\nA six-shot, thirty-second segment inside a three-part animated family comedy that continues directly from the previous segment's last frame. It traces first freedom in the faded coupe and the early-finish leap to first job with bootcamp work. It ends the instant the felt-like-six-figures pride line finishes — do not continue, do not resolve anything, do not add an ending. The comedy is played completely straight. Nobody in frame knows anything is funny.\n\n[CONTINUITY]\nLocation: @family_driveway in afternoon then @home_bedroom_office in evening, throughout. Never leave these two places. The camera stays on the same side of the action as in @family_driveway and then @home_bedroom_office for the whole segment and never crosses to the other side. @DadShaz stays driver side of coupe in driveway shots, then at desk in bedroom, and this never flips. 180-degree axis along driveway locked, then along desk locked. No background characters appear; only @DadShaz is present with zero face repeats. Costume is fixed for the whole segment and never changes. Faded coupe with no air conditioning stays parked in same spot.\n\n[SHOTS]\nSHOT 1 | 0–5s\nWide shot of @DadShaz standing by car door in @family_driveway, breathing and blinking calmly.\n@DadShaz, voiceover: {At seventeen I got my license. I did not have to ask for rides.}\nHard cut.\n\nSHOT 2 | 5–9s\nMedium shot of @DadShaz leaning into car tapping dashboard in @family_driveway, breathing with proud energy.\n@DadShaz: {Put my song on! This is ours!}\nHard cut.\n\nSHOT 3 | 9–13s\nClose shot of @DadShaz crouching plugging cable in beside car in @family_driveway, breathing steadily.\nHard cut.\n\nSHOT 4 | 13–18s\nMedium shot of @DadShaz sitting at desk typing in @home_bedroom_office, breathing and blinking in lamplight.\n@DadShaz, voiceover: {I finished early at McKinney Boyd. I doubled up and kept going.}\nHard cut.\n\nSHOT 5 | 18–24s\nClose shot of @DadShaz staring at laptop screen in @home_bedroom_office, breathing and nodding slowly.\n@DadShaz, voiceover: {Bootcamp taught me Python and Ruby on Rails. At nineteen I got my first job.}\nHard cut.\n\nSHOT 6 | 24–30s\nMedium shot of @DadShaz leaning back exhaling in @home_bedroom_office, breathing calmly with quiet pride.\n@DadShaz, voiceover: {Fifty thousand felt like six figures at home. For the first time I did it.}\nHard cut.\n\n[VISUAL STYLE]\nFeature-quality 3D animated film, production CG, stylized cinematic warmth, not flat cartoon. Low warm late-summer afternoon sun then warm practical lamplight in evening, soft subsurface glow through ears and skin, tactile metal, fabric and wood materials. Depth of field as a natural in-camera optical artifact with soft background falloff.\n\n[CAMERA AND PERFORMANCE]\nSix shots with five hard cuts in thirty seconds. The body plays broad. The face stays honest. No mugging, no pulled faces, no comic reactions. Anticipation winds opposite before moves. Snap and Settle with fast transitions and overshoot on arrival. Moving Holds breathe and micro-shift, never frozen. Overlap and Secondary Action with hair, cloth and attachments arriving late. Eye Life with micro-saccades, catchlights and natural blinks, eyes never glaze.\n\n[AUDIO]\nFoley of car door movement, dashboard taps, cable click, keyboard typing and chair shifts. Driveway ambience with summer cicadas and soft wind, then quiet bedroom office tone with laptop hum. Tinny guitar riff from car speakers, subtle warm score under pride beat. Room tone stays continuous.\n\n[EXCLUSIONS]\nThe only spoken words in the entire segment are the lines in braces. Nothing else written anywhere in this prompt is dialogue, and nobody speaks who is not named on a line. No extra cuts anywhere. No unison movement. No subtitles, no watermark, no logo. No new characters, no new locations, no costume changes.\n\n[MAINTAIN CONSISTENCY]\nMaintain one character @DadShaz and two locations @family_driveway and @home_bedroom_office with fixed face and height. Adult equals 7 heads tall. Toddler equals 4 heads tall. Child equals 4.5 to 5 heads tall with long torso and short legs as scale reference. Costume, sunglasses and beard never change. Car position and desk setup never change. No face repeats.",
+      "generationPayload": {
+        "engine": "seedance-2.5",
+        "durationSec": 30,
+        "resolution": "480p",
+        "aspectRatio": "16:9",
+        "fps": 24
+      },
+      "segmentIndex": 2,
+      "extendsFrom": 1,
+      "references": [
+        {
+          "tag": "@DadShaz",
+          "kind": "character",
+          "sourceTag": "@Image 2",
+          "assetKey": "placeholder:master-render:image-2"
+        },
+        {
+          "tag": "@family_driveway",
+          "kind": "location",
+          "sourceTag": "@Loc 2",
+          "assetKey": "placeholder:location-plate:loc-2"
+        },
+        {
+          "tag": "@home_bedroom_office",
+          "kind": "location",
+          "sourceTag": "@Loc 3",
+          "assetKey": "placeholder:location-plate:loc-3"
+        }
+      ],
+      "shots": [
+        {
+          "shotNumber": 1,
+          "startSec": 0,
+          "endSec": 5,
+          "sceneId": "2.1",
+          "locationTag": "@family_driveway",
+          "cast": [
+            "@DadShaz"
+          ],
+          "action": "Wide shot of @DadShaz standing by car door in driveway breathing and blinking calmly",
+          "dialogue": {
+            "speaker": "@DadShaz",
+            "line": "{At seventeen I got my license. I did not have to ask for rides.}",
+            "mode": "voiceover"
+          },
+          "sfx": [
+            "summer cicadas",
+            "driveway ambience"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 2,
+          "startSec": 5,
+          "endSec": 9,
+          "sceneId": "2.2",
+          "locationTag": "@family_driveway",
+          "cast": [
+            "@DadShaz"
+          ],
+          "action": "Medium shot of @DadShaz leaning into car tapping dashboard breathing with proud energy",
+          "dialogue": {
+            "speaker": "@DadShaz",
+            "line": "{Put my song on! This is ours!}",
+            "mode": "on-camera"
+          },
+          "sfx": [
+            "car door tap",
+            "dashboard tap"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 3,
+          "startSec": 9,
+          "endSec": 13,
+          "sceneId": "2.3",
+          "locationTag": "@family_driveway",
+          "cast": [
+            "@DadShaz"
+          ],
+          "action": "Close shot of @DadShaz crouching plugging cable in breathing steadily beside car",
+          "sfx": [
+            "cable click",
+            "tinny guitar riff",
+            "cicadas"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 4,
+          "startSec": 13,
+          "endSec": 18,
+          "sceneId": "2.4",
+          "locationTag": "@home_bedroom_office",
+          "cast": [
+            "@DadShaz"
+          ],
+          "action": "Medium shot of @DadShaz sitting at desk typing breathing and blinking in lamplight",
+          "dialogue": {
+            "speaker": "@DadShaz",
+            "line": "{I finished early at McKinney Boyd. I doubled up and kept going.}",
+            "mode": "voiceover"
+          },
+          "sfx": [
+            "keyboard typing",
+            "desk chair shift"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 5,
+          "startSec": 18,
+          "endSec": 24,
+          "sceneId": "2.5",
+          "locationTag": "@home_bedroom_office",
+          "cast": [
+            "@DadShaz"
+          ],
+          "action": "Close shot of @DadShaz staring at laptop screen breathing and nodding slowly",
+          "dialogue": {
+            "speaker": "@DadShaz",
+            "line": "{Bootcamp taught me Python and Ruby on Rails. At nineteen I got my first job.}",
+            "mode": "voiceover"
+          },
+          "sfx": [
+            "laptop hum",
+            "soft room tone"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 6,
+          "startSec": 24,
+          "endSec": 30,
+          "sceneId": "2.6",
+          "locationTag": "@home_bedroom_office",
+          "cast": [
+            "@DadShaz"
+          ],
+          "action": "Medium shot of @DadShaz leaning back exhaling breathing calmly with quiet pride",
+          "dialogue": {
+            "speaker": "@DadShaz",
+            "line": "{Fifty thousand felt like six figures at home. For the first time I did it.}",
+            "mode": "voiceover"
+          },
+          "sfx": [
+            "chair lean",
+            "soft exhale"
+          ],
+          "cut": "Hard cut."
+        }
+      ]
+    },
+    {
+      "segmentId": 3,
+      "title": "Part 3: Sequel 2",
+      "totalDurationSec": 30,
+      "shotCount": 6,
+      "attachedElements": [
+        "@DadShaz",
+        "@Wife",
+        "@dallas_apartment_call_corner",
+        "@family_living_room"
+      ],
+      "tenBlocks": {
+        "block1_referenceMaterials": "@DadShaz = Slim athletic adult man with short black faded hair swept up, short full dark beard, dark brown eyes, black sunglasses pushed up on forehead with eyes visible, white crew t-shirt, charcoal jeans and brown boots.\n@Wife = Adult woman with slim build, light olive skin, dark brown eyes, soft oval face, soft sage cotton hijab fully covering hair and hairline with no visible hair, cream long-sleeve tunic, olive trousers and flats.\n@dallas_apartment_call_corner = Empty Dallas apartment call corner with desk and phone propped, small table lamp on right giving soft warm lamplight glow at night with gentle shadows to left.\n@family_living_room = Empty family living room with sofa facing window, wood floor, tall unseen windows on left giving soft warm morning daylight with gentle shadows to right.\nEach reference is one person or one object and appears once. No duplicates.",
+        "block2_voices": "@DadShaz VOICE: \"Early-30s American man, warm low storyteller timbre, unhurried steady pace, gentle dry humor, softens with tenderness when emotional\"\n@Wife VOICE: \"Around 30-year-old American woman, calm warm timbre, steady gentle pace, consistent reassuring delivery that stays kind and even\"",
+        "block3_goal": "A six-shot, thirty-second segment inside a three-part animated family comedy that continues directly from the previous segment's last frame. It keeps romance setup to ten seconds then gives twenty seconds of father wisdom narration. It ends the instant the you-are-what-you-think-about line finishes — do not continue, do not resolve anything, do not add an ending. The comedy is played completely straight. Nobody in frame knows anything is funny.",
+        "block4_continuity": "Location: @dallas_apartment_call_corner at night then @family_living_room, throughout. Never leave these two places. The camera stays on the same side of the action as in @dallas_apartment_call_corner and then @family_living_room for the whole segment and never crosses to the other side. Phone stays propped on desk for call shots, then living room faces window. 180-degree axis from desk to door locked, then sofa to window locked, and this never flips. No background characters appear; only the named cast are present with zero face repeats. Costume is fixed for the whole segment and never changes. @Wife wears soft sage hijab with no visible hair, hairline or dark band.",
+        "block5_shots": "SHOT 1 | 0–5s\nMedium shot of @DadShaz sitting holding phone in @dallas_apartment_call_corner, breathing and blinking in lamplight.\n@DadShaz, voiceover: {We met on an app. She was in Chicago. I was in Dallas.}\nHard cut.\n\nSHOT 2 | 5–10s\nClose shot of @Wife smiling and holding still in @dallas_apartment_call_corner, breathing and blinking.\n@Wife: {Eight o'clock. I am here. How was your week?}\nHard cut.\n\nSHOT 3 | 10–15s\nMedium close shot of @DadShaz looking forward softly in @family_living_room, breathing calmly.\n@DadShaz, voiceover: {Mia, I love you even when I do not show it well.}\nHard cut.\n\nSHOT 4 | 15–20s\nWide shot of @DadShaz sitting still beside @Wife in @family_living_room, both breathing and blinking.\n@DadShaz, voiceover: {A mother shows love one way. A father shows it another way.}\nHard cut.\n\nSHOT 5 | 20–25s\nMedium shot of @DadShaz gazing aside in @family_living_room, breathing steadily.\n@DadShaz, voiceover: {The world is not a Disney movie. It is messier than that.}\nHard cut.\n\nSHOT 6 | 25–30s\nMedium close shot of @DadShaz looking forward warmly in @family_living_room, breathing and blinking.\n@DadShaz, voiceover: {Good people can do bad things. You are what you think about.}\nHard cut.",
+        "block6_visualStyle": "Feature-quality 3D animated film, production CG, stylized cinematic warmth, not flat cartoon. Soft warm lamplight glow at night then warm morning daylight, soft subsurface glow through ears and skin, tactile fabric and wood materials. Depth of field as a natural in-camera optical artifact with soft background falloff.",
+        "block7_cameraAndPerformance": "Six shots with five hard cuts in thirty seconds. The body plays broad. The face stays honest. No mugging, no pulled faces, no comic reactions. Anticipation winds opposite before moves. Snap and Settle with fast transitions and overshoot on arrival. Moving Holds breathe and micro-shift, never frozen. Overlap and Secondary Action with hair, cloth and attachments arriving late. Eye Life with micro-saccades, catchlights and natural blinks, eyes never glaze.",
+        "block8_audio": "Foley of phone handling, soft chair shifts and fabric rustle. Quiet apartment call corner tone with faint phone speaker hiss, then quiet living-room atmosphere. Subtle warm score under wisdom lines with gentle resolve at end. Room tone stays soft and continuous.",
+        "block9_exclusions": "The only spoken words in the entire segment are the lines in braces. Nothing else written anywhere in this prompt is dialogue, and nobody speaks who is not named on a line. No extra cuts anywhere. No unison movement. No subtitles, no watermark, no logo. No new characters, no new locations, no costume changes.",
+        "block10_maintainConsistency": "Maintain two characters @DadShaz and @Wife and two locations @dallas_apartment_call_corner and @family_living_room with fixed faces and heights. Adult equals 7 heads tall. Toddler equals 4 heads tall. Child equals 4.5 to 5 heads tall with long torso and short legs as scale reference. Costumes and hijab never change. Phone position and sofa to window layout never change. No face repeats."
+      },
+      "compiledPrompt": "[REFERENCE MATERIALS]\n@DadShaz = Slim athletic adult man with short black faded hair swept up, short full dark beard, dark brown eyes, black sunglasses pushed up on forehead with eyes visible, white crew t-shirt, charcoal jeans and brown boots.\n@Wife = Adult woman with slim build, light olive skin, dark brown eyes, soft oval face, soft sage cotton hijab fully covering hair and hairline with no visible hair, cream long-sleeve tunic, olive trousers and flats.\n@dallas_apartment_call_corner = Empty Dallas apartment call corner with desk and phone propped, small table lamp on right giving soft warm lamplight glow at night with gentle shadows to left.\n@family_living_room = Empty family living room with sofa facing window, wood floor, tall unseen windows on left giving soft warm morning daylight with gentle shadows to right.\nEach reference is one person or one object and appears once. No duplicates.\n\n[VOICES]\n@DadShaz VOICE: \"Early-30s American man, warm low storyteller timbre, unhurried steady pace, gentle dry humor, softens with tenderness when emotional\"\n@Wife VOICE: \"Around 30-year-old American woman, calm warm timbre, steady gentle pace, consistent reassuring delivery that stays kind and even\"\n\n[GOAL]\nA six-shot, thirty-second segment inside a three-part animated family comedy that continues directly from the previous segment's last frame. It keeps romance setup to ten seconds then gives twenty seconds of father wisdom narration. It ends the instant the you-are-what-you-think-about line finishes — do not continue, do not resolve anything, do not add an ending. The comedy is played completely straight. Nobody in frame knows anything is funny.\n\n[CONTINUITY]\nLocation: @dallas_apartment_call_corner at night then @family_living_room, throughout. Never leave these two places. The camera stays on the same side of the action as in @dallas_apartment_call_corner and then @family_living_room for the whole segment and never crosses to the other side. Phone stays propped on desk for call shots, then living room faces window. 180-degree axis from desk to door locked, then sofa to window locked, and this never flips. No background characters appear; only the named cast are present with zero face repeats. Costume is fixed for the whole segment and never changes. @Wife wears soft sage hijab with no visible hair, hairline or dark band.\n\n[SHOTS]\nSHOT 1 | 0–5s\nMedium shot of @DadShaz sitting holding phone in @dallas_apartment_call_corner, breathing and blinking in lamplight.\n@DadShaz, voiceover: {We met on an app. She was in Chicago. I was in Dallas.}\nHard cut.\n\nSHOT 2 | 5–10s\nClose shot of @Wife smiling and holding still in @dallas_apartment_call_corner, breathing and blinking.\n@Wife: {Eight o'clock. I am here. How was your week?}\nHard cut.\n\nSHOT 3 | 10–15s\nMedium close shot of @DadShaz looking forward softly in @family_living_room, breathing calmly.\n@DadShaz, voiceover: {Mia, I love you even when I do not show it well.}\nHard cut.\n\nSHOT 4 | 15–20s\nWide shot of @DadShaz sitting still beside @Wife in @family_living_room, both breathing and blinking.\n@DadShaz, voiceover: {A mother shows love one way. A father shows it another way.}\nHard cut.\n\nSHOT 5 | 20–25s\nMedium shot of @DadShaz gazing aside in @family_living_room, breathing steadily.\n@DadShaz, voiceover: {The world is not a Disney movie. It is messier than that.}\nHard cut.\n\nSHOT 6 | 25–30s\nMedium close shot of @DadShaz looking forward warmly in @family_living_room, breathing and blinking.\n@DadShaz, voiceover: {Good people can do bad things. You are what you think about.}\nHard cut.\n\n[VISUAL STYLE]\nFeature-quality 3D animated film, production CG, stylized cinematic warmth, not flat cartoon. Soft warm lamplight glow at night then warm morning daylight, soft subsurface glow through ears and skin, tactile fabric and wood materials. Depth of field as a natural in-camera optical artifact with soft background falloff.\n\n[CAMERA AND PERFORMANCE]\nSix shots with five hard cuts in thirty seconds. The body plays broad. The face stays honest. No mugging, no pulled faces, no comic reactions. Anticipation winds opposite before moves. Snap and Settle with fast transitions and overshoot on arrival. Moving Holds breathe and micro-shift, never frozen. Overlap and Secondary Action with hair, cloth and attachments arriving late. Eye Life with micro-saccades, catchlights and natural blinks, eyes never glaze.\n\n[AUDIO]\nFoley of phone handling, soft chair shifts and fabric rustle. Quiet apartment call corner tone with faint phone speaker hiss, then quiet living-room atmosphere. Subtle warm score under wisdom lines with gentle resolve at end. Room tone stays soft and continuous.\n\n[EXCLUSIONS]\nThe only spoken words in the entire segment are the lines in braces. Nothing else written anywhere in this prompt is dialogue, and nobody speaks who is not named on a line. No extra cuts anywhere. No unison movement. No subtitles, no watermark, no logo. No new characters, no new locations, no costume changes.\n\n[MAINTAIN CONSISTENCY]\nMaintain two characters @DadShaz and @Wife and two locations @dallas_apartment_call_corner and @family_living_room with fixed faces and heights. Adult equals 7 heads tall. Toddler equals 4 heads tall. Child equals 4.5 to 5 heads tall with long torso and short legs as scale reference. Costumes and hijab never change. Phone position and sofa to window layout never change. No face repeats.",
+      "generationPayload": {
+        "engine": "seedance-2.5",
+        "durationSec": 30,
+        "resolution": "480p",
+        "aspectRatio": "16:9",
+        "fps": 24
+      },
+      "segmentIndex": 3,
+      "extendsFrom": 2,
+      "references": [
+        {
+          "tag": "@DadShaz",
+          "kind": "character",
+          "sourceTag": "@Image 2",
+          "assetKey": "placeholder:master-render:image-2"
+        },
+        {
+          "tag": "@Wife",
+          "kind": "character",
+          "sourceTag": "@Image 6",
+          "assetKey": "placeholder:master-render:image-6"
+        },
+        {
+          "tag": "@dallas_apartment_call_corner",
+          "kind": "location",
+          "sourceTag": "@Loc 4",
+          "assetKey": "placeholder:location-plate:loc-4"
+        },
+        {
+          "tag": "@family_living_room",
+          "kind": "location",
+          "sourceTag": "@Loc 1",
+          "assetKey": "placeholder:location-plate:loc-1"
+        }
+      ],
+      "shots": [
+        {
+          "shotNumber": 1,
+          "startSec": 0,
+          "endSec": 5,
+          "sceneId": "3.1",
+          "locationTag": "@dallas_apartment_call_corner",
+          "cast": [
+            "@DadShaz"
+          ],
+          "action": "Medium shot of @DadShaz sitting holding phone breathing and blinking in lamplight",
+          "dialogue": {
+            "speaker": "@DadShaz",
+            "line": "{We met on an app. She was in Chicago. I was in Dallas.}",
+            "mode": "voiceover"
+          },
+          "sfx": [
+            "soft room tone",
+            "phone handling"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 2,
+          "startSec": 5,
+          "endSec": 10,
+          "sceneId": "3.2",
+          "locationTag": "@dallas_apartment_call_corner",
+          "cast": [
+            "@Wife"
+          ],
+          "action": "Close shot of @Wife smiling and holding still breathing and blinking with warm calm face",
+          "dialogue": {
+            "speaker": "@Wife",
+            "line": "{Eight o'clock. I am here. How was your week?}",
+            "mode": "on-camera"
+          },
+          "sfx": [
+            "soft room tone",
+            "phone speaker hiss"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 3,
+          "startSec": 10,
+          "endSec": 15,
+          "sceneId": "3.3",
+          "locationTag": "@family_living_room",
+          "cast": [
+            "@DadShaz"
+          ],
+          "action": "Medium close shot of @DadShaz looking forward softly breathing calmly",
+          "dialogue": {
+            "speaker": "@DadShaz",
+            "line": "{Mia, I love you even when I do not show it well.}",
+            "mode": "voiceover"
+          },
+          "sfx": [
+            "quiet room tone"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 4,
+          "startSec": 15,
+          "endSec": 20,
+          "sceneId": "3.4",
+          "locationTag": "@family_living_room",
+          "cast": [
+            "@DadShaz",
+            "@Wife"
+          ],
+          "action": "Wide shot of @DadShaz sitting still beside @Wife both breathing and blinking calmly",
+          "dialogue": {
+            "speaker": "@DadShaz",
+            "line": "{A mother shows love one way. A father shows it another way.}",
+            "mode": "voiceover"
+          },
+          "sfx": [
+            "quiet room tone"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 5,
+          "startSec": 20,
+          "endSec": 25,
+          "sceneId": "3.5",
+          "locationTag": "@family_living_room",
+          "cast": [
+            "@DadShaz"
+          ],
+          "action": "Medium shot of @DadShaz gazing aside breathing steadily with honest face",
+          "dialogue": {
+            "speaker": "@DadShaz",
+            "line": "{The world is not a Disney movie. It is messier than that.}",
+            "mode": "voiceover"
+          },
+          "sfx": [
+            "quiet room tone"
+          ],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 6,
+          "startSec": 25,
+          "endSec": 30,
+          "sceneId": "3.6",
+          "locationTag": "@family_living_room",
+          "cast": [
+            "@DadShaz"
+          ],
+          "action": "Medium close shot of @DadShaz looking forward warmly breathing and blinking",
+          "dialogue": {
+            "speaker": "@DadShaz",
+            "line": "{Good people can do bad things. You are what you think about.}",
+            "mode": "voiceover"
+          },
+          "sfx": [
+            "quiet room tone",
+            "gentle score resolve"
+          ],
+          "cut": "Hard cut."
+        }
+      ]
+    }
+  ],
+  "totalRuntimeSec": 90,
+  "assumptions": []
+}
