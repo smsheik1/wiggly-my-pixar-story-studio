@@ -125,7 +125,7 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
       }
       let out;
       try { out = spec.parse(raw); } catch (e) {
-        issues = (e.issues ?? [{ path: [], message: e.message }]).map((i) => ({ severity: 'error', code: 'SCHEMA_REJECTED', message: i.message, path: (i.path ?? []).join('.') }));
+        issues = (e.issues ?? [{ path: [], message: e.message }]).map((i) => { const path = (i.path ?? []).join('.'); return { severity: 'error', code: 'SCHEMA_REJECTED', message: path ? `${path}: ${i.message}` : i.message, path }; });
         done({ output: raw, issues }); continue;
       }
       if (spec.merge) out = spec.merge(kept, out, state);

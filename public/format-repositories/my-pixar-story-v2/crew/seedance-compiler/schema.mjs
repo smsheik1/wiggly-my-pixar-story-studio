@@ -76,7 +76,8 @@ export const SeedanceSegmentBase = z.object({
   generationPayload: GenerationPayloadSchema,
   // WIGGLY
   segmentIndex: z.number().int().positive(),
-  extendsFrom: z.number().int().positive().nullable(),
+  // Absent = first segment (null). Muse omitted it on segment 1 in r4-dry5; the chain refine still enforces 2+.
+  extendsFrom: z.number().int().positive().nullable().default(null).describe('null for the first segment; otherwise the previous segmentIndex'),
   references: z.array(ReferenceSchema).min(1),
   shots: z.array(CompiledShotSchema).min(1),
 }).strict();

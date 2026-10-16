@@ -142,3 +142,12 @@ test('deep agent that never submits counts as a failed attempt and escalates aft
   assert.equal(s.status, 'failed'); assert.equal(s.escalations[0].agent, 'story-director');
   assert.ok(s.escalations[0].issues.some((i) => i.code === 'AGENT_RUN_FAILED' && /without calling submit/.test(i.message)));
 }));
+
+test('r4-dry5 regression: SC segment 1 omitted extendsFrom -> defaults to null; schema issues carry the field path', async () => {
+  const [, omitted, zero] = json('r4-dry5-seedance-submit-args.json');
+  const subs = []; const t = makeSubmitTool('seedance-compiler', subs, { maxInvalid: 5 });
+  const r1 = await t.invoke(omitted);
+  assert.ok(!/extendsFrom/.test(r1), r1.slice(0, 400));
+  const r2 = await t.invoke(zero);
+  assert.match(r2, /segments\.0\.extendsFrom: Too small/);
+});

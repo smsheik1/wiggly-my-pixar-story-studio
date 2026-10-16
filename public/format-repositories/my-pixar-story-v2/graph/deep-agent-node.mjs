@@ -102,8 +102,8 @@ export function dropDisallowedNulls(v, js) {
   }
   return v;
 }
-export const zodIssues = (issues) => issues.map((i) => ({ severity: 'error', code: 'SCHEMA_REJECTED', path: (i.path ?? []).join('.'), message: i.message }));
-const issueText = (issues, max = 40) => issues.slice(0, max).map((i) => `- ${i.path || '(root)'}: ${i.message}`).join('\n') + (issues.length > max ? `\n- …and ${issues.length - max} more` : '');
+export const zodIssues = (issues) => issues.map((i) => { const path = (i.path ?? []).join('.'); return { severity: 'error', code: 'SCHEMA_REJECTED', path, message: path ? `${path}: ${i.message}` : i.message }; });
+const issueText = (issues, max = 40) => issues.slice(0, max).map((i) => `- ${i.message}`).join('\n') + (issues.length > max ? `\n- …and ${issues.length - max} more` : '');
 
 export class SubmitRejectedError extends Error {
   constructor(agent, issues) { super(`${agent}: submit rejected by the output schema (${issues.length} issue${issues.length === 1 ? '' : 's'}):\n${issueText(issues, 15)}`); this.issues = issues; this.code = 'SCHEMA_REJECTED'; }
