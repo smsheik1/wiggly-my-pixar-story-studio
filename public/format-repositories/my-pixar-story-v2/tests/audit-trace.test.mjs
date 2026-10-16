@@ -103,3 +103,11 @@ test('truncated model calls (output at max tokens) are flagged', { timeout: 1000
   const m2 = auditTrace([{ id: 'r', name: 'wiggly-v2 rehearsal', run_type: 'chain', start_time: '2026-10-16T00:00:00Z', end_time: '2026-10-16T00:02:00Z', tags: ['runId:x'] }, llm(32217), llm(3000)]);
   assert.equal(m2.truncated.length, 1); assert.ok(auditMarkdown(m2).includes('32.2k out of 32.0k'));
 });
+
+test('attempt with a cut-off call and no submit gets MAX_TOKENS_NO_SUBMIT', { timeout: 10000 }, () => {
+  const meta = { agent: 'story-director', attempt: 1, ls_max_tokens: 32000, ls_model_name: 'meta/muse-spark-1.3-contributor', usage_metadata: { input_tokens: 10, output_tokens: 32217 } };
+  const m3 = auditTrace([{ id: 'r', name: 'wiggly-v2 rehearsal', run_type: 'chain', start_time: '2026-10-16T00:00:00Z', end_time: '2026-10-16T00:02:00Z', tags: ['runId:x'] },
+    { id: 'a', parent_run_id: 'r', name: 'story-director attempt 1', run_type: 'chain', error: 'story-director: the deep agent finished without calling submit', start_time: '2026-10-16T00:00:00Z', end_time: '2026-10-16T00:01:00Z', extra: { metadata: { agent: 'story-director', attempt: 1 } } },
+    { id: 'l', parent_run_id: 'a', name: 'ChatOpenAI', run_type: 'llm', start_time: '2026-10-16T00:00:00Z', end_time: '2026-10-16T00:01:00Z', extra: { metadata: meta } }]);
+  assert.equal(m3.rejected[0].issues[0].code, 'MAX_TOKENS_NO_SUBMIT'); assert.equal(m3.agents['story-director'].wastedTotal, 1);
+});

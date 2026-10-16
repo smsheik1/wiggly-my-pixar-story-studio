@@ -75,7 +75,12 @@ export function auditTrace(runs, { specs = AGENT_SPECS, validationErrors = [] } 
     a.attempts++; a.ms += ms(r);
     if (r.error) {
       const msg = String(r.error); const kind = classifyError(msg);
-      a.wasted[kind]++;
+      if (!(steps.some((st) => st.truncated && st.agent === agent && st.attempt === attempt) && /without calling submit/.test(msg))) a.wasted[kind]++;
+      const cut = steps.some((st) => st.truncated && st.agent === agent && st.attempt === attempt);
+      if (cut && /without calling submit/.test(msg)) {
+        a.wasted.other++; rejected.push({ agent, attempt, kind: 'max-tokens', issues: [{ code: 'MAX_TOKENS_NO_SUBMIT', message: 'model output hit max tokens (reasoning used the budget) before calling submit; raise maxTokens or lower effort' }], ms: ms(r) });
+        continue;
+      }
       const issues = kind === 'schema' ? schemaIssuesFromError(msg) : [{ code: kind === 'network' ? 'NETWORK' : kind === 'timeout' ? 'MODEL_TIMEOUT' : 'AGENT_RUN_FAILED', message: msg.split('\n')[0].slice(0, 300) }];
       rejected.push({ agent, attempt, kind, issues, ms: ms(r) });
       continue;
