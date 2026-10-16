@@ -81,3 +81,18 @@ test('tracing: null skips audit; audit failure is non-fatal', async () => {
     assert.equal(called, 0);
   } finally { done(); }
 });
+
+test('output is saved before LangSmith flush, and a hung flush is bounded (r4-dry11 lost output)', async () => {
+  const { root, from, proj, done } = sandboxFromDry10();
+  try {
+    const lines = [];
+    let savedAtFlush = null;
+    const summary = await runCaSheets({ from, runId: 'sheets-hang', projectPath: proj, runsRoot: root, secrets: {}, invoke: async () => sheetsFx,
+      tracing: { projectName: 'wiggly-v2', callbacks: [], rootRunId: '00000000-0000-4000-8000-0000000000cc', url: async () => 'https://x',
+        flush: () => { savedAtFlush = existsSync(join(root, 'sheets-hang', 'outputs', 'character-architect.json')); return new Promise(() => {}); } },
+      audit: null, auditDelayMs: 0, flushTimeoutMs: 50, log: (l) => lines.push(l) });
+    assert.equal(savedAtFlush, true);
+    assert.equal(summary.status, 'passed');
+    assert.ok(lines.some((l) => l.startsWith('LangSmith flush timed out')));
+  } finally { done(); }
+});

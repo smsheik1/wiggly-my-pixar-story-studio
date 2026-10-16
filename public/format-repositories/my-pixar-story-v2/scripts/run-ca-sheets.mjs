@@ -27,7 +27,7 @@ export function sheetState({ inputs, storyDirector, characters }) {
 }
 
 export async function runCaSheets({ from, runId, projectPath, photoRefsPath, secretsPath = defaultSecretsPath(), secrets, runsRoot = RUNS_ROOT, invoke, timeouts = {}, log = console.log,
-  tracing, audit = auditRun, auditDelayMs = 5000 } = {}) {
+  tracing, audit = auditRun, auditDelayMs = 5000, flushTimeoutMs = 120_000 } = {}) {
   if (!from || !runId || !projectPath) throw new Error('--from, --run-id and --project are required');
   if (from === runId) throw new Error('--run-id must differ from --from (never overwrite the source run)');
   const outDir = join(runsRoot, runId, 'outputs');
@@ -62,10 +62,15 @@ export async function runCaSheets({ from, runId, projectPath, photoRefsPath, sec
       ...(tr ? { runId: tr.rootRunId } : {}),
     });
   } finally { clearInterval(hb); }
-  if (tr) await tr.flush?.();
-  const url = tr ? await tr.url() : null;
+  log('[ca-sheets] node returned; saving output');
+  // Save the CA output BEFORE any LangSmith flush: r4-dry11-sister-sheets passed, then the process drained and exited 0 with the output only in memory.
   await mkdir(outDir, { recursive: true });
   if (res.characterArchitect?.output) await writeFile(join(outDir, 'character-architect.json'), JSON.stringify(res.characterArchitect.output, null, 2));
+  // Keep the event loop alive while LangSmith flushes (bounded), so an unsettled flush cannot silently end the process.
+  const bounded = (p, ms, what) => { let t; const keep = setInterval(() => {}, 1000);
+    return Promise.race([Promise.resolve(p), new Promise((r) => { t = setTimeout(() => { log(`${what} timed out after ${ms / 1000}s`); r(null); }, ms); })]).finally(() => { clearTimeout(t); clearInterval(keep); }); };
+  if (tr) await bounded(tr.flush?.(), flushTimeoutMs, 'LangSmith flush');
+  const url = tr ? await bounded(tr.url(), flushTimeoutMs, 'LangSmith url') : null;
   const summary = { from, runId, status: res.status ?? 'passed', ms: Date.now() - started, attempts: res.attempts, gateIssues: res.gateIssues, validationErrors: res.validationErrors, escalations: res.escalations, events, langsmithUrl: url, tracingProject: tr?.projectName ?? null };
   await writeFile(join(outDir, 'state.json'), JSON.stringify(summary, null, 2));
   if (tr && audit) {
