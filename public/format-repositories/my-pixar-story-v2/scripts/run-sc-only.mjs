@@ -5,6 +5,8 @@
 // Approvals: placeholder asset keys for every pendingApproval tag (same as --placeholder-assets; no image or video calls).
 // Budget guard: polls the OpenRouter key and aborts if this run spends more than --max-usd (default 0.05).
 // Usage: node scripts/run-sc-only.mjs --project runs/<id>/project.json --run-id <id> [--max-usd 0.05] [--secrets <file>]
+//   [--suffix v2]   write seedance-compiler-v2.json / sc-state-v2.json instead of overwriting the first SC output
+//   [--audit-id <id>] audit folder runs/<id>/ (default <runId>-sc)
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { RunnableLambda } from '@langchain/core/runnables';
@@ -19,6 +21,7 @@ import { inputsFromProject, loadPhotoReferences, defaultPhotoRefsPath } from './
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 const projectPath = arg('--project'), runId = arg('--run-id'), maxUsd = +(arg('--max-usd') ?? 0.05);
+const suffix = arg('--suffix') ? `-${arg('--suffix')}` : '', auditId = arg('--audit-id') ?? `${runId}-sc`;
 if (!projectPath || !runId) throw new Error('--project and --run-id are required');
 const sec = loadSecrets(arg('--secrets') ?? defaultSecretsPath());
 if (!sec.OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY missing');
@@ -54,11 +57,11 @@ try {
     metadata: { runId, scOnly: true }, callbacks: [new LivenessHandler(liveness), ...(tr?.callbacks ?? [])], ...(tr ? { runId: tr.rootRunId } : {}) });
 } finally { clearInterval(hb); clearInterval(guard); }
 const wallSec = Math.round((Date.now() - t0) / 1000);
-if (res.seedanceCompiler?.output) await writeFile(join(out, 'seedance-compiler.json'), JSON.stringify(res.seedanceCompiler.output, null, 2));
+if (res.seedanceCompiler?.output) await writeFile(join(out, `seedance-compiler${suffix}.json`), JSON.stringify(res.seedanceCompiler.output, null, 2));
 const b1 = await keyUsage();
-await writeFile(join(out, 'sc-state.json'), JSON.stringify({ status: res.status ?? 'done', approvedAssets, attempts: res.attempts, retryCounts: res.retryCounts, gateIssues: res.gateIssues,
+await writeFile(join(out, `sc-state${suffix}.json`), JSON.stringify({ status: res.status ?? 'done', approvedAssets, attempts: res.attempts, retryCounts: res.retryCounts, gateIssues: res.gateIssues,
   validationErrors: res.validationErrors, escalations: res.escalations ?? [], wallSec, keySpentUsd: b1.usage - b0.usage, events }, null, 2));
 log(`SC ${res.status ?? 'passed'}: attempts ${res.attempts?.['seedance-compiler']}, wall ${wallSec}s, key spend $${(b1.usage - b0.usage).toFixed(4)}, remaining $${b1.remaining?.toFixed(4)}`);
-if (tr) { await tr.flush?.(); try { await new Promise((r) => setTimeout(r, 8000)); await auditRun({ runId: `${runId}-sc`, traceId: tr.rootRunId, secrets: sec, trackerPath: null, log }); } catch (e) { log(`audit skipped: ${e.message}`); } }
+if (tr) { await tr.flush?.(); try { await new Promise((r) => setTimeout(r, 8000)); await auditRun({ runId: auditId, traceId: tr.rootRunId, secrets: sec, trackerPath: null, log }); } catch (e) { log(`audit skipped: ${e.message}`); } }
 log('DONE');
 process.exit(res.status === 'failed' ? 2 : 0);

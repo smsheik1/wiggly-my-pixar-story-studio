@@ -8,6 +8,7 @@ import { validateWritingTells } from './writing-tells.mjs';
 // Usage: node check-seedance-prompts.mjs <sc-output.json> <seedance-compiler-input.json>
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { segmentCastPresence } from '../seedance-compiler/input.mjs';
 import { VIDEO_ENGINE, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX_TOTAL_SECONDS, BLOCK_HEADERS, headerPositions } from '../seedance-compiler/schema.mjs';
 
 import { WORDS_PER_SECOND, budgetMessage } from './speech.mjs';
@@ -28,6 +29,17 @@ const unNegatedHit = (text, re) => {
   let m; while ((m = g.exec(text))) if (!/\b(no|not) $/i.test(text.slice(Math.max(0, m.index - 4), m.index))) return true;
   return false;
 };
+// Heard-only speaker label at the start of a [SHOTS] line ("@DadShaz, voiceover: {..}"): a voice, not an on-screen element.
+const HEARD_SPEAKER_LABEL = /^(\s*)@[\w_]+(\s*,\s*(?:voice[- ]?over|off[- ]?camera)\s*:)/gim;
+// WIGGLY (r4-dry15): every SHOT block states its camera direction on one line: "Camera: <framing>, <angle>, <move>."
+export const CAMERA_LINE = /^\s*Camera:\s*([^,\n]+),\s*([^,\n]+),\s*([^\n]+?)\.?\s*$/m;
+const SUNGLASSES = /\bsun-?glasses\b/i;
+const BREATHING = /\bbreath(?:e|es|ing)?\b/i;
+const BROKEN_HARD_STOP = /ends the instant[^.]*?\band do not\b/i;
+const normWords = (x) => String(x ?? '').toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+/** [SHOTS] split into per-shot blocks: [{ n, text }]. */
+export const shotBlocks = (shotsText) => shotsText.split(/(?=SHOT\s+\d+\s*\|)/).filter((x) => /^SHOT\s+\d+/.test(x.trim())).map((x) => ({ n: +x.match(/SHOT\s+(\d+)/)[1], text: x }));
+const withoutBraces = (x) => String(x ?? '').replace(/\{[^}]*\}/g, '');
 const words = (line) => line.replace(/[{}]/g, ' ').trim().split(/\s+/).filter(Boolean).length;
 
 /** Split a compiled prompt into its blocks by header (body text only). */
@@ -92,7 +104,7 @@ export function validateSeedanceSegment(seg, { pathPrefix = '' } = {}) {
   const refs = B['[REFERENCE MATERIALS]'] ?? seg?.tenBlocks?.block1_referenceMaterials ?? '';
   const registered = new Set([...refs.matchAll(/^@([\w_]+)\s*=/gm)].map((m) => '@' + m[1]));
   const attached = new Set(seg?.attachedElements ?? []);
-  for (const m of shotsText.matchAll(/@([\w_]+)/g)) {
+  for (const m of shotsText.replace(HEARD_SPEAKER_LABEL, '$1$2').matchAll(/@([\w_]+)/g)) {
     const tag = '@' + m[1];
     if (/^@(Image|Loc)$/.test(tag)) { err('SLOT_TAG_IN_PROMPT', `Use element names, not ${tag} N slots.`); continue; } // WIGGLY
     if (!registered.has(tag)) err('UNREGISTERED_ELEMENT_TAG', `${tag} is used in [SHOTS] but not bound in [REFERENCE MATERIALS].`);
@@ -168,6 +180,31 @@ export function validateSeedancePrompts(data, input) {
         if (!t.includes(s.dialogue.line)) err('DIALOGUE_NOT_VERBATIM', `${sp}: line ${s.dialogue.line} is not in the prompt.`, `${sp}.dialogue`);
       }
     });
+    // WIGGLY (r4-dry15): camera direction, sunglasses placement, voice-only cast, [GOAL] grammar, breathing filler.
+    const shotsText = seg.tenBlocks?.block5_shots ?? '';
+    for (const b of shotBlocks(shotsText)) {
+      const sp = `${p}.tenBlocks.block5_shots`;
+      const m = b.text.match(CAMERA_LINE);
+      if (!m) { err('MISSING_CAMERA_DIRECTION', `${p}: SHOT ${b.n} needs a "Camera: <framing>, <angle>, <move>." line (from the stage play's framing, cameraAngle, cameraMove).`, sp); }
+      else {
+        const srcShot = src?.shots.find((x) => x.shotNumber === b.n);
+        const line = normWords(m[0]);
+        const miss = ['framing', 'cameraAngle', 'cameraMove'].filter((k) => srcShot?.[k] && !line.includes(normWords(srcShot[k])));
+        if (miss.length) issues.push({ severity: 'warning', code: 'CAMERA_DIRECTION_MISMATCH', message: `${p}: SHOT ${b.n} camera line does not match the stage play's ${miss.map((k) => `${k} "${srcShot[k]}"`).join(', ')}.`, path: sp });
+      }
+      if (SUNGLASSES.test(withoutBraces(b.text))) err('REDESCRIBED_CHARACTER', `${p}: SHOT ${b.n} mentions sunglasses. The sunglasses live only in [REFERENCE MATERIALS], [CONTINUITY] and [MAINTAIN CONSISTENCY]; [SHOTS] uses the @tag only.`, sp);
+      if (BREATHING.test(withoutBraces(b.text))) issues.push({ severity: 'warning', code: 'FILLER_BREATHING', message: `${p}: SHOT ${b.n} uses breathing as filler action; give a concrete action or hold instead.`, path: sp });
+    }
+    (seg.shots ?? []).forEach((s, j) => { if (SUNGLASSES.test(s.action ?? '')) err('REDESCRIBED_CHARACTER', `${p}.shots.${j}: action mentions sunglasses; use the @tag only.`, `${p}.shots.${j}.action`); });
+    const goal = seg.tenBlocks?.block3_goal ?? '';
+    if (BROKEN_HARD_STOP.test(goal)) err('BROKEN_HARD_STOP', `${p}: [GOAL] hard stop is one broken sentence ("It ends the instant X ... and do not ..."). Write "It ends the instant X. Do not continue past that moment, do not resolve anything and do not add an ending."`, `${p}.tenBlocks.block3_goal`);
+    const voiceOnly = src ? (src.voiceOnlyCast ?? segmentCastPresence(src, [...cast.keys()]).voiceOnlyCast) : [];
+    const block1 = seg.tenBlocks?.block1_referenceMaterials ?? t;
+    for (const tag of voiceOnly) {
+      const where = [refTags.has(tag) && 'references', (seg.attachedElements ?? []).includes(tag) && 'attachedElements',
+        new RegExp(`^${tag}\\s*=`, 'm').test(block1) && '[REFERENCE MATERIALS]', (seg.shots ?? []).some((s) => (s.cast ?? []).includes(tag)) && 'shots[].cast'].filter(Boolean);
+      if (where.length) err('VOICE_ONLY_REFERENCE', `${p}: ${tag} is only heard in this part (voiceover / off camera), so attach no image of them: remove from ${where.join(', ')}.`, `${p}.references`);
+    }
     // On-camera stage-play speakers must be bound; narration and voiceover are audio only.
     for (const sh of src?.shots ?? []) if (sh.dialogue && !heardOnly(sh.dialogue)) present.add(sh.dialogue.speaker);
     for (const tag of present) {

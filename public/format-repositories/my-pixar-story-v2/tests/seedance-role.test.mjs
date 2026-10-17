@@ -5,7 +5,13 @@ import { SeedanceCompilerOutputSchema, SeedanceSegmentSchema } from '../crew/see
 
 const role = readFileSync(new URL('../crew/seedance-compiler/role.md', import.meta.url), 'utf8');
 const gemini = readFileSync(new URL('./fixtures/gemini-sc-SKILL.md', import.meta.url), 'utf8');
-const norm = (s) => s.replaceAll('Higgsfield / Volcano Engine', 'Seedance 2.5 via Replicate (bytedance/seedance-2.5) at 480p');
+// Wiggly overrides of Gemini lines (r4-dry15 SC review): two-sentence hard stop; [VISUAL STYLE] never names a forbidden word.
+const OVERRIDES = [
+  ['Higgsfield / Volcano Engine', 'Seedance 2.5 via Replicate (bytedance/seedance-2.5) at 480p'],
+  ['It ends the instant X finishes — do not continue into her story, do not resolve anything, do not add an ending.', 'It ends the instant X finishes. Do not continue past that moment, do not resolve anything and do not add an ending.'],
+  ['Feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon.', 'Feature-quality 3D animated film in stylized production CG with appealing animated proportions, never flat cartoon.'],
+];
+const norm = (s) => OVERRIDES.reduce((x, [a, b]) => x.replaceAll(a, b), s);
 
 test('SC role.md contains Gemini SKILL.md word for word (only the engine swap)', () => {
   const missing = norm(gemini).split('\n').filter((l) => l.trim() && !role.includes(l));

@@ -33,6 +33,10 @@ export const InputShotSchema = z.object({
   startSec: z.number().int().nonnegative(),
   endSec: z.number().int().positive(),
   location: z.string().min(1),
+  // WIGGLY (r4-dry15): the Story Director's camera direction, passed through so [SHOTS] states framing, angle and move.
+  framing: z.string().min(1).optional(),
+  cameraAngle: z.string().min(1).optional(),
+  cameraMove: z.string().min(1).optional(),
   whatWeSee: z.string().min(10),
   whatWeHear: z.string().optional(),
   directorsNote: z.string().optional(),
@@ -50,6 +54,9 @@ export const SeedanceCompilerInput = z.object({
     targetDurationSec: z.number().int().min(1).max(30),
     goalSummary: z.string().min(10),
     continuityLocks: z.array(z.string()).min(1),
+    // WIGGLY (r4-dry15): who is seen in this part vs only heard (voiceover / off camera). Voice-only cast gets no image reference.
+    onScreenCast: z.array(z.string().regex(/^@[\w_]+$/)).default([]),
+    voiceOnlyCast: z.array(z.string().regex(/^@[\w_]+$/)).default([]),
     shots: z.array(InputShotSchema).min(1),
   }).strict()).min(1),
   characters: z.array(z.object({
@@ -81,6 +88,22 @@ export const SeedanceCompilerInput = z.object({
   });
 });
 
+const heardOnlyLine = (d) => !!(d?.isVoiceover || d?.isOffCamera || /^(voiceover|off[- _]?camera)$/i.test(d?.mode ?? ''));
+/**
+ * Cast presence for one stage-play segment. On screen: tagged in a shot's whatWeSee, or speaks on camera.
+ * Voice only: speaks only as narration / voiceover / off camera and is never on screen in this segment.
+ */
+export function segmentCastPresence(seg, castTags) {
+  const known = new Set(castTags ?? []);
+  const onScreen = new Set(), heard = new Set();
+  for (const sh of seg?.shots ?? []) {
+    for (const m of String(sh.whatWeSee ?? '').matchAll(/@[\w_]+/g)) if (!known.size || known.has(m[0])) onScreen.add(m[0]);
+    if (sh.dialogue?.speaker) (heardOnlyLine(sh.dialogue) ? heard : onScreen).add(sh.dialogue.speaker);
+    if (sh.narration?.speaker) heard.add(sh.narration.speaker);
+  }
+  return { onScreenCast: [...onScreen], voiceOnlyCast: [...heard].filter((t) => !onScreen.has(t)) };
+}
+
 /** Filter shared pipeline state to the Seedance Compiler slice. Throws if an approved reference is missing. */
 export function selectSeedanceCompilerInput(state = {}) {
   const p = state.project ?? state;
@@ -89,13 +112,15 @@ export function selectSeedanceCompilerInput(state = {}) {
   const ls = p.locationScout?.output ?? {};
   const assets = p.approvedAssets ?? {};
   let current;
+  const castTags = (sd.cast ?? []).map((c) => c.elementTag);
   const segments = (sd.segments ?? []).map((seg) => ({
     segmentId: seg.segmentId, title: seg.title, targetDurationSec: seg.targetDurationSec, goalSummary: seg.goalSummary, continuityLocks: seg.continuityLocks ?? [],
+    ...segmentCastPresence(seg, castTags),
     shots: (seg.shots ?? []).map((sh) => {
       if (sh.location) current = sh.location;
       const o = { sceneId: `${seg.segmentId}.${sh.shotNumber}`, shotNumber: sh.shotNumber, startSec: sh.startSec, endSec: sh.endSec,
         location: current, whatWeSee: sh.whatWeSee, isContinuousMove: sh.isContinuousMove ?? false };
-      for (const k of ['whatWeHear', 'directorsNote', 'tag', 'dialogue', 'narration']) if (sh[k] !== undefined) o[k] = sh[k];
+      for (const k of ['framing', 'cameraAngle', 'cameraMove', 'whatWeHear', 'directorsNote', 'tag', 'dialogue', 'narration']) if (sh[k] !== undefined) o[k] = sh[k];
       return o;
     }),
   }));
