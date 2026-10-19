@@ -23,12 +23,12 @@ You must open or anchor the prompt with the exact verbatim phrase:
 ### Law 2: Match Script Staging & Perspective Geometry
 The location plate must establish the exact spatial layout and camera POV required by the screenplay's wide master shot:
 * **Camera Height:** Match the action (e.g. *"Adult chest height looking slightly down toward the rug"* or *"Seated child eye-level at 2.5 feet"*).
-* **Lens & Perspective:** 35mm (wide establishing) or 50mm (medium master). Deep staging with clear foreground, midground, and background layers.
+* **Framing:** a wide shot or medium shot in plain words, with clear foreground, midground and background layers.
 * **Actor Coordinates:** Describe the staging furniture/markers where characters will sit or stand (e.g. *"a large patterned rug with twelve square carpet mats laid out in loose uneven rows"*).
 
 ### Law 3: Palette Discipline & Signature Accent Exclusion
 In stylized 3D animation, the environment must support character readability:
-* Sets use **muted, warm, natural palettes** (warm white walls, honey-oak wood, scuffed painted cubbies, soft desaturated teal).
+* Sets use a **gently saturated, cohesive palette** (warm white walls, honey-oak wood, soft teal).
 * **Forbid the Cast's Signature Colors from Dominating Walls:** If the hero child wears a saturated mustard-yellow tee and the secondary child wears a magenta tutu, forbid whole walls from being painted bright yellow or neon magenta.
 
 ### Law 4: The Single-Sign Text Law (Anti-Rune Protection)
@@ -53,15 +53,15 @@ Every location plate prompt must follow this structured template:
 ```text
 A background plate from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. 16:9 widescreen environment plate, completely empty of people.
 
-Room / Environment: [PRIMARY ENVIRONMENT TYPE AND MOOD] on a [TIME OF DAY / ATMOSPHERE], completely empty of people. [FOREGROUND STAGING ELEMENTS — rugs, carpet markers, baseline geometry where actors will stage]. [MIDGROUND ARCHITECTURE AND FURNITURE — shelves, desks, cubbies, textures with soft wear and tactile production CG materials]. [WALL DRESSING — drawings, textures, soft paint wear]. [MAXIMUM ONE SIGN — e.g. A hand-lettered paper banner reading '[TEXT]' strung across the wall in uneven capitals].
+Room / Environment: [PRIMARY ENVIRONMENT TYPE AND MOOD] on a [TIME OF DAY / ATMOSPHERE], completely empty of people. [FOREGROUND STAGING ELEMENTS — rugs, carpet markers, baseline geometry where actors will stage]. [MIDGROUND ARCHITECTURE AND FURNITURE — simplified rounded chunky shapes, clean stylized materials]. [WALL DRESSING — a few simple items]. [MAXIMUM ONE SIGN — e.g. A hand-lettered paper banner reading '[TEXT]' strung across the wall in uneven capitals].
 
-Secondary Depth & Props: [RECEDING ELEMENTS — stacking chairs, coat racks, aquarium tank, plants, small tactile details creating believable living space without clutter].
+Secondary Depth & Props: [RECEDING ELEMENTS — a few clear story props from the answers, no clutter].
 
-Lighting & Atmosphere: [EXPLICIT KEY LIGHT DIRECTION AND QUALITY — e.g. Soft warm morning sunlight streaming from unseen tall windows on the left casting long gentle shadows across the floor. Warm ambient daylight bounce. Subtle atmospheric dust motes in light beams, no fog, no haze].
+Lighting & Atmosphere: [EXPLICIT KEY LIGHT DIRECTION AND QUALITY — e.g. Soft warm morning sunlight streaming from unseen tall windows on the left casting long gentle shadows across the floor. Soft simple bounce light, no fog, no haze].
 
-Camera: [FOCAL LENGTH, CAMERA HEIGHT, ANGLE — e.g. 35mm wide shot at adult chest height looking down at the carpet staging area, level horizon, deep depth of field keeping background readable].
+Camera: [SHOT SIZE, CAMERA HEIGHT, ANGLE — e.g. wide shot at adult chest height looking down at the carpet staging area, level horizon].
 
-Exclusions: completely empty of people, no humans, no silhouettes, no crowds, no other text or posters on walls, no photorealistic film grain, no 35mm noise.
+Exclusions: completely empty of people, no humans, no silhouettes, no crowds, no other text or posters on walls, no wear, no grime, no stains, no dust, no scratches.
 ```
 
 ---
@@ -88,10 +88,9 @@ Before outputting a location plate prompt:
 - **Location tags.** Cast `@Image N` tags are assigned by the Character Architect and are NOT known to you. Tag each location `"@Loc 1"`, `"@Loc 2"`… positionally, in order of first appearance.
 - **Setting coverage.** Each setting carries the Story Director's `description` of what the background must contain: build exactly that. Every stage-play setting gets exactly one entry; `"settingName"` matches the stage-play location string exactly. Scene ids are `"segmentId.shotNumber"` (e.g. `"1.3"`); a shot with no location inherits the previous shot's location. List every scene id that uses the plate; never invent one.
 - **Time of day.** Set `"timeOfDay"` and state it in the prompt.
-- **Family / home realism.** Wiggly stories are mostly real family homes: lived-in, specific, modest (scuffed table, fridge, tea towel), never a showroom. Use the settingSeed for culture and era.
+- **Stylized, not photographed.** Homes feel warm and specific to the family's answers (settingSeed for culture and era), but designed like an animated film set: simplified rounded chunky shapes, clean stylized textures (no wear, grime, stains, dust or scratches), a few clear story props, gently saturated cohesive palette, soft simple lighting. No lens or depth-of-field terms.
 - **Comedy-friendly staging space.** Leave clear open floor and sightlines for reveals, double-takes and entrances; keep the 180-degree line readable.
 - **No people at all,** and never describe ages, cast names, element tags (@Theo), pets or reflections of people. Write "children's drawings" or "child-sized chairs" only as objects.
-- **Jargon negation is local.** "not photorealistic" is fine; do not write "no photorealistic film grain" or "no 35mm noise" (the gate only exempts a term that directly follows "no"/"not").
 - **No clarifying questions.** Any guess goes in `"assumptions"`.
 
 ## 5. JSON Output Contract (output exactly this, no prose)

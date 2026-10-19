@@ -5,7 +5,8 @@ import { CharacterArchitectOutputSchema } from '../crew/character-architect/sche
 
 const role = readFileSync(new URL('../crew/character-architect/role.md', import.meta.url), 'utf8');
 const gemini = readFileSync(new URL('./fixtures/gemini-ca-SKILL.md', import.meta.url), 'utf8');
-const SWAPS = [['GPT Image 2', 'Nano Banana 2.1'], ['Seedream 5.0 Pro', 'Nano Banana 2.1'], ['Higgsfield / OpenAI', 'Google Flow']];
+const SWAPS = [['GPT Image 2', 'Nano Banana 2.1'], ['Seedream 5.0 Pro', 'Nano Banana 2.1'], ['Higgsfield / OpenAI', 'Google Flow'],
+  ['Heavy cloth with weight, few large folds, grime in creases, unbranded]', 'Cloth with weight, few large folds, clean, unbranded]']]; // deliberate: no wear/grime (anti-photoreal)
 
 test('CA role.md contains Gemini SKILL.md word for word (only engine swaps)', () => {
   const norm = (s) => SWAPS.reduce((t, [a, b]) => t.replaceAll(a, b), s);
