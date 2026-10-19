@@ -1,6 +1,7 @@
 // Location Scout v2 input slice: the ONLY state this agent may see.
 // Included: stage-play scenes (with inherited locations), distinct settings, settingSeed, toneDirectives.
 // Excluded: character sheets, cast photos/notes, dialogue lines, storyboard, HTML deck, secrets, URLs, photo paths.
+import { accentOf } from '../story-director/schema.mjs';
 import { z } from 'zod';
 import { SCENE_ID } from './schema.mjs';
 
@@ -82,7 +83,7 @@ export function selectLocationScoutInput(state = {}) {
   const hints = p.locationScout?.hints ?? {}; // inputs only; the LS output lives at locationScout.output
   // Forbidden wall colours derived from cast signature accents (colour words only; the cast itself is not passed on).
   const COLOURS = /\b(red|orange|yellow|mustard|green|teal|blue|navy|purple|magenta|pink|grey|black|white|brown|gold)\b/gi;
-  const accentColours = [...new Set((sd.cast ?? []).flatMap((c) => (c.signatureAccent ?? '').match(COLOURS) ?? []).map((c) => c.toLowerCase()))];
+  const accentColours = [...new Set((sd.cast ?? []).flatMap((c) => accentOf(c.signatureAccent).match(COLOURS) ?? []).map((c) => c.toLowerCase()))];
   for (const e of settings) {
     const h = hints[e.name] ?? {};
     e.paletteRestrictions = { forbiddenWallColors: accentColours, ...(h.paletteRestrictions ?? {}) };

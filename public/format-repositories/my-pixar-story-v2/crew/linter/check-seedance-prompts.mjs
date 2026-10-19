@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { accentOf } from '../story-director/schema.mjs';
 import { validateWritingTells } from './writing-tells.mjs';
 // v2 deterministic gate for Seedance Compiler output.
 // BASE: Gemini's per-segment checks (gemini-sc-gate.md), his codes. validateSeedanceSegment() runs them on one segment.
@@ -38,7 +39,7 @@ export const CAMERA_LINE = /^\s*Camera:\s*([^,\n]+),\s*([^,\n]+),\s*([^\n]+?)\.?
 export function accessoryWords(cast = []) {
   const out = [];
   for (const c of cast) {
-    const item = String(c?.signatureAccent ?? '').toLowerCase().split(/\b(?:pushed|pulled|worn|on|over|around|in|with|that|which|tucked|clipped|always)\b|[,;.(]/)[0];
+    const item = accentOf(c?.signatureAccent).toLowerCase().split(/\b(?:pushed|pulled|worn|on|over|around|in|with|that|which|tucked|clipped|always)\b|[,;.(]/)[0];
     const word = (item.match(/[a-z][a-z-]{2,}/g) ?? []).at(-1);
     if (word) out.push({ tag: c.elementTag, word, re: new RegExp(`\\b${word.replace(/[-]/g, '[- ]?').replace(/s$/, '')}s?\\b`, 'i') });
   }

@@ -206,7 +206,8 @@ export function buildPatchGraph({ prior: rawPrior, target, note, invoke, deepAge
     'location-scout': locationScoutPatchSpec(),
     'seedance-compiler': seedanceCompilerPatchSpec({ priorSc: prior.seedanceCompiler, note }),
   };
-  const node = (a) => makeAgentNode(a, invoke, { maxAttempts, specs, onEvent, runTag, liveness, timeouts });
+  const runStop = new AbortController(); // a fatal provider error in any node stops the whole patch run
+  const node = (a) => makeAgentNode(a, invoke, { maxAttempts, specs, onEvent, runTag, liveness, timeouts, runStop });
   const impact = async (s) => {
     const im = computeImpact(prior.storyDirector, s.storyDirector);
     const ls = resyncLocationScenes(s.locationScout?.output, s);

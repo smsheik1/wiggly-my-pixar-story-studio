@@ -2,6 +2,7 @@
 // BASE: Gemini's CharacterArchitectOutputSchema (gemini-ca-output.md), one object per character.
 // Wiggly additions are marked "WIGGLY".
 import { z } from 'zod';
+import { OptionalAccent, dropEmptyAccents } from '../story-director/schema.mjs';
 
 export const IMAGE_ENGINE = 'nano-banana-2.1'; // WIGGLY: both phases, Google Flow (was gpt-image-2 / seedream-5.0-pro)
 export const SHEET_MIN = 3500; // WIGGLY sheet length bounds
@@ -17,7 +18,7 @@ export const DesignSpecsSchema = z.object({
   exaggeration: z.string().min(5).describe('The one exaggerated feature'),
   counterpart: z.string().min(5).describe('Neighbouring features kept small'),
   skinZoning: z.enum(['light', 'deep']).describe('Light: pink nose, translucent red ears; Deep: red-orange nose, plum-red flush, grey-violet'),
-  signatureAccent: z.string().min(5).describe('Only saturated colour'),
+  signatureAccent: OptionalAccent.describe("Copied from the cast card's signatureAccent when it has one; omit when the card has none. Never invented"),
   isChildProportionRiderApplied: z.boolean().describe('Long torso, short legs, enlarged head; MUST be false for adults'),
   cleanSkinGuarantee: z.boolean().default(true).describe('No tattoos/ink'),
   emptyHandsGuarantee: z.boolean().default(true).describe('Open empty hands, no props'),
@@ -111,5 +112,5 @@ export function parseCharacterSheets(input) {
   }
   const r = CharacterArchitectOutputSchema.safeParse(obj);
   if (!r.success) throw new CharacterSheetParseError(r.error.issues);
-  return r.data;
+  return Array.isArray(r.data.characters) ? { ...r.data, characters: dropEmptyAccents(r.data.characters) } : r.data;
 }

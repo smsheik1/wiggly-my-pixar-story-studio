@@ -5,6 +5,7 @@
 // Usage: node scripts/run-rehearsal.mjs --project <project.json> [--secrets <secrets.env>] [--placeholder-assets] [--run-id <id>] [--no-tracker]
 //   [--first-token-timeout-sec 300] [--idle-timeout-sec 180] [--stall-warn-sec 90] [--heartbeat-sec 5]
 //   [--max-usd 2] hard spend cap: polls the OpenRouter key usage and exits (code 3) once this run spends more
+import { FATAL_CODE } from '../graph/provider-errors.mjs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
@@ -98,6 +99,8 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
     log(`ESCALATED ${e.agent}: ${e.reason}`);
     for (const i of (e.issues ?? []).filter((x) => x.severity === 'error')) log(`  - [${i.code}] ${i.message}`);
   }
+  const fatalIssue = (state.escalations ?? []).flatMap((e) => e.issues ?? []).find((i) => i.code === FATAL_CODE);
+  if (fatalIssue) log(`FATAL: ${fatalIssue.message}`);
   if (state.status === 'awaiting-approval') log(`awaiting approval for: ${(state.pendingApproval ?? []).join(', ')}`);
   try { applyScriptView({ runId, runsRoot, trackerPath }); } catch (e) { log(`script view skipped: ${e.message}`); }
   // Trace audit (non-fatal): LangSmith ingests asynchronously, so wait briefly before reading the trace back.

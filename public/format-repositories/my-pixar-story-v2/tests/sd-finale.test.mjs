@@ -108,7 +108,9 @@ test('speech-rate fixes lengthen or split the shot, never shorten the words', { 
   const role = readFileSync(new URL('../crew/story-director/role.md', import.meta.url), 'utf8');
   assert.match(role, /Never shorten, paraphrase or compress the family's words to fit a shot length/);
 });
-test('Seedance Compiler and Story Director: 64k output budget at xhigh', { timeout: 10000 }, async () => {
+test('output budgets at xhigh: Story Director 128k (r5-dry1 hit 64.2k of 64k), CA and SC 64k', { timeout: 10000 }, async () => {
   const { V2_MODELS } = await import('../config/models.mjs');
-  for (const a of ['story-director', 'character-architect', 'seedance-compiler']) { assert.equal(V2_MODELS[a].maxTokens, 64000); assert.equal(V2_MODELS[a].effort, 'xhigh'); }
+  assert.equal(V2_MODELS['story-director'].maxTokens, 128000);
+  for (const a of ['character-architect', 'seedance-compiler']) assert.equal(V2_MODELS[a].maxTokens, 64000);
+  for (const a of ['story-director', 'character-architect', 'seedance-compiler']) assert.equal(V2_MODELS[a].effort, 'xhigh');
 });

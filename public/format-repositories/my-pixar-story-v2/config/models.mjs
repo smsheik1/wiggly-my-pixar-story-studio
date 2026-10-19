@@ -4,8 +4,20 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 export const NANO_BANANA = Object.freeze({ provider: 'google-flow', model: 'nano-banana-2.1', promptLines: 'single' });
 
+// Provider limits per model (OpenRouter /api/v1/models top_provider, checked 2026-10-18). Every agent's maxTokens must fit
+// maxCompletionTokens; openRouterModel refuses a config that does not (tests/models.test.mjs checks it too).
+export const MODEL_LIMITS = Object.freeze({
+  'meta/muse-spark-1.3-contributor': { contextLength: 1048576, maxCompletionTokens: 943718 },
+});
+/** maxTokens for an agent config, checked against MODEL_LIMITS (throws if it exceeds the model's output limit). */
+export function outputCap(config) {
+  const lim = MODEL_LIMITS[config?.model];
+  if (lim && config.maxTokens > lim.maxCompletionTokens) throw new Error(`maxTokens ${config.maxTokens} exceeds ${config.model}'s output limit ${lim.maxCompletionTokens} (config/models.mjs MODEL_LIMITS)`);
+  return config.maxTokens;
+}
+
 export const V2_MODELS = Object.freeze({
-  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 64000, /* r4-dry7: xhigh reasoning used all 32k (31998 reasoning tokens) 3x and never submitted */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
+  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 128000, /* r4-dry7: xhigh reasoning used all 32k 3x and never submitted; r5-dry1: one call used 64.2k of 64k (~53k reasoning) -> 2x headroom, well under the model's limit (MODEL_LIMITS) */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     // Self-critique + rewrite rounds after the first draft (graph/deep-agent-node.mjs); the gate checks the final revision.
     reflectionRounds: 2,
     // Patch mode (graph/patch.mjs): one self-review round scoped to the target; --reflection-rounds overrides it.

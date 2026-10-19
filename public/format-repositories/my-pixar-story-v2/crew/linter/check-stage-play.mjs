@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { accentOf } from '../story-director/schema.mjs';
 import { validateWritingTells } from './writing-tells.mjs';
 import { checkStageShotLocks, onScreenOf } from './shot-locks.mjs';
 import { words, lcs, answerSentences, NEAR_VERBATIM, checkAnswerSources, checkExtraCast } from './answer-sources.mjs';
@@ -250,8 +251,9 @@ export function validateStoryDirectorOutput(data, input = {}) {
   if (!cast.length) err('NO_CAST', 'Output contains no cast.', 'cast');
   cast.forEach((c, i) => {
     const p = `cast.${i}`;
-    if (!c.signatureAccent || String(c.signatureAccent).length < 5)
-      warn('WEAK_SIGNATURE_ACCENT', `Cast ${c.elementTag ?? c.name}: signature accent is missing or too vague.`, p);
+    // signatureAccent is optional (empty = no accessory); only a given-but-vague one is flagged.
+    if (accentOf(c.signatureAccent) && accentOf(c.signatureAccent).length < 5)
+      warn('WEAK_SIGNATURE_ACCENT', `Cast ${c.elementTag ?? c.name}: signature accent is too vague; use the answers' own wording or leave it empty.`, p);
     if (c.age >= 13 && c.age <= 17)
       err('UNDERAGE_DEPICTION', `Cast ${c.elementTag ?? c.name} is age ${c.age}; teens are depicted as 18.`, p);
     if ([c.physicalDescription, c.signatureAccent, ...(c.signatureAccessories ?? [])].some((look) => new RegExp(DARK_EYEWEAR, 'i').test(look ?? '') && (EYES_HIDDEN.test(look) || !/forehead|pushed up/i.test(look))))

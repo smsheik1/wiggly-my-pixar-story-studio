@@ -8,7 +8,9 @@
 //                    segment.scenes[]   { shots, present, props }: who is in the scene and each prop's one locked state
 //   Character Arch.  character.visualTell  a distinct visible tell for look-alikes (drawn in the master render)
 //   Seedance Comp.   every SHOT block: "On screen: @A, @B." + "Look @A: <locked wording>." + "Props: <locked state>."
-//                    (locked wording = the cast card's signatureAccent + signatureAccessories + the visual tell, word for word)
+//                    (locked wording = the cast card's signatureAccent + signatureAccessories + the visual tell, word for word;
+//                     signatureAccent is optional: an empty / 'none' one is no accessory and is not locked)
+import { accentOf } from '../story-director/schema.mjs';
 import { EYES_HIDDEN } from './check-stage-play.mjs';
 import { keyWords } from './answer-sources.mjs';
 import { countWords, secondsNeeded, shotWords, budgetMessage, MAX_LINE_WORDS } from './speech.mjs';
@@ -32,7 +34,8 @@ const list = (xs) => (xs.length ? xs.join(', ') : 'no one');
 
 /** The locked wording for one character: signature accessories from the cast card, then the visual tell from the Character Architect. */
 export function lockPhrases(card = {}, character = {}) {
-  const acc = [card.signatureAccent, ...(card.signatureAccessories ?? [])].map((x) => String(x ?? '').trim()).filter((x) => x.length >= 3);
+  // signatureAccent is optional: an empty / 'none' accent (or accessory) is no accessory and is left out of the lock
+  const acc = [card.signatureAccent, ...(card.signatureAccessories ?? [])].map(accentOf).filter((x) => x.length >= 3);
   // one entry per item: drop exact repeats and any phrase already contained in a longer one ('blue hijab' inside 'blue hijab covering the hair')
   const uniq = [...new Map(acc.map((x) => [lockNorm(x), x])).values()];
   const out = uniq.filter((x) => !uniq.some((y) => y !== x && lockNorm(y).includes(lockNorm(x)))).map((x) => ({ kind: 'accessory', text: x }));

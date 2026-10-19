@@ -5,6 +5,7 @@
 //   runs/<runId>/<agent>/versions     read-only: prior approved versions (empty by default)
 //   runs/<runId>/<agent>/skills/<agent>/SKILL.md   the agent's role.md
 // The agent finishes by calling submit_<agent>, whose Zod schema is the agent's schema.mjs output; returnDirect ends the run.
+import { isFatalProviderError } from './provider-errors.mjs';
 import { mkdir, writeFile, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, extname, relative } from 'node:path';
@@ -17,7 +18,7 @@ import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
 import { CharacterArchitectOutputSchema } from '../crew/character-architect/schema.mjs';
 import { LocationScoutOutputSchema } from '../crew/location-scout/schema.mjs';
 import { SeedanceCompilerOutputSchema, SeedanceSubmitSchema, withAssembledPrompts } from '../crew/seedance-compiler/schema.mjs';
-import { loadSkill } from '../config/models.mjs';
+import { loadSkill, outputCap } from '../config/models.mjs';
 
 export const RUNS_ROOT = fileURLToPath(new URL('../runs/', import.meta.url));
 export const OUTPUT_SCHEMAS = {
@@ -185,7 +186,7 @@ export const systemPromptFor = (agent, retryNotes = '', { photos = false } = {})
 export async function openRouterModel(config, _agent, { apiKey = process.env.OPENROUTER_API_KEY } = {}) {
   const { ChatOpenAI } = await import('@langchain/openai');
   if (!apiKey) throw new Error('openRouterModel: OPENROUTER_API_KEY is not set');
-  return new ChatOpenAI({ model: config.model, apiKey, maxTokens: config.maxTokens,
+  return new ChatOpenAI({ model: config.model, apiKey, maxTokens: outputCap(config),
     streaming: true, configuration: { baseURL: 'https://openrouter.ai/api/v1' }, modelKwargs: { reasoning: { effort: config.effort }, include_reasoning: true } });
 }
 
@@ -324,6 +325,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
         entry.draftFile = rel(`draft-${round}.json`);
       } catch (e) {
         if (signal?.aborted) throw signal.reason ?? e;
+        if (isFatalProviderError(e)) throw e; // spent key / no credits: never swallowed as a failed rewrite
         // A failed rewrite keeps the previous valid draft; the gate still checks it and the node's retries still apply.
         entry.changed = false; entry.revisionError = String(e?.message ?? e).slice(0, 2000);
       }

@@ -8,6 +8,7 @@ import { PipelineAnnotation } from './state.mjs';
 import { withWatchdog } from './liveness.mjs';
 import { deepAgentInvoke, REFLECTION } from './deep-agent-node.mjs';
 import { V2_MODELS, loadSkill } from '../config/models.mjs';
+import { isFatalProviderError, fatalMessage, FATAL_CODE, RunStoppedError } from './provider-errors.mjs';
 import { selectStoryDirectorInput } from '../crew/story-director/input.mjs';
 import { parseStagePlay } from '../crew/story-director/schema.mjs';
 import { validateStoryDirectorOutput } from '../crew/linter/check-stage-play.mjs';
@@ -26,7 +27,7 @@ import { validateSeedancePrompts } from '../crew/linter/check-seedance-prompts.m
 export const MAX_ATTEMPTS = 3;
 export const MAX_TRANSIENT_RETRIES = 2;
 /** Network drops / provider 5xx are infrastructure, not the agent's fault: retry the same attempt. */
-export const isTransient = (e) => e?.code !== 'MODEL_TIMEOUT' && !e?.issues
+export const isTransient = (e) => e?.code !== 'MODEL_TIMEOUT' && !e?.issues && !isFatalProviderError(e)
   && /network connection lost|ECONNRESET|ETIMEDOUT|EPIPE|socket hang up|fetch failed|terminated|other side closed|\b(502|503|504|520|524)\b|overloaded|rate limit|429/i.test(String(e?.message ?? e));
 
 // ---- Character Architect: per-character gating, name-prefixed errors, keep valid characters across retries ----
@@ -88,13 +89,16 @@ export function retryNotes(issues = []) {
 }
 
 /** Build one agent node around an injectable invoke({ agent, config, skill, input, attempt, retryNotes }) -> string|object. */
-export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs = AGENT_SPECS, skill = loadSkill, now = () => new Date().toISOString(), onEvent = () => {}, runTag, liveness, timeouts = {} } = {}) {
+export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs = AGENT_SPECS, skill = loadSkill, now = () => new Date().toISOString(), onEvent = () => {}, runTag, liveness, timeouts = {}, runStop } = {}) {
   const spec = specs[agent];
   return async (state) => {
     let input;
     const ev = (e) => { try { onEvent({ agent, ...e }); } catch { /* observers never break a run */ } };
     // Each attempt is its own traced child run (inherits the node's run via async context).
-    const call = (r) => (liveness ? withWatchdog((signal) => invoke({ ...r, signal }), { liveness, agent, attempt: r.attempt, ...timeouts }) : invoke(r));
+    // runStop (one AbortController per graph): a fatal provider error in any node aborts every in-flight sibling call.
+    const withStop = (s) => (s && runStop ? AbortSignal.any([s, runStop.signal]) : (s ?? runStop?.signal));
+    const call = (r) => (liveness ? withWatchdog((signal) => invoke({ ...r, signal: withStop(signal) }), { liveness, agent, attempt: r.attempt, ...timeouts })
+      : invoke(runStop ? { ...r, signal: runStop.signal } : r));
     const traced = (req) => RunnableLambda.from(async (r) => call(r)).invoke(req, {
       runName: `${agent} attempt ${req.attempt}`, tags: [`agent:${agent}`, `attempt:${req.attempt}`, ...(runTag ? [`runId:${runTag}`] : [])],
       metadata: { agent, attempt: req.attempt, runId: runTag } });
@@ -111,8 +115,19 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
     const log = [];
     const reflections = []; // per attempt: the agent's own critiques (deepAgentInvoke with reflectionRounds > 0)
     const withReflections = (o) => (reflections.length ? { ...o, reflections: { [agent]: reflections } } : o);
+    /** Fatal provider error (spent key / no credits): stop now; no retries, no further attempts. */
+    const fatal = (attempt, e) => {
+      const message = e instanceof RunStoppedError ? e.message : fatalMessage(e);
+      if (runStop && !runStop.signal.aborted) runStop.abort(new RunStoppedError(`run stopped: ${agent} hit a fatal provider error. ${message}`));
+      const issues = [{ severity: 'error', code: FATAL_CODE, message }];
+      ev({ type: 'fatal', attempt, issues }); ev({ type: 'failed', attempt, issues }); // report/patch logs key off 'failed'
+      return withReflections({ status: 'failed', attempts: { [agent]: attempt }, retryCounts: { [agent]: Math.max(0, attempt - 1) }, gateIssues: { [agent]: issues },
+        validationErrors: [...log, { node: agent, attempt: Math.max(1, attempt), errors: issues, timestamp: now() }],
+        escalations: [{ agent, reason: `fatal provider error (no retries): ${message}`, attempts: attempt, issues }] });
+    };
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       if (attempt > 1) log.push({ node: agent, attempt: attempt - 1, errors: issues, timestamp: now() });
+      if (runStop?.signal.aborted) return fatal(attempt - 1, runStop.signal.reason);
       ev({ type: 'attempt', attempt, input });
       const done = (o) => ev({ type: 'attempt-result', attempt, ...o });
       let raw;
@@ -121,6 +136,7 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
       let transient = 0;
       for (;;) {
         try { raw = await traced(req); break; } catch (e) {
+          if (isFatalProviderError(e) || runStop?.signal.aborted) return fatal(attempt, isFatalProviderError(e) ? e : runStop.signal.reason);
           if (isTransient(e) && transient < MAX_TRANSIENT_RETRIES) { transient++; ev({ type: 'transient-retry', attempt, message: e.message }); continue; }
           raw = { __error: e }; break;
         }
@@ -128,6 +144,7 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
       const refl = raw && typeof raw === 'object' ? raw[REFLECTION] : undefined;
       if (refl) { reflections.push({ attempt, ...refl }); ev({ type: 'reflection', attempt, rounds: refl.rounds, log: refl.log }); }
       try { if (raw && raw.__error) throw raw.__error; } catch (e) {
+        if (isFatalProviderError(e)) return fatal(attempt, e);
         issues = Array.isArray(e.issues) && e.issues.length ? e.issues : [{ severity: 'error', code: e.code === 'MODEL_TIMEOUT' ? 'MODEL_TIMEOUT' : 'AGENT_RUN_FAILED', message: `model call failed: ${e.message}` }];
         done({ output: null, issues }); continue;
       }
@@ -184,7 +201,8 @@ const halted = (s) => ['escalated', 'failed', 'awaiting-approval'].includes(s.st
 export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer, onEvent, runTag, autoApprove, liveness, timeouts } = {}) {
   if (invoke === undefined) invoke = deepAgentInvoke(deepAgent);
   if (typeof invoke !== 'function') throw new Error('buildGraph: invoke must be a function');
-  const node = (a) => makeAgentNode(a, invoke, { maxAttempts, onEvent, runTag, liveness, timeouts });
+  const runStop = new AbortController(); // shared by every node: a fatal provider error stops the whole run
+  const node = (a) => makeAgentNode(a, invoke, { maxAttempts, onEvent, runTag, liveness, timeouts, runStop });
   const g = new StateGraph(PipelineAnnotation)
     .addNode('story-director', node('story-director'))
     .addNode('character-architect', node('character-architect'))

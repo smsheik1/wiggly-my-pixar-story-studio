@@ -1,6 +1,17 @@
 // Story Director v2 output contract (Zod, plain JS).
 // BASE: Gemini's StoryDirectorOutputSchema (gemini-schema.ts). Wiggly additions are marked "WIGGLY".
 import { z } from 'zod';
+/** 'none' / 'n/a' / 'no accessory' etc. count as empty: no accessory. */
+export const NO_ACCESSORY = /^(?:none|n\/?a|nil|null|-+|no (?:signature |always[- ]worn |worn )?(?:accent|accessor(?:y|ies)|item)s?(?: given| stated)?)\.?$/i;
+/** The accent text, or '' when there is none (missing, empty, whitespace, 'none'). */
+export const accentOf = (v) => { const t = typeof v === 'string' ? v.trim() : ''; return !t || NO_ACCESSORY.test(t) ? '' : t; };
+/** Optional accessory field (plain string so the submit tool's JSON schema stays representable). */
+export const OptionalAccent = z.string().trim().optional();
+/** Drop empty / 'none' signatureAccent keys from cast-like cards (parsers call this; empty = no accessory). */
+export const dropEmptyAccents = (cards) => (cards ?? []).map((c) => {
+  if (!c || typeof c !== 'object' || !('signatureAccent' in c) || accentOf(c.signatureAccent)) return c;
+  const { signatureAccent: _none, ...rest } = c; return rest;
+});
 
 export const MAX_SEGMENT_SECONDS = 30;
 export const MAX_TOTAL_SECONDS = 180; // WIGGLY: matches input targetTotalRuntimeSec max
@@ -80,9 +91,11 @@ export const CastCardSchema = z.object({
   age: z.number().int().positive(),
   oneWordRole: z.string().min(2).describe("e.g. 'presenter', 'teacher', 'father'"),
   physicalDescription: z.string().min(20).describe('Plain visual description anyone could draw from; no non-visual adjectives'),
-  signatureAccent: z.string().min(5).describe('One worn/attached item carrying the only saturated color in an otherwise muted palette'),
+  // Optional (r5-dry1: the SD invented accents and hijab colours to fill a required field). Empty/none = no accessory,
+  // and it is then left out of the per-shot Look locks. Never invented: only an item the answers / cast notes give, in their wording.
+  signatureAccent: OptionalAccent.describe("The one always-worn item the answers / cast notes give, in their wording (e.g. 'wears a hijab'); omit or leave empty when none is given. Never invent details such as colours"),
   // WIGGLY shot locks: everything else this person always wears, each written once exactly as worn; repeated word for word in every shot they are on screen.
-  signatureAccessories: z.array(z.string().trim().min(3)).default([]).describe("Other items they always wear, exactly as worn, e.g. 'navy hijab fully covering the hair and hairline', 'round glasses pushed up on the forehead'"),
+  signatureAccessories: z.array(z.string().trim().min(3)).default([]).describe("Other items they always wear, exactly as worn, e.g. 'hijab fully covering the hair and hairline', 'round glasses pushed up on the forehead'; only items the answers give, never invented details such as colours"),
   voiceDescription: z.string().min(20).describe('Age, nationality, timbre, pace, delivery, emotional shifts'),
   // WIGGLY
   skinTone: z.string().min(3).describe('Plain-words skin tone; repeated in every panel and shot that shows them'),
@@ -180,5 +193,5 @@ export function parseStagePlay(input) {
   }
   const r = StoryDirectorOutputSchema.safeParse(obj);
   if (!r.success) throw new StagePlayParseError(r.error.issues);
-  return r.data;
+  return { ...r.data, cast: dropEmptyAccents(r.data.cast) };
 }

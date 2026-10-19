@@ -34,6 +34,17 @@ test('downstreamAgents and maxTokens', () => {
     if (c.kind === 'llm') assert.ok(c.maxTokens > 0, a);
   }
 });
+test('every LLM agent output cap fits its model limit (MODEL_LIMITS), with headroom over the r5-dry1 Story Director peak', async () => {
+  const { MODEL_LIMITS, outputCap } = await import('../config/models.mjs');
+  for (const [a, c] of Object.entries(V2_MODELS)) {
+    if (c.kind !== 'llm') continue;
+    const lim = MODEL_LIMITS[c.model];
+    assert.ok(lim, `${a}: no MODEL_LIMITS entry for ${c.model}`);
+    assert.ok(c.maxTokens <= lim.maxCompletionTokens, a); assert.equal(outputCap(c), c.maxTokens);
+  }
+  assert.ok(V2_MODELS['story-director'].maxTokens >= 1.5 * 64200, 'SD cap needs headroom over the 64.2k r5-dry1 peak');
+  assert.throws(() => outputCap({ model: 'meta/muse-spark-1.3-contributor', maxTokens: 2_000_000 }), /exceeds .*output limit 943718/);
+});
 test('loadSkill reads role.md and throws clearly when missing', () => {
   assert.match(loadSkill('story-director'), /Story Director/);
   assert.throws(() => loadSkill('nobody'), /unknown v2 agent "nobody"/);
