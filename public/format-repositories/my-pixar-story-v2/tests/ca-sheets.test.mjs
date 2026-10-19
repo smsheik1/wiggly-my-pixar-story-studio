@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 import { selectCharacterArchitectInput } from '../crew/character-architect/input.mjs';
 import { sheetState, runCaSheets } from '../scripts/run-ca-sheets.mjs';
+import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
 
 const sd = JSON.parse(readFileSync(new URL('../runs/r4-dry10/outputs/story-director.json', import.meta.url)));
 const ca = JSON.parse(readFileSync(new URL('../runs/r4-dry10/outputs/character-architect.json', import.meta.url)));
@@ -27,7 +28,7 @@ function sandboxFromDry10() {
   writeFileSync(join(root, from, 'outputs', 'story-director.json'), JSON.stringify(sd));
   writeFileSync(join(root, from, 'outputs', 'character-architect.json'), JSON.stringify(ca));
   const proj = join(root, 'p.json');
-  writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: { scene1Childhood: { memory: 'sunglasses' } } } }));
+  writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS } }));
   return { root, from, proj, done: () => rmSync(root, { recursive: true, force: true }) };
 }
 

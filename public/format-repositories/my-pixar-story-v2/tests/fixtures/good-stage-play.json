@@ -1,321 +1,355 @@
 {
- "masthead": {
-  "title": "The Sunglasses Scientist",
-  "draftNumber": 1,
-  "oneLinePremise": "An eight-year-old in sunglasses insists he is a scientist, and his whole family has to play along."
- },
- "finaleThesis": "You become what you think about, so keep thinking about the people who never laughed at you.",
- "shapeBar": {
-  "totalRuntimeSec": 46,
-  "parts": [
-   {
-    "name": "Part 1: Original",
-    "durationSec": 30
-   },
-   {
-    "name": "Part 2: Sequel",
-    "durationSec": 16
-   }
+  "masthead": {
+    "title": "The Sunglasses Scientist",
+    "draftNumber": 1,
+    "oneLinePremise": "An eight-year-old in sunglasses insists he is a scientist, and his whole family has to play along."
+  },
+  "finaleThesis": "You become what you think about, so keep thinking about the people who never laughed at you.",
+  "shapeBar": {
+    "totalRuntimeSec": 46,
+    "parts": [
+      {
+        "name": "Part 1: Original",
+        "durationSec": 30
+      },
+      {
+        "name": "Part 2: Sequel",
+        "durationSec": 16
+      }
+    ]
+  },
+  "cast": [
+    {
+      "name": "Shaz",
+      "elementTag": "@Shaz",
+      "age": 8,
+      "oneWordRole": "scientist",
+      "physicalDescription": "Small round-faced boy, short black hair, red plastic sunglasses pushed up on his forehead, plain red t-shirt.",
+      "signatureAccent": "red plastic sunglasses pushed up on his forehead",
+      "voiceDescription": "Eight-year-old boy, flat declarative delivery, total conviction, quick pace.",
+      "skinTone": "warm medium brown",
+      "gender": "male",
+      "family": true,
+      "realPerson": "Shaz",
+      "photoRef": null
+    },
+    {
+      "name": "Mom",
+      "elementTag": "@Mom",
+      "age": 40,
+      "oneWordRole": "mother",
+      "physicalDescription": "Kind round face, soft blue hijab fully covering hair and hairline, long modest dress.",
+      "signatureAccent": "soft blue hijab",
+      "voiceDescription": "Warm adult woman, gentle teasing tone, slow pace, quiet laugh.",
+      "skinTone": "warm medium brown",
+      "gender": "female",
+      "family": true,
+      "realPerson": "Mom",
+      "photoRef": null
+    },
+    {
+      "name": "Sister",
+      "elementTag": "@Sister",
+      "age": 18,
+      "oneWordRole": "rival",
+      "physicalDescription": "Young woman, grey hijab fully covering hair and hairline, oversized hoodie.",
+      "signatureAccent": "yellow hoodie strings",
+      "voiceDescription": "Eighteen-year-old, dry deadpan delivery, unimpressed, clipped lines.",
+      "skinTone": "light warm brown",
+      "gender": "female",
+      "family": true,
+      "realPerson": "Sister",
+      "photoRef": null,
+      "ageNote": "true age 15 (7 years older than Shaz at 8); shown as 18"
+    }
+  ],
+  "segments": [
+    {
+      "segmentId": 1,
+      "title": "Part 1: Original",
+      "targetDurationSec": 30,
+      "goalSummary": "Ordinary afternoon card battle; Shaz declares himself a scientist twice, the third time Mom believes him. Six shots.",
+      "continuityLocks": [
+        "Shaz screen-left, Sister screen-right at the kitchen table",
+        "180-degree line along the table edge"
+      ],
+      "answerSources": [
+        "scene1Childhood.memory"
+      ],
+      "shots": [
+        {
+          "shotNumber": 1,
+          "startSec": 0,
+          "endSec": 5,
+          "whatWeSee": "@Shaz slaps a card down across the kitchen table from @Sister.",
+          "isContinuousMove": false,
+          "location": "Kitchen",
+          "whatWeHear": "Card slap, fridge hum.",
+          "framing": "wide",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "shotNumber": 2,
+          "startSec": 5,
+          "endSec": 9,
+          "whatWeSee": "@Shaz pushes his sunglasses higher up his forehead very slowly.",
+          "isContinuousMove": false,
+          "dialogue": {
+            "speaker": "@Shaz",
+            "line": "{I am a scientist.}",
+            "isVoiceover": false,
+            "isOffCamera": false,
+            "source": {
+              "answer": "scene1Childhood.memory",
+              "kind": "verbatim"
+            }
+          },
+          "location": "Kitchen",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "slow push in"
+        },
+        {
+          "shotNumber": 3,
+          "startSec": 9,
+          "endSec": 14,
+          "whatWeSee": "@Sister stays unimpressed, one slow blink.",
+          "isContinuousMove": false,
+          "dialogue": {
+            "speaker": "@Sister",
+            "line": "{You are eight.}",
+            "isVoiceover": false,
+            "isOffCamera": false,
+            "source": {
+              "answer": "scene1Childhood.memory",
+              "kind": "verbatim"
+            }
+          },
+          "directorsNote": "Play it completely straight; it is the ruler for the third beat.",
+          "location": "Kitchen",
+          "framing": "close-up",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "shotNumber": 4,
+          "startSec": 14,
+          "endSec": 20,
+          "whatWeSee": "@Shaz taps his sunglasses up on his forehead and slaps a second card.",
+          "isContinuousMove": false,
+          "dialogue": {
+            "speaker": "@Shaz",
+            "line": "{A scientist. Not even kidding.}",
+            "isVoiceover": false,
+            "isOffCamera": false,
+            "source": {
+              "answer": "scene1Childhood.memory",
+              "kind": "verbatim"
+            }
+          },
+          "location": "Kitchen",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "shotNumber": 5,
+          "startSec": 20,
+          "endSec": 24,
+          "whatWeSee": "@Mom appears in the doorway holding a tea towel, watching.",
+          "isContinuousMove": false,
+          "whatWeHear": "No dialogue in this shot; kettle starts to whistle.",
+          "location": "Kitchen",
+          "framing": "wide",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "shotNumber": 6,
+          "startSec": 24,
+          "endSec": 30,
+          "whatWeSee": "@Mom nods seriously, holding back a smile, breathing.",
+          "isContinuousMove": false,
+          "dialogue": {
+            "speaker": "@Mom",
+            "line": "{Then go do science, habibi.}",
+            "isVoiceover": false,
+            "isOffCamera": false,
+            "source": {
+              "answer": "scene1Childhood.memory",
+              "kind": "verbatim"
+            }
+          },
+          "location": "Kitchen",
+          "framing": "close-up",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        }
+      ]
+    },
+    {
+      "segmentId": 2,
+      "title": "Part 2: Sequel",
+      "targetDurationSec": 16,
+      "goalSummary": "Payoff: the sunglasses stay on; the narrator lands the memory. Three shots.",
+      "continuityLocks": [
+        "Same kitchen, same screen sides"
+      ],
+      "answerSources": [
+        "scene5LegacyFinale.memory"
+      ],
+      "shots": [
+        {
+          "shotNumber": 1,
+          "startSec": 0,
+          "endSec": 6,
+          "whatWeSee": "@Shaz marches to the window holding a cup of water like a beaker.",
+          "isContinuousMove": false,
+          "narration": {
+            "speaker": "@Shaz",
+            "line": "{She never once laughed at me.}",
+            "source": {
+              "answer": "scene5LegacyFinale.memory",
+              "kind": "paraphrase"
+            }
+          },
+          "location": "Kitchen",
+          "framing": "wide",
+          "cameraAngle": "eye level",
+          "cameraMove": "pan right to follow"
+        },
+        {
+          "shotNumber": 2,
+          "startSec": 6,
+          "endSec": 10,
+          "whatWeSee": "@Sister pushes a pair of sunglasses up onto her forehead too.",
+          "isContinuousMove": false,
+          "whatWeHear": "No dialogue in this shot; chair creak.",
+          "location": "Kitchen",
+          "framing": "close-up",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "narration": {
+            "speaker": "@Shaz",
+            "line": "{Good people can still do bad things.}",
+            "source": {
+              "answer": "scene5LegacyFinale.memory",
+              "kind": "verbatim"
+            }
+          }
+        },
+        {
+          "shotNumber": 3,
+          "startSec": 10,
+          "endSec": 16,
+          "whatWeSee": "Held image: the three of them in afternoon light, slow breathing, sunglasses glinting on foreheads.",
+          "isContinuousMove": true,
+          "whatWeHear": "Soft music swell.",
+          "location": "Kitchen",
+          "framing": "wide",
+          "cameraAngle": "slightly high angle",
+          "cameraMove": "slow pull back",
+          "narration": {
+            "speaker": "@Shaz",
+            "line": "{You are what you think about, sunglasses kid.}",
+            "source": {
+              "answer": "scene5LegacyFinale.memory",
+              "kind": "verbatim"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "storyboardSheets": [
+    {
+      "segmentId": 1,
+      "targetEngine": "nano-banana-2.1",
+      "fullPrompt": "An eight-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two even rows of four panels on a warm off-white page, each 16:9 panel with its exact label (part.shot, like 1.4) hand-written small in the corner, with no other codes; empty panels have no label. Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Panel 1, labelled \"1.1\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 2, labelled \"1.2\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 3, labelled \"1.3\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 4, labelled \"1.4\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 5, labelled \"1.5\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 6, labelled \"1.6\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 7 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. Panel 8 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. No text other than the panel labels.",
+      "panels": [
+        {
+          "panelNumber": 1,
+          "shotNumberRef": 1,
+          "shotSizeAndAngle": "Medium shot at eye level",
+          "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+          "lightAndPalette": "Soft window light from the left, warm amber shadows"
+        },
+        {
+          "panelNumber": 2,
+          "shotNumberRef": 2,
+          "shotSizeAndAngle": "Medium shot at eye level",
+          "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+          "lightAndPalette": "Soft window light from the left, warm amber shadows"
+        },
+        {
+          "panelNumber": 3,
+          "shotNumberRef": 3,
+          "shotSizeAndAngle": "Medium shot at eye level",
+          "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+          "lightAndPalette": "Soft window light from the left, warm amber shadows"
+        },
+        {
+          "panelNumber": 4,
+          "shotNumberRef": 4,
+          "shotSizeAndAngle": "Medium shot at eye level",
+          "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+          "lightAndPalette": "Soft window light from the left, warm amber shadows"
+        },
+        {
+          "panelNumber": 5,
+          "shotNumberRef": 5,
+          "shotSizeAndAngle": "Medium shot at eye level",
+          "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+          "lightAndPalette": "Soft window light from the left, warm amber shadows"
+        },
+        {
+          "panelNumber": 6,
+          "shotNumberRef": 6,
+          "shotSizeAndAngle": "Medium shot at eye level",
+          "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+          "lightAndPalette": "Soft window light from the left, warm amber shadows"
+        }
+      ]
+    },
+    {
+      "segmentId": 2,
+      "targetEngine": "nano-banana-2.1",
+      "fullPrompt": "An eight-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two even rows of four panels on a warm off-white page, each 16:9 panel with its exact label (part.shot, like 1.4) hand-written small in the corner, with no other codes; empty panels have no label. Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Panel 1, labelled \"2.1\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 2, labelled \"2.2\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 3, labelled \"2.3\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 4 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. Panel 5 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. Panel 6 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. Panel 7 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. Panel 8 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. No text other than the panel labels.",
+      "panels": [
+        {
+          "panelNumber": 1,
+          "shotNumberRef": 1,
+          "shotSizeAndAngle": "Medium shot at eye level",
+          "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+          "lightAndPalette": "Soft window light from the left, warm amber shadows"
+        },
+        {
+          "panelNumber": 2,
+          "shotNumberRef": 2,
+          "shotSizeAndAngle": "Medium shot at eye level",
+          "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+          "lightAndPalette": "Soft window light from the left, warm amber shadows"
+        },
+        {
+          "panelNumber": 3,
+          "shotNumberRef": 3,
+          "shotSizeAndAngle": "Medium shot at eye level",
+          "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
+          "lightAndPalette": "Soft window light from the left, warm amber shadows"
+        }
+      ]
+    }
+  ],
+  "htmlScriptDocument": "<!doctype html><html><head><link href=\"https://fonts.googleapis.com/css2?family=Fraunces&family=Karla&family=Space+Mono\" rel=\"stylesheet\"><style>body{background:#E4E6D9;color:#22272A;font-family:Karla}.card{background:#F2F3EA}</style></head><body><h1>The Sunglasses Scientist</h1><p>Draft 1</p></body></html>",
+  "clarifyingQuestion": null,
+  "assumptions": [
+    "Assumed the card battles happened at the kitchen table."
+  ],
+  "locations": [
+    {
+      "name": "Kitchen",
+      "description": "Modest lived-in family kitchen, afternoon: scuffed wooden table, fridge, window over the sink."
+    }
   ]
- },
- "cast": [
-  {
-   "name": "Shaz",
-   "elementTag": "@Shaz",
-   "age": 8,
-   "oneWordRole": "scientist",
-   "physicalDescription": "Small round-faced boy, short black hair, red plastic sunglasses pushed up on his forehead, plain red t-shirt.",
-   "signatureAccent": "red plastic sunglasses pushed up on his forehead",
-   "voiceDescription": "Eight-year-old boy, flat declarative delivery, total conviction, quick pace.",
-   "skinTone": "warm medium brown",
-   "gender": "male",
-   "family": true,
-   "realPerson": "Shaz",
-   "photoRef": null
-  },
-  {
-   "name": "Mom",
-   "elementTag": "@Mom",
-   "age": 40,
-   "oneWordRole": "mother",
-   "physicalDescription": "Kind round face, soft blue hijab fully covering hair and hairline, long modest dress.",
-   "signatureAccent": "soft blue hijab",
-   "voiceDescription": "Warm adult woman, gentle teasing tone, slow pace, quiet laugh.",
-   "skinTone": "warm medium brown",
-   "gender": "female",
-   "family": true,
-   "realPerson": "Mom",
-   "photoRef": null
-  },
-  {
-   "name": "Sister",
-   "elementTag": "@Sister",
-   "age": 18,
-   "oneWordRole": "rival",
-   "physicalDescription": "Young woman, grey hijab fully covering hair and hairline, oversized hoodie.",
-   "signatureAccent": "yellow hoodie strings",
-   "voiceDescription": "Eighteen-year-old, dry deadpan delivery, unimpressed, clipped lines.",
-   "skinTone": "light warm brown",
-   "gender": "female",
-   "family": true,
-   "realPerson": "Sister",
-   "photoRef": null,
-   "ageNote": "true age 15 (7 years older than Shaz at 8); shown as 18"
-  }
- ],
- "segments": [
-  {
-   "segmentId": 1,
-   "title": "Part 1: Original",
-   "targetDurationSec": 30,
-   "goalSummary": "Ordinary afternoon card battle; Shaz declares himself a scientist twice, the third time Mom believes him. Six shots.",
-   "continuityLocks": [
-    "Shaz screen-left, Sister screen-right at the kitchen table",
-    "180-degree line along the table edge"
-   ],
-   "shots": [
-    {
-     "shotNumber": 1,
-     "startSec": 0,
-     "endSec": 5,
-     "whatWeSee": "@Shaz slaps a card down across the kitchen table from @Sister.",
-     "isContinuousMove": false,
-     "location": "Kitchen",
-     "whatWeHear": "Card slap, fridge hum.",
-     "framing": "wide",
-     "cameraAngle": "eye level",
-     "cameraMove": "static"
-    },
-    {
-     "shotNumber": 2,
-     "startSec": 5,
-     "endSec": 9,
-     "whatWeSee": "@Shaz pushes his sunglasses higher up his forehead very slowly.",
-     "isContinuousMove": false,
-     "dialogue": {
-      "speaker": "@Shaz",
-      "line": "{I am a scientist.}",
-      "isVoiceover": false,
-      "isOffCamera": false
-     },
-     "location": "Kitchen",
-     "framing": "medium",
-     "cameraAngle": "eye level",
-     "cameraMove": "slow push in"
-    },
-    {
-     "shotNumber": 3,
-     "startSec": 9,
-     "endSec": 14,
-     "whatWeSee": "@Sister stays unimpressed, one slow blink.",
-     "isContinuousMove": false,
-     "dialogue": {
-      "speaker": "@Sister",
-      "line": "{You are eight.}",
-      "isVoiceover": false,
-      "isOffCamera": false
-     },
-     "directorsNote": "Play it completely straight; it is the ruler for the third beat.",
-     "location": "Kitchen",
-     "framing": "close-up",
-     "cameraAngle": "eye level",
-     "cameraMove": "static"
-    },
-    {
-     "shotNumber": 4,
-     "startSec": 14,
-     "endSec": 20,
-     "whatWeSee": "@Shaz taps his sunglasses up on his forehead and slaps a second card.",
-     "isContinuousMove": false,
-     "dialogue": {
-      "speaker": "@Shaz",
-      "line": "{A scientist. Not even kidding.}",
-      "isVoiceover": false,
-      "isOffCamera": false
-     },
-     "location": "Kitchen",
-     "framing": "medium",
-     "cameraAngle": "eye level",
-     "cameraMove": "static"
-    },
-    {
-     "shotNumber": 5,
-     "startSec": 20,
-     "endSec": 24,
-     "whatWeSee": "@Mom appears in the doorway holding a tea towel, watching.",
-     "isContinuousMove": false,
-     "whatWeHear": "No dialogue in this shot; kettle starts to whistle.",
-     "location": "Kitchen",
-     "framing": "wide",
-     "cameraAngle": "eye level",
-     "cameraMove": "static"
-    },
-    {
-     "shotNumber": 6,
-     "startSec": 24,
-     "endSec": 30,
-     "whatWeSee": "@Mom nods seriously, holding back a smile, breathing.",
-     "isContinuousMove": false,
-     "dialogue": {
-      "speaker": "@Mom",
-      "line": "{Then go do science, habibi.}",
-      "isVoiceover": false,
-      "isOffCamera": false
-     },
-     "location": "Kitchen",
-     "framing": "close-up",
-     "cameraAngle": "eye level",
-     "cameraMove": "static"
-    }
-   ]
-  },
-  {
-   "segmentId": 2,
-   "title": "Part 2: Sequel",
-   "targetDurationSec": 16,
-   "goalSummary": "Payoff: the sunglasses stay on; the narrator lands the memory. Three shots.",
-   "continuityLocks": [
-    "Same kitchen, same screen sides"
-   ],
-   "shots": [
-    {
-     "shotNumber": 1,
-     "startSec": 0,
-     "endSec": 6,
-     "whatWeSee": "@Shaz marches to the window holding a cup of water like a beaker.",
-     "isContinuousMove": false,
-     "narration": {
-      "speaker": "@Shaz",
-      "line": "{She never once laughed at me.}"
-     },
-     "location": "Kitchen",
-     "framing": "wide",
-     "cameraAngle": "eye level",
-     "cameraMove": "pan right to follow"
-    },
-    {
-     "shotNumber": 2,
-     "startSec": 6,
-     "endSec": 10,
-     "whatWeSee": "@Sister pushes a pair of sunglasses up onto her forehead too.",
-     "isContinuousMove": false,
-     "whatWeHear": "No dialogue in this shot; chair creak.",
-     "location": "Kitchen",
-     "framing": "close-up",
-     "cameraAngle": "eye level",
-     "cameraMove": "static",
-     "narration": {
-      "speaker": "@Shaz",
-      "line": "{Good people can still do bad things.}"
-     }
-    },
-    {
-     "shotNumber": 3,
-     "startSec": 10,
-     "endSec": 16,
-     "whatWeSee": "Held image: the three of them in afternoon light, slow breathing, sunglasses glinting on foreheads.",
-     "isContinuousMove": true,
-     "whatWeHear": "Soft music swell.",
-     "location": "Kitchen",
-     "framing": "wide",
-     "cameraAngle": "slightly high angle",
-     "cameraMove": "slow pull back",
-     "narration": {
-      "speaker": "@Shaz",
-      "line": "{You are what you think about, sunglasses kid.}"
-     }
-    }
-   ]
-  }
- ],
- "storyboardSheets": [
-  {
-   "segmentId": 1,
-   "targetEngine": "nano-banana-2.1",
-   "fullPrompt": "An eight-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two even rows of four panels on a warm off-white page, each 16:9 panel with its exact label (part.shot, like 1.4) hand-written small in the corner, with no other codes; empty panels have no label. Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Panel 1, labelled \"1.1\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 2, labelled \"1.2\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 3, labelled \"1.3\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 4, labelled \"1.4\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 5, labelled \"1.5\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 6, labelled \"1.6\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 7 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. Panel 8 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. No text other than the panel labels.",
-   "panels": [
-    {
-     "panelNumber": 1,
-     "shotNumberRef": 1,
-     "shotSizeAndAngle": "Medium shot at eye level",
-     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-     "lightAndPalette": "Soft window light from the left, warm amber shadows"
-    },
-    {
-     "panelNumber": 2,
-     "shotNumberRef": 2,
-     "shotSizeAndAngle": "Medium shot at eye level",
-     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-     "lightAndPalette": "Soft window light from the left, warm amber shadows"
-    },
-    {
-     "panelNumber": 3,
-     "shotNumberRef": 3,
-     "shotSizeAndAngle": "Medium shot at eye level",
-     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-     "lightAndPalette": "Soft window light from the left, warm amber shadows"
-    },
-    {
-     "panelNumber": 4,
-     "shotNumberRef": 4,
-     "shotSizeAndAngle": "Medium shot at eye level",
-     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-     "lightAndPalette": "Soft window light from the left, warm amber shadows"
-    },
-    {
-     "panelNumber": 5,
-     "shotNumberRef": 5,
-     "shotSizeAndAngle": "Medium shot at eye level",
-     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-     "lightAndPalette": "Soft window light from the left, warm amber shadows"
-    },
-    {
-     "panelNumber": 6,
-     "shotNumberRef": 6,
-     "shotSizeAndAngle": "Medium shot at eye level",
-     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-     "lightAndPalette": "Soft window light from the left, warm amber shadows"
-    }
-   ]
-  },
-  {
-   "segmentId": 2,
-   "targetEngine": "nano-banana-2.1",
-   "fullPrompt": "An eight-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two even rows of four panels on a warm off-white page, each 16:9 panel with its exact label (part.shot, like 1.4) hand-written small in the corner, with no other codes; empty panels have no label. Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Panel 1, labelled \"2.1\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 2, labelled \"2.2\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 3, labelled \"2.3\": Medium shot at eye level. Warm medium brown boy in red sunglasses at the table. Soft window light from the left, warm amber shadows. Panel 4 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. Panel 5 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. Panel 6 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. Panel 7 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. Panel 8 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. No text other than the panel labels.",
-   "panels": [
-    {
-     "panelNumber": 1,
-     "shotNumberRef": 1,
-     "shotSizeAndAngle": "Medium shot at eye level",
-     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-     "lightAndPalette": "Soft window light from the left, warm amber shadows"
-    },
-    {
-     "panelNumber": 2,
-     "shotNumberRef": 2,
-     "shotSizeAndAngle": "Medium shot at eye level",
-     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-     "lightAndPalette": "Soft window light from the left, warm amber shadows"
-    },
-    {
-     "panelNumber": 3,
-     "shotNumberRef": 3,
-     "shotSizeAndAngle": "Medium shot at eye level",
-     "whatIsInFrame": "Warm medium brown boy in red sunglasses at the table",
-     "lightAndPalette": "Soft window light from the left, warm amber shadows"
-    }
-   ]
-  }
- ],
- "htmlScriptDocument": "<!doctype html><html><head><link href=\"https://fonts.googleapis.com/css2?family=Fraunces&family=Karla&family=Space+Mono\" rel=\"stylesheet\"><style>body{background:#E4E6D9;color:#22272A;font-family:Karla}.card{background:#F2F3EA}</style></head><body><h1>The Sunglasses Scientist</h1><p>Draft 1</p></body></html>",
- "clarifyingQuestion": null,
- "assumptions": [
-  "Assumed the card battles happened at the kitchen table."
- ],
- "locations": [
-  {
-   "name": "Kitchen",
-   "description": "Modest lived-in family kitchen, afternoon: scuffed wooden table, fridge, window over the sink."
-  }
- ]
 }

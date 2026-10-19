@@ -11,6 +11,7 @@ import { V2_MODELS, loadSkill } from '../config/models.mjs';
 import { selectStoryDirectorInput } from '../crew/story-director/input.mjs';
 import { parseStagePlay } from '../crew/story-director/schema.mjs';
 import { validateStoryDirectorOutput } from '../crew/linter/check-stage-play.mjs';
+import { traceReport, traceSummary } from '../crew/linter/answer-sources.mjs';
 import { selectCharacterArchitectInput } from '../crew/character-architect/input.mjs';
 import { parseCharacterSheets } from '../crew/character-architect/schema.mjs';
 import { validateCharacterSheets } from '../crew/linter/check-character-sheets.mjs';
@@ -60,6 +61,8 @@ export function mergeCharacters(kept, out, state) {
 export const AGENT_SPECS = {
   'story-director': {
     select: selectStoryDirectorInput, parse: parseStagePlay, gate: (out, input) => validateStoryDirectorOutput(out, input),
+    // answer trace shown to (and logged with) the self-review critique
+    trace: (out, input) => ({ text: traceReport(out, input), data: traceSummary(out, input) }),
     write: (out) => ({ storyDirector: out }),
   },
   'character-architect': {
@@ -113,7 +116,7 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
       ev({ type: 'attempt', attempt, input });
       const done = (o) => ev({ type: 'attempt-result', attempt, ...o });
       let raw;
-      const req = { agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state, gate: (o) => spec.gate(o, input, state) };
+      const req = { agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state, gate: (o) => spec.gate(o, input, state), ...(spec.trace ? { trace: (o) => spec.trace(o, input) } : {}) };
       let transient = 0;
       for (;;) {
         try { raw = await traced(req); break; } catch (e) {

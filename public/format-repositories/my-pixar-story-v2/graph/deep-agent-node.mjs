@@ -208,7 +208,7 @@ export const REFLECTION_FOCUS = {
   ],
   'story-director': [
     'Ending coherence: does the final part build to the ONE idea in finaleThesis? Name every finale line that does not serve it, any callback that does not fit it, and whether the last line says or shows it plainly.',
-    'Traceability: for every spoken or narrated line, can you point to the answer it comes from? Quote each line that cannot be traced, and each invented fact (people, objects, events, dates, ages, places, motives).',
+    'Traceability: for every spoken or narrated line, is its source the answer the line really comes from, and is its kind honest (verbatim = the family\'s sentence as written)? Quote each line that cannot be traced, each detail borrowed from a different answer, and each invented fact (people, objects, events, dates, ages, places, motives), including in whatWeSee, which the trace table does not check. Connective lines must be few, short and fact-free. Every cast card must be a person the family names.',
     'Nothing crammed: details squeezed in from a different moment of the answers, separate thoughts merged into one punchy line, or a family sentence compressed into a slogan to fit a short shot (lengthen or split the shot instead).',
     'Abstract claims: each piece of advice or wisdom in the finale should play over a shot where someone does something that shows it.',
     'Every other rule in your SKILL.md (including its do-not-write list): quote the line or field that breaks one.',
@@ -216,7 +216,7 @@ export const REFLECTION_FOCUS = {
 };
 
 /** Messages for one critique call: the agent reviews its own draft against its rules, the input and (if any) the gate. */
-export function critiqueMessages({ agent, skill, input, draft, round, rounds, gateIssues = [] }) {
+export function critiqueMessages({ agent, skill, input, draft, round, rounds, gateIssues = [], trace = '' }) {
   const focus = REFLECTION_FOCUS[agent] ?? REFLECTION_FOCUS.default;
   const gate = gateIssues.filter((i) => i.severity === 'error');
   return [
@@ -225,10 +225,22 @@ export function critiqueMessages({ agent, skill, input, draft, round, rounds, ga
       'The input for this run (/references/input.json):', '```json', JSON.stringify(input ?? {}), '```',
       'Your current draft:', '```json', JSON.stringify(draft), '```',
       gate.length ? `The deterministic gate currently fails this draft; the rewrite must fix these:\n${gate.map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n')}` : 'The deterministic gate currently passes this draft; the rewrite must keep it passing.',
+      ...(trace ? ['Line-by-line trace of the draft against the answers (from the deterministic checker; "match" is word overlap with the cited answer):', trace] : []),
       'Check the draft for:', ...focus.map((f, i) => `${i + 1}. ${f}`),
-      'Reply in plain text: a numbered list of concrete problems, most important first. For each one give where it is (part/shot or field), the exact quote, why it is a problem, and the exact fix. Only list real problems; say what already works in one line at the end. Finish with one line: VERDICT: REVISE or VERDICT: SHIP.',
+      'Reply in plain text: a numbered list of concrete problems, most important first. For each one give where it is (part/shot or field), the exact quote, why it is a problem, and the exact fix. Only list real problems; say what already works in one line at the end.',
+      ...(trace ? [UNTRACEABLE_ASK] : []),
+      'Finish with one line: VERDICT: REVISE or VERDICT: SHIP.',
     ].join('\n') },
   ];
+}
+/** Asked of the critic when an answer trace is available: its own traceability findings as data. */
+export const UNTRACEABLE_ASK = 'Then give your traceability findings as data in one fenced json block: ```json {"untraceable": [{"where": "<part.shot>", "line": "<exact line>", "why": "<invented | borrowed from another answer | wrong source | changed detail>", "fix": "<answer id to cite, or cut>"}]} ``` (an empty list if every line traces).';
+/** The critic's {"untraceable": [...]} block, or null if it gave none or it does not parse. */
+export function parseUntraceable(critique) {
+  for (const m of String(critique ?? '').matchAll(/```(?:json)?\s*([\s\S]*?)```/g)) {
+    try { const v = JSON.parse(m[1]); if (v && Array.isArray(v.untraceable)) return v.untraceable.filter((x) => x && typeof x === 'object'); } catch { /* not this block */ }
+  }
+  return null;
 }
 /** User message for a rewrite run: the draft plus the agent's own critique. */
 export const revisionMessage = ({ agent, draft, critique, round, rounds }) => [
@@ -248,7 +260,7 @@ export const revisionMessage = ({ agent, draft, critique, round, rounds }) => [
  * the returned object under REFLECTION. N = 0 is exactly the single-draft behaviour.
  */
 export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60, maxInvalidSubmits = 3, reflectionRounds } = {}) {
-  return async ({ agent, config, input, attempt = 1, retryNotes = '', state = {}, signal, gate }) => {
+  return async ({ agent, config, input, attempt = 1, retryNotes = '', state = {}, signal, gate, trace }) => {
     const photoFiles = photoFilesFor(agent, input, state);
     const { root } = await prepareRunWorkspace({ runsRoot, runId: `${runId}/attempt-${attempt}`, agent, input, approvedAssets: state.approvedAssets ?? {}, assetFiles, photoFiles });
     const model = await createModel(config, agent);
@@ -291,9 +303,12 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       let gateIssues = [];
       try { gateIssues = gate ? (gate(out)?.issues ?? []) : []; } catch { gateIssues = []; }
       const meta = { runName: `${agent} reflection round ${round} critique`, tags: [`agent:${agent}`, `attempt:${attempt}`, `reflection:${round}`], metadata: { agent, attempt, reflectionRound: round }, signal };
-      const critique = replyText(await model.invoke(critiqueMessages({ agent, skill, input, draft: out, round, rounds, gateIssues }), meta)).trim();
+      let tr = null;
+      try { tr = trace ? trace(out) : null; } catch { tr = null; }
+      const critique = replyText(await model.invoke(critiqueMessages({ agent, skill, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '' }), meta)).trim();
       await writeFile(join(dir, `round-${round}-critique.md`), critique + '\n');
       const entry = { round, critique, critiqueFile: rel(`round-${round}-critique.md`), gateErrorsBefore: gateIssues.filter((i) => i.severity === 'error').length };
+      if (tr?.data) { entry.trace = tr.data; entry.untraceable = parseUntraceable(critique); }
       try {
         const revised = await runOnce(revisionMessage({ agent, draft: out, critique, round, rounds }), `${agent} reflection round ${round} rewrite`, [`reflection:${round}`]);
         entry.changed = JSON.stringify(revised) !== JSON.stringify(out);

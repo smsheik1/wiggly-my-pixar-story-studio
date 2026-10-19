@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { validateWritingTells } from './writing-tells.mjs';
+import { words, lcs, answerSentences, NEAR_VERBATIM, checkAnswerSources, checkExtraCast } from './answer-sources.mjs';
+export { answerSentences, NEAR_VERBATIM };
 // v2 deterministic validation gate for Story Director output.
 // BASE: Gemini's validateStoryDirectorOutput (same return shape, codes and message text).
 // Wiggly codes added: SPEAKER_NOT_IN_CAST, UNDERAGE_DEPICTION, MULTILINE_STORYBOARD_PROMPT,
@@ -138,12 +140,6 @@ export function roleExampleLines(dir = new URL('../', import.meta.url)) {
 }
 let EXAMPLES = null;
 // The family's own words: a finale line that quotes an answer sentence word for word (or nearly) is theirs, not a platitude we added.
-const words = (t) => String(t ?? '').toLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/[^a-z0-9' ]+/g, ' ').split(/\s+/).filter(Boolean);
-const allStrings = (v, out = []) => { if (typeof v === 'string') out.push(v); else if (Array.isArray(v)) v.forEach((x) => allStrings(x, out)); else if (v && typeof v === 'object') Object.values(v).forEach((x) => allStrings(x, out)); return out; };
-/** Answer sentences (split on . ! ? and line breaks) from every string in the answers. */
-export const answerSentences = (answers) => allStrings(answers).flatMap((t) => t.split(/(?<=[.!?])\s+|\n+/)).map((t) => t.trim()).filter(Boolean);
-const lcs = (a, b) => { let prev = new Array(b.length + 1).fill(0); for (const x of a) { const cur = [0]; for (let j = 0; j < b.length; j++) cur.push(x === b[j] ? prev[j] + 1 : Math.max(prev[j + 1], cur[j])); prev = cur; } return prev[b.length]; };
-export const NEAR_VERBATIM = 0.8;
 /** True when the line (braces ignored) reproduces >= 80% of its words, in order, from one answer sentence that itself says the same platitude. */
 export function quotesAnswer(line, answers, re = FINALE_PLATITUDE) {
   const lw = words(String(line ?? '').replace(/[{}]/g, ''));
@@ -284,6 +280,8 @@ export function validateStoryDirectorOutput(data, input = {}) {
       err('EYES_HIDDEN', `Storyboard sheet ${si + 1} panel ${pn.panelNumber ?? i + 1}: eyes must stay visible; eyewear that would hide them sits pushed up on the forehead.`, `storyboardSheets.${si}.panels.${i}`);
   }));
 
+  // WIGGLY answer tracing: every line cites the answer it comes from; only people the family names are cast.
+  issues.push(...checkAnswerSources(data, input), ...checkExtraCast(data, input));
   issues.push(...validateWritingTells('story-director', data));
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
   const warnings = issues.filter((i) => i.severity === 'warning').map((i) => i.message);

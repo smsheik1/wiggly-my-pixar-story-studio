@@ -9,6 +9,7 @@ import { AIMessage } from '@langchain/core/messages';
 import { prepareRunWorkspace, workspaceAgent, makeSubmitTool, deepAgentInvoke, assetPath, dropDisallowedNulls } from '../graph/deep-agent-node.mjs';
 import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
 import { buildGraph } from '../graph/graph.mjs';
+import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
 
 // Explicit isolated mock (same idea as v1 studio-spike offline-model.ts): proves harness mechanics only.
 class ScriptedModel extends BaseChatModel {
@@ -104,8 +105,10 @@ test('3 invalid submits in one attempt -> attempt fails with the specific Zod is
 }));
 
 test('r4-dry1 regression: Muse sent null for optional shot fields; tool schema accepts it and the submit validates', () => tmp(async () => {
-  // Recorded before finaleThesis was required; add it so the test still isolates the null-tolerance behaviour.
+  // Recorded before finaleThesis, line sources and answerSources were required; add them so the test still isolates the null-tolerance behaviour.
   const args = { ...json('r4-dry1-story-director-submit-args.json'), finaleThesis: 'One plain sentence naming the finale idea.' };
+  args.segments = args.segments.map((seg) => ({ ...seg, answerSources: ['scene1Childhood.memory'],
+    shots: seg.shots.map((sh) => Object.fromEntries(Object.entries(sh).map(([k, v]) => [k, (k === 'dialogue' || k === 'narration') && v ? { ...v, source: { answer: 'scene1Childhood.memory', kind: 'paraphrase' } } : v]))) }));
   assert.equal(StoryDirectorOutputSchema.safeParse(args).success, false, 'raw args fail Zod (null on optional fields)');
   const subs = []; const t = makeSubmitTool('story-director', subs);
   assert.match(await t.invoke(args), /submitted/); assert.equal(subs.length, 1);
@@ -134,7 +137,7 @@ test('graph happy path through the deep-agent node (scripted model, zero network
     ]);
   };
   const g = buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'happy' } });
-  const s = await g.invoke({ inputs: { subject: 'Shaz', answers: { scene1Childhood: 'sunglasses scientist' } }, approvedAssets: assets() });
+  const s = await g.invoke({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS }, approvedAssets: assets() });
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
   assert.deepEqual(seen.map((x) => x[0]).sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director']);
   assert.ok(seen.every((x) => x[1] === 'meta/muse-spark-1.3-contributor' && x[2] === 'xhigh'));

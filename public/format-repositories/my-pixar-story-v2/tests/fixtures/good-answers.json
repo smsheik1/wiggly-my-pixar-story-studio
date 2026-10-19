@@ -1,0 +1,12 @@
+{
+  "_note": "Test input data simulating one family's questionnaire answers; pairs with good-stage-play.json.",
+  "subject": "Shaz (parent)",
+  "answers": {
+    "scene1Childhood": {
+      "memory": "When I was eight I wore my sunglasses everywhere and told everyone I am a scientist. My sister rolled her eyes and said you are eight. I said a scientist, not even kidding. Mom just said then go do science, habibi."
+    },
+    "scene5LegacyFinale": {
+      "memory": "My mom never once laughed at me, even when I was ridiculous. Good people can still do bad things, and you can still love them. You are what you think about, sunglasses kid."
+    }
+  }
+}

@@ -3,7 +3,7 @@
 // main outfit text), approved location plates (@Loc N -> asset key, scene ids, lighting).
 // Excluded: photos, photo notes, raw image prompts, storyboard, HTML deck, secrets, URLs, file paths.
 import { z } from 'zod';
-import { CastCardSchema, DialogueSchema, NarrationSchema } from '../story-director/schema.mjs';
+import { CastCardSchema, DialogueLineSchema, NarrationLineSchema } from '../story-director/schema.mjs';
 import { ASSET_KEY } from '../character-architect/schema.mjs';
 
 const KEY = z.string().regex(ASSET_KEY, 'asset key must be a local asset key, not a URL or file path');
@@ -42,8 +42,8 @@ export const InputShotSchema = z.object({
   directorsNote: z.string().optional(),
   tag: z.string().optional(),
   isContinuousMove: z.boolean().default(false),
-  dialogue: DialogueSchema.optional(),
-  narration: NarrationSchema.optional(),
+  dialogue: DialogueLineSchema.optional(), // the Story Director's source field is dropped here (not needed downstream)
+  narration: NarrationLineSchema.optional(),
 }).strict().refine((s) => s.endSec > s.startSec, { message: 'endSec must be > startSec', path: ['endSec'] });
 
 export const SeedanceCompilerInput = z.object({

@@ -1,5 +1,19 @@
 # Spec: answer tracing (`scripts/trace-answers.mjs`)
 
+> **Gate (BUILT, change 4):** the Story Director now cites its sources and a deterministic check runs on every draft:
+> `crew/linter/answer-sources.mjs`, wired into `check-stage-play.mjs`. Every `dialogue`/`narration` line carries
+> `source: { answer: '<key path in input.answers>', kind: 'verbatim' | 'paraphrase' | 'connective' }` and every part lists
+> `answerSources`. Errors: `LINE_SOURCE_MISSING`, `LINE_SOURCE_UNKNOWN`, `SEGMENT_SOURCE_MISSING`, `SEGMENT_SOURCE_UNKNOWN`,
+> `LINE_NOT_VERBATIM` (< 80% of the line's words in order from 1-2 answer sentences), `LINE_SOURCE_MISMATCH` (paraphrase with
+> < 50% of its key words in the cited answer), `LINE_FACT_NOT_IN_SOURCE` (a name, number or time missing from the cited answer;
+> connective lines may carry none), `CAST_NOT_IN_ANSWERS` (a cast person named nowhere in the answers, subject, cast notes or photos).
+> Warnings: `CONNECTIVE_LINES_HIGH` (> max(2, 20% of lines)), `CONNECTIVE_LINE_LONG` (> 12 words), `SHOT_FACT_NOT_IN_SOURCE`
+> (a name, digit or time in `whatWeSee` missing from the part's answerSources). Spelling variants (case, hyphens, possessives,
+> plurals/-ed/-ing, one-letter typos in 5+ letter words, digits vs number words) match. Skipped when the input has no answers.
+> The trace table is shown to the SD's self-review critique, which also returns its own `{"untraceable": [...]}` list; both
+> are logged per round (`reflection.json`: `trace`, `untraceable`). Objects and events the checker cannot see are left to the
+> critique and to the LLM audit below, which stays a post-run report (it costs model calls, so it is not in the gate).
+
 Owner: Muse Spark 1.3 via OpenCode. Branch `feat/v2-answer-trace` off `feat/v2-orchestrator` (benchmark already merged). Local commits only.
 
 ## Goal

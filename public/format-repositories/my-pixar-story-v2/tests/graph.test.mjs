@@ -4,10 +4,11 @@ import { readFileSync } from 'node:fs';
 import { MemorySaver, Command } from '@langchain/langgraph';
 import { buildGraph, retryNotes, requiredAssetTags } from '../graph/graph.mjs';
 import { parseInitialState, statusReducer } from '../graph/state.mjs';
+import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
 
 const json = (f) => JSON.parse(readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const FIX = { 'story-director': 'good-stage-play.json', 'character-architect': 'good-master-renders.json', 'location-scout': 'good-location-plates.json', 'seedance-compiler': 'good-seedance-prompts.json' };
-const initial = (extra = {}) => ({ inputs: { subject: 'Shaz', answers: { scene1Childhood: 'sunglasses scientist' }, settingSeed: 'suburban home' }, ...extra });
+const initial = (extra = {}) => ({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, settingSeed: 'suburban home' }, ...extra });
 const assets = () => json('good-approved-assets.json');
 
 /** Fake model: returns fixtures; `bad` maps agent -> number of leading bad attempts (or Infinity). Records every call. */

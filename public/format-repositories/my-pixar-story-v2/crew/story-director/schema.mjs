@@ -6,18 +6,25 @@ export const MAX_SEGMENT_SECONDS = 30;
 export const MAX_TOTAL_SECONDS = 180; // WIGGLY: matches input targetTotalRuntimeSec max
 export const IMAGE_ENGINE = 'nano-banana-2.1'; // WIGGLY: Nano Banana 2.1 via Google Flow, not gpt-image-2
 
-export const DialogueSchema = z.object({
+// Spoken line fields shared with the Seedance Compiler input (which does not need the source).
+export const DialogueLineSchema = z.object({
   speaker: z.string().describe("The speaker handle, e.g. '@Ben' or '@Miss_Park'"),
   line: z.string().regex(/^\{.+\}$/, 'Dialogue line must be enclosed in curly braces {}').describe("Verbatim dialogue line enclosed in braces, e.g. '{This is my dad.}'"),
   isVoiceover: z.boolean().default(false).describe('True if spoken as voiceover from off-screen or memory'),
   isOffCamera: z.boolean().default(false).describe('True if speaker is in the scene but currently out of frame'),
 });
-
 // WIGGLY: optional narration in the maker's cloned storyteller voice, alongside or instead of dialogue.
-export const NarrationSchema = z.object({
+export const NarrationLineSchema = z.object({
   speaker: z.string().describe("Narrator element tag, usually the maker, e.g. '@AdultTheo'"),
   line: z.string().regex(/^\{.+\}$/, 'Narration line must be enclosed in curly braces {}'),
 });
+// WIGGLY answer tracing: every line names the family answer it comes from (crew/linter/answer-sources.mjs checks it).
+export const LineSourceSchema = z.object({
+  answer: z.string().trim().min(1).optional().describe("Id of the answer in input.json the line comes from: its key path inside answers, e.g. 'scene1Childhood.memory'. Required unless kind is 'connective'"),
+  kind: z.enum(['verbatim', 'paraphrase', 'connective']).describe("verbatim: the family's sentence as written (small trims ok); paraphrase: reworded from that answer, same facts; connective: short scene-setting line with no facts of its own (few, flagged)"),
+}).refine((s) => s.kind === 'connective' || !!s.answer, { message: "source.answer is required unless kind is 'connective'", path: ['answer'] });
+export const DialogueSchema = DialogueLineSchema.extend({ source: LineSourceSchema });
+export const NarrationSchema = NarrationLineSchema.extend({ source: LineSourceSchema });
 
 export const ShotCardSchema = z.object({
   shotNumber: z.number().int().positive().describe('Sequential shot number within the segment'),
@@ -43,6 +50,8 @@ export const ScriptSegmentSchema = z.object({
   targetDurationSec: z.number().int().min(1).max(30).describe('Total segment duration in seconds — HARD CEILING IS 30s'),
   goalSummary: z.string().min(10).describe('2-3 sentences explaining goal, shot count, and the hard narrative stop'),
   continuityLocks: z.array(z.string()).min(1).describe('Character counts, seating positions, 180-degree axis lock'),
+  // WIGGLY answer tracing: the answers whose memories this part depicts.
+  answerSources: z.array(z.string().trim().min(1)).min(1).describe("Answer ids (key paths inside input.json answers) whose memories this part depicts, e.g. ['scene1Childhood.memory']"),
   shots: z.array(ShotCardSchema).min(1).describe('Ordered shot sequence'),
 }).refine((segment) => {
   const total = segment.shots.reduce((acc, shot) => acc + (shot.endSec - shot.startSec), 0);

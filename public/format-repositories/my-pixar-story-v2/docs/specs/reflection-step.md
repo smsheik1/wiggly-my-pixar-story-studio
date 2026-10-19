@@ -1,6 +1,6 @@
 # Reflection / critic step (Google Sheet row 31): scoring note
 
-Status: self-critique loop BUILT for the Story Director (graph/deep-agent-node.mjs, `reflectionRounds` in config/models.mjs: 2 for the SD, 0 for the others).
+Status: self-critique loop BUILT for the Story Director (graph/deep-agent-node.mjs, `reflectionRounds` in config/models.mjs: 2 for the SD, 0 for the others). Since change 4 the SD critique also gets the deterministic answer trace table (`AGENT_SPECS['story-director'].trace`) and ends with an `{"untraceable": [...]}` JSON block; each log entry keeps `trace` (counts + rows) and `untraceable` (parsed list, or null).
 After the first draft the same agent critiques its own draft (plain model call: SKILL.md + input.json + draft + current gate findings; checks ending coherence
 against `finaleThesis`, every line traceable to the answers, nothing invented or crammed, all role rules) and then rewrites it (a Deep Agent run that resubmits
 through the typed submit tool). The gate runs on the final revision; gate failures keep the normal retry/escalation. Critiques and every draft are saved under

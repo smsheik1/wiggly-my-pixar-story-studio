@@ -8,6 +8,7 @@ import { createLiveness, LivenessHandler, withWatchdog } from '../graph/liveness
 import { buildGraph } from '../graph/graph.mjs';
 import { runRehearsal } from '../scripts/run-rehearsal.mjs';
 import { createRecorder, trackerSection } from '../scripts/lib/report.mjs';
+import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
 
 const json = (f) => JSON.parse(readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const clock = (t = 0) => { const c = () => t; c.add = (ms) => { t += ms; }; return c; };
@@ -56,7 +57,7 @@ test('timeout counts as failed attempt; message reaches retry feedback; next att
     if (r.agent === 'story-director' && r.attempt === 1) return new Promise(() => {}); // hangs, never streams
     return JSON.stringify(json({ 'story-director': 'good-stage-play.json', 'character-architect': 'good-master-renders.json', 'location-scout': 'good-location-plates.json' }[r.agent]));
   };
-  const s = await buildGraph({ invoke, liveness: l, timeouts: { firstTokenMs: 30, idleMs: 1000, pollMs: 5 } }).invoke({ inputs: { subject: 'Shaz', answers: { a: 'x' } } });
+  const s = await buildGraph({ invoke, liveness: l, timeouts: { firstTokenMs: 30, idleMs: 1000, pollMs: 5 } }).invoke({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS } });
   assert.equal(s.status, 'awaiting-approval'); assert.equal(s.retryCounts['story-director'], 1);
   assert.match(s.validationErrors[0].errors[0].message, /model call timed out/);
   assert.match(calls.find((c) => c.agent === 'story-director' && c.attempt === 2).retryNotes, /model call timed out/);
@@ -65,7 +66,7 @@ test('timeout counts as failed attempt; message reaches retry feedback; next att
 test('runner: heartbeat to console + tracker every interval, red STALLED?, tracing label during run then link', async () => {
   const root = mkdtempSync(join(tmpdir(), 'v2-live-'));
   try {
-    const proj = join(root, 'p.json'); writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: { a: 'x' } } }));
+    const proj = join(root, 'p.json'); writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS } }));
     const tracker = join(root, 't.html'); writeFileSync(tracker, '<html><body><div class="now">x</div></body></html>');
     const lines = []; const snaps = [];
     const invoke = async (r) => {

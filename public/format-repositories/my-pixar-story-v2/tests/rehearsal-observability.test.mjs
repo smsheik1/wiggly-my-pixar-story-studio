@@ -8,6 +8,7 @@ import { runRehearsal } from '../scripts/run-rehearsal.mjs';
 import { loadSecrets } from '../scripts/lib/secrets.mjs';
 import { upsertTracker, createRecorder } from '../scripts/lib/report.mjs';
 import { placeholderAssets } from '../graph/graph.mjs';
+import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
 
 const json = (f) => JSON.parse(readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const FIX = { 'story-director': 'good-stage-play.json', 'character-architect': 'good-master-renders.json', 'location-scout': 'good-location-plates.json', 'seedance-compiler': 'good-seedance-prompts.json' };
@@ -17,7 +18,7 @@ const fake = (bad = {}) => async (r) => { if (r.agent === 'seedance-compiler') r
 const TRACKER = '<!doctype html><html><head><style>.x{}</style></head><body><h1>Old work</h1><ul><li>keep me</li></ul>\n<div class="now"><b>Now:</b> x</div><script>/*reload*/</script></body></html>';
 function sandbox() {
   const root = mkdtempSync(join(tmpdir(), 'v2-obs-'));
-  const proj = join(root, 'p.json'); writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: { scene1Childhood: { memory: 'sunglasses' } } } }));
+  const proj = join(root, 'p.json'); writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS } }));
   const tracker = join(root, 'progress.html'); writeFileSync(tracker, TRACKER);
   return { root, proj, tracker, done: () => rmSync(root, { recursive: true, force: true }) };
 }
