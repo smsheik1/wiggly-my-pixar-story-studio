@@ -5,7 +5,9 @@
 //   runs/<runId>/<agent>/versions     read-only: prior approved versions (empty by default)
 //   runs/<runId>/<agent>/skills/<agent>/SKILL.md   the agent's role.md
 // The agent finishes by calling submit_<agent>, whose Zod schema is the agent's schema.mjs output; returnDirect ends the run.
-import { isFatalProviderError } from './provider-errors.mjs';
+import { isFatalProviderError, isStreamDrop } from './provider-errors.mjs';
+import { createMiddleware } from 'langchain';
+import { noteStreamActivity } from './liveness.mjs';
 import { mkdir, writeFile, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, extname, relative } from 'node:path';
@@ -74,13 +76,37 @@ export async function prepareRunWorkspace({ runsRoot = RUNS_ROOT, runId, agent, 
 }
 
 /** Deep Agent with v1's backend/permission pattern. */
-export function workspaceAgent(model, root, profileKey, name, tools, systemPrompt) {
+// ---- Single-call retry for dropped streams (r5-dry4) ----
+/** Retries of ONE model call after a mid-stream / network drop, before the error reaches the attempt loop. */
+export const CALL_RETRIES = 2;
+const sleep = (ms, signal) => new Promise((res, rej) => { const t = setTimeout(res, ms); signal?.addEventListener?.('abort', () => { clearTimeout(t); rej(signal.reason); }, { once: true }); });
+/**
+ * Run one model call; when its stream drops (isStreamDrop) retry just that call up to `retries` times, with a short
+ * backoff. Anything else (gate/schema problems, our own timeouts and aborts, fatal key errors) is thrown at once.
+ */
+export async function withCallRetry(call, { retries = CALL_RETRIES, delayMs = 2000, onRetry = () => {}, signal } = {}) {
+  for (let n = 0; ; n++) {
+    try { return await call(); } catch (e) {
+      if (n >= retries || !isStreamDrop(e) || signal?.aborted) throw e;
+      onRetry(e, n + 1);
+      await sleep(delayMs * (n + 1), signal);
+    }
+  }
+}
+/** Agent middleware: the same single-call retry around every model request of a Deep Agent run. */
+export const streamDropRetryMiddleware = (opts = {}) => createMiddleware({
+  name: 'StreamDropRetryMiddleware',
+  wrapModelCall: (request, handler) => withCallRetry(() => handler(request), opts),
+});
+const logRetry = (agent) => (e, n) => console.log(`[retry] ${agent}: model call dropped (${String(e?.message ?? e).slice(0, 120)}); retrying that call (${n}/${CALL_RETRIES})`);
+
+export function workspaceAgent(model, root, profileKey, name, tools, systemPrompt, { retry = {} } = {}) {
   registerHarnessProfile(profileKey, { excludedTools: ['task', 'execute'], generalPurposeSubagent: { enabled: false } });
   const mount = (dir) => new FilesystemBackend({ rootDir: join(root, dir), virtualMode: true });
   const backend = new CompositeBackend(new FilesystemBackend({ rootDir: root, virtualMode: true }), {
     '/drafts/': mount('drafts'), '/references/': mount('references'), '/versions/': mount('versions'), '/skills/': mount('skills'),
   });
-  return createDeepAgent({ model, backend, name, skills: ['/skills/'], tools, permissions: PERMISSIONS, systemPrompt });
+  return createDeepAgent({ model, backend, name, skills: ['/skills/'], tools, permissions: PERMISSIONS, systemPrompt, middleware: [streamDropRetryMiddleware(retry)] });
 }
 
 /** submit_<agent>: args are validated by the agent's output schema; returnDirect ends the agent run. */
@@ -203,11 +229,32 @@ export const systemPromptFor = (agent, retryNotes = '', { photos = false } = {})
 ].filter(Boolean).join('\n');
 
 /** Default production model: OpenRouter via ChatOpenAI (lazy; never constructed in tests). */
+/**
+ * Count what the SDK hides: SSE keepalive comments (": OPENROUTER PROCESSING") and `reasoning` deltas (LangChain only
+ * maps `reasoning_content`), reported to the heartbeat via noteStreamActivity. The response body passes through untouched.
+ */
+export function sseActivity(text) {
+  let keepalives = 0, reasoning = 0;
+  for (const line of text.split('\n')) {
+    if (line.startsWith(':')) keepalives++;
+    else if (line.startsWith('data:') && /"reasoning(?:_details|_content)?"\s*:\s*(?:"[^"]|\[\s*\{)/.test(line)) reasoning++;
+  }
+  return { keepalives, reasoning };
+}
+export function observingFetch(agent, base = globalThis.fetch, note = noteStreamActivity) {
+  return async (url, init) => {
+    const res = await base(url, init);
+    if (!res.body || !String(res.headers?.get?.('content-type') ?? '').includes('event-stream')) return res;
+    const dec = new TextDecoder();
+    const tap = new TransformStream({ transform(chunk, ctl) { const a = sseActivity(dec.decode(chunk, { stream: true })); if (a.keepalives || a.reasoning) note(agent, a); ctl.enqueue(chunk); } });
+    return new Response(res.body.pipeThrough(tap), { status: res.status, statusText: res.statusText, headers: res.headers });
+  };
+}
 export async function openRouterModel(config, _agent, { apiKey = process.env.OPENROUTER_API_KEY } = {}) {
   const { ChatOpenAI } = await import('@langchain/openai');
   if (!apiKey) throw new Error('openRouterModel: OPENROUTER_API_KEY is not set');
   return new ChatOpenAI({ model: config.model, apiKey, maxTokens: outputCap(config),
-    streaming: true, configuration: { baseURL: 'https://openrouter.ai/api/v1' }, modelKwargs: { reasoning: { effort: config.effort }, include_reasoning: true } });
+    streaming: true, configuration: { baseURL: 'https://openrouter.ai/api/v1', fetch: observingFetch(_agent) }, modelKwargs: { reasoning: { effort: config.effort }, include_reasoning: true } });
 }
 
 // ---- Reflection: the agent critiques its own draft, then rewrites it (config.reflectionRounds rounds) ----
@@ -322,7 +369,7 @@ export const revisionMessage = ({ agent, draft, critique, round, rounds, scope =
  * Critiques and every draft are saved under runs/<runId>/attempt-N/<agent>/reflection/, and the log is attached to
  * the returned object under REFLECTION. N = 0 is exactly the single-draft behaviour.
  */
-export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60, maxInvalidSubmits = 3, reflectionRounds } = {}) {
+export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60, maxInvalidSubmits = 3, reflectionRounds, callRetry = {} } = {}) {
   // Patch mode (graph/patch.mjs) adds: task (the first user message), scope (shown to the critic and the rewrite),
   // rounds (reflection rounds for this run; overrides config and the reflectionRounds option) and submitSchema.
   return async ({ agent, config, input, attempt = 1, retryNotes = '', state = {}, signal, gate, trace, task, scope = '', rounds: reqRounds, submitSchema }) => {
@@ -337,7 +384,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       let giveUp = null;
       const submit = makeSubmitTool(agent, submissions, { maxInvalid: maxInvalidSubmits, ...(submitSchema ? { schema: submitSchema } : {}),
         onSubmitted: () => done.abort(new Error('submitted')), onGiveUp: (e) => { giveUp = e; done.abort(e); } });
-      const agentRun = workspaceAgent(model, root, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], sysPrompt);
+      const agentRun = workspaceAgent(model, root, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], sysPrompt, { retry: { onRetry: logRetry(agent), signal, ...callRetry } });
       const sig = signal ? AbortSignal.any([signal, done.signal]) : done.signal;
       try {
         await agentRun.invoke({ messages: [{ role: 'user', content }] }, { recursionLimit, signal: sig, runName, tags: [`agent:${agent}`, `attempt:${attempt}`, ...extraTags] });
@@ -373,7 +420,8 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       const meta = { runName: `${agent} reflection round ${round} critique`, tags: [`agent:${agent}`, `attempt:${attempt}`, `reflection:${round}`], metadata: { agent, attempt, reflectionRound: round }, signal };
       let tr = null;
       try { tr = trace ? trace(out) : null; } catch { tr = null; }
-      const critique = replyText(await model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime }), meta)).trim();
+      const msgs = critiqueMessages({ agent, skill, review, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime });
+      const critique = replyText(await withCallRetry(() => model.invoke(msgs, meta), { onRetry: logRetry(agent), signal, ...callRetry })).trim();
       await writeFile(join(dir, `round-${round}-critique.md`), critique + '\n');
       const entry = { round, critique, critiqueFile: rel(`round-${round}-critique.md`), gateErrorsBefore: gateIssues.filter((i) => i.severity === 'error').length };
       if (tr?.data) { entry.trace = tr.data; entry.untraceable = parseUntraceable(critique); }

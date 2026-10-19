@@ -28,3 +28,13 @@ export function fatalMessage(e) {
 export class RunStoppedError extends Error {
   constructor(reason) { super(reason || 'run stopped after a fatal provider error'); this.name = 'RunStoppedError'; this.code = FATAL_CODE; this.fatal = true; }
 }
+
+// A model call whose connection dropped mid-stream or failed at the network/gateway level (r5-dry4: Muse Spark calls
+// cut at ~6 min with "Network connection lost"). Retried as that single call, not as a whole new attempt.
+const STREAM_DROP = /network connection lost|network error|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE|UND_ERR_SOCKET|socket hang up|fetch failed|\bterminated\b|other side closed|premature close|aborted by the server|stream (?:ended|closed) unexpectedly|\b(502|503|504|520|522|524)\b/i;
+/** True for a transient network / mid-stream drop (never for a fatal key error, a timeout we raised, or our own abort). */
+export function isStreamDrop(e) {
+  if (!e || isFatalProviderError(e) || e.code === 'MODEL_TIMEOUT' || e.name === 'AbortError') return false;
+  const text = [e.message, e.cause?.message, e.cause?.code, e.code].filter(Boolean).join(' ');
+  return STREAM_DROP.test(text);
+}

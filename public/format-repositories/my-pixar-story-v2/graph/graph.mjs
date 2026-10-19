@@ -163,8 +163,17 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
     log.push({ node: agent, attempt: maxAttempts, errors: issues, timestamp: now() });
     ev({ type: 'failed', attempt: maxAttempts, issues });
     return withReflections({ status: 'failed', attempts: { [agent]: maxAttempts }, retryCounts: { [agent]: maxAttempts - 1 }, gateIssues: { [agent]: issues }, validationErrors: log,
-      escalations: [{ agent, reason: `failed the gate ${maxAttempts} times`, attempts: maxAttempts, issues }] });
+      escalations: [{ agent, reason: escalationReason(issues, maxAttempts), attempts: maxAttempts, issues }] });
   };
+}
+
+/** Why an agent escalated: a gate failure, or a model call that kept failing (a network drop is not a gate failure). */
+export function escalationReason(issues = [], maxAttempts) {
+  const errs = issues.filter((i) => i.severity === 'error');
+  const runFail = errs.length > 0 && errs.every((i) => i.code === 'AGENT_RUN_FAILED' || i.code === 'MODEL_TIMEOUT');
+  if (!runFail) return `failed the gate ${maxAttempts} times`;
+  const net = errs.some((i) => /network|connection|ECONNRESET|socket|terminated|fetch failed|\b50[234]\b/i.test(i.message ?? ''));
+  return net ? `model call kept dropping (network/stream error) on all ${maxAttempts} attempts; not a gate failure` : `model call failed on all ${maxAttempts} attempts; not a gate failure`;
 }
 
 /** Tags that must be approved before compiling: every CA @Image N and LS @Loc N. */

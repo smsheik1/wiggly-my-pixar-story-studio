@@ -6,6 +6,10 @@ const LABELS = { 'story-director': 'Story Director', 'character-architect': 'Cha
 const dur = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return s >= 60 ? `${Math.floor(s / 60)}m${String(s % 60).padStart(2, '0')}s` : `${s}s`; };
 const PHASE = { 'waiting-for-first-token': 'waiting for first token', thinking: 'thinking', writing: 'writing', 'tool-call': 'tool call', done: 'done' };
 
+const LIVE = new Set(); // every liveness tracker, so raw stream activity (no LangChain event) can reach the active entry
+/** Raw stream activity for an agent's active call: reasoning chunks count as thinking activity, keepalives only as signs of life. */
+export function noteStreamActivity(agent, { keepalives = 0, reasoning = 0 } = {}) { for (const L of LIVE) L.stream(agent, { keepalives, reasoning }); }
+
 export function createLiveness({ now = Date.now, stallMs = DEFAULT_TIMEOUTS.stallMs } = {}) {
   const entries = new Map();
   const key = (agent, attempt) => `${agent}#${attempt}`;
@@ -17,14 +21,23 @@ export function createLiveness({ now = Date.now, stallMs = DEFAULT_TIMEOUTS.stal
       const t = now(); e.lastActivity = t; if (phase) e.phase = phase; e.tokens += tokens;
       if (tokens && !e.firstTokenAt) e.firstTokenAt = t;
     },
+    stream(agent, { keepalives = 0, reasoning = 0 } = {}) {
+      const t = now();
+      for (const e of entries.values()) if (e.active && e.agent === agent) {
+        e.keepalives = (e.keepalives ?? 0) + keepalives; e.reasoningChunks = (e.reasoningChunks ?? 0) + reasoning;
+        if (keepalives) e.lastKeepalive = t;
+        if (reasoning) { e.lastActivity = t; if (e.phase === 'waiting-for-first-token' || e.phase === 'writing') e.phase = 'thinking'; e.firstTokenAt ??= t; }
+      }
+    },
     end(agent, attempt) { const e = entries.get(key(agent, attempt)); if (e) { e.active = false; e.phase = 'done'; } },
     active: () => [...entries.values()].filter((e) => e.active),
     status(e) { const t = now(); return { ...e, elapsedMs: t - e.startedAt, idleMs: t - e.lastActivity, stalled: t - e.lastActivity >= stallMs }; },
     line(e) {
       const s = L.status(e);
-      return `${LABELS[e.agent] ?? e.agent} — attempt ${e.attempt} — ${PHASE[e.phase] ?? e.phase}… ${e.tokens.toLocaleString('en-US')} tokens · ${dur(s.elapsedMs)} · last activity ${dur(s.idleMs)} ago${s.stalled ? ' · STALLED?' : ''}`;
+      return `${LABELS[e.agent] ?? e.agent} — attempt ${e.attempt} — ${PHASE[e.phase] ?? e.phase}… ${e.tokens.toLocaleString('en-US')} tokens${e.reasoningChunks ? ` · ${e.reasoningChunks.toLocaleString('en-US')} reasoning chunks` : ''} · ${dur(s.elapsedMs)} · last activity ${dur(s.idleMs)} ago${e.lastKeepalive != null ? ` · provider alive ${dur(now() - e.lastKeepalive)} ago` : ''}${s.stalled && !(e.lastKeepalive != null && now() - e.lastKeepalive < stallMs) ? ' · STALLED?' : ''}`;
     },
   };
+  LIVE.add(L);
   return L;
 }
 
