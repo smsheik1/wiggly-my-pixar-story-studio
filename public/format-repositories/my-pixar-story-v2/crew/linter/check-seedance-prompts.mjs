@@ -9,9 +9,10 @@ import { validateWritingTells } from './writing-tells.mjs';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { segmentCastPresence } from '../seedance-compiler/input.mjs';
+import { checkSeedanceShotLocks } from './shot-locks.mjs';
 import { VIDEO_ENGINE, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX_TOTAL_SECONDS, BLOCK_HEADERS, headerPositions } from '../seedance-compiler/schema.mjs';
 
-import { WORDS_PER_SECOND, budgetMessage } from './speech.mjs';
+import { WORDS_PER_SECOND } from './speech.mjs';
 export { WORDS_PER_SECOND };
 const heardOnly = (d) => !!(d?.isVoiceover || d?.isOffCamera || /^(voiceover|off[- _]?camera)$/i.test(d?.mode ?? ''));
 export const DIALOGUE_EXCLUSION = 'The only spoken words in the entire segment are the lines in braces';
@@ -33,7 +34,7 @@ const unNegatedHit = (text, re) => {
 const HEARD_SPEAKER_LABEL = /^(\s*)@[\w_]+(\s*,\s*(?:voice[- ]?over|off[- ]?camera)\s*:)/gim;
 // WIGGLY (r4-dry15): every SHOT block states its camera direction on one line: "Camera: <framing>, <angle>, <move>."
 export const CAMERA_LINE = /^\s*Camera:\s*([^,\n]+),\s*([^,\n]+),\s*([^\n]+?)\.?\s*$/m;
-/** Each cast card's signature accessory as its head noun ('red knitted cap pushed back' -> cap), for the [SHOTS] re-description check. */
+/** Each cast card's signature accessory as its head noun ('red knitted cap pushed back' -> cap). */
 export function accessoryWords(cast = []) {
   const out = [];
   for (const c of cast) {
@@ -49,7 +50,6 @@ const normWords = (x) => String(x ?? '').toLowerCase().replace(/[-_]/g, ' ').rep
 /** [SHOTS] split into per-shot blocks: [{ n, text }]. */
 export const shotBlocks = (shotsText) => shotsText.split(/(?=SHOT\s+\d+\s*\|)/).filter((x) => /^SHOT\s+\d+/.test(x.trim())).map((x) => ({ n: +x.match(/SHOT\s+(\d+)/)[1], text: x }));
 const withoutBraces = (x) => String(x ?? '').replace(/\{[^}]*\}/g, '');
-const words = (line) => line.replace(/[{}]/g, ' ').trim().split(/\s+/).filter(Boolean).length;
 
 /** Split a compiled prompt into its blocks by header (body text only). */
 export function splitBlocks(text) {
@@ -147,7 +147,6 @@ export function validateSeedancePrompts(data, input) {
   const err = (code, message, path) => issues.push({ severity: 'error', code, message, path });
   const segs = data?.segments ?? [];
   const cast = new Map((input?.cast ?? []).map((c) => [c.elementTag, c]));
-  const accessories = accessoryWords(input?.cast ?? []);
   const approved = new Map((input?.references ?? []).map((r) => [r.tag, r]));
   const locBySetting = new Map((input?.locations ?? []).map((l) => [l.settingName, l.elementName]));
   const srcSegs = new Map((input?.segments ?? []).map((s) => [s.segmentId, s]));
@@ -185,12 +184,11 @@ export function validateSeedancePrompts(data, input) {
         // Voiceover / off-camera speakers are heard, not seen: they need no image reference.
         if (!heardOnly(s.dialogue)) present.add(s.dialogue.speaker);
         if (!cast.has(s.dialogue.speaker)) err('SPEAKER_NOT_IN_CAST', `${sp}: speaker ${s.dialogue.speaker} is not in the stage-play cast.`, `${sp}.dialogue.speaker`);
-        const secs = s.endSec - s.startSec, n = words(s.dialogue.line);
-        if (n > WORDS_PER_SECOND * secs) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`${sp} (${s.startSec}s-${s.endSec}s)`, n, secs), `${sp}.dialogue.line`);
+        // speech length (dialogue + narration + pad) vs the shot: checkSeedanceShotLocks
         if (!t.includes(s.dialogue.line)) err('DIALOGUE_NOT_VERBATIM', `${sp}: line ${s.dialogue.line} is not in the prompt.`, `${sp}.dialogue`);
       }
     });
-    // WIGGLY (r4-dry15): camera direction, signature accessories only in the reference/continuity blocks, voice-only cast, [GOAL] grammar, breathing filler.
+    // WIGGLY (r4-dry15): camera direction, voice-only cast, [GOAL] grammar, breathing filler.
     const shotsText = seg.tenBlocks?.block5_shots ?? '';
     for (const b of shotBlocks(shotsText)) {
       const sp = `${p}.tenBlocks.block5_shots`;
@@ -202,10 +200,11 @@ export function validateSeedancePrompts(data, input) {
         const miss = ['framing', 'cameraAngle', 'cameraMove'].filter((k) => srcShot?.[k] && !line.includes(normWords(srcShot[k])));
         if (miss.length) issues.push({ severity: 'warning', code: 'CAMERA_DIRECTION_MISMATCH', message: `${p}: SHOT ${b.n} camera line does not match the stage play's ${miss.map((k) => `${k} "${srcShot[k]}"`).join(', ')}.`, path: sp });
       }
-      for (const a of accessories) if (a.re.test(withoutBraces(b.text))) err('REDESCRIBED_CHARACTER', `${p}: SHOT ${b.n} mentions ${a.tag}'s signature accessory ('${a.word}'). It lives only in [REFERENCE MATERIALS], [CONTINUITY] and [MAINTAIN CONSISTENCY]; [SHOTS] uses the @tag only.`, sp);
       if (BREATHING.test(withoutBraces(b.text))) issues.push({ severity: 'warning', code: 'FILLER_BREATHING', message: `${p}: SHOT ${b.n} uses breathing as filler action; give a concrete action or hold instead.`, path: sp });
     }
-    (seg.shots ?? []).forEach((s, j) => { for (const a of accessories) if (a.re.test(s.action ?? '')) err('REDESCRIBED_CHARACTER', `${p}.shots.${j}: action mentions ${a.tag}'s signature accessory ('${a.word}'); use the @tag only.`, `${p}.shots.${j}.action`); });
+    // WIGGLY shot locks (change 5): presence, Look lock (accessories + visual tell word for word), prop states, eyes visible,
+    // speaker on screen and leading, timecodes as staged, speech length. Replaces the old "accessory never in [SHOTS]" rule.
+    issues.push(...checkSeedanceShotLocks(seg, src, shotBlocks(shotsText), input, p));
     const goal = seg.tenBlocks?.block3_goal ?? '';
     if (BROKEN_HARD_STOP.test(goal)) err('BROKEN_HARD_STOP', `${p}: [GOAL] hard stop is one broken sentence ("It ends the instant X ... and do not ..."). Write "It ends the instant X. Do not continue past that moment, do not resolve anything and do not add an ending."`, `${p}.tenBlocks.block3_goal`);
     const voiceOnly = src ? (src.voiceOnlyCast ?? segmentCastPresence(src, [...cast.keys()]).voiceOnlyCast) : [];

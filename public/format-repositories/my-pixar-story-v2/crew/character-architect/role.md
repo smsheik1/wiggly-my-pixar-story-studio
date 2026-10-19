@@ -157,6 +157,10 @@ Before delivering prompts to Google Flow:
 * Seedance 2.5 reference tags are positional. Assign `imageTag` in cast order: first cast card `@Image 1`, then `@Image 2`, and so on. Location plates are numbered after the characters by the Seedance Compiler.
 * List every outfit the script needs in `outfits[]` with its `segmentIds`; mark exactly one `isMain`. The render and sheet draw the main outfit only; other outfits are later edits.
 * Record anything you had to decide (notes vs card conflicts, inferred outfits) in `assumptions`. No clarifying questions at this stage.
+* **Visual tell between look-alikes.** Seedance renders every shot on its own, so two cast members who read alike get swapped between shots. Give each such character a `visualTell`: one short, concrete, always-visible difference (a hair or hijab colour, a garment colour, a mark or a held-back accessory taken from the cast card, photo notes or outfit; never invented). Write it word for word into that character's `masterRenderPrompt.promptText` (TELL_NOT_IN_RENDER). The Seedance Compiler repeats it word for word on the character's `Look` line in every shot.
+  * **Look-alike rule (the gate's simple heuristic, `lookAlikeReason` in `crew/linter/shot-locks.mjs`):** two characters are look-alikes when they have the same `gender` AND the same age band (under 13 child, 13–29 young adult, 30–49 adult, 50+ older adult) AND either a similar build (`headsTall` within 0.5) or the same family resemblance (both `family: true` with the same `skinTone`).
+  * Both characters of a look-alike pair need a `visualTell` (LOOKALIKE_NO_TELL), and the two tells must differ: not the same words, and fewer than half their key words shared (LOOKALIKE_TELLS_TOO_SIMILAR). Name a different thing or a clearly different colour, e.g. "mustard yellow scarf" vs "bright green rain boots", not "blue scarf" vs "light blue scarf".
+  * A character with no look-alike may leave `visualTell` out.
 
 ---
 
@@ -176,6 +180,7 @@ Return ONE JSON object and nothing else, matching `schema.mjs` (`CharacterArchit
     "masterRenderPrompt": { "targetEngine": "nano-banana-2.1", "promptText": "A single-character full-body render … Background: flat grey studio backdrop, empty.", "aspectRatio": "1:1" },
     "modelSheetPrompt": { "targetEngine": "nano-banana-2.1", "promptText": "A character model sheet … (model-sheet mode only, 3,500-5,000 chars)", "aspectRatio": "16:9", "resolution": "2K", "masterRenderRef": "asset:master-render:theo-v1", "expressionCount": 8 },
     "age": 8, "gender": "male", "family": true, "skinTone": "warm medium brown",
+    "visualTell": "bright green rain boots (only for look-alikes; also written word for word in masterRenderPrompt)",
     "imageTag": "@Image 1",
     "outfits": [ { "segmentIds": [1, 2], "description": "garment by garment with colours", "isMain": true } ]
   } ],

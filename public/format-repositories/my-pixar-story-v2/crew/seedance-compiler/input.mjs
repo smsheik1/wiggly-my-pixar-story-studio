@@ -42,6 +42,10 @@ export const InputShotSchema = z.object({
   directorsNote: z.string().optional(),
   tag: z.string().optional(),
   isContinuousMove: z.boolean().default(false),
+  // WIGGLY shot locks: exactly who is in frame (restated per shot as "On screen:"), and entrances / exits.
+  onScreen: z.array(z.string().regex(/^@[\w_]+$/)).optional(),
+  enters: z.array(z.string().regex(/^@[\w_]+$/)).optional(),
+  exits: z.array(z.string().regex(/^@[\w_]+$/)).optional(),
   dialogue: DialogueLineSchema.optional(), // the Story Director's source field is dropped here (not needed downstream)
   narration: NarrationLineSchema.optional(),
 }).strict().refine((s) => s.endSec > s.startSec, { message: 'endSec must be > startSec', path: ['endSec'] });
@@ -57,6 +61,8 @@ export const SeedanceCompilerInput = z.object({
     // WIGGLY (r4-dry15): who is seen in this part vs only heard (voiceover / off camera). Voice-only cast gets no image reference.
     onScreenCast: z.array(z.string().regex(/^@[\w_]+$/)).default([]),
     voiceOnlyCast: z.array(z.string().regex(/^@[\w_]+$/)).default([]),
+    // WIGGLY shot locks: per scene, who is present and each prop's one state (repeated word for word in every shot of the scene).
+    scenes: z.array(z.object({ shots: z.array(z.number().int().positive()).min(1), present: z.array(z.string()).default([]), props: z.array(z.string()).default([]) }).strict()).default([]),
     shots: z.array(InputShotSchema).min(1),
   }).strict()).min(1),
   characters: z.array(z.object({
@@ -64,6 +70,7 @@ export const SeedanceCompilerInput = z.object({
     imageTag: z.string().regex(/^@Image \d+$/),
     assetKey: KEY,
     mainOutfit: z.string().optional(),
+    visualTell: z.string().optional(), // WIGGLY: the Character Architect's distinct tell, part of the per-shot Look lock
   }).strict()).min(1),
   locations: z.array(z.object({
     settingName: z.string().min(1),
@@ -98,6 +105,7 @@ export function segmentCastPresence(seg, castTags) {
   const onScreen = new Set(), heard = new Set();
   for (const sh of seg?.shots ?? []) {
     for (const m of String(sh.whatWeSee ?? '').matchAll(/@[\w_]+/g)) if (!known.size || known.has(m[0])) onScreen.add(m[0]);
+    for (const t of sh.onScreen ?? []) if (!known.size || known.has(t)) onScreen.add(t);
     if (sh.dialogue?.speaker) (heardOnlyLine(sh.dialogue) ? heard : onScreen).add(sh.dialogue.speaker);
     if (sh.narration?.speaker) heard.add(sh.narration.speaker);
   }
@@ -116,11 +124,12 @@ export function selectSeedanceCompilerInput(state = {}) {
   const segments = (sd.segments ?? []).map((seg) => ({
     segmentId: seg.segmentId, title: seg.title, targetDurationSec: seg.targetDurationSec, goalSummary: seg.goalSummary, continuityLocks: seg.continuityLocks ?? [],
     ...segmentCastPresence(seg, castTags),
+    scenes: (seg.scenes ?? []).map(({ shots, present, props }) => ({ shots, present: present ?? [], props: props ?? [] })),
     shots: (seg.shots ?? []).map((sh) => {
       if (sh.location) current = sh.location;
       const o = { sceneId: `${seg.segmentId}.${sh.shotNumber}`, shotNumber: sh.shotNumber, startSec: sh.startSec, endSec: sh.endSec,
         location: current, whatWeSee: sh.whatWeSee, isContinuousMove: sh.isContinuousMove ?? false };
-      for (const k of ['framing', 'cameraAngle', 'cameraMove', 'whatWeHear', 'directorsNote', 'tag', 'dialogue', 'narration']) if (sh[k] !== undefined) o[k] = sh[k];
+      for (const k of ['framing', 'cameraAngle', 'cameraMove', 'whatWeHear', 'directorsNote', 'tag', 'onScreen', 'enters', 'exits', 'dialogue', 'narration']) if (sh[k] !== undefined) o[k] = sh[k];
       return o;
     }),
   }));
@@ -130,6 +139,7 @@ export function selectSeedanceCompilerInput(state = {}) {
     const o = { elementTag: c.elementTag, imageTag: c.imageTag, assetKey };
     const main = (c.outfits ?? []).find((x) => x.isMain);
     if (main) o.mainOutfit = main.description;
+    if (c.visualTell) o.visualTell = c.visualTell;
     return o;
   });
   const locations = (ls.locations ?? []).map((l) => {

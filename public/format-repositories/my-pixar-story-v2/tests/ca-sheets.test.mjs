@@ -8,9 +8,12 @@ import { selectCharacterArchitectInput } from '../crew/character-architect/input
 import { sheetState, runCaSheets } from '../scripts/run-ca-sheets.mjs';
 import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
 
+// r4-dry10 predates visual tells; its look-alikes (two boys, two adult women) get distinct tells drawn in the render (change 5).
+const TELLS = ['a bright green baseball cap', 'a striped orange scarf', 'a purple knitted cardigan', 'a yellow raincoat', 'a red bandana', 'a teal bomber jacket', 'white sneakers with pink laces'];
+const withTells = (o) => ({ ...o, characters: o.characters.map((c, i) => ({ ...c, visualTell: TELLS[i], masterRenderPrompt: { ...c.masterRenderPrompt, promptText: `${c.masterRenderPrompt.promptText} Tell: ${TELLS[i]}.` } })) });
 const sd = JSON.parse(readFileSync(new URL('../runs/r4-dry10/outputs/story-director.json', import.meta.url)));
-const ca = JSON.parse(readFileSync(new URL('../runs/r4-dry10/outputs/character-architect.json', import.meta.url)));
-const sheetsFx = readFileSync(new URL('../runs/r4-dry10-sheets/outputs/character-architect.json', import.meta.url), 'utf8');
+const ca = withTells(JSON.parse(readFileSync(new URL('../runs/r4-dry10/outputs/character-architect.json', import.meta.url))));
+const sheetsFx = JSON.stringify(withTells(JSON.parse(readFileSync(new URL('../runs/r4-dry10-sheets/outputs/character-architect.json', import.meta.url), 'utf8'))));
 
 test('model-sheet state passes mode, masterRenderRef and master prompts through the CA selector', () => {
   const input = selectCharacterArchitectInput(sheetState({ inputs: {}, storyDirector: sd, characters: ca }));

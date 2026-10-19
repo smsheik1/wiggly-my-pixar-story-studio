@@ -103,7 +103,7 @@ test('wisdom runs are broken by an on-screen action, never an inserted memory', 
 });
 test('speech-rate fixes lengthen or split the shot, never shorten the words', { timeout: 10000 }, () => {
   const m = budgetMessage('Segment 2, shot 1 (0s-3s)', 12, 3);
-  assert.match(m, /lengthen this shot to 4s/); assert.match(m, /split the line across two shots/); assert.match(m, /Never shorten or paraphrase/);
+  assert.match(m, /lengthen this shot to 5s/); assert.match(m, /1s lead-in and tail/); assert.match(m, /split the line across two shots/); assert.match(m, /Never shorten or paraphrase/);
   assert.ok(!/cut the line/.test(m));
   const role = readFileSync(new URL('../crew/story-director/role.md', import.meta.url), 'utf8');
   assert.match(role, /Never shorten, paraphrase or compress the family's words to fit a shot length/);

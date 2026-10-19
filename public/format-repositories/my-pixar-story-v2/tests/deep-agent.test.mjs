@@ -105,10 +105,11 @@ test('3 invalid submits in one attempt -> attempt fails with the specific Zod is
 }));
 
 test('r4-dry1 regression: Muse sent null for optional shot fields; tool schema accepts it and the submit validates', () => tmp(async () => {
-  // Recorded before finaleThesis, line sources and answerSources were required; add them so the test still isolates the null-tolerance behaviour.
+  // Recorded before finaleThesis, line sources, answerSources and the shot locks (scenes, onScreen) were required; add them so
+  // the test still isolates the null-tolerance behaviour.
   const args = { ...json('r4-dry1-story-director-submit-args.json'), finaleThesis: 'One plain sentence naming the finale idea.' };
-  args.segments = args.segments.map((seg) => ({ ...seg, answerSources: ['scene1Childhood.memory'],
-    shots: seg.shots.map((sh) => Object.fromEntries(Object.entries(sh).map(([k, v]) => [k, (k === 'dialogue' || k === 'narration') && v ? { ...v, source: { answer: 'scene1Childhood.memory', kind: 'paraphrase' } } : v]))) }));
+  args.segments = args.segments.map((seg) => ({ ...seg, answerSources: ['scene1Childhood.memory'], scenes: [{ shots: seg.shots.map((sh) => sh.shotNumber), present: [] }],
+    shots: seg.shots.map((sh) => ({ ...Object.fromEntries(Object.entries(sh).map(([k, v]) => [k, (k === 'dialogue' || k === 'narration') && v ? { ...v, source: { answer: 'scene1Childhood.memory', kind: 'paraphrase' } } : v])), onScreen: [] })) }));
   assert.equal(StoryDirectorOutputSchema.safeParse(args).success, false, 'raw args fail Zod (null on optional fields)');
   const subs = []; const t = makeSubmitTool('story-director', subs);
   assert.match(await t.invoke(args), /submitted/); assert.equal(subs.length, 1);

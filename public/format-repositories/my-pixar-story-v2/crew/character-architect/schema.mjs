@@ -63,6 +63,9 @@ export const CharacterSchema = z.object({
   skinTone: z.string().min(3),
   imageTag: z.string().regex(/^@Image \d+$/, "imageTag must look like '@Image 1'"),
   outfits: z.array(OutfitSchema).min(1),
+  // WIGGLY shot locks: one clear visible difference from any look-alike in the cast (hair, a garment, a colour, an accessory).
+  // Drawn in the master render word for word and repeated in every Seedance shot the character is in.
+  visualTell: z.string().trim().min(5).optional().describe("A distinct visible tell, e.g. 'a short silver bob' or 'a mustard-yellow cardigan'; required when another cast member could be confused with this one"),
 }).refine((d) => !(d.designSpecs.headsTall >= 6.5 && d.designSpecs.isChildProportionRiderApplied), {
   message: 'Bobblehead Anti-Pattern: Adult character (>=6.5 heads) cannot have child proportion rider applied!',
   path: ['designSpecs', 'isChildProportionRiderApplied'],

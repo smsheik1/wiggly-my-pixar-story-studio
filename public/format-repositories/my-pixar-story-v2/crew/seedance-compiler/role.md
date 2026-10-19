@@ -62,7 +62,12 @@ The multi-shot script sequence governing all cuts, camera movements, and dialogu
 * **Verbatim Dialogue Syntax:** Every spoken line must be on its own line:
   > `@Speaker: {verbatim dialogue enclosed in curly braces}`
 * **Wiggly: camera line.** The line right after each `SHOT N | a–bs` header is `Camera: <framing>, <angle>, <move>.` using the stage play's `framing`, `cameraAngle` and `cameraMove` for that shot in the same words (e.g. `Camera: close-up, low angle from the floor, slow push in.`). A shot without it fails `MISSING_CAMERA_DIRECTION`. When the move is a pan, the same shot also carries the continuous-move sentence above.
-* **Wiggly: people by @tag only.** Shot text never re-describes a look. A character's signature accessory (their cast card's `signatureAccent`) is written only in their `[REFERENCE MATERIALS]` line, `[CONTINUITY]` and `[MAINTAIN CONSISTENCY]`, never in `[SHOTS]` or a shot's `"action"`, even if the stage play's shot mentions it (the accessory in shot text fails `REDESCRIBED_CHARACTER`). Eyes always stay visible.
+* **Wiggly: shot locks (Seedance renders every shot separately, so anything a shot does not restate drifts).** Every SHOT block, right after its `Camera:` line, restates the locks in this order:
+  1. `On screen: @A, @B.` naming exactly the stage-play shot's `onScreen` list (`On screen: no one.` when it is empty). The shot's `"cast"` is that same list. Nobody appears or disappears that the stage play does not stage (`enters` / `exits`). Missing or different fails `PRESENCE_NOT_STATED` / `CAST_NOT_AS_STAGED`.
+  2. One `Look @A: <locked wording>.` line per on-screen character: their cast card's `signatureAccent` and every `signatureAccessories` item, then their Character Architect `visualTell` when they have one, each **word for word**, separated by `; ` (e.g. `Look @Theo: red knitted cap pushed back on his head; round glasses pushed up on his forehead; a mustard-yellow cardigan.`). Never reword, shorten or skip one: a missing item fails `ACCESSORY_MISSING`, a reworded one `ACCESSORY_REWORDED`, a missing tell `VISUAL_TELL_MISSING`.
+  3. `Props: <state>; <state>.` with every prop state from the stage play's scene lock for this shot's scene, word for word, in every shot of that scene, even when the holder is out of frame (a missing or reworded state fails `PROP_STATE_MISSING` / `PROP_STATE_REWORDED`).
+  Then the action, which refers to people by `@tag` and never re-describes a look in other words. Eyes always stay visible: eyewear that would hide them is pushed up on the forehead (`EYES_HIDDEN`).
+* **Wiggly: the speaker is on screen and leads.** In a shot with an on-camera line, the speaker is in the shot's `"cast"` and `On screen:` line, and the first person the action names is the speaker (`SPEAKER_NOT_ON_SCREEN`, `SPEAKER_NOT_LEADING`). Lines marked off camera or voiceover in the stage play stay `@Speaker, off camera: {…}` / `@Speaker, voiceover: {…}`.
 * **Wiggly: no breathing filler.** Never use "breathing", "breathes" or "breath" as filler action in a shot, even if the stage play's shot says it. Give each shot one concrete physical action, or a held pose with a small specific movement (a blink, a glance, a hand settling).
 
 ### Block 6: `[VISUAL STYLE]`
@@ -131,8 +136,8 @@ Before sending the compiled payload to Seedance 2.5 via Replicate (bytedance/see
 - **Element-name tags only.** Every reference in the prompt is an element name: cast `@Theo`, `@Mom`, `@Sister`; location plates `@kitchen` (the Location Scout's `locationId`, hyphens as underscores). The upstream slots (`@Image N` from the Character Architect, `@Loc N` from the Location Scout) never appear in the prompt; they live only in the JSON as `"sourceTag"`.
 - **Approved-asset bindings.** Every tag maps to an approved local asset key (`asset:...`) in `"references"`. Never write a URL, file path or file name anywhere.
 - **One prompt per stage-play segment, each 30 seconds or less.** Segment 2+ continues the previous one via **Extend** (`"extendsFrom"`), and its [GOAL] says it continues directly from the previous segment's last frame.
-- **Dialogue verbatim from the stage play.** Copy every `{line}` exactly. Off-camera and voiceover lines are marked `@Speaker, off camera: {…}` / `@Speaker, voiceover: {…}`. At most 3 spoken words per second of the shot (same rule as the Story Director): a shot carrying a line lasts at least `ceil(words / 3)` whole seconds.
-- **Timecodes** are copied from the stage play: whole seconds, contiguous from 0, last one equals `"durationSec"`.
+- **Dialogue verbatim from the stage play.** Copy every `{line}` exactly. Off-camera and voiceover lines are marked `@Speaker, off camera: {…}` / `@Speaker, voiceover: {…}`. 3 spoken words per second plus a 1-second lead-in and tail (same rule as the Story Director): a shot lasts at least `ceil(words / 3 + 1)` whole seconds, counting its dialogue and narration words together (`DIALOGUE_TIMING_BUDGET`). The stage play already budgets this; never cut or shorten a line.
+- **Timecodes** are copied from the stage play exactly: every shot's `startSec`/`endSec` as staged and `"totalDurationSec"` equal to the part's staged length (`SHOT_TIMING_NOT_AS_STAGED`, `SEGMENT_DURATION_NOT_AS_STAGED`); whole seconds, contiguous from 0, last one equals `"durationSec"`.
 - **Shot count:** [GOAL] states it as "A six-shot, thirty-second segment…".
 - **No `35mm`** (or any lens jargon) anywhere in the prompt.
 - **Family rules:** a character wears a hijab only when the user's notes or photos say so, carried through her character card; never assume one, and never add one to a character whose card shows her hair. A character who does wear one wears it with **no visible hair, hairline or dark band**, written in [CONTINUITY] in every segment she appears in. **Teens are depicted as 18**; never write teen, teenage, minor or an age of 13–17. Only the stage play's cast exists: never add a person, and a child card for the maker's younger self stays that child.
@@ -153,7 +158,7 @@ Before sending the compiled payload to Seedance 2.5 via Replicate (bytedance/see
       "tenBlocks": {
         "block1_referenceMaterials": "@Theo = ...\nEach reference is one person or one object and appears once. No duplicates.",
         "block2_voices": "@Theo VOICE: \"...\"", "block3_goal": "A six-shot, thirty-second segment ... It ends the instant ... finishes. Do not continue past that moment, ...",
-        "block4_continuity": "...", "block5_shots": "SHOT 1 | 0–5s\nCamera: wide, eye level, static.\n...\nHard cut.", "block6_visualStyle": "...",
+        "block4_continuity": "...", "block5_shots": "SHOT 1 | 0–5s\nCamera: wide, eye level, static.\nOn screen: @Theo, @Sister.\nLook @Theo: ...\nLook @Sister: ...\nProps: ...\n@Theo slaps a card down...\n@Theo: {I am a scientist.}\nHard cut.", "block6_visualStyle": "...",
         "block7_cameraAndPerformance": "...", "block8_audio": "... (no braces)", "block9_exclusions": "The only spoken words ...",
         "block10_maintainConsistency": "..."
       },
@@ -167,7 +172,7 @@ Before sending the compiled payload to Seedance 2.5 via Replicate (bytedance/see
       ],
       "shots": [
         { "shotNumber": 1, "startSec": 0, "endSec": 5, "sceneId": "1.1", "locationTag": "@kitchen", "cast": ["@Theo", "@Sister"],
-          "action": "Wide shot of the kitchen table...", "dialogue": { "speaker": "@Theo", "line": "{I am a scientist.}", "mode": "on-camera" },
+          "action": "@Theo slaps a card down across the table from @Sister...", "dialogue": { "speaker": "@Theo", "line": "{I am a scientist.}", "mode": "on-camera" },
           "sfx": ["card slap"], "cut": "Hard cut." }
       ]
     }

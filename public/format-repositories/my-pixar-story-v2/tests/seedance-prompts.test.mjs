@@ -117,7 +117,7 @@ test('MISSING_EXTEND, MISSING_SEGMENT, SHOT_HEADER_MISMATCH', () => {
 test('warnings: hard narrative stop, animation physics, continuous pan', () => {
   const d = T(out(), (t) => t.replace(/It ends the instant[^.]*\./, ''), 0, 'block3_goal');
   T(d, (t) => t.replace('Anticipation: every move winds the opposite way first. ', ''), 0, 'block7_cameraAndPerformance');
-  T(d, (t) => t.replace('Medium on Shaz lowering', 'Slow pan to Shaz lowering'), 0, 'block5_shots');
+  T(d, (t) => t.replace('@Shaz lowers his chin very slowly.', '@Shaz lowers his chin as the camera does a slow pan.'), 0, 'block5_shots');
   const r = gate(d);
   for (const c of ['MISSING_HARD_NARRATIVE_STOP', 'MISSING_ANIMATION_PHYSICS', 'UNMARKED_CONTINUOUS_PAN']) assert.ok(r.issues.some((i) => i.code === c && i.severity === 'warning'), c);
   assert.ok(!gate(T(out(), (t) => t.replace('fridge on', 'pantry and fridge on'))).issues.some((i) => i.code === 'UNMARKED_CONTINUOUS_PAN'));

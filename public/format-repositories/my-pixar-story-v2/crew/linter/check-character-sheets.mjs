@@ -7,6 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { IMAGE_ENGINE, SHEET_MIN, SHEET_MAX, SHEET_EXPRESSIONS } from '../character-architect/schema.mjs';
+import { checkVisualTells } from './shot-locks.mjs';
 
 export const MASTER_OPENING = 'A single-character full-body render from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon.';
 export const TEMPLATE_LABELS = ['Eyes:', 'Eyebrows:', 'Face:', 'Subject:', 'Skin:', 'Hands:', 'Silhouette:', 'Hair:', 'Wardrobe:', 'Pose:', 'Camera:', 'Background:'];
@@ -122,6 +123,8 @@ export function validateCharacterSheets(data, story) {
       }
     } else if (sheet !== undefined) err('WRONG_MODE', `${c.elementTag}: master-render mode outputs master renders only.`, `${p}.modelSheetPrompt`);
   });
+  // WIGGLY shot locks: look-alikes get distinct visual tells, drawn in the master render.
+  issues.push(...checkVisualTells(chars));
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
   const warnings = issues.filter((i) => i.severity === 'warning').map((i) => i.message);
   return { isValid: errors.length === 0, errors, warnings, issues };

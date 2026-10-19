@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { validateWritingTells } from './writing-tells.mjs';
+import { checkStageShotLocks, onScreenOf } from './shot-locks.mjs';
 import { words, lcs, answerSentences, NEAR_VERBATIM, checkAnswerSources, checkExtraCast } from './answer-sources.mjs';
 export { answerSentences, NEAR_VERBATIM };
 // v2 deterministic validation gate for Story Director output.
@@ -31,7 +32,7 @@ export const BANNED_JARGON = [
   ['unreal engine', /\bunreal engine\b/i, 'leave render engines out'],
 ];
 /** Whole-second budget for a spoken line (Gemini: 3–5 words = 2 s). null = too long for one shot. */
-// Shared 3 words/sec rate (crew/linter/speech.mjs); same rule as the Seedance Compiler gate.
+// Shared speech rate (3 words/sec + 1s lead/tail pad, crew/linter/speech.mjs); same rule as the Seedance Compiler gate.
 export function lineBudget(words) { return words > MAX_LINE_WORDS ? null : secondsNeeded(words); }
 // WIGGLY storyboard sheets -------------------------------------------------------
 export const SHEET_OPENING = "An eight-panel colour storyboard sheet";
@@ -181,10 +182,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
         const line = String(d.line ?? '').trim();
         if (!/^\{.+\}$/.test(line))
           err('UNBRACKETED_DIALOGUE', `Shot ${n}: dialogue line must be enclosed in curly braces {}.`, `${p}.${k}`);
-        const words = countWords(line);
-        const need = lineBudget(words);
-        if (need === null) err('DIALOGUE_TIMING_BUDGET', `Shot ${n}: ${words}-word line is too long for one shot (max ${MAX_LINE_WORDS} words); split it across two shots.`, `${p}.${k}`);
-        else if (dur < need) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`Segment ${seg.segmentId ?? si + 1}, shot ${n} (${shot.startSec}s-${shot.endSec}s)`, words, dur), `${p}.${k}`);
+        // speech length per shot (dialogue + narration + lead/tail pad): checkStageShotLocks
       }
       // WIGGLY: camera direction + defined location on every shot.
       for (const k of ['framing', 'cameraAngle', 'cameraMove']) if (!String(shot[k] ?? '').trim())
@@ -202,7 +200,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
         if (bare && new RegExp(`(?<![@\\w])${bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(String(shot.whatWeSee ?? '').replace(/@[\w_]+/g, '')))
           err('UNTAGGED_CHARACTER', `Shot ${n} in segment ${seg.segmentId} names '${bare}' without the tag. Write ${c.elementTag}.`, `${p}.whatWeSee`);
       }
-      const onScreen = new Set((String(shot.whatWeSee ?? '').match(/@[\w_]+/g) ?? []).filter((t) => tags.has(t)));
+      const onScreen = new Set([...(String(shot.whatWeSee ?? '').match(/@[\w_]+/g) ?? []), ...onScreenOf(shot, tags)].filter((t) => tags.has(t)));
       if (onScreen.size > MAX_ON_SCREEN)
         err('TOO_MANY_ON_SCREEN', `Shot ${n} in segment ${seg.segmentId} shows ${onScreen.size} characters (${[...onScreen].join(', ')}); max ${MAX_ON_SCREEN} on screen. Others are heard off-camera (whatWeHear / isOffCamera dialogue) or get their own shot.`, `${p}.whatWeSee`);
       if (shot.dialogue && RESUME_LINE.test(shot.dialogue.line ?? ''))
@@ -256,7 +254,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
       warn('WEAK_SIGNATURE_ACCENT', `Cast ${c.elementTag ?? c.name}: signature accent is missing or too vague.`, p);
     if (c.age >= 13 && c.age <= 17)
       err('UNDERAGE_DEPICTION', `Cast ${c.elementTag ?? c.name} is age ${c.age}; teens are depicted as 18.`, p);
-    if ([c.physicalDescription, c.signatureAccent].some((look) => new RegExp(DARK_EYEWEAR, 'i').test(look ?? '') && (EYES_HIDDEN.test(look) || !/forehead|pushed up/i.test(look))))
+    if ([c.physicalDescription, c.signatureAccent, ...(c.signatureAccessories ?? [])].some((look) => new RegExp(DARK_EYEWEAR, 'i').test(look ?? '') && (EYES_HIDDEN.test(look) || !/forehead|pushed up/i.test(look))))
       err('EYES_HIDDEN', `Cast ${c.elementTag ?? c.name}: eyewear that would hide the eyes must be described as pushed up on the forehead, never over the eyes.`, p);
     if (c.age === 18 && !c.ageNote)
       err('MISSING_TRUE_AGE', `Cast ${c.elementTag}: shown as 18; record the true age from the answers math in ageNote (e.g. 'true age 15, 7 years older than the maker at 8').`, p);
@@ -280,6 +278,8 @@ export function validateStoryDirectorOutput(data, input = {}) {
       err('EYES_HIDDEN', `Storyboard sheet ${si + 1} panel ${pn.panelNumber ?? i + 1}: eyes must stay visible; eyewear that would hide them sits pushed up on the forehead.`, `storyboardSheets.${si}.panels.${i}`);
   }));
 
+  // WIGGLY shot locks: who is on screen, scene locks, entrances/exits, speaker on screen and leading, speech length.
+  issues.push(...checkStageShotLocks(data));
   // WIGGLY answer tracing: every line cites the answer it comes from; only people the family names are cast.
   issues.push(...checkAnswerSources(data, input), ...checkExtraCast(data, input));
   issues.push(...validateWritingTells('story-director', data));

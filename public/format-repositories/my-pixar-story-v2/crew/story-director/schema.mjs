@@ -26,6 +26,14 @@ export const LineSourceSchema = z.object({
 export const DialogueSchema = DialogueLineSchema.extend({ source: LineSourceSchema });
 export const NarrationSchema = NarrationLineSchema.extend({ source: LineSourceSchema });
 
+const TAG_RE = /^@[\w_]+$/;
+// WIGGLY shot locks: one lock per scene (a run of consecutive shots in one place) that every shot of the scene repeats.
+export const SceneLockSchema = z.object({
+  shots: z.array(z.number().int().positive()).min(1).describe('The consecutive shotNumbers of this scene'),
+  present: z.array(z.string().regex(TAG_RE)).describe('Cast @tags in the scene (in the room, even when out of frame in a shot)'),
+  props: z.array(z.string().trim().min(5)).default([]).describe("Each prop that matters with its ONE state for the whole scene, written once and repeated word for word downstream, e.g. \"the phone held flat in @Theo's right hand, screen lit\". A state change starts a new scene"),
+});
+
 export const ShotCardSchema = z.object({
   shotNumber: z.number().int().positive().describe('Sequential shot number within the segment'),
   startSec: z.number().int().nonnegative().describe('Start timecode in whole integer seconds'),
@@ -40,6 +48,10 @@ export const ShotCardSchema = z.object({
   whatWeHear: z.string().optional().describe('Foley, room tone, or music cues; mandatory on silent shots'),
   dialogue: DialogueSchema.optional(),
   narration: NarrationSchema.optional(), // WIGGLY
+  // WIGGLY shot locks: exactly who is in frame, and the only way someone arrives or leaves mid-scene.
+  onScreen: z.array(z.string().regex(TAG_RE)).describe('Exactly the cast @tags in frame in this shot (the same people whatWeSee names); [] for nobody. An on-camera speaker is always here'),
+  enters: z.array(z.string().regex(TAG_RE)).optional().describe('Cast @tags who arrive in this shot (they are on screen here and not earlier in the scene)'),
+  exits: z.array(z.string().regex(TAG_RE)).optional().describe('Cast @tags who leave in this shot (on screen here, not later in the scene)'),
   directorsNote: z.string().optional().describe('Explains consequence: what breaks if this shot is got wrong'),
   isContinuousMove: z.boolean().default(false).describe('True if camera move is unbroken across the entire duration'),
 }).refine((shot) => shot.endSec > shot.startSec, { message: 'endSec must be strictly greater than startSec' });
@@ -51,6 +63,7 @@ export const ScriptSegmentSchema = z.object({
   goalSummary: z.string().min(10).describe('2-3 sentences explaining goal, shot count, and the hard narrative stop'),
   continuityLocks: z.array(z.string()).min(1).describe('Character counts, seating positions, 180-degree axis lock'),
   // WIGGLY answer tracing: the answers whose memories this part depicts.
+  scenes: z.array(SceneLockSchema).min(1).describe('WIGGLY shot locks: every shot in exactly one scene, in order'),
   answerSources: z.array(z.string().trim().min(1)).min(1).describe("Answer ids (key paths inside input.json answers) whose memories this part depicts, e.g. ['scene1Childhood.memory']"),
   shots: z.array(ShotCardSchema).min(1).describe('Ordered shot sequence'),
 }).refine((segment) => {
@@ -68,6 +81,8 @@ export const CastCardSchema = z.object({
   oneWordRole: z.string().min(2).describe("e.g. 'presenter', 'teacher', 'father'"),
   physicalDescription: z.string().min(20).describe('Plain visual description anyone could draw from; no non-visual adjectives'),
   signatureAccent: z.string().min(5).describe('One worn/attached item carrying the only saturated color in an otherwise muted palette'),
+  // WIGGLY shot locks: everything else this person always wears, each written once exactly as worn; repeated word for word in every shot they are on screen.
+  signatureAccessories: z.array(z.string().trim().min(3)).default([]).describe("Other items they always wear, exactly as worn, e.g. 'navy hijab fully covering the hair and hairline', 'round glasses pushed up on the forehead'"),
   voiceDescription: z.string().min(20).describe('Age, nationality, timbre, pace, delivery, emotional shifts'),
   // WIGGLY
   skinTone: z.string().min(3).describe('Plain-words skin tone; repeated in every panel and shot that shows them'),

@@ -26,6 +26,7 @@
       "oneWordRole": "scientist",
       "physicalDescription": "Small round-faced boy, short black hair, red plastic sunglasses pushed up on his forehead, plain red t-shirt.",
       "signatureAccent": "red plastic sunglasses pushed up on his forehead",
+      "signatureAccessories": [],
       "voiceDescription": "Eight-year-old boy, flat declarative delivery, total conviction, quick pace.",
       "skinTone": "warm medium brown",
       "gender": "male",
@@ -40,6 +41,9 @@
       "oneWordRole": "mother",
       "physicalDescription": "Kind round face, soft blue hijab fully covering hair and hairline, long modest dress.",
       "signatureAccent": "soft blue hijab",
+      "signatureAccessories": [
+        "soft blue hijab fully covering the hair and hairline"
+      ],
       "voiceDescription": "Warm adult woman, gentle teasing tone, slow pace, quiet laugh.",
       "skinTone": "warm medium brown",
       "gender": "female",
@@ -54,6 +58,9 @@
       "oneWordRole": "rival",
       "physicalDescription": "Young woman, grey hijab fully covering hair and hairline, oversized hoodie.",
       "signatureAccent": "yellow hoodie strings",
+      "signatureAccessories": [
+        "grey hijab fully covering the hair and hairline"
+      ],
       "voiceDescription": "Eighteen-year-old, dry deadpan delivery, unimpressed, clipped lines.",
       "skinTone": "light warm brown",
       "gender": "female",
@@ -73,6 +80,26 @@
         "Shaz screen-left, Sister screen-right at the kitchen table",
         "180-degree line along the table edge"
       ],
+      "scenes": [
+        {
+          "shots": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "present": [
+            "@Shaz",
+            "@Sister",
+            "@Mom"
+          ],
+          "props": [
+            "a short stack of playing cards face up in the middle of the kitchen table"
+          ]
+        }
+      ],
       "answerSources": [
         "scene1Childhood.memory"
       ],
@@ -85,6 +112,10 @@
           "isContinuousMove": false,
           "location": "Kitchen",
           "whatWeHear": "Card slap, fridge hum.",
+          "onScreen": [
+            "@Shaz",
+            "@Sister"
+          ],
           "framing": "wide",
           "cameraAngle": "eye level",
           "cameraMove": "static"
@@ -94,6 +125,9 @@
           "startSec": 5,
           "endSec": 9,
           "whatWeSee": "@Shaz pushes his sunglasses higher up his forehead very slowly.",
+          "onScreen": [
+            "@Shaz"
+          ],
           "isContinuousMove": false,
           "dialogue": {
             "speaker": "@Shaz",
@@ -115,6 +149,9 @@
           "startSec": 9,
           "endSec": 14,
           "whatWeSee": "@Sister stays unimpressed, one slow blink.",
+          "onScreen": [
+            "@Sister"
+          ],
           "isContinuousMove": false,
           "dialogue": {
             "speaker": "@Sister",
@@ -137,6 +174,9 @@
           "startSec": 14,
           "endSec": 20,
           "whatWeSee": "@Shaz taps his sunglasses up on his forehead and slaps a second card.",
+          "onScreen": [
+            "@Shaz"
+          ],
           "isContinuousMove": false,
           "dialogue": {
             "speaker": "@Shaz",
@@ -160,6 +200,12 @@
           "whatWeSee": "@Mom appears in the doorway holding a tea towel, watching.",
           "isContinuousMove": false,
           "whatWeHear": "No dialogue in this shot; kettle starts to whistle.",
+          "onScreen": [
+            "@Mom"
+          ],
+          "enters": [
+            "@Mom"
+          ],
           "location": "Kitchen",
           "framing": "wide",
           "cameraAngle": "eye level",
@@ -170,6 +216,9 @@
           "startSec": 24,
           "endSec": 30,
           "whatWeSee": "@Mom nods seriously, holding back a smile, breathing.",
+          "onScreen": [
+            "@Mom"
+          ],
           "isContinuousMove": false,
           "dialogue": {
             "speaker": "@Mom",
@@ -196,6 +245,22 @@
       "continuityLocks": [
         "Same kitchen, same screen sides"
       ],
+      "scenes": [
+        {
+          "shots": [
+            1,
+            2,
+            3
+          ],
+          "present": [
+            "@Shaz",
+            "@Sister"
+          ],
+          "props": [
+            "a clear glass of water held like a beaker in @Shaz's right hand"
+          ]
+        }
+      ],
       "answerSources": [
         "scene5LegacyFinale.memory"
       ],
@@ -205,6 +270,9 @@
           "startSec": 0,
           "endSec": 6,
           "whatWeSee": "@Shaz marches to the window holding a cup of water like a beaker.",
+          "onScreen": [
+            "@Shaz"
+          ],
           "isContinuousMove": false,
           "narration": {
             "speaker": "@Shaz",
@@ -226,6 +294,9 @@
           "whatWeSee": "@Sister pushes a pair of sunglasses up onto her forehead too.",
           "isContinuousMove": false,
           "whatWeHear": "No dialogue in this shot; chair creak.",
+          "onScreen": [
+            "@Sister"
+          ],
           "location": "Kitchen",
           "framing": "close-up",
           "cameraAngle": "eye level",
@@ -243,9 +314,13 @@
           "shotNumber": 3,
           "startSec": 10,
           "endSec": 16,
-          "whatWeSee": "Held image: the three of them in afternoon light, slow breathing, sunglasses glinting on foreheads.",
+          "whatWeSee": "@Shaz and @Sister stand at the window in afternoon light, cups raised like beakers.",
           "isContinuousMove": true,
           "whatWeHear": "Soft music swell.",
+          "onScreen": [
+            "@Shaz",
+            "@Sister"
+          ],
           "location": "Kitchen",
           "framing": "wide",
           "cameraAngle": "slightly high angle",

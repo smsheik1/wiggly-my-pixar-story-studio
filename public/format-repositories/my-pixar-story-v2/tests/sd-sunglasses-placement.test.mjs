@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateStoryDirectorOutput } from '../crew/linter/check-stage-play.mjs';
-import { WORDS_PER_SECOND, MAX_LINE_WORDS } from '../crew/linter/speech.mjs';
+import { WORDS_PER_SECOND, MAX_LINE_WORDS, SPEECH_PAD_SEC } from '../crew/linter/speech.mjs';
 
 const role = readFileSync(new URL('../crew/story-director/role.md', import.meta.url), 'utf8');
 const good = () => JSON.parse(readFileSync(new URL('./fixtures/good-stage-play.json', import.meta.url)));
@@ -29,6 +29,6 @@ test('storyboard panel with "sunglasses pushed up on his forehead" passes', () =
 test('role.md states the same speech budget the DIALOGUE_TIMING_BUDGET gate uses', () => {
   assert.equal(WORDS_PER_SECOND, 3); assert.equal(MAX_LINE_WORDS, 18);
   assert.match(role, new RegExp(`${WORDS_PER_SECOND} words per second`));
-  assert.match(role, new RegExp(`ceil\\(words / ${WORDS_PER_SECOND}\\)`));
+  assert.match(role, new RegExp(`ceil\\(words / ${WORDS_PER_SECOND} \\+ ${SPEECH_PAD_SEC}\\)`));
   assert.match(role, new RegExp(`longer than ${MAX_LINE_WORDS} words must be split`));
 });
