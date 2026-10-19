@@ -126,7 +126,8 @@ class RoleModel extends ScriptedModel {
     this.calls.push(messages);
     const all = text(messages), last = messages.at(-1);
     let msg;
-    if (/reviewing your own draft/.test(String(messages[0]?.content))) { this.kinds.push('critique'); this.onCritique(all); msg = say(this.q.critiques.shift()); }
+    if (/Cold Read/i.test(String(messages[0]?.content))) { this.kinds.push('cold-read'); msg = say('1. Setup & payoff: PASS\n2. Referents: PASS\n3. Time framing: PASS\n4. Finale clarity: PASS'); }
+    else if (/reviewing your own draft/.test(String(messages[0]?.content))) { this.kinds.push('critique'); this.onCritique(all); msg = say(this.q.critiques.shift()); }
     else if ((last?.getType?.() ?? last?._getType?.()) === 'tool') { this.kinds.push('after-submit'); msg = say('Done.'); }
     else if (/Revise your story-director draft/.test(all)) { this.kinds.push('rewrite'); msg = call(SUBMIT, this.q.revisions.shift()); }
     else { this.kinds.push('draft'); this.onDraft(all); msg = call(SUBMIT, this.q.draft.shift()); }
@@ -142,7 +143,7 @@ test('graph: a gate-failing first draft fixed by the revisions passes on attempt
     critiques: ['1. Finale has no narration. VERDICT: REVISE', '1. Still no narration. VERDICT: REVISE'], onCritique: (t) => critiqueTexts.push(t) })));
   const s = await buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'g1' }, onEvent: (e) => events.push(e) }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
-  assert.deepEqual(sd.kinds.filter((k) => k !== 'after-submit'), ['draft', 'critique', 'rewrite', 'critique', 'rewrite']);
+  assert.deepEqual(sd.kinds.filter((k) => k !== 'after-submit'), ['draft', 'cold-read', 'critique', 'rewrite', 'cold-read', 'critique', 'rewrite']);
   assert.match(critiqueTexts[0], /FINALE_TOO_THIN/); assert.match(critiqueTexts[0], /Thin draft/); assert.match(critiqueTexts[1], /Still thin/);
   assert.equal(s.attempts['story-director'], 1); assert.equal(s.storyDirector.masthead.title, 'Fixed');
   assert.ok(!s.gateIssues['story-director'].some((i) => i.code === 'FINALE_TOO_THIN'));

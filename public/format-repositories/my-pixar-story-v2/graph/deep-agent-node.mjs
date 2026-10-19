@@ -21,6 +21,7 @@ import { CharacterArchitectOutputSchema } from '../crew/character-architect/sche
 import { LocationScoutOutputSchema } from '../crew/location-scout/schema.mjs';
 import { SeedanceCompilerOutputSchema, SeedanceSubmitSchema, withAssembledPrompts } from '../crew/seedance-compiler/schema.mjs';
 import { loadSkill, loadReview, outputCap } from '../config/models.mjs';
+import { runColdRead } from './cold-read.mjs';
 
 export const RUNS_ROOT = fileURLToPath(new URL('../runs/', import.meta.url));
 export const OUTPUT_SCHEMAS = {
@@ -247,7 +248,7 @@ export const runtimeNote = cutQuotaNote;
  * With a review rubric (crew/<agent>/REVIEW.md, loadReview) the call is an editor's pass: score each rubric item
  * PASS/FAIL with evidence, list at most 8 fixes, end on VERDICT. Without one it uses the generic focus list.
  */
-export function critiqueMessages({ agent, skill, review = null, input, draft, round, rounds, gateIssues = [], trace = '', scope = '', firstRuntime = null, prevDraft = null }) {
+export function critiqueMessages({ agent, skill, review = null, input, draft, round, rounds, gateIssues = [], trace = '', scope = '', firstRuntime = null, prevDraft = null, coldNotes = '' }) {
   const focus = REFLECTION_FOCUS[agent] ?? REFLECTION_FOCUS.default;
   const gate = gateIssues.filter((i) => i.severity === 'error');
   const warns = gateIssues.filter((i) => i.severity === 'warning');
@@ -266,6 +267,7 @@ export function critiqueMessages({ agent, skill, review = null, input, draft, ro
       gate.length ? `The deterministic gate currently fails this draft; the rewrite must fix these:\n${gate.map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n')}` : 'The deterministic gate currently passes this draft; the rewrite must keep it passing.',
       ...(review && warns.length ? [`Gate warnings (not blocking; check each against the rubric and list a fix only if it is a real problem):\n${warns.map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n')}`] : []),
       ...(rt ? [rt] : []),
+      ...(coldNotes ? [`Cold viewer notes (a first-time viewer read the script without the answers; turn real issues into FIXES, ignore notes that are wrong):\n${coldNotes}`] : []),
       ...(trace ? ['Line-by-line trace of the draft against the answers (from the deterministic checker; "match" is word overlap with the cited answer):', trace] : []),
       ...(review
         ? ['Review the draft with your rubric: read it once as a viewer, then answer R1 to R9 in order, PASS or FAIL with exact evidence, then FIXES (at most 8, most important first, cuts before additions), in the rubric\'s reply format.']
@@ -367,12 +369,14 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     let stoppedEarly = false;
     for (let round = 1; round <= rounds; round++) {
       if (signal?.aborted) throw signal.reason ?? new Error('aborted');
+      const cold = await runColdRead({ agent, config, draft: out, model, round, attempt, signal, dir, rel, scope });
       const meta = { runName: `${agent} reflection round ${round} critique`, tags: [`agent:${agent}`, `attempt:${attempt}`, `reflection:${round}`], metadata: { agent, attempt, reflectionRound: round }, signal };
       let tr = null;
       try { tr = trace ? trace(out) : null; } catch { tr = null; }
-      const critique = replyText(await model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime, prevDraft }), meta)).trim();
+      const critique = replyText(await model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime, prevDraft, coldNotes: cold?.notes ?? '' }), meta)).trim();
       await writeFile(join(dir, `round-${round}-critique.md`), critique + '\n');
       const entry = { round, critique, critiqueFile: rel(`round-${round}-critique.md`), gateErrorsBefore: gateIssues.filter((i) => i.severity === 'error').length };
+      if (cold) { entry.coldRead = cold.notes; entry.coldReadFile = cold.file; }
       if (tr?.data) { entry.trace = tr.data; entry.untraceable = parseUntraceable(critique); }
       entry.verdict = parseVerdict(critique); entry.fixes = countFixes(critique); entry.runtimeBefore = runtimeOf(out);
       if (shipsAsIs(critique, gateIssues)) {
