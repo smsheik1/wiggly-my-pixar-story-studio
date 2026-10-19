@@ -88,6 +88,7 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
     if (o) await writeFile(join(dir, `${agent}.json`), JSON.stringify(o, null, 2));
     log(`  ${agent}: ${summarize(agent, o)} (attempts ${state.attempts?.[agent] ?? 0}, retries ${state.retryCounts?.[agent] ?? 0})`);
   }
+  if (Object.keys(state.reflections ?? {}).length) await writeFile(join(dir, 'reflections.json'), JSON.stringify(state.reflections, null, 2));
   await writeFile(join(dir, 'state.json'), JSON.stringify({ status: state.status, placeholderAssets: usePlaceholderAssets, approvedAssets: state.approvedAssets, pendingApproval: state.pendingApproval, retryCounts: state.retryCounts, escalations: state.escalations, validationErrors: state.validationErrors }, null, 2));
   const report = join(runDir, 'report.html');
   await writeFile(report, reportHtml(rec.model));

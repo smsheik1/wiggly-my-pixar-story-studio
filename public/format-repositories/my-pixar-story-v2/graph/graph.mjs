@@ -6,7 +6,7 @@ import { RunnableLambda } from '@langchain/core/runnables';
 import { StateGraph, START, END, interrupt } from '@langchain/langgraph';
 import { PipelineAnnotation } from './state.mjs';
 import { withWatchdog } from './liveness.mjs';
-import { deepAgentInvoke } from './deep-agent-node.mjs';
+import { deepAgentInvoke, REFLECTION } from './deep-agent-node.mjs';
 import { V2_MODELS, loadSkill } from '../config/models.mjs';
 import { selectStoryDirectorInput } from '../crew/story-director/input.mjs';
 import { parseStagePlay } from '../crew/story-director/schema.mjs';
@@ -106,12 +106,14 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
     let issues = [];
     let kept = null;
     const log = [];
+    const reflections = []; // per attempt: the agent's own critiques (deepAgentInvoke with reflectionRounds > 0)
+    const withReflections = (o) => (reflections.length ? { ...o, reflections: { [agent]: reflections } } : o);
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       if (attempt > 1) log.push({ node: agent, attempt: attempt - 1, errors: issues, timestamp: now() });
       ev({ type: 'attempt', attempt, input });
       const done = (o) => ev({ type: 'attempt-result', attempt, ...o });
       let raw;
-      const req = { agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state };
+      const req = { agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state, gate: (o) => spec.gate(o, input, state) };
       let transient = 0;
       for (;;) {
         try { raw = await traced(req); break; } catch (e) {
@@ -119,6 +121,8 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
           raw = { __error: e }; break;
         }
       }
+      const refl = raw && typeof raw === 'object' ? raw[REFLECTION] : undefined;
+      if (refl) { reflections.push({ attempt, ...refl }); ev({ type: 'reflection', attempt, rounds: refl.rounds, log: refl.log }); }
       try { if (raw && raw.__error) throw raw.__error; } catch (e) {
         issues = Array.isArray(e.issues) && e.issues.length ? e.issues : [{ severity: 'error', code: e.code === 'MODEL_TIMEOUT' ? 'MODEL_TIMEOUT' : 'AGENT_RUN_FAILED', message: `model call failed: ${e.message}` }];
         done({ output: null, issues }); continue;
@@ -131,14 +135,14 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
       if (spec.merge) out = spec.merge(kept, out, state);
       const r = spec.gate(out, input, state);
       done({ output: out, issues: r.issues, isValid: r.isValid });
-      if (r.isValid) { ev({ type: 'passed', attempt }); return { ...spec.write(out), attempts: { [agent]: attempt }, retryCounts: { [agent]: attempt - 1 }, gateIssues: { [agent]: r.issues }, validationErrors: log }; }
+      if (r.isValid) { ev({ type: 'passed', attempt }); return withReflections({ ...spec.write(out), attempts: { [agent]: attempt }, retryCounts: { [agent]: attempt - 1 }, gateIssues: { [agent]: r.issues }, validationErrors: log }); }
       issues = r.issues;
       if (spec.carry) kept = { ...(kept ?? {}), ...spec.carry(out, issues) };
     }
     log.push({ node: agent, attempt: maxAttempts, errors: issues, timestamp: now() });
     ev({ type: 'failed', attempt: maxAttempts, issues });
-    return { status: 'failed', attempts: { [agent]: maxAttempts }, retryCounts: { [agent]: maxAttempts - 1 }, gateIssues: { [agent]: issues }, validationErrors: log,
-      escalations: [{ agent, reason: `failed the gate ${maxAttempts} times`, attempts: maxAttempts, issues }] };
+    return withReflections({ status: 'failed', attempts: { [agent]: maxAttempts }, retryCounts: { [agent]: maxAttempts - 1 }, gateIssues: { [agent]: issues }, validationErrors: log,
+      escalations: [{ agent, reason: `failed the gate ${maxAttempts} times`, attempts: maxAttempts, issues }] });
   };
 }
 

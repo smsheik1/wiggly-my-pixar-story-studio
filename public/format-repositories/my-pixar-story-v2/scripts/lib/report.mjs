@@ -15,6 +15,7 @@ export function createRecorder({ runId, placeholderAssets = false, tracingProjec
     if (e.type === 'start' || e.type === 'attempt') a.status = 'running';
     if (e.type === 'attempt') a.attempts.push({ attempt: e.attempt, input: e.input, output: null, issues: [], isValid: null, at: new Date().toISOString() });
     if (e.type === 'attempt-result') Object.assign(a.attempts.at(-1) ?? {}, { output: e.output, issues: e.issues ?? [], isValid: !!e.isValid });
+    if (e.type === 'reflection') Object.assign(a.attempts.at(-1) ?? {}, { reflection: e.log ?? [] }); // the agent's own critiques
     if (e.type === 'passed') a.status = 'passed';
     if (e.type === 'failed') { a.status = 'failed'; if (!a.attempts.length) a.attempts.push({ attempt: 0, input: null, output: null, issues: e.issues ?? [], isValid: false }); }
     onChange(model);

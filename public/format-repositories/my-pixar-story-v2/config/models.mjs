@@ -6,12 +6,16 @@ export const NANO_BANANA = Object.freeze({ provider: 'google-flow', model: 'nano
 
 export const V2_MODELS = Object.freeze({
   'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 64000, /* r4-dry7: xhigh reasoning used all 32k (31998 reasoning tokens) 3x and never submitted */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
+    // Self-critique + rewrite rounds after the first draft (graph/deep-agent-node.mjs); the gate checks the final revision.
+    reflectionRounds: 2,
     imageSteps: { storyboard: NANO_BANANA } },
   'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 64000, /* r4-dry9: CA used 23.5k of 24k */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
+    reflectionRounds: 0, // off until proven on the Story Director
     imageSteps: { character: NANO_BANANA },
     targetEngines: { masterRender: 'nano-banana-2.1', modelSheet: 'nano-banana-2.1' },
     contract: { output: 'crew/character-architect/schema.mjs', input: 'crew/character-architect/input.mjs', gate: 'crew/linter/check-character-sheets.mjs' } },
   'location-scout': { role: 'Location Scout & Environment Plate Architect', downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 32000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
+    reflectionRounds: 0,
     imageSteps: { location: NANO_BANANA },
     targetEngines: { plate: 'nano-banana-2.1' },
     parallelWith: ['character-architect'],
@@ -19,6 +23,7 @@ export const V2_MODELS = Object.freeze({
   'seedance-compiler': { role: 'Seedance Compiler', upstreamAgents: ['character-architect', 'location-scout'], downstreamAgents: ['vera', 'linter'], maxTokens: 64000, /* r4-dry6/r4-dry8: compile calls hit the 32k cap */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     video: { provider: 'replicate', model: 'bytedance/seedance-2.5', resolution: '480p', enabled: false,
              note: 'not yet enabled: Seedance testing only after all upstream agents are proven' },
+    reflectionRounds: 0,
     targetEngines: { video: 'seedance-2.5' }, segmentMaxSec: 30, continuation: 'extend',
     contract: { output: 'crew/seedance-compiler/schema.mjs', input: 'crew/seedance-compiler/input.mjs', gate: 'crew/linter/check-seedance-prompts.mjs' } },
   vera: { downstreamAgents: [], maxTokens: 8000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh' },

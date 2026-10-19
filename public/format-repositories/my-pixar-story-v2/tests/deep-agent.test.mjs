@@ -94,7 +94,8 @@ test('3 invalid submits in one attempt -> attempt fails with the specific Zod is
     if (agent === 'location-scout' && lsRuns++ === 0) { fx.locations[0].elementTag = '@Kitchen'; return new ScriptedModel([0, 1, 2].map(() => () => call(name, fx))); }
     return new ScriptedModel([(m) => { notes.push([agent, JSON.stringify(m[0].content)]); return call(name, fx); }]);
   };
-  const s = await buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'retry' } }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
+  // reflectionRounds: 0 keeps this test about submit retries only (reflection has its own tests in reflection.test.mjs).
+  const s = await buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'retry', reflectionRounds: 0 } }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done'); assert.equal(s.attempts['location-scout'], 2);
   const logged = s.validationErrors.find((v) => v.node === 'location-scout').errors;
   assert.ok(logged.every((i) => i.code === 'SCHEMA_REJECTED')); assert.ok(logged.some((i) => i.path === 'locations.0.elementTag'));
@@ -119,10 +120,17 @@ test('graph happy path through the deep-agent node (scripted model, zero network
   const seen = [];
   const createModel = async (config, agent) => {
     seen.push([agent, config.model, config.effort]);
+    const name = `submit_${agent.replaceAll('-', '_')}`;
+    // The Story Director runs its default 2 self-critique rounds (critique reply + resubmit, twice). Inside the graph each
+    // deep-agent run takes one extra turn after its submit, so every SD step answers a critique with text and anything else with a submit.
+    const sdStep = (m) => (/reviewing your own draft/.test(String(m[0]?.content)) ? new AIMessage('1. Nothing major. VERDICT: SHIP')
+      : m.at(-1)?.getType?.() === 'tool' ? done() : call(name, json(FIX[agent])));
+    const reflect = agent === 'story-director' ? Array.from({ length: 8 }, () => sdStep) : [];
     return new ScriptedModel([
       () => call('read_file', { file_path: `/skills/${agent}/SKILL.md` }),
       () => call('read_file', { file_path: '/references/input.json' }),
-      () => call(`submit_${agent.replaceAll('-', '_')}`, json(FIX[agent])),
+      () => call(name, json(FIX[agent])),
+      ...reflect,
     ]);
   };
   const g = buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'happy' } });
@@ -135,6 +143,8 @@ test('graph happy path through the deep-agent node (scripted model, zero network
   assert.equal(m.length, 4);
   const sdInput = JSON.parse(await readFile(join(runs, 'happy_attempt-1', 'location-scout', 'references/input.json'), 'utf8'));
   assert.equal(sdInput.settings[0].name, 'Kitchen');
+  assert.equal(s.reflections['story-director'][0].log.length, 2);
+  assert.equal(s.reflections['character-architect'], undefined);
 }));
 
 test('deep agent that never submits counts as a failed attempt and escalates after 3', () => tmp(async (runs) => {

@@ -34,6 +34,7 @@ export const PipelineStateSchema = z.object({
   escalations: z.array(EscalationSchema).default([]),
   retryCounts: z.record(z.string(), z.number().int().nonnegative()).default({}),
   validationErrors: z.array(ValidationErrorSchema).default([]),
+  reflections: z.record(z.string(), z.array(z.unknown())).default({}), // { agent: [{ attempt, rounds, log: [{ round, critique, ... }] }] }
   status: z.enum(STATUSES).default('running'),
   pendingApproval: z.array(z.string()).default([]),
 });
@@ -62,6 +63,7 @@ export const PipelineAnnotation = Annotation.Root({
   escalations: Annotation({ reducer: (a = [], b = []) => [...a, ...b], default: () => [] }),
   retryCounts: Annotation({ reducer: mergeObj, default: () => ({}) }),
   validationErrors: Annotation({ reducer: (a = [], b = []) => [...a, ...b], default: () => [] }), // append-only log
+  reflections: Annotation({ reducer: mergeObj, default: () => ({}) }), // per-agent self-critique log (reviewable)
   status: Annotation({ reducer: statusReducer, default: () => 'running' }),
   pendingApproval: Annotation({ reducer: replace, default: () => [] }),
 });
