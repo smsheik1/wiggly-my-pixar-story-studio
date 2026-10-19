@@ -8,5 +8,5 @@ export const maxWordsFor = (secs) => WORDS_PER_SECOND * secs;
 /** Exact, actionable feedback for an over-budget line. */
 export function budgetMessage(label, words, secs) {
   const need = secondsNeeded(words);
-  return `${label}: ${words}-word line needs ${need}s at ${WORDS_PER_SECOND} words/sec but the shot is ${secs}s. Fix: lengthen this shot to ${need}s (shift the following timecodes; keep the segment <= 30s) or cut the line to <= ${maxWordsFor(secs)} words.`;
+  return `${label}: ${words}-word line needs ${need}s at ${WORDS_PER_SECOND} words/sec but the shot is ${secs}s. Fix: lengthen this shot to ${need}s (shift the following timecodes; keep the segment <= 30s, moving a shot to the next part if needed) or split the line across two shots at a natural pause. Never shorten or paraphrase the line to fit.`;
 }

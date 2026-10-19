@@ -103,7 +103,8 @@ test('3 invalid submits in one attempt -> attempt fails with the specific Zod is
 }));
 
 test('r4-dry1 regression: Muse sent null for optional shot fields; tool schema accepts it and the submit validates', () => tmp(async () => {
-  const args = json('r4-dry1-story-director-submit-args.json');
+  // Recorded before finaleThesis was required; add it so the test still isolates the null-tolerance behaviour.
+  const args = { ...json('r4-dry1-story-director-submit-args.json'), finaleThesis: 'One plain sentence naming the finale idea.' };
   assert.equal(StoryDirectorOutputSchema.safeParse(args).success, false, 'raw args fail Zod (null on optional fields)');
   const subs = []; const t = makeSubmitTool('story-director', subs);
   assert.match(await t.invoke(args), /submitted/); assert.equal(subs.length, 1);

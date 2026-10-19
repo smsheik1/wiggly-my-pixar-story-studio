@@ -32,7 +32,7 @@ Quote each one and rewrite it as a direct positive line before scoring anything 
 - **Everyone speaks in the same voice.** The 8-year-old, the teen sister, the mom and the dad all have the same rhythm and vocabulary. Each person needs their own words.
 - **The theme said out loud.** A character states what the film is about. "Family is what you make of it."
 - **Voiceover reading a resume.** Narration lists achievements, salaries, certifications and dates like a CV. Pick the one fact that carries feeling and tie it to an image.
-- **Stacked wisdom lines.** Three or more advice or moral lines in a row in the finale. Break them up with a moment, an action or a callback.
+- **Stacked wisdom lines.** Three or more advice or moral lines in a row in the finale. Break them up with an on-screen action that shows what the words mean (a shot where someone does something), never by inserting an unrelated memory or callback.
 - **Forced callbacks.** An earlier object or line is dragged back in only to tie a bow, with no reason in the scene.
 - **Kid dialogue that sounds written.** Children speak in complete, polished, quotable sentences. Real kids interrupt, repeat, mispronounce, brag, and say odd things.
 - **Platitudes.** Sweeping generalisations about life, love, family, men and women, "the world". Keep only wisdom the answers ground in this family.
@@ -84,7 +84,7 @@ Words: delve, tapestry, testament, profound, resonate, vibrant, nestled, bustlin
 - Announced feelings → an action, a look, a joke or a specific detail.
 - Same voice → give each person their own words: the kid brags and interrupts, the teen is dry, the parent is plain.
 - Resume voiceover → one fact, tied to an image, said like a person would say it.
-- Stacked wisdom → no more than two advice lines in a row; put a moment between them.
+- Stacked wisdom → no more than two advice lines in a row; put an on-screen action between them that shows the idea, not an inserted memory.
 - Forced callback → only if the scene needs it.
 - Em dash → comma, period or two lines. Missing contractions → add them.
 - Filler stage directions → add one specific action next to the moving hold.
@@ -105,7 +105,7 @@ REWRITTEN LINES (only if score >= 16):
 - No em dashes in spoken or narrated lines.
 - No "it's not X, it's Y" or any forced negation.
 - No wrap-up morals, no theme said out loud, no platitudes about life, love, family, men and women or "the world".
-- No more than two wisdom or advice lines in a row in the finale.
+- No more than two wisdom or advice lines in a row in the finale; break a run with an on-screen action that shows the idea, never with an inserted memory or callback.
 - No three-beat staccato runs ("He showed up. He listened. He stayed.").
 - No characters announcing their feelings ("I'm so proud", "I feel free").
 - No resume voiceover (salary, certifications, dates read as a list).

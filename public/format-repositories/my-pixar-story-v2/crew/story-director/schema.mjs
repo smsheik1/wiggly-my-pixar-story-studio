@@ -106,6 +106,8 @@ export const StoryDirectorOutputSchema = z.object({
     draftNumber: z.number().int().positive().default(1),
     oneLinePremise: z.string().min(10).describe('Gives away the tone and conflict, but NOT the ending'),
   }),
+  // WIGGLY: the finale is built around ONE idea from the family's answers; every final-part line serves it.
+  finaleThesis: z.string().trim().min(10).describe("One plain sentence naming the one idea the finale is built around, taken from the family's answers"),
   shapeBar: z.object({
     totalRuntimeSec: z.number().int().positive().max(MAX_TOTAL_SECONDS),
     parts: z.array(z.object({ name: z.string(), durationSec: z.number().int().positive() })),

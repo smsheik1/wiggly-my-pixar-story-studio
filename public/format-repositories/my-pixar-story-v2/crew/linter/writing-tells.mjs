@@ -44,7 +44,7 @@ export function checkWritingTells({ lines = [] }, t = loadTells()) {
   }
   // Stacked wisdom: more than wisdomMax consecutive finale lines that read as advice/moral.
   let run = [];
-  const flush = () => { if (run.length > t.wisdomMax) warn('WRITING_TELL_WISDOM_STACK', `${run.length} wisdom lines in a row in the finale (${run.map((x) => `'${clean(x.text)}'`).join(', ')}). Max ${t.wisdomMax}; put a moment, action or callback between them.`, run[0].path); run = []; };
+  const flush = () => { if (run.length > t.wisdomMax) warn('WRITING_TELL_WISDOM_STACK', `${run.length} wisdom lines in a row in the finale (${run.map((x) => `'${clean(x.text)}'`).join(', ')}). Max ${t.wisdomMax}; break the run with an on-screen action that shows the idea (a shot where someone does something), not an inserted memory or callback.`, run[0].path); run = []; };
   for (const l of lines.filter((x) => x.finale)) { if (t.wisdom.test(clean(l.text))) run.push(l); else flush(); }
   flush();
   // Contractions: only meaningful across all speech.

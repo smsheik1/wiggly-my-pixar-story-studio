@@ -105,7 +105,7 @@ export function lookPhrases(c) {
 export const SUNGLASSES_OVER_EYES = /sunglasses[^.;]{0,40}\b(over|covering|covers|cover|hid(?:e|es|ing)|shield(?:s|ing)?|block(?:s|ing)?|on)\s+(?:his |her |the |both )?(eyes|face|nose)\b|(?:behind|through)\s+(?:his |her |the |dark |black )*sunglasses|\b(?:eyes|face)\b[^.;]{0,20}\b(?:hidden|covered)\b[^.;]{0,20}sunglasses|sunglasses (?:on|down)\b(?![^.;]{0,20}forehead)|(?:puts?|slides?|sliding|putting|pulls?|pulling|lowers?|lowering|drops?|dropping) (?:on )?(?:his |her |the )?sunglasses(?: on| down)?\b(?![^.;]{0,30}(?:forehead|up))|wearing (?:dark |black |matte black |his |her )*sunglasses(?![^.;]{0,30}(?:forehead|pushed up))/i;
 export const MAX_CARDS_PER_PERSON = 2;
 export const MAX_ON_SCREEN = 2;
-export const FINALE_MIN_NARRATION_SEC = 15;
+export const FINALE_MIN_NARRATION_SEC = 10;
 /** Resume facts in spoken in-scene dialogue (they belong in narration). */
 export const RESUME_LINE = /\b(salary|salaries|\d+\s?k\b|\$\s?\d|benefits|certifications?|bootcamp|graduated|semester|years? old|full[- ]time|promotion|job offer)\b/i;
 const AGE_WORDS = /\b(teen|teenage|young|younger|adult|grown|grown-up|older|old|dad|father|kid|child|little|baby|boy|man)\b/gi;
@@ -126,18 +126,6 @@ export function roleExampleLines(dir = new URL('../', import.meta.url)) {
   return out;
 }
 let EXAMPLES = null;
-export const PLATITUDE = /\b(men and women|the world (?:is|will)|life is|love is|family is|always remember|never forget|follow your (?:dreams|heart)|be yourself|everything happens)\b/i;
-const COMMON_CAPS = new Set(['i', 'a', 'the', 'and', 'if', 'my', 'we', 'she', 'he', 'it', 'when', 'to', 'and', 'but', 'so', 'mom', 'dad', 'that', 'this', 'there', 'they', 'our', 'his', 'her', 'in', 'on', 'at', 'for', 'of', 'with', 'yes', 'no']);
-/** Concrete anchors from the answers: capitalized/proper words, numbers, and a few object nouns the maker wrote. */
-export function answerAnchors(answers, exclude = []) {
-  const text = JSON.stringify(answers ?? {});
-  const out = new Set();
-  for (const m of text.matchAll(/(?<![.!?]\s)\b([A-Z][a-zA-Z]{2,}|\d{1,4}(?:pm|am|k)?)\b/g)) out.add(m[1].toLowerCase());
-  for (const m of text.toLowerCase().matchAll(/\b(sunglasses|cards?|car|license|facetime|phone|radio|aux|paint|bootcamp|app|scientist)\b/g)) out.add(m[1]);
-  for (const w of [...COMMON_CAPS, ...exclude.map((x) => String(x).toLowerCase())]) out.delete(w);
-  return out;
-}
-const NUM_WORDS = { eight: '8', seven: '7', nine: '9', nineteen: '19', seventeen: '17', fifty: '50' };
 export const recipientOf = (subject) => /story for ([A-Z][\w-]*)/i.exec(String(subject ?? ''))?.[1] ?? null;
 
 export function validateStoryDirectorOutput(data, input = {}) {
@@ -208,14 +196,17 @@ export function validateStoryDirectorOutput(data, input = {}) {
     if (segTotal > 30) err('EXCEEDS_30S_CEILING', `Segment ${seg.segmentId} runs ${segTotal}s. HARD CEILING IS 30 SECONDS per segment.`, `segments.${si}`);
     filmTotal += segTotal;
   });
-  // WIGGLY: the emotional core gets its weight: >=15s of narration in the final part.
+  // WIGGLY: the finale is built around one idea, named in finaleThesis.
+  if (!String(data?.finaleThesis ?? '').trim())
+    err('MISSING_FINALE_THESIS', 'Output has no finaleThesis. Name the one idea the finale is built around, in one plain sentence taken from the family\'s answers; every final-part line serves it.', 'finaleThesis');
+  // WIGGLY: the closing idea gets room to breathe: >=10s of narration in the final part.
   const last = segments.at(-1);
   if (segments.length > 1 && last) {
     const narr = (last.shots ?? []).filter((h) => h.narration).reduce((n, h) => n + (h.endSec - h.startSec), 0);
     if (narr < FINALE_MIN_NARRATION_SEC)
-      err('FINALE_TOO_THIN', `Final part carries only ${narr}s of narration; give the closing wisdom from the answers ${FINALE_MIN_NARRATION_SEC}-20s (setup ~10s).`, `segments.${segments.length - 1}`);
+      err('FINALE_TOO_THIN', `Final part carries only ${narr}s of narration; give the finale's one idea at least ${FINALE_MIN_NARRATION_SEC}s of narration in the family's own whole sentences (setup ~10s). Lengthen shots rather than shortening lines.`, `segments.${segments.length - 1}`);
   }
-  // WIGGLY: the recipient listens on screen in the finale; the last line is specific to these answers.
+  // WIGGLY: the recipient listens on screen in the finale; the last line is never copied from a role-file example.
   const recipient = recipientOf(input?.subject);
   if (recipient && segments.length > 1 && last) {
     const card = cast.find((c) => norm(c.realPerson ?? c.name) === norm(recipient) || norm(c.elementTag).replace(/^@/, '') === norm(recipient));
@@ -223,16 +214,12 @@ export function validateStoryDirectorOutput(data, input = {}) {
     if (!seen) err('RECIPIENT_NOT_IN_FINALE', `${recipient} (the recipient) is ${card ? `not on screen in the final part; put ${card.elementTag}` : `not in the cast; add a cast card for ${recipient} and put her`} on screen listening in at least one final-part shot (max 2 on screen: the narrator and ${recipient}).`, `segments.${segments.length - 1}`);
   }
   const lastLine = [...(last?.shots ?? [])].reverse().map((h) => h.narration?.line ?? h.dialogue?.line).find(Boolean);
-  if (lastLine && input?.answers && Object.keys(input.answers).length) {
-    const words = norm(lastLine.replace(/[{}]/g, '')).split(/\s+/).map((w) => NUM_WORDS[w] ?? w);
-    const anchors = answerAnchors(input.answers, [recipient ?? '', ...cast.map((c) => c.realPerson ?? '')]);
-    const hit = words.find((w) => anchors.has(w) || anchors.has(w.replace(/s$/, '')));
+  // No concrete-detail requirement: a plain full sentence from the family is a good last line (a forced detail broke r4's ending).
+  if (lastLine) {
     EXAMPLES ??= roleExampleLines().map(norm).filter((x) => x.split(' ').length >= 3);
     const ln = norm(lastLine.replace(/[{}]/g, ''));
     const copied = EXAMPLES.find((x) => ln === x || (x.split(' ').length >= 5 && ln.includes(x)));
-    if (copied) err('GENERIC_FINAL_LINE', `The film's last line '${lastLine}' copies an example from the role files ('${copied}'). Write a new line from these answers.`, `segments.${segments.length - 1}`);
-    else if (PLATITUDE.test(lastLine) || (anchors.size && !hit))
-      err('GENERIC_FINAL_LINE', `The film's last line '${lastLine}' is ${PLATITUDE.test(lastLine) ? 'a generic platitude' : 'not tied to anything specific in the answers'}. End on a line that carries one concrete detail only this family lived (e.g. ${[...anchors].sort((a, b) => /^\d/.test(a) - /^\d/.test(b)).slice(0, 6).join(', ')}), and put the general maxims earlier.`, `segments.${segments.length - 1}`);
+    if (copied) err('GENERIC_FINAL_LINE', `The film's last line '${lastLine}' copies an example from the role files ('${copied}'). End on the family's own words that say or show the finaleThesis.`, `segments.${segments.length - 1}`);
   }
   if (segments.length > 1 && last) (last.shots ?? []).forEach((h, hi) => {
     for (const k of ['dialogue', 'narration']) if (h[k]?.line && FINALE_PLATITUDE.test(h[k].line))
