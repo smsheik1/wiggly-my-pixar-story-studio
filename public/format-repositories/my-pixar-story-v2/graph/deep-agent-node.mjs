@@ -251,7 +251,7 @@ export function critiqueMessages({ agent, skill, review = null, input, draft, ro
   const focus = REFLECTION_FOCUS[agent] ?? REFLECTION_FOCUS.default;
   const gate = gateIssues.filter((i) => i.severity === 'error');
   const warns = gateIssues.filter((i) => i.severity === 'warning');
-  const rt = cutQuotaNote(input, draft, prevDraft ?? firstRuntime, { firstRuntime });
+  const rt = cutQuotaNote(input, draft, prevDraft, { firstRuntime });
   // Patch mode: the prior output is the draft's own baseline; do not send it twice.
   if (input?.patch?.currentOutput) input = { ...input, patch: { ...input.patch, currentOutput: '(the output before this patch; outside the target the draft must equal it exactly)' } };
   const system = review

@@ -34,10 +34,11 @@ export function cutQuotaNote(input, draft, prevDraft = null, options = {}) {
   const now = runtimeOf(draft);
   if (now == null) return '';
   const target = resolveTargetSeconds(input);
-  const prev = options?.firstRuntime ?? (Number.isFinite(prevDraft) ? prevDraft : runtimeOf(prevDraft));
-  const isFirst = options?.firstRuntime != null || Number.isFinite(prevDraft);
-  const prevLabel = isFirst ? 'first draft' : 'previous draft';
-  const prevPart = prev != null && prev !== now ? `; ${prevLabel} ${prev}s` : '';
+  // prevDraft: the draft this one revised (object) or, for older callers, a runtime number.
+  const prev = Number.isFinite(prevDraft) ? prevDraft : runtimeOf(prevDraft);
+  const first = options?.firstRuntime ?? null;
+  const prevPart = (prev != null && prev !== now ? `; previous draft ${prev}s` : '')
+    + (first != null && first !== now && first !== prev ? `; first draft ${first}s` : '');
 
   if (now > target) {
     const excess = now - target;
