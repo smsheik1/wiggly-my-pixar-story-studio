@@ -139,6 +139,33 @@ export const SeedanceCompilerOutputSchema = z.object({
   if (total !== d.totalRuntimeSec) ctx.addIssue({ code: 'custom', path: ['totalRuntimeSec'], message: `totalRuntimeSec ${d.totalRuntimeSec} != sum of segments ${total}` });
 });
 
+/**
+ * WIGGLY patch mode: the compiler recompiles only the parts a Story Director patch touched. Each submitted segment keeps
+ * its place in the whole film (segmentIndex / extendsFrom from positions: { segmentId: segmentIndex }); requiredIds, when
+ * given, must all be present and nothing else. Code then merges these segments into the prior output (graph/patch.mjs).
+ */
+export function makeSeedancePatchSchema(positions = {}, requiredIds) {
+  return z.object({
+    segments: z.array(SeedanceSegmentSchema).min(1),
+    totalRuntimeSec: z.number().int().positive().max(MAX_TOTAL_SECONDS),
+    assumptions: z.array(z.string()).default([]),
+  }).strict().superRefine((d, ctx) => {
+    const ids = d.segments.map((s) => s.segmentId);
+    if (new Set(ids).size !== ids.length) ctx.addIssue({ code: 'custom', path: ['segments'], message: 'a part is compiled twice' });
+    d.segments.forEach((s, i) => {
+      const at = positions[s.segmentId];
+      if (at === undefined) { ctx.addIssue({ code: 'custom', path: ['segments', i, 'segmentId'], message: `part ${s.segmentId} is not in this film` }); return; }
+      if (requiredIds && !requiredIds.includes(s.segmentId)) ctx.addIssue({ code: 'custom', path: ['segments', i, 'segmentId'], message: `part ${s.segmentId} is not affected by the patch; compile only parts ${requiredIds.join(', ')}` });
+      if (s.segmentIndex !== at) ctx.addIssue({ code: 'custom', path: ['segments', i, 'segmentIndex'], message: `segmentIndex must be ${at} (its place in the whole film)` });
+      const want = at === 1 ? null : at - 1;
+      if (s.extendsFrom !== want) ctx.addIssue({ code: 'custom', path: ['segments', i, 'extendsFrom'], message: `extendsFrom must be ${want} (Extend chain of the whole film)` });
+    });
+    for (const id of requiredIds ?? []) if (!ids.includes(id)) ctx.addIssue({ code: 'custom', path: ['segments'], message: `part ${id} is affected by the patch and must be compiled` });
+    const total = d.segments.reduce((n, s) => n + s.totalDurationSec, 0);
+    if (total !== d.totalRuntimeSec) ctx.addIssue({ code: 'custom', path: ['totalRuntimeSec'], message: `totalRuntimeSec ${d.totalRuntimeSec} != sum of the compiled parts ${total}` });
+  });
+}
+
 export class SeedancePromptParseError extends Error {
   constructor(issues) {
     super('Seedance Compiler output failed the contract:\n' +

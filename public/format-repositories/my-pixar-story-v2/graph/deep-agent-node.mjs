@@ -134,8 +134,9 @@ class CodeValidatedTool extends DynamicStructuredTool {
  * exact Zod paths/messages to the agent, which fixes and resubmits inside the same attempt.
  * onSubmitted() ends the run on a valid submit; after maxInvalid bad submits onGiveUp(err) ends it with the issues.
  */
-export function makeSubmitTool(agent, submissions, { onSubmitted = () => {}, onGiveUp = () => {}, maxInvalid = 3 } = {}) {
-  const schema = OUTPUT_SCHEMAS[agent];
+export function makeSubmitTool(agent, submissions, { onSubmitted = () => {}, onGiveUp = () => {}, maxInvalid = 3, schema: override } = {}) {
+  // override: a run-specific validation schema (patch mode: the Seedance Compiler submits only the affected parts)
+  const schema = override ?? OUTPUT_SCHEMAS[agent];
   // Seedance Compiler: compiledPrompt is assembled in code from tenBlocks, so the tool takes the blocks only.
   const toolZod = agent === 'seedance-compiler' ? SeedanceSubmitSchema : schema;
   const prep = agent === 'seedance-compiler' ? withAssembledPrompts : (x) => x;
@@ -216,12 +217,15 @@ export const REFLECTION_FOCUS = {
 };
 
 /** Messages for one critique call: the agent reviews its own draft against its rules, the input and (if any) the gate. */
-export function critiqueMessages({ agent, skill, input, draft, round, rounds, gateIssues = [], trace = '' }) {
+export function critiqueMessages({ agent, skill, input, draft, round, rounds, gateIssues = [], trace = '', scope = '' }) {
   const focus = REFLECTION_FOCUS[agent] ?? REFLECTION_FOCUS.default;
   const gate = gateIssues.filter((i) => i.severity === 'error');
+  // Patch mode: the prior output is the draft's own baseline; do not send it twice.
+  if (input?.patch?.currentOutput) input = { ...input, patch: { ...input.patch, currentOutput: '(the output before this patch; outside the target the draft must equal it exactly)' } };
   return [
     { role: 'system', content: `You are the Wiggly v2 ${agent}, reviewing your own draft before it ships (review round ${round} of ${rounds}). Be a strict, specific editor. You do not rewrite the draft here; you list what must change.\n\nYour rules (SKILL.md):\n\n${skill}` },
     { role: 'user', content: [
+      ...(scope ? [scope] : []),
       'The input for this run (/references/input.json):', '```json', JSON.stringify(input ?? {}), '```',
       'Your current draft:', '```json', JSON.stringify(draft), '```',
       gate.length ? `The deterministic gate currently fails this draft; the rewrite must fix these:\n${gate.map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n')}` : 'The deterministic gate currently passes this draft; the rewrite must keep it passing.',
@@ -243,8 +247,9 @@ export function parseUntraceable(critique) {
   return null;
 }
 /** User message for a rewrite run: the draft plus the agent's own critique. */
-export const revisionMessage = ({ agent, draft, critique, round, rounds }) => [
+export const revisionMessage = ({ agent, draft, critique, round, rounds, scope = '' }) => [
   `Revise your ${agent} draft (revision round ${round} of ${rounds}). Below are your current draft and your own critique of it.`,
+  ...(scope ? [scope] : []),
   'Fix every real problem the critique lists. Keep everything that already works. Do not add anything the input does not support. The result must still follow every rule in your SKILL.md and pass the gate.',
   `Finish by calling submit_${agent.replaceAll('-', '_')} with the complete revised JSON (the whole output, not a diff).`,
   'Your critique:', critique,
@@ -260,7 +265,9 @@ export const revisionMessage = ({ agent, draft, critique, round, rounds }) => [
  * the returned object under REFLECTION. N = 0 is exactly the single-draft behaviour.
  */
 export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60, maxInvalidSubmits = 3, reflectionRounds } = {}) {
-  return async ({ agent, config, input, attempt = 1, retryNotes = '', state = {}, signal, gate, trace }) => {
+  // Patch mode (graph/patch.mjs) adds: task (the first user message), scope (shown to the critic and the rewrite),
+  // rounds (reflection rounds for this run; overrides config and the reflectionRounds option) and submitSchema.
+  return async ({ agent, config, input, attempt = 1, retryNotes = '', state = {}, signal, gate, trace, task, scope = '', rounds: reqRounds, submitSchema }) => {
     const photoFiles = photoFilesFor(agent, input, state);
     const { root } = await prepareRunWorkspace({ runsRoot, runId: `${runId}/attempt-${attempt}`, agent, input, approvedAssets: state.approvedAssets ?? {}, assetFiles, photoFiles });
     const model = await createModel(config, agent);
@@ -270,7 +277,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       const submissions = [];
       const done = new AbortController(); // ends the agent loop on a valid submit (or give-up)
       let giveUp = null;
-      const submit = makeSubmitTool(agent, submissions, { maxInvalid: maxInvalidSubmits,
+      const submit = makeSubmitTool(agent, submissions, { maxInvalid: maxInvalidSubmits, ...(submitSchema ? { schema: submitSchema } : {}),
         onSubmitted: () => done.abort(new Error('submitted')), onGiveUp: (e) => { giveUp = e; done.abort(e); } });
       const agentRun = workspaceAgent(model, root, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], sysPrompt);
       const sig = signal ? AbortSignal.any([signal, done.signal]) : done.signal;
@@ -288,8 +295,8 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       throw new Error(`${agent}: the deep agent finished without calling submit`);
     };
 
-    let out = await runOnce(`Produce the ${agent} output for this run.`, `${agent} deep agent`);
-    const rounds = reflectionRoundsFor(config, typeof reflectionRounds === 'object' && reflectionRounds ? reflectionRounds[agent] : reflectionRounds);
+    let out = await runOnce(task ?? `Produce the ${agent} output for this run.`, `${agent} deep agent`);
+    const rounds = reflectionRoundsFor(config, reqRounds ?? (typeof reflectionRounds === 'object' && reflectionRounds ? reflectionRounds[agent] : reflectionRounds));
     if (!rounds) return out;
 
     const dir = join(root, 'reflection');
@@ -305,12 +312,12 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       const meta = { runName: `${agent} reflection round ${round} critique`, tags: [`agent:${agent}`, `attempt:${attempt}`, `reflection:${round}`], metadata: { agent, attempt, reflectionRound: round }, signal };
       let tr = null;
       try { tr = trace ? trace(out) : null; } catch { tr = null; }
-      const critique = replyText(await model.invoke(critiqueMessages({ agent, skill, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '' }), meta)).trim();
+      const critique = replyText(await model.invoke(critiqueMessages({ agent, skill, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope }), meta)).trim();
       await writeFile(join(dir, `round-${round}-critique.md`), critique + '\n');
       const entry = { round, critique, critiqueFile: rel(`round-${round}-critique.md`), gateErrorsBefore: gateIssues.filter((i) => i.severity === 'error').length };
       if (tr?.data) { entry.trace = tr.data; entry.untraceable = parseUntraceable(critique); }
       try {
-        const revised = await runOnce(revisionMessage({ agent, draft: out, critique, round, rounds }), `${agent} reflection round ${round} rewrite`, [`reflection:${round}`]);
+        const revised = await runOnce(revisionMessage({ agent, draft: out, critique, round, rounds, scope }), `${agent} reflection round ${round} rewrite`, [`reflection:${round}`]);
         entry.changed = JSON.stringify(revised) !== JSON.stringify(out);
         out = revised;
         await writeFile(join(dir, `draft-${round}.json`), JSON.stringify(out, null, 2));

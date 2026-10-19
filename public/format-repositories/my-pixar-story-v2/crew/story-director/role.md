@@ -262,3 +262,15 @@ Return ONE JSON object and nothing else, matching `schema.mjs` (`StoryDirectorOu
 }
 ```
 `storyboardSheets` has one sheet per part (more if a part has over 8 shots); each sheet has 1 to 8 `panels` (real shots only; empty slots live only in `fullPrompt`), and together the panels cover every shot exactly once, in order. Every shot has `location`, `framing`, `cameraAngle`, `cameraMove`. `dialogue` and `narration` are optional per shot (at most one of each); each one carries a `source` (see "Every line traces to an answer"), and every part lists `answerSources`. `finaleThesis` is required: every final-part line serves it, and the last line says or shows it.
+
+## 8. Patch Mode (Wiggly)
+
+Sometimes the maker points at ONE thing that is wrong instead of asking for a new story. Then `/references/input.json` has a `patch` object: `target` (`line:<part>.<shot>.<dialogue|narration>`, `shot:<part>.<shot>` or `part:<part>`), `note` (what is wrong, in the maker's words), `editable` (exactly what you may change) and `currentOutput` (the approved stage play).
+
+- **Fix only the target, the way the note asks.** Everything outside it is copied from `currentOutput` character for character. A code check compares the two and rejects any other change (`PATCH_OUTSIDE_TARGET`); your retry starts again from `currentOutput`.
+- **Every rule still applies to the target:** family words verbatim and traced to their answer, shot locks (`onScreen`, scene `present` / `props`), the speaker on screen and leading, the finale thesis.
+- **A longer line needs a longer shot, never a shorter line.** You may lengthen the target shot's `endSec` and shift every later shot in the same part by exactly the same number of seconds, moving the part's `targetDurationSec`, its `shapeBar.parts` duration and `shapeBar.totalRuntimeSec` by that amount (`PATCH_TIMING_RIPPLE` otherwise). The part still fits in 30 seconds.
+- **A shot target** may also update the `present` / `props` of the scene lock that contains it, that shot's storyboard panel and its sheet's `fullPrompt`, and the part's `answerSources`. A new person or place goes on the END of `cast` / `locations`; existing cards are locked. The number of shots is locked; target the whole part to add or remove shots.
+- **A part target** may rewrite the whole part (its shots, scenes, timings, storyboard sheets, `shapeBar.parts` entry); every other part is locked. Only a patch of the final part may change `finaleThesis`.
+- Update `htmlScriptDocument` so it still says exactly what the JSON says; bump `masthead.draftNumber` if you like.
+- Submit the complete output with `submit_story_director`, as always.

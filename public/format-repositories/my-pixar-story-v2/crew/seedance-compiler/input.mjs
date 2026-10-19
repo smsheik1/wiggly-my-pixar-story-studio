@@ -112,16 +112,11 @@ export function segmentCastPresence(seg, castTags) {
   return { onScreenCast: [...onScreen], voiceOnlyCast: [...heard].filter((t) => !onScreen.has(t)) };
 }
 
-/** Filter shared pipeline state to the Seedance Compiler slice. Throws if an approved reference is missing. */
-export function selectSeedanceCompilerInput(state = {}) {
-  const p = state.project ?? state;
-  const sd = p.storyDirector ?? p.stagePlay ?? {};
-  const ca = p.characterArchitect?.output ?? {}; // outputs only (hints/options live beside them)
-  const ls = p.locationScout?.output ?? {};
-  const assets = p.approvedAssets ?? {};
+/** The Seedance Compiler's per-part slice of a stage play (no assets needed). Patch mode diffs these to find affected parts. */
+export function seedanceSegmentsOf(sd = {}) {
   let current;
   const castTags = (sd.cast ?? []).map((c) => c.elementTag);
-  const segments = (sd.segments ?? []).map((seg) => ({
+  return (sd.segments ?? []).map((seg) => ({
     segmentId: seg.segmentId, title: seg.title, targetDurationSec: seg.targetDurationSec, goalSummary: seg.goalSummary, continuityLocks: seg.continuityLocks ?? [],
     ...segmentCastPresence(seg, castTags),
     scenes: (seg.scenes ?? []).map(({ shots, present, props }) => ({ shots, present: present ?? [], props: props ?? [] })),
@@ -133,6 +128,16 @@ export function selectSeedanceCompilerInput(state = {}) {
       return o;
     }),
   }));
+}
+
+/** Filter shared pipeline state to the Seedance Compiler slice. Throws if an approved reference is missing. */
+export function selectSeedanceCompilerInput(state = {}) {
+  const p = state.project ?? state;
+  const sd = p.storyDirector ?? p.stagePlay ?? {};
+  const ca = p.characterArchitect?.output ?? {}; // outputs only (hints/options live beside them)
+  const ls = p.locationScout?.output ?? {};
+  const assets = p.approvedAssets ?? {};
+  const segments = seedanceSegmentsOf(sd);
   const characters = (ca.characters ?? []).map((c) => {
     const assetKey = assets[c.imageTag] ?? assets[c.elementTag] ?? c.modelSheetPrompt?.masterRenderRef;
     if (!assetKey) throw new Error(`selectSeedanceCompilerInput: no approved reference asset for ${c.elementTag} (${c.imageTag})`);

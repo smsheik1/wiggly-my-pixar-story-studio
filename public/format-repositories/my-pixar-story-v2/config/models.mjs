@@ -8,6 +8,8 @@ export const V2_MODELS = Object.freeze({
   'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 64000, /* r4-dry7: xhigh reasoning used all 32k (31998 reasoning tokens) 3x and never submitted */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     // Self-critique + rewrite rounds after the first draft (graph/deep-agent-node.mjs); the gate checks the final revision.
     reflectionRounds: 2,
+    // Patch mode (graph/patch.mjs): one self-review round scoped to the target; --reflection-rounds overrides it.
+    patchReflectionRounds: 1,
     imageSteps: { storyboard: NANO_BANANA } },
   'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 64000, /* r4-dry9: CA used 23.5k of 24k */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     reflectionRounds: 0, // off until proven on the Story Director

@@ -116,7 +116,8 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
       ev({ type: 'attempt', attempt, input });
       const done = (o) => ev({ type: 'attempt-result', attempt, ...o });
       let raw;
-      const req = { agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state, gate: (o) => spec.gate(o, input, state), ...(spec.trace ? { trace: (o) => spec.trace(o, input) } : {}) };
+      const req = { agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state, gate: (o) => spec.gate(o, input, state), ...(spec.trace ? { trace: (o) => spec.trace(o, input) } : {}),
+        ...(spec.request ? spec.request(input, state) : {}) }; // patch mode: task, scope, rounds, submitSchema
       let transient = 0;
       for (;;) {
         try { raw = await traced(req); break; } catch (e) {
