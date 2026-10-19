@@ -4,6 +4,7 @@
 // updates the 'v2 dry run' section of ~/wiggly-progress.html live, traces to LangSmith when a key is present.
 // Usage: node scripts/run-rehearsal.mjs --project <project.json> [--secrets <secrets.env>] [--placeholder-assets] [--run-id <id>] [--no-tracker]
 //   [--first-token-timeout-sec 300] [--idle-timeout-sec 180] [--stall-warn-sec 90] [--heartbeat-sec 5]
+//   [--max-usd 2] hard spend cap: polls the OpenRouter key usage and exits (code 3) once this run spends more
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
@@ -17,6 +18,7 @@ import { createLiveness, LivenessHandler, DEFAULT_TIMEOUTS } from '../graph/live
 import { auditRun } from './audit-trace.mjs';
 import { applyScriptView } from './script-view.mjs';
 import { createRecorder, upsertTracker, reportHtml, defaultTrackerPath } from './lib/report.mjs';
+import { startBudgetGuard } from './lib/budget.mjs';
 
 const OUTPUT_KEYS = { 'story-director': (s) => s.storyDirector, 'character-architect': (s) => s.characterArchitect?.output,
   'location-scout': (s) => s.locationScout?.output, 'seedance-compiler': (s) => s.seedanceCompiler?.output };
@@ -111,11 +113,13 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
   const has = (k) => process.argv.includes(k);
-  runRehearsal({ projectPath: arg('--project'), ...(arg('--run-id') ? { runId: arg('--run-id') } : {}), ...(arg('--secrets') ? { secretsPath: arg('--secrets') } : {}),
+  const maxUsd = arg('--max-usd') ? +arg('--max-usd') : null;
+  const guarded = maxUsd ? startBudgetGuard({ apiKey: loadSecrets(arg('--secrets') ?? defaultSecretsPath()).OPENROUTER_API_KEY, maxUsd, onExceed: () => process.exit(3) }) : Promise.resolve(null);
+  guarded.then((guard) => runRehearsal({ projectPath: arg('--project'), ...(arg('--run-id') ? { runId: arg('--run-id') } : {}), ...(arg('--secrets') ? { secretsPath: arg('--secrets') } : {}),
     usePlaceholderAssets: has('--placeholder-assets'), ...(arg('--photo-refs') ? { photoRefsPath: arg('--photo-refs') } : {}),
     // CLI default: 900s first-token/idle, 600s stall warning (xhigh reasoning can think silently for minutes; r4-dry7 timed out at 180s).
     timeouts: { firstTokenMs: 900_000, idleMs: 900_000, stallMs: 600_000, ...(arg('--first-token-timeout-sec') ? { firstTokenMs: +arg('--first-token-timeout-sec') * 1000 } : {}), ...(arg('--idle-timeout-sec') ? { idleMs: +arg('--idle-timeout-sec') * 1000 } : {}), ...(arg('--stall-warn-sec') ? { stallMs: +arg('--stall-warn-sec') * 1000 } : {}) },
     ...(arg('--heartbeat-sec') ? { heartbeatMs: +arg('--heartbeat-sec') * 1000 } : {}), ...(has('--no-tracker') ? { trackerPath: null } : {}) })
-    .then(({ state }) => { process.exitCode = state.status === 'failed' ? 2 : 0; })
+    .then(async ({ state }) => { if (guard) { await guard.check(); guard.stop(); } process.exitCode = state.status === 'failed' ? 2 : 0; }))
     .catch((e) => { console.error(`rehearsal failed: ${e.message}`); process.exitCode = 1; });
 }
