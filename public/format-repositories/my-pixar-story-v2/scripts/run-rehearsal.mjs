@@ -4,6 +4,8 @@
 // updates the 'v2 dry run' section of ~/wiggly-progress.html live, traces to LangSmith when a key is present.
 // Usage: node scripts/run-rehearsal.mjs --project <project.json> [--secrets <secrets.env>] [--placeholder-assets] [--run-id <id>] [--no-tracker]
 //   [--first-token-timeout-sec 300] [--idle-timeout-sec 180] [--stall-warn-sec 90] [--heartbeat-sec 5]
+//   [--reflection-rounds N | agent=N[,agent=N]] self-review rounds override for this run only (N = every agent; e.g.
+//     story-director=0 for a no-review comparison run); default: config/models.mjs reflectionRounds
 //   [--max-usd 2] hard spend cap: polls the OpenRouter key usage and exits (code 3) once this run spends more
 import { FATAL_CODE } from '../graph/provider-errors.mjs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -12,6 +14,7 @@ import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { buildGraph, placeholderAssets } from '../graph/graph.mjs';
+import { V2_MODELS } from '../config/models.mjs';
 import { RUNS_ROOT, openRouterModel } from '../graph/deep-agent-node.mjs';
 import { loadSecrets, defaultSecretsPath } from './lib/secrets.mjs';
 import { makeTracing } from './lib/tracing.mjs';
@@ -56,9 +59,23 @@ const summarize = (agent, o) => {
   return `${o.segments?.length ?? 0} segments, ${o.totalRuntimeSec}s`;
 };
 
+/** --reflection-rounds value: 'N' (every agent) or 'agent=N[,agent=N]'. Throws on anything else. */
+export function parseReflectionRounds(v) {
+  const s = String(v ?? '').trim();
+  if (/^\d+$/.test(s)) return +s;
+  const out = {};
+  for (const part of s.split(',')) {
+    const m = /^\s*([a-z][a-z-]*)\s*=\s*(\d+)\s*$/.exec(part);
+    if (!m) throw new Error(`--reflection-rounds: expected N or agent=N[,agent=N], got "${v}"`);
+    if (!V2_MODELS[m[1]] || V2_MODELS[m[1]].kind !== 'llm') throw new Error(`--reflection-rounds: unknown agent "${m[1]}"`);
+    out[m[1]] = +m[2];
+  }
+  return out;
+}
+
 export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUID().slice(0, 8)}`, runsRoot = RUNS_ROOT, invoke, log = console.log,
   secretsPath = defaultSecretsPath(), secrets, usePlaceholderAssets = false, trackerPath = defaultTrackerPath(), tracing,
-  timeouts = {}, heartbeatMs = 5000, now = Date.now, photoRefsPath, audit = auditRun, auditDelayMs = 5000 } = {}) {
+  timeouts = {}, heartbeatMs = 5000, now = Date.now, photoRefsPath, audit = auditRun, auditDelayMs = 5000, reflectionRounds, buildGraphFn = buildGraph } = {}) {
   if (!projectPath) throw new Error('--project <path to project/answers json> is required');
   const inputs = inputsFromProject(JSON.parse(await readFile(projectPath, 'utf8')));
   const refs = await loadPhotoReferences(photoRefsPath === undefined ? defaultPhotoRefsPath(projectPath) : photoRefsPath);
@@ -69,7 +86,8 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
   const t = { ...DEFAULT_TIMEOUTS, ...timeouts };
   const liveness = createLiveness({ now, stallMs: t.stallMs });
   const rec = createRecorder({ runId, placeholderAssets: usePlaceholderAssets, tracingProject: tr?.projectName ?? null, onChange: (m) => { if (trackerPath) { try { upsertTracker(m, trackerPath); } catch { /* tracker is optional */ } } } });
-  const graph = buildGraph({ ...(invoke ? { invoke } : { deepAgent: { runId, runsRoot, createModel: (c, a) => openRouterModel(c, a, { apiKey: sec.OPENROUTER_API_KEY }) } }),
+  if (reflectionRounds !== undefined) log(`self-review rounds override: ${typeof reflectionRounds === 'number' ? `${reflectionRounds} for every agent` : Object.entries(reflectionRounds).map(([a, n]) => `${a}=${n}`).join(', ')}`);
+  const graph = buildGraphFn({ ...(invoke ? { invoke } : { deepAgent: { runId, runsRoot, createModel: (c, a) => openRouterModel(c, a, { apiKey: sec.OPENROUTER_API_KEY }), ...(reflectionRounds !== undefined ? { reflectionRounds } : {}) } }),
     onEvent: rec.onEvent, runTag: runId, liveness, timeouts: { firstTokenMs: t.firstTokenMs, idleMs: t.idleMs, ...(t.pollMs ? { pollMs: t.pollMs } : {}), now }, ...(usePlaceholderAssets ? { autoApprove: placeholderAssets } : {}) });
   if (usePlaceholderAssets) log('PLACEHOLDER ASSETS: asset approval auto-filled with fake keys (no images generated)');
   const config = { runName: 'wiggly-v2 rehearsal', tags: [`runId:${runId}`, 'wiggly-v2', ...(usePlaceholderAssets ? ['placeholder-assets'] : [])],
@@ -116,10 +134,12 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
   const has = (k) => process.argv.includes(k);
+  // parsed before the budget guard starts, so a bad value fails fast with no API call
+  const reflectionRounds = arg('--reflection-rounds') !== undefined ? parseReflectionRounds(arg('--reflection-rounds')) : undefined;
   const maxUsd = arg('--max-usd') ? +arg('--max-usd') : null;
   const guarded = maxUsd ? startBudgetGuard({ apiKey: loadSecrets(arg('--secrets') ?? defaultSecretsPath()).OPENROUTER_API_KEY, maxUsd, onExceed: () => process.exit(3) }) : Promise.resolve(null);
   guarded.then((guard) => runRehearsal({ projectPath: arg('--project'), ...(arg('--run-id') ? { runId: arg('--run-id') } : {}), ...(arg('--secrets') ? { secretsPath: arg('--secrets') } : {}),
-    usePlaceholderAssets: has('--placeholder-assets'), ...(arg('--photo-refs') ? { photoRefsPath: arg('--photo-refs') } : {}),
+    usePlaceholderAssets: has('--placeholder-assets'), ...(reflectionRounds !== undefined ? { reflectionRounds } : {}), ...(arg('--photo-refs') ? { photoRefsPath: arg('--photo-refs') } : {}),
     // CLI default: 900s first-token/idle, 600s stall warning (xhigh reasoning can think silently for minutes; r4-dry7 timed out at 180s).
     timeouts: { firstTokenMs: 900_000, idleMs: 900_000, stallMs: 600_000, ...(arg('--first-token-timeout-sec') ? { firstTokenMs: +arg('--first-token-timeout-sec') * 1000 } : {}), ...(arg('--idle-timeout-sec') ? { idleMs: +arg('--idle-timeout-sec') * 1000 } : {}), ...(arg('--stall-warn-sec') ? { stallMs: +arg('--stall-warn-sec') * 1000 } : {}) },
     ...(arg('--heartbeat-sec') ? { heartbeatMs: +arg('--heartbeat-sec') * 1000 } : {}), ...(has('--no-tracker') ? { trackerPath: null } : {}) })
