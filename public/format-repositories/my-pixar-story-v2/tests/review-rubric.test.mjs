@@ -39,7 +39,7 @@ test('rubric: REVIEW.md lives with the Story Director, covers R1-R9, ends on VER
   const r = loadReview('story-director');
   for (const k of ['R1 Fidelity', 'R2 Invented details', 'R3 Setup and payoff', 'R4 Cast in the scene', 'R5 Referents', 'R6 Finale', 'R7 Time framing', 'R8 Length', 'R9 Gate rules']) assert.match(r, new RegExp(k), k);
   assert.match(r, /editor/); assert.match(r, /never rewrite|do not rewrite/i); assert.match(r, /PASS or FAIL/); assert.match(r, /at most 8 fixes/i); assert.match(r, /VERDICT: SHIP\|REVISE/);
-  assert.match(r, /FIXES:/); assert.match(r, /applies only\s+the fixes you list/); assert.match(r, /never by adding/); assert.match(r, /targetTotalRuntimeSec/); assert.match(r, /big to small/); assert.match(r, /as a viewer/);
+  assert.match(r, /FIXES:/); assert.match(r, /applies only\s+the fixes you list/); assert.match(r, /never adding/); assert.match(r, /targetTotalRuntimeSec/); assert.match(r, /big to small/); assert.match(r, /as a viewer/);
   for (const a of ['character-architect', 'location-scout', 'seedance-compiler']) assert.equal(loadReview(a), null, a);
   assert.ok(!/R1 Fidelity/.test(loadSkill('story-director')), 'the rubric is not part of the writer\'s skill');
   assert.match(loadSkill('story-director'), /Draft to the review checklist/, 'the writer\'s rules aim the first draft at the same checks');
