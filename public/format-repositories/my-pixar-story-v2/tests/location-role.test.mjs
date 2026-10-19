@@ -14,7 +14,9 @@ const STYLIZED = [
   ['stacking chairs, coat racks, aquarium tank, plants, small tactile details creating believable living space without clutter]', 'a few clear story props from the answers, no clutter]'],
   [' Warm ambient daylight bounce. Subtle atmospheric dust motes in light beams, no fog, no haze]', ' Soft simple bounce light, no fog, no haze]'],
   ['[FOCAL LENGTH, CAMERA HEIGHT, ANGLE — e.g. 35mm wide shot at adult chest height looking down at the carpet staging area, level horizon, deep depth of field keeping background readable]', '[SHOT SIZE, CAMERA HEIGHT, ANGLE — e.g. wide shot at adult chest height looking down at the carpet staging area, level horizon]'],
-  ['no photorealistic film grain, no 35mm noise.', 'no wear, no grime, no stains, no dust, no scratches.'],
+  [', no photorealistic film grain, no 35mm noise.', '.'],
+  ['feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon', 'stylized 3D animated feature film: storybook look, simplified chunky shapes with soft rounded edges, smooth clean materials, gently saturated colors'],
+  ['Authors production CG background', 'Authors stylized 3D background'],
 ];
 const norm = (s) => STYLIZED.reduce((t, [a, b]) => t.replaceAll(a, b), s).replaceAll(' (and GPT Image 2)', '').replaceAll(' and GPT Image 2', '').replaceAll('Nano Banana Pro', 'Nano Banana 2.1 (Google Flow)');
 

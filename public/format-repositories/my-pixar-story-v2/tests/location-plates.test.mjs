@@ -95,7 +95,7 @@ test('PROMPT_LENGTH bounds', () => {
   hasCode(validate(P(plates(), (t) => t.slice(0, 250)), input()), 'PROMPT_LENGTH');
   hasCode(validate(P(plates(), (t) => t + ' warm wood'.repeat(300)), input()), 'PROMPT_LENGTH');
 });
-test('INVALID_OPENING_STYLE', () => hasCode(validate(P(plates(), (t) => t.replace('production CG, not photorealistic', 'CG')), input()), 'INVALID_OPENING_STYLE'));
+test('INVALID_OPENING_STYLE', () => hasCode(validate(P(plates(), (t) => t.replace('storybook look', 'CG look')), input()), 'INVALID_OPENING_STYLE'));
 test('BANNED_LIVE_ACTION_JARGON: local negation only', () => {
   for (const w of ['film grain', 'Kodak look', 'lens flare', '8K', 'Unreal Engine', 'hyperrealistic', 'live-action', 'shot on 35mm grain'])
     hasCode(validate(P(plates(), (t) => `${t} ${w}.`), input()), 'BANNED_LIVE_ACTION_JARGON');

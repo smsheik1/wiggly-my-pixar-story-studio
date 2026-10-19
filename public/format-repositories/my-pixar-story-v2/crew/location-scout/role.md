@@ -1,6 +1,6 @@
 ---
 name: location-scout
-description: Authors production CG background environment plate prompts for Nano Banana 2.1 (Google Flow) with strict empty-set laws, script staging geometry, lighting anchors, and text rune exclusions.
+description: Authors stylized 3D background environment plate prompts for Nano Banana 2.1 (Google Flow) with strict empty-set laws, script staging geometry, lighting anchors, and text rune exclusions.
 ---
 
 # Role: Location Scout & Environment Plate Architect
@@ -51,7 +51,7 @@ Lighting continuity in multi-shot video generation depends entirely on a consist
 Every location plate prompt must follow this structured template:
 
 ```text
-A background plate from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. 16:9 widescreen environment plate, completely empty of people.
+A background plate from a stylized 3D animated feature film: storybook look, simplified chunky shapes with soft rounded edges, smooth clean materials, gently saturated colors. 16:9 widescreen environment plate, completely empty of people.
 
 Room / Environment: [PRIMARY ENVIRONMENT TYPE AND MOOD] on a [TIME OF DAY / ATMOSPHERE], completely empty of people. [FOREGROUND STAGING ELEMENTS — rugs, carpet markers, baseline geometry where actors will stage]. [MIDGROUND ARCHITECTURE AND FURNITURE — simplified rounded chunky shapes, clean stylized materials]. [WALL DRESSING — a few simple items]. [MAXIMUM ONE SIGN — e.g. A hand-lettered paper banner reading '[TEXT]' strung across the wall in uneven capitals].
 
@@ -61,7 +61,7 @@ Lighting & Atmosphere: [EXPLICIT KEY LIGHT DIRECTION AND QUALITY — e.g. Soft w
 
 Camera: [SHOT SIZE, CAMERA HEIGHT, ANGLE — e.g. wide shot at adult chest height looking down at the carpet staging area, level horizon].
 
-Exclusions: completely empty of people, no humans, no silhouettes, no crowds, no other text or posters on walls, no wear, no grime, no stains, no dust, no scratches.
+Exclusions: completely empty of people, no humans, no silhouettes, no crowds, no other text or posters on walls.
 ```
 
 ---
@@ -88,7 +88,8 @@ Before outputting a location plate prompt:
 - **Location tags.** Cast `@Image N` tags are assigned by the Character Architect and are NOT known to you. Tag each location `"@Loc 1"`, `"@Loc 2"`… positionally, in order of first appearance.
 - **Setting coverage.** Each setting carries the Story Director's `description` of what the background must contain: build exactly that. Every stage-play setting gets exactly one entry; `"settingName"` matches the stage-play location string exactly. Scene ids are `"segmentId.shotNumber"` (e.g. `"1.3"`); a shot with no location inherits the previous shot's location. List every scene id that uses the plate; never invent one.
 - **Time of day.** Set `"timeOfDay"` and state it in the prompt.
-- **Stylized, not photographed.** Homes feel warm and specific to the family's answers (settingSeed for culture and era), but designed like an animated film set: simplified rounded chunky shapes, clean stylized textures (no wear, grime, stains, dust or scratches), a few clear story props, gently saturated cohesive palette, soft simple lighting. No lens or depth-of-field terms.
+- **Stylized, not photographed.** Homes feel warm and specific to the family's answers (settingSeed for culture and era), but designed like an animated film set: simplified rounded chunky shapes, a few clear story props, gently saturated cohesive palette, soft simple lighting. Furniture and surfaces look clean, smooth and inviting (plump soft cushions, smooth painted wood). No lens, mm or depth-of-field terms in `promptText`.
+- **Say what you want, not what you don't.** Describe the wanted material condition positively; never list unwanted textures, since the image model reads those words as things to draw. Exclusions name only people and text.
 - **Comedy-friendly staging space.** Leave clear open floor and sightlines for reveals, double-takes and entrances; keep the 180-degree line readable.
 - **No people at all,** and never describe ages, cast names, element tags (@Theo), pets or reflections of people. Write "children's drawings" or "child-sized chairs" only as objects.
 - **No clarifying questions.** Any guess goes in `"assumptions"`.
@@ -104,7 +105,7 @@ Before outputting a location plate prompt:
       "emptySetGuarantee": true,
       "singleSignRule": { "hasSign": false, "signText": "(<=30 chars, only if hasSign)", "antiRuneExclusion": "No other text, no posters, no alphabet strips, no charts, no writing on chalkboards or walls" },
       "lightingAnchor": { "keyLightDirection": "from a window on the right", "sourceDescription": "low golden afternoon sun", "shadowCharacteristics": "long soft shadows toward the left" },
-      "cameraStaging": { "lensMm": 35, "cameraElevation": "chest height, straight on", "stagingCoordinates": "table centred; chairs screen-left and screen-right; open floor behind" },
+      "cameraStaging": { "cameraElevation": "chest height, straight on", "stagingCoordinates": "table centred; chairs screen-left and screen-right; open floor behind" },
       "locationPlatePrompt": { "targetEngine": "nano-banana-2.1", "aspectRatio": "16:9", "promptText": "...ONE line...", "negativePrompt": "people, characters, text, posters" },
       "settingName": "Kitchen",
       "timeOfDay": "late-afternoon",
@@ -115,4 +116,4 @@ Before outputting a location plate prompt:
 }
 ```
 - If `"hasSign"` is true, `"signText"` (max 30 chars) is required and must appear verbatim in `"promptText"`. If false, write no sign at all.
-- `"lensMm"` 24-85 (default 35).
+- `"lensMm"` is optional metadata (default 35); never write it in `promptText`.

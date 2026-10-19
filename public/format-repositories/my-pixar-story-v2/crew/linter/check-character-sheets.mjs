@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { IMAGE_ENGINE, SHEET_MIN, SHEET_MAX, SHEET_EXPRESSIONS } from '../character-architect/schema.mjs';
 import { checkVisualTells } from './shot-locks.mjs';
 
-export const MASTER_OPENING = 'A single-character full-body render from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon.';
+export const MASTER_OPENING = 'A single-character full-body render from a stylized 3D animated feature film: storybook look, simplified chunky shapes with soft rounded edges, smooth clean materials, gently saturated colors.';
 export const TEMPLATE_LABELS = ['Eyes:', 'Eyebrows:', 'Face:', 'Subject:', 'Skin:', 'Hands:', 'Silhouette:', 'Hair:', 'Wardrobe:', 'Pose:', 'Camera:', 'Background:'];
 export const HELD = /\b(holds?|holding|clutching|grasping)\s+(a|an|the|his|her)\s+(?!only\b|weight\b|shape\b|pose\b)/i;
 const CARRY = /\b(carries|carrying)\s+(?:a|an|the|his|her)?\s*(?:\w+\s+){0,2}(axe|cup|mug|bag|backpack|tool|toy|umbrella|book|phone|box|ball|doll|cane)s?\b/i;

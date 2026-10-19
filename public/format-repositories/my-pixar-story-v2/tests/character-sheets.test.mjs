@@ -5,7 +5,7 @@ import { parseCharacterSheets, CharacterSheetParseError, CharacterSchema } from 
 import { selectCharacterArchitectInput, CharacterArchitectInput } from '../crew/character-architect/input.mjs';
 import { validateCharacterArchitectOutput as validateOne, validateCharacterSheets as validate } from '../crew/linter/check-character-sheets.mjs';
 
-const fx = (f) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
+const fx = (f) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8').replaceAll('feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon', 'stylized 3D animated feature film: storybook look, simplified chunky shapes with soft rounded edges, smooth clean materials, gently saturated colors'); // Gemini originals; opening line swapped to the stylized one
 const json = (f) => JSON.parse(fx(f));
 const story = () => json('good-stage-play.json');
 const sheets = () => json('good-character-sheets.json');
