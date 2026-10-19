@@ -110,6 +110,7 @@ export function formatScopedRevisionInstructions(allowedShots) {
   const shotsList = Array.from(allowedShots ?? []).sort().join(', ');
   return [
     `Allowed shots to change: ${shotsList}.`,
+    'Keep every other shot word for word; you may cut or split the allowed shots and renumber shots in order.',
     'Every shot outside this allowed set is frozen and must not change; any change to an unnamed shot will be reverted in code.',
     `A restored sentence longer than the per-line word cap (${MAX_LINE_WORDS} words) must be split across consecutive lines or shots, never left long.`,
   ].join('\n');
@@ -152,6 +153,12 @@ export function recomputeRuntime(draft) {
     }
   }
   return draft;
+}
+
+/** A shot's content without its number and timecodes, so a renumbered but unchanged shot still matches. */
+export function shotKey(shot) {
+  const { shotNumber, startSec, endSec, ...rest } = shot ?? {};
+  return JSON.stringify(rest);
 }
 
 /**
@@ -238,6 +245,8 @@ export function enforceScope(prev, next, allowed) {
     prevShots.forEach((s) => {
       prevShotMap.set(s.shotNumber, s);
     });
+    const prevKeys = new Set(prevShots.map(shotKey));
+    const nextKeys = new Set(nextShots.map(shotKey));
 
     // Identify named cut shots from prev
     const cutNamedShotNumbers = new Set(
@@ -299,7 +308,8 @@ export function enforceScope(prev, next, allowed) {
       if (prevShotMap.has(shot.shotNumber)) {
         const prevShot = prevShotMap.get(shot.shotNumber);
         if (!allowedSet.has(shotId)) {
-          if (shotContentChanged(prevShot, shot)) {
+          // A renumbered copy of an existing shot (after a cut earlier in the part) is not an edit.
+          if (shotContentChanged(prevShot, shot) && !prevKeys.has(shotKey(shot))) {
             survivingNextShots.push(structuredClone(prevShot));
             if (!reverted.includes(shotId)) reverted.push(shotId);
           } else {
@@ -318,7 +328,11 @@ export function enforceScope(prev, next, allowed) {
     for (let pIdx = 0; pIdx < prevShots.length; pIdx++) {
       const prevShot = prevShots[pIdx];
       const shotId = `${segId}.${prevShot.shotNumber}`;
-      if (!survivingShotNumbers.has(prevShot.shotNumber)) {
+      const survivingKeys = new Set(survivingNextShots.map(shotKey));
+      const stillThere = survivingShotNumbers.has(prevShot.shotNumber)
+        && survivingNextShots.some((x) => x.shotNumber === prevShot.shotNumber && (shotKey(x) === shotKey(prevShot) || allowedSet.has(shotId) || !prevKeys.has(shotKey(x))));
+      if (survivingKeys.has(shotKey(prevShot))) continue; // present (maybe renumbered)
+      if (!stillThere) {
         if (allowedSet.has(shotId)) {
           // Named cut
           continue;
@@ -339,12 +353,14 @@ export function enforceScope(prev, next, allowed) {
       }
     }
 
+    survivingNextShots.forEach((x, k) => { x.shotNumber = k + 1; });
     nextSeg.shots = survivingNextShots;
   }
 
   recomputeRuntime(out);
 
-  out.reverted = reverted;
+  // Not enumerable: never serialized into the draft, the gate input or the saved JSON.
+  Object.defineProperty(out, 'reverted', { value: reverted, enumerable: false, configurable: true });
   Object.defineProperty(out, 'draft', { get() { return this; }, enumerable: false, configurable: true });
   return out;
 }

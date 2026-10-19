@@ -199,7 +199,7 @@ test('named shot cut accepted', { timeout: 10000 }, () => {
 
   // Shot 2 was named, so its deletion is accepted
   assert.equal(enforced.segments[0].shots.length, 2);
-  assert.deepEqual(enforced.segments[0].shots.map((s) => s.shotNumber), [1, 3]);
+  assert.deepEqual(enforced.segments[0].shots.map((s) => s.shotNumber), [1, 2], 'renumbered in order after the cut (schema: sequential)');
   assert.deepEqual(enforced.reverted, []);
 });
 
@@ -232,7 +232,8 @@ test('adjacent insertion allowed', { timeout: 10000 }, () => {
 
   const enforcedA = enforceScope(prev, nextAdjacent, new Set(['1.2']));
   assert.equal(enforcedA.segments[0].shots.length, 4);
-  assert.equal(enforcedA.segments[0].shots[2].shotNumber, 4);
+  assert.equal(enforcedA.segments[0].shots[2].whatWeSee, 'New adjacent shot');
+  assert.deepEqual(enforcedA.segments[0].shots.map((x) => x.shotNumber), [1, 2, 3, 4]);
   assert.deepEqual(enforcedA.reverted, []);
 
   // Case B: Insertion NOT adjacent to named shot (named shot is 1.3, but shot 4 is inserted between 1.1 and 1.2)
@@ -476,3 +477,15 @@ test('a round can never replace a gate-passing draft with a failing one; node ou
   assert.equal(out.masthead.title, 'Passing Rewrite 2');
 }));
 
+
+test('a named cut that renumbers later shots does not revert or duplicate them', { timeout: 10000 }, () => {
+  const sh = (n, line) => ({ shotNumber: n, startSec: (n - 1) * 4, endSec: n * 4, whatWeSee: `Theo ${line}`, dialogue: { speaker: 'Theo', line } });
+  const prev = { shapeBar: { totalRuntimeSec: 16 }, segments: [{ segmentId: 1, shots: [sh(1, 'a'), sh(2, 'b'), sh(3, 'c'), sh(4, 'd')] }] };
+  const next = structuredClone(prev);
+  next.segments[0].shots = [sh(1, 'a'), { ...sh(2, 'c') }, { ...sh(3, 'd') }]; // cut 1.2, renumber the rest
+  const out = enforceScope(prev, next, new Set(['1.2']));
+  assert.deepEqual(out.segments[0].shots.map((x) => x.dialogue.line), ['a', 'c', 'd']);
+  assert.deepEqual(out.segments[0].shots.map((x) => x.shotNumber), [1, 2, 3]);
+  assert.deepEqual(out.reverted, []);
+  assert.ok(!('reverted' in JSON.parse(JSON.stringify(out))), 'reverted is not serialized');
+});

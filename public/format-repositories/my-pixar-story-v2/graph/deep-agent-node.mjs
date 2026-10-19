@@ -409,7 +409,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       const fixShots = isScoped ? parseFixShots(critique) : null;
       if (fixShots?.unscopedFixes?.length) entry.unscopedFixes = fixShots.unscopedFixes;
       const totalFixCount = (fixShots?.size ?? 0) + (fixShots?.unscopedFixes?.length ?? 0);
-      if (isScoped && totalFixCount > 0 && fixShots.size === 0) {
+      if (isScoped && totalFixCount > 0 && fixShots.size === 0) { // fixes listed, none names a shot: nothing scoped to rewrite
         entry.changed = false;
         entry.skipped = 'no scoped fixes';
         entry.runtimeAfter = runtimeOf(out);
