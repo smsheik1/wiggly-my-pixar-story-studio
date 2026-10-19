@@ -38,3 +38,21 @@ export function isStreamDrop(e) {
   const text = [e.message, e.cause?.message, e.cause?.code, e.code].filter(Boolean).join(' ');
   return STREAM_DROP.test(text);
 }
+
+// ---- Single-call retry for dropped streams (r5-dry4) ----
+/** Retries of ONE model call after a mid-stream / network drop, before the error reaches the attempt loop. */
+export const CALL_RETRIES = 2;
+const sleep = (ms, signal) => new Promise((res, rej) => { const t = setTimeout(res, ms); signal?.addEventListener?.('abort', () => { clearTimeout(t); rej(signal.reason); }, { once: true }); });
+/**
+ * Run one model call; when its stream drops (isStreamDrop) retry just that call up to `retries` times, with a short
+ * backoff. Anything else (gate/schema problems, our own timeouts and aborts, fatal key errors) is thrown at once.
+ */
+export async function withCallRetry(call, { retries = CALL_RETRIES, delayMs = 2000, onRetry = () => {}, signal } = {}) {
+  for (let n = 0; ; n++) {
+    try { return await call(); } catch (e) {
+      if (n >= retries || !isStreamDrop(e) || signal?.aborted) throw e;
+      onRetry(e, n + 1);
+      await sleep(delayMs * (n + 1), signal);
+    }
+  }
+}

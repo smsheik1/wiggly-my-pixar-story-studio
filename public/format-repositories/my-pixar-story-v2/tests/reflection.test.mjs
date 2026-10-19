@@ -63,7 +63,7 @@ test('2 rounds happen: critique sees rules + answers + draft, rewrite sees the c
   assert.match(seen.r1, /revision round 1 of 2/); assert.match(seen.r1, /last line is off the idea/); assert.match(seen.r1, /Draft zero/);
   assert.match(seen.c2, /Revision one/); assert.ok(!/Draft zero/.test(seen.c2), 'round 2 critiques the revised draft'); assert.match(seen.c2, /currently passes/);
   assert.match(seen.r2, /shot 2 action is vague/);
-  assert.deepEqual(gateCalls, ['Draft zero', 'Revision one']);
+  assert.deepEqual(gateCalls, ['Draft zero', 'Revision one', 'Revision two']);
   // Saved for review: on the output (non-enumerable, never serialized) and on disk.
   const r = out[REFLECTION];
   assert.equal(r.rounds, 2); assert.equal(r.log.length, 2);
@@ -120,13 +120,14 @@ const otherAgents = (agent) => new ScriptedModel([() => call(`submit_${agent.rep
 const assets = () => json('good-approved-assets.json');
 class RoleModel extends ScriptedModel {
   constructor({ draft, critiques, revisions, onCritique = () => {}, onDraft = () => {} }) {
-    super([]); this.q = { draft: [draft], critiques: [...critiques], revisions: [...revisions] }; this.onCritique = onCritique; this.onDraft = onDraft; this.kinds = [];
+    super([]); this.q = { draft: Array.isArray(draft) ? [...draft] : [draft, draft], critiques: [...critiques], revisions: [...revisions] }; this.onCritique = onCritique; this.onDraft = onDraft; this.kinds = [];
   }
   async _generate(messages) {
     this.calls.push(messages);
     const all = text(messages), last = messages.at(-1);
     let msg;
-    if (/reviewing your own draft/.test(String(messages[0]?.content))) { this.kinds.push('critique'); this.onCritique(all); msg = say(this.q.critiques.shift()); }
+    if (/Cold Read/i.test(String(messages[0]?.content))) { this.kinds.push('cold-read'); msg = say('1. Setup & payoff: PASS\n2. Referents: PASS\n3. Time framing: PASS\n4. Finale clarity: PASS'); }
+    else if (/reviewing your own draft/.test(String(messages[0]?.content))) { this.kinds.push('critique'); this.onCritique(all); msg = say(this.q.critiques.shift()); }
     else if ((last?.getType?.() ?? last?._getType?.()) === 'tool') { this.kinds.push('after-submit'); msg = say('Done.'); }
     else if (/Revise your story-director draft/.test(all)) { this.kinds.push('rewrite'); msg = call(SUBMIT, this.q.revisions.shift()); }
     else { this.kinds.push('draft'); this.onDraft(all); msg = call(SUBMIT, this.q.draft.shift()); }
@@ -142,7 +143,7 @@ test('graph: a gate-failing first draft fixed by the revisions passes on attempt
     critiques: ['1. Finale has no narration. VERDICT: REVISE', '1. Still no narration. VERDICT: REVISE'], onCritique: (t) => critiqueTexts.push(t) })));
   const s = await buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'g1' }, onEvent: (e) => events.push(e) }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
-  assert.deepEqual(sd.kinds.filter((k) => k !== 'after-submit'), ['draft', 'critique', 'rewrite', 'critique', 'rewrite']);
+  assert.deepEqual(sd.kinds.filter((k) => k !== 'after-submit'), ['draft', 'draft', 'cold-read', 'critique', 'rewrite', 'cold-read', 'critique', 'rewrite']);
   assert.match(critiqueTexts[0], /FINALE_TOO_THIN/); assert.match(critiqueTexts[0], /Thin draft/); assert.match(critiqueTexts[1], /Still thin/);
   assert.equal(s.attempts['story-director'], 1); assert.equal(s.storyDirector.masthead.title, 'Fixed');
   assert.ok(!s.gateIssues['story-director'].some((i) => i.code === 'FINALE_TOO_THIN'));
@@ -159,11 +160,11 @@ test('graph: if the final revision fails the gate, the existing retry runs (with
   const createModel = async (_c, agent) => {
     if (agent !== 'story-director') return otherAgents(agent);
     sdModels++;
-    return new RoleModel({ draft: titled('Draft'), revisions: [titled('Mid'), sdModels === 1 ? thin('Bad final') : titled('Good final')], critiques: ['critique a', 'critique b'], onDraft: (t) => drafts.push(t) });
+    return new RoleModel({ draft: thin('Draft'), revisions: [thin('Mid'), sdModels === 1 ? thin('Bad final') : titled('Good final')], critiques: ['critique a', 'critique b'], onDraft: (t) => drafts.push(t) });
   };
   const s = await buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'g2' } }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done'); assert.equal(s.attempts['story-director'], 2); assert.equal(s.storyDirector.masthead.title, 'Good final');
   assert.ok(s.validationErrors.find((v) => v.node === 'story-director').errors.some((i) => i.code === 'FINALE_TOO_THIN'));
-  assert.ok(!/FINALE_TOO_THIN/.test(drafts[0])); assert.match(drafts[1], /FINALE_TOO_THIN/, 'attempt 2 gets the gate errors of the final revision as retry notes');
+  assert.ok(!/FINALE_TOO_THIN/.test(drafts[0])); assert.match(drafts[2], /FINALE_TOO_THIN/, 'attempt 2 gets the gate errors of the final revision as retry notes');
   assert.deepEqual(s.reflections['story-director'].map((r) => r.attempt), [1, 2]);
 }));

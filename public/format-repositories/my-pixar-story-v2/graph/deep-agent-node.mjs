@@ -5,9 +5,11 @@
 //   runs/<runId>/<agent>/versions     read-only: prior approved versions (empty by default)
 //   runs/<runId>/<agent>/skills/<agent>/SKILL.md   the agent's role.md
 // The agent finishes by calling submit_<agent>, whose Zod schema is the agent's schema.mjs output; returnDirect ends the run.
-import { isFatalProviderError, isStreamDrop } from './provider-errors.mjs';
+import { isFatalProviderError, isStreamDrop, withCallRetry, CALL_RETRIES } from './provider-errors.mjs';
 import { createMiddleware } from 'langchain';
 import { noteStreamActivity } from './liveness.mjs';
+import { cutQuotaNote, judgeRewrite, runtimeOf } from './length-guard.mjs';
+export { cutQuotaNote, judgeRewrite, runtimeOf };
 import { mkdir, writeFile, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, extname, relative } from 'node:path';
@@ -21,6 +23,8 @@ import { CharacterArchitectOutputSchema } from '../crew/character-architect/sche
 import { LocationScoutOutputSchema } from '../crew/location-scout/schema.mjs';
 import { SeedanceCompilerOutputSchema, SeedanceSubmitSchema, withAssembledPrompts } from '../crew/seedance-compiler/schema.mjs';
 import { loadSkill, loadReview, outputCap } from '../config/models.mjs';
+import { runColdRead } from './cold-read.mjs';
+import { bestOfEnabled, runBestOf } from './best-of.mjs';
 
 export const RUNS_ROOT = fileURLToPath(new URL('../runs/', import.meta.url));
 export const OUTPUT_SCHEMAS = {
@@ -77,22 +81,7 @@ export async function prepareRunWorkspace({ runsRoot = RUNS_ROOT, runId, agent, 
 
 /** Deep Agent with v1's backend/permission pattern. */
 // ---- Single-call retry for dropped streams (r5-dry4) ----
-/** Retries of ONE model call after a mid-stream / network drop, before the error reaches the attempt loop. */
-export const CALL_RETRIES = 2;
-const sleep = (ms, signal) => new Promise((res, rej) => { const t = setTimeout(res, ms); signal?.addEventListener?.('abort', () => { clearTimeout(t); rej(signal.reason); }, { once: true }); });
-/**
- * Run one model call; when its stream drops (isStreamDrop) retry just that call up to `retries` times, with a short
- * backoff. Anything else (gate/schema problems, our own timeouts and aborts, fatal key errors) is thrown at once.
- */
-export async function withCallRetry(call, { retries = CALL_RETRIES, delayMs = 2000, onRetry = () => {}, signal } = {}) {
-  for (let n = 0; ; n++) {
-    try { return await call(); } catch (e) {
-      if (n >= retries || !isStreamDrop(e) || signal?.aborted) throw e;
-      onRetry(e, n + 1);
-      await sleep(delayMs * (n + 1), signal);
-    }
-  }
-}
+export { CALL_RETRIES, withCallRetry };
 /** Agent middleware: the same single-call retry around every model request of a Deep Agent run. */
 export const streamDropRetryMiddleware = (opts = {}) => createMiddleware({
   name: 'StreamDropRetryMiddleware',
@@ -284,25 +273,19 @@ export const REFLECTION_FOCUS = {
   ],
 };
 
-/** Runtime facts for the critic's length check: the target from the input, this draft's and the first draft's runtime. */
-const runtimeOf = (o) => (Number.isFinite(o?.shapeBar?.totalRuntimeSec) ? o.shapeBar.totalRuntimeSec : null);
-function runtimeNote(input, draft, firstRuntime) {
-  const now = runtimeOf(draft);
-  if (now == null) return '';
-  const target = input?.targetTotalRuntimeSec ?? input?.format?.targetTotalSeconds ?? null;
-  return `Runtime: this draft ${now}s${target ? `; target ${target}s` : ''}${firstRuntime != null && firstRuntime !== now ? `; first draft ${firstRuntime}s` : ''}. A revision must not be longer than the draft it fixes unless a fix requires it.`;
-}
+/** Runtime facts for the critic's length check: delegates to cutQuotaNote. */
+export const runtimeNote = cutQuotaNote;
 
 /**
  * Messages for one critique call: the agent reviews its own draft against its rules, the input and (if any) the gate.
  * With a review rubric (crew/<agent>/REVIEW.md, loadReview) the call is an editor's pass: score each rubric item
  * PASS/FAIL with evidence, list at most 8 fixes, end on VERDICT. Without one it uses the generic focus list.
  */
-export function critiqueMessages({ agent, skill, review = null, input, draft, round, rounds, gateIssues = [], trace = '', scope = '', firstRuntime = null }) {
+export function critiqueMessages({ agent, skill, review = null, input, draft, round, rounds, gateIssues = [], trace = '', scope = '', firstRuntime = null, prevDraft = null, coldNotes = '' }) {
   const focus = REFLECTION_FOCUS[agent] ?? REFLECTION_FOCUS.default;
   const gate = gateIssues.filter((i) => i.severity === 'error');
   const warns = gateIssues.filter((i) => i.severity === 'warning');
-  const rt = runtimeNote(input, draft, firstRuntime);
+  const rt = cutQuotaNote(input, draft, prevDraft, { firstRuntime });
   // Patch mode: the prior output is the draft's own baseline; do not send it twice.
   if (input?.patch?.currentOutput) input = { ...input, patch: { ...input.patch, currentOutput: '(the output before this patch; outside the target the draft must equal it exactly)' } };
   const system = review
@@ -317,6 +300,7 @@ export function critiqueMessages({ agent, skill, review = null, input, draft, ro
       gate.length ? `The deterministic gate currently fails this draft; the rewrite must fix these:\n${gate.map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n')}` : 'The deterministic gate currently passes this draft; the rewrite must keep it passing.',
       ...(review && warns.length ? [`Gate warnings (not blocking; check each against the rubric and list a fix only if it is a real problem):\n${warns.map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n')}`] : []),
       ...(rt ? [rt] : []),
+      ...(coldNotes ? [`Cold viewer notes (a first-time viewer read the script without the answers; turn real issues into FIXES, ignore notes that are wrong):\n${coldNotes}`] : []),
       ...(trace ? ['Line-by-line trace of the draft against the answers (from the deterministic checker; "match" is word overlap with the cited answer):', trace] : []),
       ...(review
         ? ['Review the draft with your rubric: read it once as a viewer, then answer R1 to R9 in order, PASS or FAIL with exact evidence, then FIXES (at most 8, most important first, cuts before additions), in the rubric\'s reply format.']
@@ -378,13 +362,13 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     const model = await createModel(config, agent);
     const sysPrompt = systemPromptFor(agent, retryNotes, { photos: Object.keys(photoFiles).length > 0 });
     /** One Deep Agent run that ends in submit_<agent>; returns the submitted (schema-valid) object or throws. */
-    const runOnce = async (content, runName, extraTags = []) => {
+    const runOnce = async (content, runName, extraTags = [], workspaceRoot = root) => {
       const submissions = [];
       const done = new AbortController(); // ends the agent loop on a valid submit (or give-up)
       let giveUp = null;
       const submit = makeSubmitTool(agent, submissions, { maxInvalid: maxInvalidSubmits, ...(submitSchema ? { schema: submitSchema } : {}),
         onSubmitted: () => done.abort(new Error('submitted')), onGiveUp: (e) => { giveUp = e; done.abort(e); } });
-      const agentRun = workspaceAgent(model, root, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], sysPrompt, { retry: { onRetry: logRetry(agent), signal, ...callRetry } });
+      const agentRun = workspaceAgent(model, workspaceRoot, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], sysPrompt, { retry: { onRetry: logRetry(agent), signal, ...callRetry } });
       const sig = signal ? AbortSignal.any([signal, done.signal]) : done.signal;
       try {
         await agentRun.invoke({ messages: [{ role: 'user', content }] }, { recursionLimit, signal: sig, runName, tags: [`agent:${agent}`, `attempt:${attempt}`, ...extraTags] });
@@ -400,8 +384,21 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       throw new Error(`${agent}: the deep agent finished without calling submit`);
     };
 
-    let out = await runOnce(task ?? `Produce the ${agent} output for this run.`, `${agent} deep agent`);
     const rounds = reflectionRoundsFor(config, reqRounds ?? (typeof reflectionRounds === 'object' && reflectionRounds ? reflectionRounds[agent] : reflectionRounds));
+    let out;
+    let bestOf = null;
+    let initialGateIssues = null;
+    if (bestOfEnabled(agent, config, { scope, task, rounds })) {
+      const picked = await runBestOf({
+        agent, input, model, gate, signal, runsRoot, root, task, runOnce,
+        prepareWorkspace: prepareRunWorkspace, state, assetFiles, photoFiles,
+      });
+      out = picked.winnerDraft;
+      bestOf = picked.bestOf;
+      initialGateIssues = picked.gateIssues;
+    } else {
+      out = await runOnce(task ?? `Produce the ${agent} output for this run.`, `${agent} deep agent`);
+    }
     if (!rounds) return out;
 
     const dir = join(root, 'reflection');
@@ -411,19 +408,23 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     const skill = loadSkill(agent);
     const review = loadReview(agent); // the rubric, for the critique call only (never in the writer's prompt)
     const firstRuntime = runtimeOf(out);
+    let prevDraft = null;
+    let gateIssues = initialGateIssues;
+    if (!gateIssues) {
+      try { gateIssues = gate ? (gate(out)?.issues ?? []) : []; } catch { gateIssues = []; }
+    }
     const log = [];
     let stoppedEarly = false;
     for (let round = 1; round <= rounds; round++) {
       if (signal?.aborted) throw signal.reason ?? new Error('aborted');
-      let gateIssues = [];
-      try { gateIssues = gate ? (gate(out)?.issues ?? []) : []; } catch { gateIssues = []; }
+      const cold = await runColdRead({ agent, config, draft: out, model, round, attempt, signal, dir, rel, scope });
       const meta = { runName: `${agent} reflection round ${round} critique`, tags: [`agent:${agent}`, `attempt:${attempt}`, `reflection:${round}`], metadata: { agent, attempt, reflectionRound: round }, signal };
       let tr = null;
       try { tr = trace ? trace(out) : null; } catch { tr = null; }
-      const msgs = critiqueMessages({ agent, skill, review, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime });
-      const critique = replyText(await withCallRetry(() => model.invoke(msgs, meta), { onRetry: logRetry(agent), signal, ...callRetry })).trim();
+      const critique = replyText(await withCallRetry(() => model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime, prevDraft, coldNotes: cold?.notes ?? '' }), meta), { onRetry: logRetry(agent), signal, ...callRetry })).trim();
       await writeFile(join(dir, `round-${round}-critique.md`), critique + '\n');
       const entry = { round, critique, critiqueFile: rel(`round-${round}-critique.md`), gateErrorsBefore: gateIssues.filter((i) => i.severity === 'error').length };
+      if (cold) { entry.coldRead = cold.notes; entry.coldReadFile = cold.file; }
       if (tr?.data) { entry.trace = tr.data; entry.untraceable = parseUntraceable(critique); }
       entry.verdict = parseVerdict(critique); entry.fixes = countFixes(critique); entry.runtimeBefore = runtimeOf(out);
       if (shipsAsIs(critique, gateIssues)) {
@@ -433,10 +434,23 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       }
       try {
         const revised = await runOnce(revisionMessage({ agent, draft: out, critique, round, rounds, scope }), `${agent} reflection round ${round} rewrite`, [`reflection:${round}`]);
-        entry.changed = JSON.stringify(revised) !== JSON.stringify(out);
-        out = revised; entry.runtimeAfter = runtimeOf(out);
-        await writeFile(join(dir, `draft-${round}.json`), JSON.stringify(out, null, 2));
-        entry.draftFile = rel(`draft-${round}.json`);
+        let gateIssuesAfter = [];
+        try { gateIssuesAfter = gate ? (gate(revised)?.issues ?? []) : []; } catch { gateIssuesAfter = []; }
+        const judgment = judgeRewrite({ input, before: out, after: revised, gateBefore: gateIssues, gateAfter: gateIssuesAfter });
+        if (!judgment.accepted) {
+          console.log(judgment.message);
+          entry.changed = false;
+          entry.rejected = judgment.rejected;
+          entry.runtimeAfter = runtimeOf(out);
+        } else {
+          entry.changed = JSON.stringify(revised) !== JSON.stringify(out);
+          prevDraft = out;
+          out = revised;
+          gateIssues = gateIssuesAfter;
+          entry.runtimeAfter = runtimeOf(out);
+          await writeFile(join(dir, `draft-${round}.json`), JSON.stringify(out, null, 2));
+          entry.draftFile = rel(`draft-${round}.json`);
+        }
       } catch (e) {
         if (signal?.aborted) throw signal.reason ?? e;
         if (isFatalProviderError(e)) throw e; // spent key / no credits: never swallowed as a failed rewrite
@@ -445,8 +459,8 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       }
       log.push(entry);
     }
-    await writeFile(join(dir, 'reflection.json'), JSON.stringify({ agent, attempt, rounds, roundsRun: log.length, stoppedEarly, rubric: Boolean(review), log }, null, 2));
-    Object.defineProperty(out, REFLECTION, { value: { rounds, roundsRun: log.length, stoppedEarly, log }, enumerable: false, configurable: true });
+    await writeFile(join(dir, 'reflection.json'), JSON.stringify({ agent, attempt, rounds, roundsRun: log.length, stoppedEarly, rubric: Boolean(review), ...(bestOf ? { bestOf } : {}), log }, null, 2));
+    Object.defineProperty(out, REFLECTION, { value: { rounds, roundsRun: log.length, stoppedEarly, ...(bestOf ? { bestOf } : {}), log }, enumerable: false, configurable: true });
     return out;
   };
 }

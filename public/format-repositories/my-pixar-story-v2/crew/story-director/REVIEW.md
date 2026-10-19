@@ -19,7 +19,7 @@ Fix: `3.4: restore "..." whole, split across 3.4-3.5`, not `tighten the middle`.
 - **R5 Referents:** Is it clear who every pronoun means, especially in the finale?
 - **R6 Finale:** Does the finale carry only the finaleThesis idea and end on a whole sentence plus an action or gesture?
 - **R7 Time framing:** Is every past moment played by an adult card framed as a memory?
-- **R8 Length:** Is runtime at or under `targetTotalRuntimeSec` and not longer than the previous draft, with no redundant beat
+- **R8 Length:** Is runtime at or under `targetTotalRuntimeSec` and not longer than the previous draft, meeting the cut quota with no redundant beat
   (repeated shot, unanswered connective, part with no new fact)? Fix by cutting, never adding.
 - **R9 Gate rules:** Do the draft and your fixes keep every gate rule and fix every gate error listed?
 
