@@ -1,8 +1,7 @@
 // WIGGLY answer tracing (deterministic). Every spoken/narrated line in the Story Director's output carries
-// source: { answer: '<path into input.answers>', kind: 'verbatim' | 'paraphrase' | 'connective' }, and every part
+// source: { answer: '<path into input.answers>', kind?: 'connective' }, and every part
 // lists answerSources (the answers whose memories it depicts). This checks each cited answer exists and that the
-// line really comes from it: verbatim lines reproduce an answer sentence nearly word for word, paraphrases share the
-// answer's key words, and names / numbers / times in a line appear in the answer it cites (so a detail cannot be
+// line really comes from it: its facts come from that answer (lines are written freely, not quoted), and names / numbers / times in a line appear in the answer it cites (so a detail cannot be
 // borrowed from a different answer). Spelling variants (case, hyphens, possessives, plurals, one-letter typos,
 // digits vs number words) count as the same word.
 // The LLM audit in scripts/trace-answers.mjs (extract facts -> trace each fact) stays a post-run report; this is
@@ -154,7 +153,7 @@ export function traceLines(data, input = {}) {
       const src = d.source && typeof d.source === 'object' ? d.source : null;
       const row = { where, path, field: k, speaker: d.speaker, line: d.line, answer: src?.answer ?? null, kind: src?.kind ?? null, score: null, problems: [] };
       rows.push(row);
-      if (!src || !SOURCE_KINDS.includes(src.kind)) { row.problems.push({ code: 'LINE_SOURCE_MISSING' }); continue; }
+      if (!src || (src.kind != null && !SOURCE_KINDS.includes(src.kind))) { row.problems.push({ code: 'LINE_SOURCE_MISSING' }); continue; }
       const text = src.answer ? resolveAnswer(answers, src.answer) : null;
       if (src.answer && !text) { row.problems.push({ code: 'LINE_SOURCE_UNKNOWN' }); continue; }
       if (src.kind !== 'connective' && !src.answer) { row.problems.push({ code: 'LINE_SOURCE_MISSING' }); continue; }
@@ -166,10 +165,7 @@ export function traceLines(data, input = {}) {
         row.problems.push({ code: 'LINE_FACT_NOT_IN_SOURCE', fact: n, foundIn: found((t) => textHasWord(t, n)) });
       for (const v of numbersIn(d.line)) if (!scopeNums.has(v))
         row.problems.push({ code: 'LINE_FACT_NOT_IN_SOURCE', fact: String(v), foundIn: found((t) => numbersIn(t).has(v)) });
-      if (src.kind === 'verbatim') {
-        row.score = verbatimScore(d.line, text);
-        if (row.score < NEAR_VERBATIM) row.problems.push({ code: 'LINE_NOT_VERBATIM' });
-      } else if (src.kind === 'paraphrase') {
+      if (!conn) {
         row.score = keyWordScore(d.line, text, free);
         if (row.score < PARAPHRASE_MIN) row.problems.push({ code: 'LINE_SOURCE_MISMATCH' });
       } else if (words(d.line).length > CONNECTIVE_MAX_WORDS) row.problems.push({ code: 'CONNECTIVE_LINE_LONG' });
@@ -193,13 +189,12 @@ export function checkAnswerSources(data, input = {}) {
   const rows = traceLines(data, input);
   for (const r of rows) for (const p of r.problems) {
     const at = `Shot ${r.where} ${r.field} ${q(r.line)}`;
-    if (p.code === 'LINE_SOURCE_MISSING') err(p.code, `${at} has no source. Add source: { answer: '<answer id>', kind: 'verbatim' | 'paraphrase' } naming the answer it comes from (answer ids: ${idList}), or kind 'connective' for a short scene-setting line with no new facts.`, `${r.path}.source`);
+    if (p.code === 'LINE_SOURCE_MISSING') err(p.code, `${at} has no source. Add source: { answer: '<answer id>', answer: '<answer id>' } naming the answer whose facts it tells (answer ids: ${idList}), or kind 'connective' for a short scene-setting line with no new facts.`, `${r.path}.source`);
     else if (p.code === 'LINE_SOURCE_UNKNOWN') err(p.code, `${at} cites answer '${r.answer}', which is not in the family's answers (answer ids: ${idList}).`, `${r.path}.source.answer`);
     else if (p.code === 'LINE_FACT_NOT_IN_SOURCE') err(p.code, r.kind === 'connective'
       ? `${at} is marked connective but states '${p.fact}'. Connective lines carry no facts (names, numbers, times)${p.foundIn.length ? `; '${p.fact}' is in '${p.foundIn.join("', '")}', so cite that answer` : '; the family never wrote it, so drop it'}.`
       : `${at} says '${p.fact}', which is not in the answer it cites ('${r.answer}')${p.foundIn.length ? `; it appears in '${p.foundIn.join("', '")}' instead. Do not move a detail from one memory into another: cite that answer, or drop the detail` : '. Do not invent names, numbers or times; use only what the family wrote'}.`, `${r.path}.line`);
-    else if (p.code === 'LINE_NOT_VERBATIM') err(p.code, `${at} is marked verbatim but only ${pct(r.score)} of its words appear in order in '${r.answer}' (need ${pct(NEAR_VERBATIM)}). Quote the family's sentence as written, or mark it paraphrase.`, `${r.path}.source`);
-    else if (p.code === 'LINE_SOURCE_MISMATCH') err(p.code, `${at} is marked a paraphrase of '${r.answer}' but only ${pct(r.score)} of its key words are in that answer (need ${pct(PARAPHRASE_MIN)}). Cite the answer it really comes from, or rewrite it from that answer's own words.`, `${r.path}.source`);
+    else if (p.code === 'LINE_SOURCE_MISMATCH') warn(p.code, `${at} cites '${r.answer}' but only ${pct(r.score)} of its key words are in that answer. Check it tells that answer's facts and cite the answer it really comes from.`, `${r.path}.source`);
     else if (p.code === 'CONNECTIVE_LINE_LONG') warn(p.code, `${at} is a connective line of ${words(r.line).length} words (max ${CONNECTIVE_MAX_WORDS}). Connective lines only set the scene; anything longer should come from an answer.`, `${r.path}.line`);
   }
   const conn = rows.filter((r) => r.kind === 'connective');

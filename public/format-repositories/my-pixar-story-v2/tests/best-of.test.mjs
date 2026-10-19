@@ -15,7 +15,6 @@ import {
   pickDraft,
   judgeMessages,
   parseWinner,
-  ownWordsShare,
   draftContext,
 } from '../graph/best-of.mjs';
 
@@ -93,14 +92,6 @@ test('WINNER parsing: standard, markdown bold, TIE, and unparseable garbage', { 
   assert.equal(parseWinner('Reasoning...\n**WINNER: B**'), 'B');
   assert.equal(parseWinner('No winner mentioned anywhere'), 'TIE');
   assert.equal(parseWinner(''), 'TIE');
-});
-
-test('ownWordsShare counts verbatim lines over total spoken lines', { timeout: 10000 }, () => {
-  const allVerbatim = withVerbatim('All Verbatim', 'verbatim');
-  assert.equal(ownWordsShare(allVerbatim), 1);
-  const noneVerbatim = withVerbatim('None', 'paraphrase');
-  assert.equal(ownWordsShare(noneVerbatim), 0);
-  assert.equal(ownWordsShare({}), 0);
 });
 
 test('flag off, other agents, and patch mode: single draft', { timeout: 10000 }, () => {
@@ -340,33 +331,11 @@ test('both fail -> draft A proceeds and existing retry still works', { timeout: 
   assert.match(seenCritique[0], /Draft A/);
 }));
 
-test('TIE/garbage -> own-words tiebreak (higher verbatim share wins)', { timeout: 10000 }, async () => {
-  const draftA = withVerbatim('A', ['verbatim', 'verbatim', 'verbatim', 'connective']);
-  const draftB = withVerbatim('B', ['verbatim', 'paraphrase', 'paraphrase', 'connective']);
-
-  const fakeModel = {
-    invoke: async () => say('WINNER: TIE'),
-  };
-
-  const res = await pickDraft({
-    draftA,
-    draftB,
-    gate: () => ({ issues: [] }),
-    model: fakeModel,
-    input: INPUT,
-    agent: 'story-director',
-  });
-
-  assert.equal(res.winner, 'A');
-  assert.equal(res.bestOf.reason, 'own-words');
-  assert.equal(res.bestOf.judged, true);
-});
-
-test('TIE/garbage -> tiebreak by fewer runtime seconds when own-words match', { timeout: 10000 }, async () => {
+test('TIE/garbage -> runtime closest to the target wins (not the shortest, not word overlap)', { timeout: 10000 }, async () => {
   const draftA = withVerbatim('A', ['verbatim', 'connective']);
-  draftA.shapeBar.totalRuntimeSec = 95;
-  const draftB = withVerbatim('B', ['verbatim', 'connective']);
-  draftB.shapeBar.totalRuntimeSec = 88;
+  draftA.shapeBar.totalRuntimeSec = 70;
+  const draftB = withVerbatim('B', ['paraphrase', 'connective']);
+  draftB.shapeBar.totalRuntimeSec = 95;
 
   const fakeModel = {
     invoke: async () => say('Could not decide.\nWINNER: UNKNOWN'),
@@ -385,11 +354,11 @@ test('TIE/garbage -> tiebreak by fewer runtime seconds when own-words match', { 
   assert.equal(res.bestOf.reason, 'runtime');
 });
 
-test('TIE/garbage -> fallback to A when own-words and runtime are equal', { timeout: 10000 }, async () => {
+test('TIE/garbage -> fallback to A when both are equally far from the target', { timeout: 10000 }, async () => {
   const draftA = withVerbatim('A', ['verbatim', 'connective']);
-  draftA.shapeBar.totalRuntimeSec = 90;
+  draftA.shapeBar.totalRuntimeSec = 85;
   const draftB = withVerbatim('B', ['verbatim', 'connective']);
-  draftB.shapeBar.totalRuntimeSec = 90;
+  draftB.shapeBar.totalRuntimeSec = 95;
 
   const fakeModel = {
     invoke: async () => { throw new Error('Temporary judge failure'); },

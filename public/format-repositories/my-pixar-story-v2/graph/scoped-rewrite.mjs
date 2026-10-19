@@ -112,7 +112,7 @@ export function formatScopedRevisionInstructions(allowedShots) {
     `Allowed shots to change: ${shotsList}.`,
     'Keep every other shot word for word; you may cut or split the allowed shots and renumber shots in order.',
     'Every shot outside this allowed set is frozen and must not change; any change to an unnamed shot will be reverted in code.',
-    `A restored sentence longer than the per-line word cap (${MAX_LINE_WORDS} words) must be split across consecutive lines or shots, never left long.`,
+    `A line longer than the per-line word cap (${MAX_LINE_WORDS} words) must be split across consecutive lines or shots, never left long.`,
   ].join('\n');
 }
 

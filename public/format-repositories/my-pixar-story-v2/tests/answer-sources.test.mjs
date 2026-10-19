@@ -31,7 +31,7 @@ const INPUT = {
 const CAST = [{ elementTag: '@AdultTheo', name: 'Adult Theo', realPerson: 'Theo' }, { elementTag: '@Gran', name: 'Gran', realPerson: 'Gran' },
   { elementTag: '@June', name: 'June', realPerson: 'June' }, { elementTag: '@Wren', name: 'Wren', realPerson: 'Wren' }];
 const sd = (lines, { answerSources = ['childhood.memory'], cast = CAST, see = '@AdultTheo sits by the water' } = {}) => ({ cast, segments: [{ segmentId: 1, answerSources,
-  shots: lines.map(([line, answer, kind, field = 'narration'], i) => ({ shotNumber: i + 1, whatWeSee: see, [field]: { speaker: '@AdultTheo', line, ...(kind ? { source: { ...(answer ? { answer } : {}), kind } } : {}) } })) }] });
+  shots: lines.map(([line, answer, kind, field = 'narration'], i) => ({ shotNumber: i + 1, whatWeSee: see, [field]: { speaker: '@AdultTheo', line, ...(kind || answer ? { source: { ...(answer ? { answer } : {}), ...(kind ? { kind } : {}) } } : {}) } })) }] });
 const run = (lines, opt) => checkAnswerSources(sd(lines, opt), INPUT);
 
 test('the good fixture traces cleanly against its answers, and the full gate passes', () => {
@@ -65,13 +65,12 @@ test('answer ids are key paths into answers; unknown ids and missing sources fai
   assert.deepEqual(codes(run([['{Patience is just love that waits.}', 'childhood.memory', 'verbatim']])), []);
 });
 
-test('verbatim must be near word for word; paraphrase must share the answer\'s key words', () => {
-  assert.deepEqual(codes(run([['{She said patience is just love that waits.}', 'childhood.memory', 'verbatim']])), []);
-  assert.deepEqual(codes(run([['{Gran said patience is love, waiting.}', 'childhood.memory', 'verbatim']])), [], 'small rewording still counts as verbatim (83%)');
-  assert.deepEqual(codes(run([['{Gran told me waiting with love is patience.}', 'childhood.memory', 'verbatim']])), ['LINE_NOT_VERBATIM']);
-  assert.deepEqual(codes(run([['{Gran told me waiting with love is patience.}', 'childhood.memory', 'paraphrase']])), []);
-  const off = run([['{We raced go-karts down the hill.}', 'childhood.memory', 'paraphrase']]);
-  assert.deepEqual(codes(off), ['LINE_SOURCE_MISMATCH']); assert.match(off[0].message, /0% of its key words/);
+test('lines are written freely from the answer: rewording passes; a line sharing nothing with its answer only warns', () => {
+  assert.deepEqual(codes(run([['{She said patience is just love that waits.}', 'childhood.memory']])), []);
+  assert.deepEqual(codes(run([['{Gran told me patience means waiting, with love.}', 'childhood.memory']])), [], 'natural rewording is fine');
+  assert.deepEqual(codes(run([['{Gran told me waiting with love is patience.}', 'childhood.memory', 'verbatim']])), [], 'old kinds are accepted, never word-checked');
+  const off = run([['{We raced go-karts down the hill.}', 'childhood.memory']]);
+  assert.deepEqual(codes(off), ['LINE_SOURCE_MISMATCH']); assert.equal(off[0].severity, 'warning'); assert.match(off[0].message, /0% of its key words/);
 });
 
 test('a detail borrowed from a different answer fails and names the answer it is really in (the "8pm" failure)', () => {

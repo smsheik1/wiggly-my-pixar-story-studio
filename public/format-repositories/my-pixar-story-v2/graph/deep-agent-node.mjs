@@ -268,7 +268,7 @@ export const REFLECTION_FOCUS = {
   ],
   'story-director': [
     'Ending coherence: does the final part build to the ONE idea in finaleThesis? Name every finale line that does not serve it, any callback that does not fit it, and whether the last line says or shows it plainly.',
-    'Traceability: for every spoken or narrated line, is its source the answer the line really comes from, and is its kind honest (verbatim = the family\'s sentence as written)? Quote each line that cannot be traced, each detail borrowed from a different answer, and each invented fact (people, objects, events, dates, ages, places, motives), including in whatWeSee, which the trace table does not check. Connective lines must be few, short and fact-free. Every cast card must be a person the family names.',
+    'Traceability: for every spoken or narrated line, is its source the answer whose facts it tells? Quote each line that cannot be traced, each detail borrowed from a different answer, and each invented fact (people, objects, events, dates, ages, places, motives), including in whatWeSee, which the trace table does not check. Connective lines must be few, short and fact-free. Every cast card must be a person the family names.',
     'Nothing crammed: details squeezed in from a different moment of the answers, separate thoughts merged into one punchy line, or a family sentence compressed into a slogan to fit a short shot (lengthen or split the shot instead).',
     'Abstract claims: each piece of advice or wisdom in the finale should play over a shot where someone does something that shows it.',
     'Every other rule in your SKILL.md (including its do-not-write list): quote the line or field that breaks one.',

@@ -12,7 +12,7 @@ import { AIMessage } from '@langchain/core/messages';
 import { deepAgentInvoke, REFLECTION, critiqueMessages, revisionMessage, parseVerdict, hasRubricFail, countFixes, shipsAsIs } from '../graph/deep-agent-node.mjs';
 import { loadReview, loadSkill } from '../config/models.mjs';
 import { validateStoryDirectorOutput } from '../crew/linter/check-stage-play.mjs';
-import { verbatimShare, checkVerbatimShare, checkPropsTraceable, objectNoun, tightestSpan, VERBATIM_SHARE_ERROR } from '../crew/linter/craft-checks.mjs';
+import { checkPropsTraceable, objectNoun } from '../crew/linter/craft-checks.mjs';
 import { runPatch } from '../scripts/patch.mjs';
 
 class ScriptedModel extends BaseChatModel {
@@ -111,37 +111,6 @@ test('no early stop when the gate fails or the critic says REVISE; the rewrite n
 }));
 
 // ---- craft checks ----
-const sdWith = (lines) => { // one part, one shot per line, all in the fixture's first scene
-  const d = json('good-stage-play.json');
-  const seg = d.segments[0];
-  const base = seg.shots.find((s) => s.dialogue);
-  seg.shots = lines.map((l, i) => ({ ...structuredClone(base), shotNumber: i + 1, dialogue: { ...base.dialogue, line: `{${l}}`, source: { answer: 'scene1Childhood.memory', kind: 'verbatim' } } }));
-  d.segments = [seg]; return d;
-};
-const WHOLE = ['When I was eight I wore my sunglasses everywhere', 'and told everyone I am a scientist.', 'My sister rolled her eyes and said you are eight.', 'I said a scientist, not even kidding.', 'Mom just said then go do science, habibi.', 'Then go do science, habibi.'];
-const SQUEEZED = ['At eight I wore sunglasses and told everyone scientist.', 'My sister said eight.', 'Not kidding, a scientist.', 'Mom said go do science.', 'Sunglasses everywhere, scientist.', 'Go do science.'];
-
-test('verbatim share: whole family sentences (split across shots) count; squeezed or reworded ones do not', () => {
-  const tsp = tightestSpan(['i', 'got', 'a', 'job'], ['when', 'i', 'was', 'nineteen', 'i', 'got', 'my', 'first', 'real', 'job']);
-  assert.equal(tsp.matched, 3, 'in order, extra words skipped');
-  const w = verbatimShare(sdWith(WHOLE), ANSWERS); assert.equal(w.share, 1, JSON.stringify(w.reworded));
-  const s = verbatimShare(sdWith(SQUEEZED), ANSWERS); assert.ok(s.share < VERBATIM_SHARE_ERROR, JSON.stringify(s));
-  assert.ok(s.reworded.some((r) => r.why === 'shortened') && s.reworded.some((r) => r.why === 'reworded'));
-  const err = checkVerbatimShare(sdWith(SQUEEZED), ANSWERS);
-  assert.equal(err[0].code, 'VERBATIM_SHARE_LOW'); assert.equal(err[0].severity, 'error'); assert.match(err[0].message, /Restore their whole sentences/);
-  assert.deepEqual(checkVerbatimShare(sdWith(WHOLE), ANSWERS), []);
-  const mixed = checkVerbatimShare(sdWith([...WHOLE.slice(0, 5), ...SQUEEZED.slice(0, 2)]), ANSWERS); // 5 of 7 = 71%: thin, legal (warning band)
-  assert.equal(mixed[0]?.severity, 'warning');
-  assert.deepEqual(checkVerbatimShare(sdWith(SQUEEZED.slice(0, 5)), ANSWERS), [], 'too few lines to judge');
-  assert.deepEqual(checkVerbatimShare(sdWith(SQUEEZED), { answers: {} }), [], 'no answers, no check');
-  const conn = sdWith(SQUEEZED); for (const sh of conn.segments[0].shots) sh.dialogue.source.kind = 'connective';
-  assert.deepEqual(checkVerbatimShare(conn, ANSWERS), [], 'connective lines are not counted');
-});
-
-test('the gate fails a squeezed script (VERBATIM_SHARE_LOW) and passes the fixture', () => {
-  assert.ok(validateStoryDirectorOutput(json('good-stage-play.json'), ANSWERS).isValid);
-  assert.ok(validateStoryDirectorOutput(sdWith(SQUEEZED), ANSWERS).issues.some((i) => i.code === 'VERBATIM_SHARE_LOW' && i.severity === 'error'));
-});
 
 test('cast listed in a scene but never seen or heard is an error; on screen, voice-over or narration clears it', () => {
   const gate = (fn) => { const d = json('good-stage-play.json'); fn(d); return validateStoryDirectorOutput(d, ANSWERS).issues.filter((i) => i.code === 'PRESENT_NEVER_SEEN'); };
@@ -185,22 +154,3 @@ test('patch: a prior with gate errors only inside the target part is patchable; 
   await assert.rejects(runPatch({ from: 'prior', target: 'part:1', runsRoot: root, check: true, log: () => {} }), /PATCH_PRIOR_INVALID[\s\S]*PRESENT_NEVER_SEEN[\s\S]*outside part:1/);
 }));
 
-// Answers are interview replies: naming the person a question-pronoun meant keeps the line the family's own.
-import { verbatimShare as vShare } from '../crew/linter/craft-checks.mjs';
-const pronounCase = (lines, answer) => vShare({ cast: [{ name: 'Wren' }, { name: 'Theo' }], segments: [{ segmentId: 1, shots: lines.map((line, i) => ({ shotNumber: i + 1, narration: { speaker: '@Theo', line: `{${line}}`, source: { answer: 'finale.memory', kind: 'verbatim' } } })) }] }, { answers: { finale: { memory: answer } } });
-test('pronoun-to-name swap still counts as own words', () => {
-  const a = 'I would want her to understand that I love her very much even if I may not always show it.';
-  assert.equal(pronounCase(['I would want Wren to understand that I love her very much even if I may not always show it.'], a).own, 1);
-});
-test('pronoun-to-you swap with verb agreement still counts as own words', () => {
-  assert.equal(pronounCase(['I would want you to understand that I love you very much'], 'I would want her to understand that I love her very much').own, 1);
-  assert.equal(pronounCase(['You are the bravest one I know.'], 'She is the bravest one I know.').own, 1);
-  assert.equal(pronounCase(["Wren's laugh filled the whole house."], 'Her laugh filled the whole house.').own, 1);
-});
-test('the exact finale line (Mia) counts as own words', () => {
-  const r = vShare({ cast: [{ name: 'Mia' }], segments: [{ segmentId: 4, shots: [{ shotNumber: 2, narration: { line: '{I would want Mia to understand that I love her very much}', source: { answer: 'q.memory' } } }] }] }, { answers: { q: { memory: 'I would want her to understand that I love her very much even if I may not always show it.' } } });
-  assert.equal(r.own, 1);
-});
-test('a real rewording still fails', () => {
-  assert.equal(pronounCase(['I really hope Wren knows how much I care'], 'I would want her to understand that I love her very much').own, 0);
-});

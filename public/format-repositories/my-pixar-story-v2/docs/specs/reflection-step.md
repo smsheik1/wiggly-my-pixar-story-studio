@@ -16,7 +16,7 @@ call; the writer's prompt and the rewrite never carry it. Agents without a REVIE
   as a viewer, then check big to small (structure, then people and scenes, then lines); never polish a line in a beat that
   should be cut.
 - **Checklist R1-R9**, each one yes/no question, PASS or FAIL with exact evidence (`part.shot` + quote; R1 also quotes the
-  family's original sentence): R1 fidelity (own whole sentences, no shortening/paraphrase where theirs fits), R2 invented
+  family's original sentence): R1 fidelity (only facts from the answers, told clearly; lines are written, not quoted), R2 invented
   details (props, objects, places, names, ages), R3 setup/payoff (no line depends on a dropped fact), R4 cast in the scene
   (seen or heard), R5 pronoun/referent clarity (finale above all), R6 finale (one idea = finaleThesis, ends on a whole
   sentence and an action/gesture), R7 time framing (adult cards in past moments framed as memory), R8 length (at or under
@@ -33,10 +33,7 @@ call; the writer's prompt and the rewrite never carry it. Agents without a REVIE
 
 ## Cheap gate checks that back the rubric (crew/linter)
 
-- `VERBATIM_SHARE_LOW` (craft-checks.mjs): share of non-connective lines that are the family's own words, measured (words in
-  order >= 80% of the line, from one unbroken stretch of the answer >= 80% kept; splitting a sentence across shots is fine,
-  squeezing words out of it is not). Error below 60%, warning below 75%, needs >= 6 lines and answers. r5 data: no-review
-  draft 96%, compressed draft 44% (flagged), reviewed draft 94%.
+- (Removed: `VERBATIM_SHARE_LOW`. The answers are raw material, not script lines; only their facts are checked.)
 - `PRESENT_NEVER_SEEN` (shot-locks.mjs) is now an error: a scene's `present` member must be on screen or heard (dialogue,
   voice-over/off-camera, or narration) in one of its shots.
 - `PROP_NOT_IN_ANSWERS` (warning): concrete objects in prop locks and `whatWeSee` whose word is in no answer, cast note or

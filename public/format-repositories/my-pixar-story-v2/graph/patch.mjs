@@ -35,7 +35,7 @@ export function patchTask(target, note) {
   return [
     `PATCH MODE. Do not write a new story: fix ONE thing in the existing Story Director output.`,
     `The current output is patch.currentOutput in /references/input.json. The target is ${target.id}. The user's note on what is wrong, in their words: "${note}"`,
-    `Rewrite only the target so it fixes the note and still follows every rule in your SKILL.md (verbatim family words, line sources, shot locks, speech timing, finale). ${describeScope(target)}`,
+    `Rewrite only the target so it fixes the note and still follows every rule in your SKILL.md (facts from the answers, line sources, shot locks, speech timing, finale). ${describeScope(target)}`,
     'Copy every other field exactly, character for character, from patch.currentOutput. A code check compares your output with it and rejects any change outside the target.',
     'Finish by calling submit_story_director with the complete output (the whole JSON, not a diff).',
   ].join('\n');

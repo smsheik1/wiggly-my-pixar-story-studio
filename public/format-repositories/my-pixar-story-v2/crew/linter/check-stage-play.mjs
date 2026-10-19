@@ -3,7 +3,7 @@ import { accentOf } from '../story-director/schema.mjs';
 import { validateWritingTells } from './writing-tells.mjs';
 import { checkStageShotLocks, onScreenOf } from './shot-locks.mjs';
 import { words, lcs, answerSentences, NEAR_VERBATIM, checkAnswerSources, checkExtraCast } from './answer-sources.mjs';
-import { checkVerbatimShare, checkPropsTraceable } from './craft-checks.mjs';
+import { checkPropsTraceable } from './craft-checks.mjs';
 export { answerSentences, NEAR_VERBATIM };
 // v2 deterministic validation gate for Story Director output.
 // BASE: Gemini's validateStoryDirectorOutput (same return shape, codes and message text).
@@ -239,7 +239,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
     EXAMPLES ??= roleExampleLines().map(norm).filter((x) => x.split(' ').length >= 3);
     const ln = norm(lastLine.replace(/[{}]/g, ''));
     const copied = EXAMPLES.find((x) => ln === x || (x.split(' ').length >= 5 && ln.includes(x)));
-    if (copied) err('GENERIC_FINAL_LINE', `The film's last line '${lastLine}' copies an example from the role files ('${copied}'). End on the family's own words that say or show the finaleThesis.`, `segments.${segments.length - 1}`);
+    if (copied) err('GENERIC_FINAL_LINE', `The film's last line '${lastLine}' copies an example from the role files ('${copied}'). End on a clear line, built from the answers, that says or shows the finaleThesis.`, `segments.${segments.length - 1}`);
   }
   if (segments.length > 1 && last) (last.shots ?? []).forEach((h, hi) => {
     for (const k of ['dialogue', 'narration']) if (h[k]?.line && FINALE_PLATITUDE.test(h[k].line) && !quotesAnswer(h[k].line, input?.answers))
@@ -284,7 +284,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
   // WIGGLY shot locks: who is on screen, scene locks, entrances/exits, speaker on screen and leading, speech length.
   issues.push(...checkStageShotLocks(data));
   // WIGGLY answer tracing: every line cites the answer it comes from; only people the family names are cast.
-  issues.push(...checkAnswerSources(data, input), ...checkExtraCast(data, input), ...checkVerbatimShare(data, input), ...checkPropsTraceable(data, input));
+  issues.push(...checkAnswerSources(data, input), ...checkExtraCast(data, input), ...checkPropsTraceable(data, input));
   issues.push(...validateWritingTells('story-director', data));
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
   const warnings = issues.filter((i) => i.severity === 'warning').map((i) => i.message);

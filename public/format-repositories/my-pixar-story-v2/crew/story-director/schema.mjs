@@ -32,7 +32,7 @@ export const NarrationLineSchema = z.object({
 // WIGGLY answer tracing: every line names the family answer it comes from (crew/linter/answer-sources.mjs checks it).
 export const LineSourceSchema = z.object({
   answer: z.string().trim().min(1).optional().describe("Id of the answer in input.json the line comes from: its key path inside answers, e.g. 'scene1Childhood.memory'. Required unless kind is 'connective'"),
-  kind: z.enum(['verbatim', 'paraphrase', 'connective']).describe("verbatim: the family's sentence as written (small trims ok); paraphrase: reworded from that answer, same facts; connective: short scene-setting line with no facts of its own (few, flagged)"),
+  kind: z.enum(['verbatim', 'paraphrase', 'connective']).optional().describe("Omit for a line told from the answer. connective: a short scene-setting line that states no facts (answer may be omitted)."),
 }).refine((s) => s.kind === 'connective' || !!s.answer, { message: "source.answer is required unless kind is 'connective'", path: ['answer'] });
 export const DialogueSchema = DialogueLineSchema.extend({ source: LineSourceSchema });
 export const NarrationSchema = NarrationLineSchema.extend({ source: LineSourceSchema });

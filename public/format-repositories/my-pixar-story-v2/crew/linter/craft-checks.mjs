@@ -1,82 +1,8 @@
 // Cheap craft checks on the Story Director output (r5 review comparison). Generic for every family: they compare the
 // script against the family's own answers, never against any one story.
-//   VERBATIM_SHARE_LOW   too few spoken lines in the family's own words (measured, not the self-declared source kind)
 //   PROP_NOT_IN_ANSWERS  a concrete object in a prop lock or a shot that no answer, cast note or photo note mentions
 // (Cast listed in a scene but never shown is PRESENT_NEVER_SEEN in shot-locks.mjs.)
 import { words, sentences, lcs, allStrings, inputCorpus, resolveAnswer, hasAnswers, NEAR_VERBATIM } from './answer-sources.mjs';
-
-// r5 data, measured by verbatimShare below (self-declared kinds in brackets): a no-review draft 96% [80%], a compressed
-// draft 44% [26%], the same draft after review 94% [94%]. Below 60% most lines are the writer's words, not the family's:
-// error (the retry/review must restore whole sentences). 60-75% is legal but thin: warning, so the review looks.
-// Needs >= 6 lines to judge.
-export const VERBATIM_SHARE_ERROR = 0.6;
-export const VERBATIM_SHARE_WARN = 0.75;
-export const VERBATIM_MIN_LINES = 6;
-
-const spoken = (data) => (data?.segments ?? []).flatMap((seg, si) => (seg.shots ?? []).flatMap((sh, hi) => ['dialogue', 'narration']
-  .filter((k) => sh[k]?.line).map((k) => ({ where: `${seg.segmentId ?? si + 1}.${sh.shotNumber ?? hi + 1}`, line: sh[k].line, source: sh[k].source }))));
-
-/**
- * Shortest stretch of the source that holds the line's words in order (greedy, skipping words the line added). The line
- * is "compact" when the stretch is barely longer than the matched words: nothing was cut from the middle of the
- * family's sentence. `lw`/`sw` are word lists. Returns { matched, span }.
- */
-export function tightestSpan(lw, sw) {
-  let best = { matched: 0, span: Infinity };
-  for (let st = 0; st < sw.length; st++) {
-    if (sw[st] !== lw[0] && !(lw.length > 1 && sw[st] === lw[1])) continue;
-    let j = st, m = 0, last = st;
-    for (const w of lw) { let k = j; while (k < sw.length && sw[k] !== w) k++; if (k < sw.length && k - j <= 6) { m++; last = k; j = k + 1; } }
-    const span = last - st + 1;
-    if (m > best.matched || (m === best.matched && span < best.span)) best = { matched: m, span };
-  }
-  return best;
-}
-
-/**
- * Share of spoken lines (connectives excluded) that are the family's own sentences: the line's words are the answer's
- * words in order (>= NEAR_VERBATIM of the line) and come from one unbroken stretch of the answer (>= NEAR_VERBATIM of
- * that stretch is kept), so words were neither swapped nor squeezed out of the middle. Splitting a long sentence across
- * shots keeps every part whole; compressing it ("I went to a bootcamp, got a job at 19") does not.
- */
-// Answers reply to a question, so a pronoun there can lean on the question ("her" = the person asked about). Naming that
-// person, or saying "you" to them, keeps the family's sentence: pronouns, cast names and "you" match each other, and so
-// do the verb forms that agree with them.
-const PERSON = new Set('he him his himself she her hers herself they them their theirs themselves you your yours yourself'.split(' '));
-const AGREE = { is: 'be', are: 'be', was: 'be-past', were: 'be-past', has: 'have', have: 'have', does: 'do', do: 'do', "doesn't": "don't", "don't": "don't", "isn't": "aren't", "aren't": "aren't", "wasn't": "weren't", "weren't": "weren't" };
-export function personWords(data) {
-  return new Set((data?.cast ?? []).flatMap((c) => [c.name, c.realPerson]).flatMap((n) => words(n)));
-}
-export const canonWord = (w, names = new Set()) => PERSON.has(w) || names.has(w.replace(/'s$/, '')) ? '<person>' : AGREE[w] ?? w;
-
-export function verbatimShare(data, input = {}) {
-  const all = allStrings(input.answers), names = personWords(data), cw = (t) => words(t).map((w) => canonWord(w, names));
-  const rows = spoken(data).filter((l) => l.source?.kind !== 'connective').map((l) => {
-    const cited = l.source?.answer ? resolveAnswer(input.answers ?? {}, l.source.answer) : null;
-    const lw = cw(String(l.line).replace(/[{}]/g, ''));
-    let score = 0, compact = 0;
-    for (const t of cited ? [cited, ...all] : all) {
-      const sp = tightestSpan(lw, cw(t)), sc = lw.length ? sp.matched / lw.length : 0, cp = sp.matched / Math.max(1, sp.span);
-      if (sc > score + 1e-9 || (Math.abs(sc - score) < 1e-9 && cp > compact)) { score = sc; compact = cp; }
-      if (cited && score >= NEAR_VERBATIM && compact >= NEAR_VERBATIM) break;
-    }
-    const own = lw.length > 0 && score >= NEAR_VERBATIM && compact >= NEAR_VERBATIM;
-    return { where: l.where, line: l.line, score, compact, own, why: own ? '' : score < NEAR_VERBATIM ? 'reworded' : 'shortened' };
-  });
-  const own = rows.filter((r) => r.own);
-  return { lines: rows.length, own: own.length, share: rows.length ? own.length / rows.length : 1, reworded: rows.filter((r) => !r.own) };
-}
-
-export function checkVerbatimShare(data, input = {}) {
-  if (!hasAnswers(input.answers)) return [];
-  const v = verbatimShare(data, input);
-  if (v.lines < VERBATIM_MIN_LINES || v.share >= VERBATIM_SHARE_WARN) return [];
-  const pct = Math.round(v.share * 100);
-  const list = v.reworded.slice(0, 6).map((r) => `${r.where} '${String(r.line).replace(/^\{|\}$/g, '')}' (${r.why})`).join('; ');
-  const sev = v.share < VERBATIM_SHARE_ERROR ? 'error' : 'warning';
-  return [{ severity: sev, code: 'VERBATIM_SHARE_LOW', path: 'segments',
-    message: `Only ${v.own} of ${v.lines} spoken lines (${pct}%) are the family's own sentences (${sev === 'error' ? `need at least ${VERBATIM_SHARE_ERROR * 100}%` : `aim for ${VERBATIM_SHARE_WARN * 100}%+`}). Restore their whole sentences where one fits, splitting long ones across shots, instead of shortening or rewording. Not whole: ${list}${v.reworded.length > 6 ? ` and ${v.reworded.length - 6} more` : ''}.` }];
-}
 
 // ---- props / objects not in the answers ----
 // Everyday room furniture, fixtures, the fixed parts of a car and body parts are set dressing, not story facts: never flagged.

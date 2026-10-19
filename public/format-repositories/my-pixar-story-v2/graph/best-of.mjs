@@ -29,25 +29,6 @@ export function bestOfEnabled(agent, config, { scope = '', task = null, rounds =
   return Number(V2_MODELS[agent]?.bestOfDrafts ?? 1) >= 2;
 }
 
-/**
- * Share of spoken lines (dialogue or narration) whose source kind is 'verbatim' (0..1).
- */
-export function ownWordsShare(draft) {
-  let total = 0;
-  let verbatim = 0;
-  for (const seg of draft?.segments ?? []) {
-    for (const shot of seg?.shots ?? []) {
-      for (const k of ['dialogue', 'narration']) {
-        const d = shot?.[k];
-        if (d?.line) {
-          total++;
-          if (d?.source?.kind === 'verbatim') verbatim++;
-        }
-      }
-    }
-  }
-  return total > 0 ? verbatim / total : 0;
-}
 
 /**
  * Chat messages for the judge call: sees ONLY the two scripts and the cold-read criteria.
@@ -146,12 +127,10 @@ export async function pickDraft({
 
   const runtimeA = draftA ? runtimeOf(draftA) : 0;
   const runtimeB = draftB ? runtimeOf(draftB) : 0;
-  const ownWordsA = draftA ? ownWordsShare(draftA) : 0;
-  const ownWordsB = draftB ? ownWordsShare(draftB) : 0;
 
   const drafts = [
-    { id: 'A', gateErrors: gateA.errors, runtime: runtimeA, ownWords: ownWordsA },
-    { id: 'B', gateErrors: gateB.errors, runtime: runtimeB, ownWords: ownWordsB },
+    { id: 'A', gateErrors: gateA.errors, runtime: runtimeA },
+    { id: 'B', gateErrors: gateB.errors, runtime: runtimeB },
   ];
 
   // 1. Exactly one passes -> it wins.
@@ -230,23 +209,10 @@ export async function pickDraft({
     winner = 'B';
     reason = 'judge';
   } else {
-    // Unparseable/TIE/throw -> tiebreak by own-words share, then fewer runtime seconds, then A.
-    if (ownWordsA > ownWordsB) {
-      winner = 'A';
-      reason = 'own-words';
-    } else if (ownWordsB > ownWordsA) {
-      winner = 'B';
-      reason = 'own-words';
-    } else if (runtimeA < runtimeB) {
-      winner = 'A';
-      reason = 'runtime';
-    } else if (runtimeB < runtimeA) {
-      winner = 'B';
-      reason = 'runtime';
-    } else {
-      winner = 'A';
-      reason = 'fallback';
-    }
+    // Unparseable/TIE/throw -> runtime closest to the target, then A.
+    const target = resolveTargetSeconds(input), offA = Math.abs(runtimeA - target), offB = Math.abs(runtimeB - target);
+    if (offA !== offB) { winner = offA < offB ? 'A' : 'B'; reason = 'runtime'; }
+    else { winner = 'A'; reason = 'fallback'; }
   }
 
   const winnerDraft = winner === 'A' ? draftA : draftB;

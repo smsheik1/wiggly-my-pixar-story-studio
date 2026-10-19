@@ -2,9 +2,9 @@
 
 > **Gate (BUILT, change 4):** the Story Director now cites its sources and a deterministic check runs on every draft:
 > `crew/linter/answer-sources.mjs`, wired into `check-stage-play.mjs`. Every `dialogue`/`narration` line carries
-> `source: { answer: '<key path in input.answers>', kind: 'verbatim' | 'paraphrase' | 'connective' }` and every part lists
+> `source: { answer: '<key path in input.answers>', kind?: 'connective' }` and every part lists
 > `answerSources`. Errors: `LINE_SOURCE_MISSING`, `LINE_SOURCE_UNKNOWN`, `SEGMENT_SOURCE_MISSING`, `SEGMENT_SOURCE_UNKNOWN`,
-> `LINE_NOT_VERBATIM` (< 80% of the line's words in order from 1-2 answer sentences), `LINE_SOURCE_MISMATCH` (paraphrase with
+> (`LINE_NOT_VERBATIM` removed: lines are written freely from the answer's facts), `LINE_SOURCE_MISMATCH` (paraphrase with
 > < 50% of its key words in the cited answer), `LINE_FACT_NOT_IN_SOURCE` (a name, number or time missing from the cited answer;
 > connective lines may carry none), `CAST_NOT_IN_ANSWERS` (a cast person named nowhere in the answers, subject, cast notes or photos).
 > Warnings: `CONNECTIVE_LINES_HIGH` (> max(2, 20% of lines)), `CONNECTIVE_LINE_LONG` (> 12 words), `SHOT_FACT_NOT_IN_SOURCE`
