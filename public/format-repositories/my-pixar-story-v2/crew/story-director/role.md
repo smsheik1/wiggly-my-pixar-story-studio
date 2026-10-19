@@ -33,6 +33,16 @@ Wiggly films are made by a family member (the maker) for someone they love, from
 * **No platitudes anywhere in the finale.** Every finale line must be wisdom the answers actually ground in this family's life. Leave out sweeping generalisations about groups or life itself (men and women, "life is…", "love is…", "family is…", "always remember", "don't let the world convince you") that you would be adding yourself. The one exception is the family's own words: a line that quotes a sentence from the answers word for word (or nearly, e.g. with filler trimmed) is kept, because it is theirs. The gate fails any other finale line like that (`FINALE_PLATITUDE`).
 * **Keep the why.** When the answers give a reason (why two people fell for each other, why someone moved, why a habit mattered), the reason is narrated, not just the event. Do not add claims the answers never made (who won a game, what money "felt like").
 * **At most 2 cast cards per real person** (`realPerson`): the main age plus at most one other. For the maker that is usually a child card for the early memories (e.g. `@Theo`) and an adult card who narrates (e.g. `@AdultTheo`). No separate teen, young-adult or adult versions: if a later moment happens at another age, use the closest of the two cards. Add a teen card only if the answers make a teen scene unavoidable, and then it replaces one of the two.
+* **Draft to the review checklist.** Your draft is reviewed against the same checks before it ships, so aim at them now:
+  (1) every line is the family's own whole sentence where one fits (split a long one across shots; never shorten or
+  reword it; the gate fails a script where fewer than 60% of lines are, `VERBATIM_SHARE_LOW`); (2) no object, place,
+  name, age or event that the answers do not give (a blanket, laptop or clock the answers never mention is invented; the
+  gate warns `PROP_NOT_IN_ANSWERS`); (3) keep every fact a later line depends on (a comparison keeps its baseline, a
+  callback its setup); (4) everyone in a scene's `present` is on screen or heard in one of its shots (`PRESENT_NEVER_SEEN`
+  fails the gate); (5) every "he / she / her / they" is clear, above all in the finale: name the person when two could
+  be meant; (6) the finale carries one idea, the `finaleThesis`, and ends on a whole sentence and an action or gesture,
+  never a half-line; (7) an adult card playing a past moment is framed as a memory (the adult remembering, past-tense
+  narration over it); (8) stay at or under the target runtime: cut connective or repeated beats before adding parts.
 * The kindergarten examples below (Ben, Wren, Miss Park) and the Theo, Gran and Wren examples in this file are made up to illustrate the craft; they are not anyone's real family. Every real name, age, place and detail comes from `references/input.json`.
 
 ---
@@ -213,6 +223,7 @@ Before handing the screenplay to downstream nodes (**Character Architect** and *
 - [ ] **Wiggly:** every shot has `location` (from `locations`), `framing`, `cameraAngle` and `cameraMove`; shots name people by `@tag` only and never re-describe looks; signature accessories appear only in cast cards and storyboard panel lines, never in shot text, and eyes are always visible; at most 2 cast cards per `realPerson`.
 - [ ] **Wiggly:** every `@Speaker` (dialogue and narration) matches a cast `elementTag`; one storyboard sheet per part (always eight panels in two rows of four, unused slots written as empty panels; extra sheets for longer parts), every shot in exactly one panel in order with its exact "P.S" label, each sheet targets `nano-banana-2.1` and its `fullPrompt` is a single line; one shot = one cut; held beats are moving holds.
 - [ ] **Wiggly:** `finaleThesis` names the finale's one idea from the answers; every finale line serves it in the family's own whole sentences (no slogans); each abstract claim has a shot that shows it; any callback comes from the answers and fits the idea; the last line is plain and says or shows the idea.
+- [ ] **Wiggly (review checklist):** lines are the family's whole sentences (>= 60%, none shortened where the sentence fits); no invented objects, places, names or ages; no line depends on a dropped fact; everyone in a scene's `present` is seen or heard in it; pronouns are clear in the finale; the finale ends on the thesis in a whole sentence plus a gesture; adult cards in past moments are framed as memories; runtime at or under target.
 
 ---
 

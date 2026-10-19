@@ -28,7 +28,7 @@ const readJson = async (f) => JSON.parse(await readFile(f, 'utf8'));
 const SAFE_ID = /^[A-Za-z0-9._-]+$/;
 
 /** Load a prior run's outputs and inputs; throws with a plain reason if it cannot be patched. */
-export async function loadPriorRun({ from, runsRoot = RUNS_ROOT, projectPath }) {
+export async function loadPriorRun({ from, runsRoot = RUNS_ROOT, projectPath, target }) {
   if (!from || !SAFE_ID.test(from)) throw new Error('--from <prior run id> is required (letters, digits, . _ -)');
   const dir = join(runsRoot, from), out = join(dir, 'outputs');
   if (!existsSync(join(out, 'story-director.json'))) throw new Error(`run ${from} has no outputs/story-director.json`);
@@ -43,21 +43,28 @@ export async function loadPriorRun({ from, runsRoot = RUNS_ROOT, projectPath }) 
   const inputs = inputsFromProject(await readJson(project));
   const refs = await loadPhotoReferences(defaultPhotoRefsPath(project)); if (refs.length) inputs.photoReferences = refs;
   // The prior outputs must match today's contracts, and the stage play must pass today's gate, or nothing outside the
-  // target could be kept as it is.
+  // target could be kept as it is. Gate errors inside the target part are allowed: the patch is how they get fixed
+  // (the patched stage play must then pass the whole gate). Script-wide errors and errors in other parts still refuse.
   Object.assign(prior, normalizePrior(prior));
+  const t = target === undefined ? null : parseTarget(target, prior.storyDirector);
   const g = validateStoryDirectorOutput(prior.storyDirector, selectStoryDirectorInput({ inputs }));
-  if (!g.isValid) throw Object.assign(new Error(`PATCH_PRIOR_INVALID: run ${from}'s stage play fails the current gate (${[...new Set(g.issues.filter((i) => i.severity === 'error').map((i) => i.code))].join(', ')}), so it cannot be patched (do a full run).`), { code: 'PATCH_PRIOR_INVALID', issues: g.issues });
-  return { dir, outDir: out, prior, state, inputs, project };
+  const errors = g.issues.filter((i) => i.severity === 'error');
+  const inTarget = (i) => t && typeof i.path === 'string' && (i.path === `segments.${t.si}` || i.path.startsWith(`segments.${t.si}.`));
+  const blocking = errors.filter((i) => !inTarget(i));
+  if (blocking.length) throw Object.assign(new Error(`PATCH_PRIOR_INVALID: run ${from}'s stage play fails the current gate (${[...new Set(blocking.map((i) => i.code))].join(', ')})${t ? ` outside ${t.id}` : ''}, so it cannot be patched (do a full run${t ? ', or patch the part that holds the error' : ''}).`), { code: 'PATCH_PRIOR_INVALID', issues: g.issues });
+  const priorErrors = errors.filter(inTarget);
+  return { dir, outDir: out, prior, state, inputs, project, target: t, priorErrors };
 }
 
 const nextRunId = (runsRoot, from) => { for (let n = 1; ; n++) { const id = `${from}-patch-${n}`; if (!existsSync(join(runsRoot, id))) return id; } };
 
 export async function runPatch({ from, target, note, runId, runsRoot = RUNS_ROOT, projectPath, invoke, secrets, secretsPath = defaultSecretsPath(),
   usePlaceholderAssets = false, reflectionRounds, check = false, tracing, log = console.log, timeouts = {} } = {}) {
-  const run = await loadPriorRun({ from, runsRoot, projectPath });
-  const t = parseTarget(target, run.prior.storyDirector);
+  const run = await loadPriorRun({ from, runsRoot, projectPath, target });
+  const t = run.target;
   log(`patch ${from} at ${t.id}: ${describeScope(t)}`);
-  if (check) return { check: true, target: t };
+  if (run.priorErrors.length) log(`the prior fails the current gate inside ${t.id} (${[...new Set(run.priorErrors.map((i) => i.code))].join(', ')}); the patch must fix it`);
+  if (check) return { check: true, target: t, priorErrors: run.priorErrors.map((i) => i.code) };
   if (!note || !String(note).trim()) throw new Error('--note "<what is wrong>" is required');
   const id = runId ?? nextRunId(runsRoot, from);
   if (!SAFE_ID.test(id) || id === from) throw new Error(`bad --run-id ${id}`);

@@ -49,7 +49,7 @@ test('nobody appears or vanishes within a scene unless the story says so', () =>
   has(sd((d) => { d.segments[0].shots[1].exits = ['@Sister']; }), 'EXIT_NOT_SHOWN');
   // a single that leaves a present character out of frame is fine
   assert.ok(!codes(sd()).includes('NOT_IN_SCENE'));
-  assert.ok(sd((d) => { d.segments[1].scenes[0].present.push('@Mom'); }).some((i) => i.code === 'PRESENT_NEVER_SEEN' && i.severity === 'warning'));
+  assert.ok(sd((d) => { d.segments[1].scenes[0].present.push('@Mom'); }).some((i) => i.code === 'PRESENT_NEVER_SEEN' && i.severity === 'error'));
 });
 test('SD: the speaker is on screen and leads, unless the line is voice-over', () => {
   has(sd((d) => { const s = d.segments[0].shots[2]; s.whatWeSee = '@Shaz waits for an answer.'; s.onScreen = ['@Shaz']; }), 'SPEAKER_NOT_ON_SCREEN');

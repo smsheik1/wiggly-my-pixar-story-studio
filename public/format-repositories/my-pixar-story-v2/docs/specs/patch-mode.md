@@ -69,7 +69,7 @@ edit, so one round catches a broken rule in the new piece without paying for a f
 review is scoped to the target and the note, gets the gate result (which includes the scope proof), and is asked to
 list any change outside the target as a problem. The prior output is not sent to the critic twice (the draft carries it).
 
-The prior Story Director output must match today's contract and pass today's gate (`PATCH_PRIOR_INVALID` otherwise):
+The prior Story Director output must match today's contract and pass today's gate (`PATCH_PRIOR_INVALID` otherwise), except for gate errors inside the target part, which the patch must fix (`--check` lists them):
 outside the target nothing may change, so a prior run that breaks a newer rule can only be fixed by a full run.
 
 ## Downstream: only what the change touches

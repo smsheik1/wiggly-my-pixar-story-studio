@@ -59,7 +59,7 @@ test('2 rounds happen: critique sees rules + answers + draft, rewrite sees the c
   assert.equal(out.masthead.title, 'Revision two');
   // Critique 1: its own rules, the family's answers, the draft, the finale thesis checks, and the gate findings.
   assert.match(seen.c1, /review round 1 of 2/); assert.match(seen.c1, /Weight|ONE idea/); assert.match(seen.c1, /I want her to know she can always call me/);
-  assert.match(seen.c1, /Draft zero/); assert.match(seen.c1, /finaleThesis/); assert.match(seen.c1, /Traceability/); assert.match(seen.c1, /FINALE_TOO_THIN/);
+  assert.match(seen.c1, /Draft zero/); assert.match(seen.c1, /finaleThesis/); assert.match(seen.c1, /editor, not the writer/); assert.match(seen.c1, /R1 Fidelity[\s\S]*R9 Gate rules/); assert.match(seen.c1, /FINALE_TOO_THIN/);
   assert.match(seen.r1, /revision round 1 of 2/); assert.match(seen.r1, /last line is off the idea/); assert.match(seen.r1, /Draft zero/);
   assert.match(seen.c2, /Revision one/); assert.ok(!/Draft zero/.test(seen.c2), 'round 2 critiques the revised draft'); assert.match(seen.c2, /currently passes/);
   assert.match(seen.r2, /shot 2 action is vague/);

@@ -3,6 +3,7 @@ import { accentOf } from '../story-director/schema.mjs';
 import { validateWritingTells } from './writing-tells.mjs';
 import { checkStageShotLocks, onScreenOf } from './shot-locks.mjs';
 import { words, lcs, answerSentences, NEAR_VERBATIM, checkAnswerSources, checkExtraCast } from './answer-sources.mjs';
+import { checkVerbatimShare, checkPropsTraceable } from './craft-checks.mjs';
 export { answerSentences, NEAR_VERBATIM };
 // v2 deterministic validation gate for Story Director output.
 // BASE: Gemini's validateStoryDirectorOutput (same return shape, codes and message text).
@@ -283,7 +284,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
   // WIGGLY shot locks: who is on screen, scene locks, entrances/exits, speaker on screen and leading, speech length.
   issues.push(...checkStageShotLocks(data));
   // WIGGLY answer tracing: every line cites the answer it comes from; only people the family names are cast.
-  issues.push(...checkAnswerSources(data, input), ...checkExtraCast(data, input));
+  issues.push(...checkAnswerSources(data, input), ...checkExtraCast(data, input), ...checkVerbatimShare(data, input), ...checkPropsTraceable(data, input));
   issues.push(...validateWritingTells('story-director', data));
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
   const warnings = issues.filter((i) => i.severity === 'warning').map((i) => i.message);

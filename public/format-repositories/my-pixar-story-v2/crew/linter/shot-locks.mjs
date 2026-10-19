@@ -78,9 +78,10 @@ export function checkStageShotLocks(data) {
       if (locs.length > 1) err('SCENE_LOCATION_MIXED', `Part ${id} scene ${ci + 1} spans locations ${locs.join(', ')}; a scene is one place. Split it into one scene per location.`, sp);
       for (const t of sc.present ?? []) if (!castTags.has(t)) err('SCENE_PRESENT_UNKNOWN', `Part ${id} scene ${ci + 1}: present lists ${t}, which is not a cast elementTag.`, `${sp}.present`);
       for (const [k, pr] of (sc.props ?? []).entries()) if (String(pr ?? '').trim().length < 5) err('PROP_LOCK_EMPTY', `Part ${id} scene ${ci + 1}: prop lock ${k + 1} is empty; write the prop and its exact state, e.g. "the phone held flat in @Theo's right hand, screen lit".`, `${sp}.props.${k}`);
-      // seen at least once (or heard): otherwise why is the person in the scene?
-      const seenOrHeard = new Set(idx.flatMap((i) => [...onScreenOf(shots[i], castTags), shots[i].dialogue?.speaker].filter(Boolean)));
-      for (const t of sc.present ?? []) if (castTags.has(t) && !seenOrHeard.has(t)) warn('PRESENT_NEVER_SEEN', `Part ${id} scene ${ci + 1}: ${t} is listed as present but is never on screen or speaking in it. Remove them from present, or show them.`, `${sp}.present`);
+      // seen at least once, or heard (a voice-over / off-camera line or narration counts): otherwise the person is named in
+      // the scene but never in it, and the viewer never learns why. Error (r5: a listed sibling never appeared in any shot).
+      const seenOrHeard = new Set(idx.flatMap((i) => [...onScreenOf(shots[i], castTags), shots[i].dialogue?.speaker, shots[i].narration?.speaker].filter(Boolean)));
+      for (const t of sc.present ?? []) if (castTags.has(t) && !seenOrHeard.has(t)) err('PRESENT_NEVER_SEEN', `Part ${id} scene ${ci + 1}: ${t} is listed as present but is never on screen or heard in any of its shots. Show them in a shot (onScreen) or give them a voice-over line, or remove them from present and from the lines that name them as there.`, `${sp}.present`);
     });
     if (scenes.length) for (const n of nums) if (!owner.has(n)) err('SCENE_LOCK_COVERAGE', `Part ${id} shot ${n} is in no scene. Every shot belongs to exactly one scene lock.`, `${P}.scenes`);
 

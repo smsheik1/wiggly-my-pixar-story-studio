@@ -257,7 +257,7 @@ test('deep agent patch mode: the patch task opens the run; ONE review round scop
   const t = parseTarget('line:1.2', prior), seen = {};
   const m = new ScriptedModel([
     (msgs) => { seen.first = text(msgs); return call('submit_story_director', fixed); },
-    (msgs) => { seen.critique = text(msgs); return new AIMessage('1. Nothing to fix in the target.\nVERDICT: SHIP'); },
+    (msgs) => { seen.critique = text(msgs); return new AIMessage('FIXES:\n1. line 1.2: use the answer sentence whole.\nVERDICT: REVISE'); },
     (msgs) => { seen.rewrite = text(msgs); return call('submit_story_director', fixed); },
   ]);
   const { patchTask, patchScopeText } = await import('../graph/patch.mjs');

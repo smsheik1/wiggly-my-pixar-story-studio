@@ -47,6 +47,15 @@ export const V2_MODELS = Object.freeze({
 const CREW = new URL('../crew/', import.meta.url);
 /** Read an agent's role.md; throws a clear error if the agent or its skill file is missing. */
 const TELLS_AGENTS = new Set(['story-director', 'seedance-compiler']);
+/**
+ * The agent's review rubric (crew/<agent>/REVIEW.md), used only for the self-review critique call, or null when the
+ * agent has none (the critique then uses the generic focus list). Same agent, same node, same model: no config entry.
+ */
+export function loadReview(agent) {
+  if (!V2_MODELS[agent]) throw new Error(`loadReview: unknown v2 agent "${agent}"`);
+  const path = fileURLToPath(new URL(`${agent}/REVIEW.md`, CREW));
+  return existsSync(path) ? readFileSync(path, 'utf8') : null;
+}
 export function loadSkill(agent) {
   if (!V2_MODELS[agent]) throw new Error(`loadSkill: unknown v2 agent "${agent}"`);
   const path = fileURLToPath(new URL(`${agent}/role.md`, CREW));

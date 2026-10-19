@@ -18,7 +18,7 @@ import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
 import { CharacterArchitectOutputSchema } from '../crew/character-architect/schema.mjs';
 import { LocationScoutOutputSchema } from '../crew/location-scout/schema.mjs';
 import { SeedanceCompilerOutputSchema, SeedanceSubmitSchema, withAssembledPrompts } from '../crew/seedance-compiler/schema.mjs';
-import { loadSkill, outputCap } from '../config/models.mjs';
+import { loadSkill, loadReview, outputCap } from '../config/models.mjs';
 
 export const RUNS_ROOT = fileURLToPath(new URL('../runs/', import.meta.url));
 export const OUTPUT_SCHEMAS = {
@@ -237,27 +237,63 @@ export const REFLECTION_FOCUS = {
   ],
 };
 
-/** Messages for one critique call: the agent reviews its own draft against its rules, the input and (if any) the gate. */
-export function critiqueMessages({ agent, skill, input, draft, round, rounds, gateIssues = [], trace = '', scope = '' }) {
+/** Runtime facts for the critic's length check: the target from the input, this draft's and the first draft's runtime. */
+const runtimeOf = (o) => (Number.isFinite(o?.shapeBar?.totalRuntimeSec) ? o.shapeBar.totalRuntimeSec : null);
+function runtimeNote(input, draft, firstRuntime) {
+  const now = runtimeOf(draft);
+  if (now == null) return '';
+  const target = input?.targetTotalRuntimeSec ?? input?.format?.targetTotalSeconds ?? null;
+  return `Runtime: this draft ${now}s${target ? `; target ${target}s` : ''}${firstRuntime != null && firstRuntime !== now ? `; first draft ${firstRuntime}s` : ''}. A revision must not be longer than the draft it fixes unless a fix requires it.`;
+}
+
+/**
+ * Messages for one critique call: the agent reviews its own draft against its rules, the input and (if any) the gate.
+ * With a review rubric (crew/<agent>/REVIEW.md, loadReview) the call is an editor's pass: score each rubric item
+ * PASS/FAIL with evidence, list at most 8 fixes, end on VERDICT. Without one it uses the generic focus list.
+ */
+export function critiqueMessages({ agent, skill, review = null, input, draft, round, rounds, gateIssues = [], trace = '', scope = '', firstRuntime = null }) {
   const focus = REFLECTION_FOCUS[agent] ?? REFLECTION_FOCUS.default;
   const gate = gateIssues.filter((i) => i.severity === 'error');
+  const warns = gateIssues.filter((i) => i.severity === 'warning');
+  const rt = runtimeNote(input, draft, firstRuntime);
   // Patch mode: the prior output is the draft's own baseline; do not send it twice.
   if (input?.patch?.currentOutput) input = { ...input, patch: { ...input.patch, currentOutput: '(the output before this patch; outside the target the draft must equal it exactly)' } };
+  const system = review
+    ? `You are the Wiggly v2 ${agent}, reviewing your own draft before it ships (review round ${round} of ${rounds}). In this call you are the editor, not the writer: you score and give fix instructions, you never rewrite.\n\n${review}\n\nThe writing rules the draft must follow (SKILL.md), for reference:\n\n${skill}`
+    : `You are the Wiggly v2 ${agent}, reviewing your own draft before it ships (review round ${round} of ${rounds}). Be a strict, specific editor. You do not rewrite the draft here; you list what must change.\n\nYour rules (SKILL.md):\n\n${skill}`;
   return [
-    { role: 'system', content: `You are the Wiggly v2 ${agent}, reviewing your own draft before it ships (review round ${round} of ${rounds}). Be a strict, specific editor. You do not rewrite the draft here; you list what must change.\n\nYour rules (SKILL.md):\n\n${skill}` },
+    { role: 'system', content: system },
     { role: 'user', content: [
       ...(scope ? [scope] : []),
       'The input for this run (/references/input.json):', '```json', JSON.stringify(input ?? {}), '```',
       'Your current draft:', '```json', JSON.stringify(draft), '```',
       gate.length ? `The deterministic gate currently fails this draft; the rewrite must fix these:\n${gate.map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n')}` : 'The deterministic gate currently passes this draft; the rewrite must keep it passing.',
+      ...(review && warns.length ? [`Gate warnings (not blocking; check each against the rubric and list a fix only if it is a real problem):\n${warns.map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n')}`] : []),
+      ...(rt ? [rt] : []),
       ...(trace ? ['Line-by-line trace of the draft against the answers (from the deterministic checker; "match" is word overlap with the cited answer):', trace] : []),
-      'Check the draft for:', ...focus.map((f, i) => `${i + 1}. ${f}`),
-      'Reply in plain text: a numbered list of concrete problems, most important first. For each one give where it is (part/shot or field), the exact quote, why it is a problem, and the exact fix. Only list real problems; say what already works in one line at the end.',
+      ...(review
+        ? ['Review the draft with your rubric: read it once as a viewer, then answer R1 to R9 in order, PASS or FAIL with exact evidence, then FIXES (at most 8, most important first, cuts before additions), in the rubric\'s reply format.']
+        : ['Check the draft for:', ...focus.map((f, i) => `${i + 1}. ${f}`),
+          'Reply in plain text: a numbered list of concrete problems, most important first. For each one give where it is (part/shot or field), the exact quote, why it is a problem, and the exact fix. Only list real problems; say what already works in one line at the end.']),
       ...(trace ? [UNTRACEABLE_ASK] : []),
       'Finish with one line: VERDICT: REVISE or VERDICT: SHIP.',
     ].join('\n') },
   ];
 }
+/** The critic's last VERDICT line: 'SHIP', 'REVISE', or null when it gave none. */
+export function parseVerdict(critique) {
+  const all = [...String(critique ?? '').matchAll(/VERDICT[*_`\s]*[:\-][*_`\s]*(SHIP|REVISE)\b/gi)];
+  return all.length ? all.at(-1)[1].toUpperCase() : null;
+}
+/** True when the critique scores any rubric item FAIL (e.g. "R4 Cast in the scene: FAIL"). */
+export const hasRubricFail = (critique) => /^\s*[*_]*R\d+\b[^\n]*:[\s*_]*FAIL\b/im.test(String(critique ?? ''));
+/** Count of numbered items in the critique's FIXES list (0 when it has none). */
+export function countFixes(critique) {
+  const m = /^\s*[*_#]*\s*FIXES\b[^\n]*\n([\s\S]*?)(?:^\s*(?:Works|VERDICT)\b|$(?![\s\S]))/im.exec(String(critique ?? ''));
+  return m ? (m[1].match(/^\s*\d+[.)]\s+\S/gm) ?? []).length : 0;
+}
+/** Early stop: the critic says SHIP, no rubric item failed and the gate has no errors, so no rewrite runs. */
+export const shipsAsIs = (critique, gateIssues = []) => parseVerdict(critique) === 'SHIP' && !hasRubricFail(critique) && !gateIssues.some((i) => i.severity === 'error');
 /** Asked of the critic when an answer trace is available: its own traceability findings as data. */
 export const UNTRACEABLE_ASK = 'Then give your traceability findings as data in one fenced json block: ```json {"untraceable": [{"where": "<part.shot>", "line": "<exact line>", "why": "<invented | borrowed from another answer | wrong source | changed detail>", "fix": "<answer id to cite, or cut>"}]} ``` (an empty list if every line traces).';
 /** The critic's {"untraceable": [...]} block, or null if it gave none or it does not parse. */
@@ -271,7 +307,8 @@ export function parseUntraceable(critique) {
 export const revisionMessage = ({ agent, draft, critique, round, rounds, scope = '' }) => [
   `Revise your ${agent} draft (revision round ${round} of ${rounds}). Below are your current draft and your own critique of it.`,
   ...(scope ? [scope] : []),
-  'Fix every real problem the critique lists. Keep everything that already works. Do not add anything the input does not support. The result must still follow every rule in your SKILL.md and pass the gate.',
+  'Apply only the fixes your critique lists (its FIXES list, or its numbered problems), most important first. Change nothing else: every line, shot and field the critique does not name stays exactly as it is. Do not add anything the input does not support.',
+  'Do not make the output longer (more parts or shots, a higher shapeBar.totalRuntimeSec) unless a listed fix requires it; when a fix can be a cut, cut. The result must still follow every rule in your SKILL.md and pass the gate.',
   `Finish by calling submit_${agent.replaceAll('-', '_')} with the complete revised JSON (the whole output, not a diff).`,
   'Your critique:', critique,
   'Your current draft:', '```json', JSON.stringify(draft), '```',
@@ -325,7 +362,10 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     const rel = (f) => relative(runsRoot, join(dir, f));
     await writeFile(join(dir, 'draft-0.json'), JSON.stringify(out, null, 2));
     const skill = loadSkill(agent);
+    const review = loadReview(agent); // the rubric, for the critique call only (never in the writer's prompt)
+    const firstRuntime = runtimeOf(out);
     const log = [];
+    let stoppedEarly = false;
     for (let round = 1; round <= rounds; round++) {
       if (signal?.aborted) throw signal.reason ?? new Error('aborted');
       let gateIssues = [];
@@ -333,14 +373,20 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       const meta = { runName: `${agent} reflection round ${round} critique`, tags: [`agent:${agent}`, `attempt:${attempt}`, `reflection:${round}`], metadata: { agent, attempt, reflectionRound: round }, signal };
       let tr = null;
       try { tr = trace ? trace(out) : null; } catch { tr = null; }
-      const critique = replyText(await model.invoke(critiqueMessages({ agent, skill, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope }), meta)).trim();
+      const critique = replyText(await model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime }), meta)).trim();
       await writeFile(join(dir, `round-${round}-critique.md`), critique + '\n');
       const entry = { round, critique, critiqueFile: rel(`round-${round}-critique.md`), gateErrorsBefore: gateIssues.filter((i) => i.severity === 'error').length };
       if (tr?.data) { entry.trace = tr.data; entry.untraceable = parseUntraceable(critique); }
+      entry.verdict = parseVerdict(critique); entry.fixes = countFixes(critique); entry.runtimeBefore = runtimeOf(out);
+      if (shipsAsIs(critique, gateIssues)) {
+        // Nothing fails: ship the draft as it is and skip this rewrite and every later round (saves their cost).
+        entry.changed = false; entry.stoppedEarly = true; stoppedEarly = true; log.push(entry);
+        break;
+      }
       try {
         const revised = await runOnce(revisionMessage({ agent, draft: out, critique, round, rounds, scope }), `${agent} reflection round ${round} rewrite`, [`reflection:${round}`]);
         entry.changed = JSON.stringify(revised) !== JSON.stringify(out);
-        out = revised;
+        out = revised; entry.runtimeAfter = runtimeOf(out);
         await writeFile(join(dir, `draft-${round}.json`), JSON.stringify(out, null, 2));
         entry.draftFile = rel(`draft-${round}.json`);
       } catch (e) {
@@ -351,8 +397,8 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       }
       log.push(entry);
     }
-    await writeFile(join(dir, 'reflection.json'), JSON.stringify({ agent, attempt, rounds, log }, null, 2));
-    Object.defineProperty(out, REFLECTION, { value: { rounds, log }, enumerable: false, configurable: true });
+    await writeFile(join(dir, 'reflection.json'), JSON.stringify({ agent, attempt, rounds, roundsRun: log.length, stoppedEarly, rubric: Boolean(review), log }, null, 2));
+    Object.defineProperty(out, REFLECTION, { value: { rounds, roundsRun: log.length, stoppedEarly, log }, enumerable: false, configurable: true });
     return out;
   };
 }

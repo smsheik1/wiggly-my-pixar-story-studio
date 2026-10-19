@@ -127,7 +127,7 @@ test('graph happy path through the deep-agent node (scripted model, zero network
     const name = `submit_${agent.replaceAll('-', '_')}`;
     // The Story Director runs its default 2 self-critique rounds (critique reply + resubmit, twice). Inside the graph each
     // deep-agent run takes one extra turn after its submit, so every SD step answers a critique with text and anything else with a submit.
-    const sdStep = (m) => (/reviewing your own draft/.test(String(m[0]?.content)) ? new AIMessage('1. Nothing major. VERDICT: SHIP')
+    const sdStep = (m) => (/reviewing your own draft/.test(String(m[0]?.content)) ? new AIMessage('1. Minor: shot 2 action is vague. VERDICT: REVISE')
       : m.at(-1)?.getType?.() === 'tool' ? done() : call(name, json(FIX[agent])));
     const reflect = agent === 'story-director' ? Array.from({ length: 8 }, () => sdStep) : [];
     return new ScriptedModel([
