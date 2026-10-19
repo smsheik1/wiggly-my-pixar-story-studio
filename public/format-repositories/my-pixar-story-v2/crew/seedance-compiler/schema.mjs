@@ -11,7 +11,7 @@ export const SLOT_TAG = /^@(?:Image|Loc)\b/i;
 const ELEMENT = /^@[\w_]+$/;
 
 export const ReferenceSchema = z.object({
-  tag: z.string().regex(ELEMENT, "tag is an element name like '@Shaz' or '@kitchen'").refine((t) => !SLOT_TAG.test(t), 'use element names, never @Image N / @Loc N slots'),
+  tag: z.string().regex(ELEMENT, "tag is an element name like '@Theo' or '@kitchen'").refine((t) => !SLOT_TAG.test(t), 'use element names, never @Image N / @Loc N slots'),
   kind: z.enum(['character', 'location', 'prop', 'staging']),
   sourceTag: z.string().regex(REF_TAG).optional().describe('Upstream slot: @Image N (Character Architect) or @Loc N (Location Scout)'),
   assetKey: z.string().regex(ASSET_KEY, 'assetKey must be a local asset key, not a URL or file path').refine((s) => !/^https?:|\//.test(s), 'assetKey must not be a URL or path'),

@@ -14,7 +14,7 @@ test('CA role.md contains Gemini SKILL.md word for word (only engine swaps)', ()
   assert.ok(!/GPT Image 2|Seedream|Higgsfield/.test(role));
 });
 test('CA role.md has Wiggly additions, worked examples and the JSON contract', () => {
-  for (const s of ['Google Flow', 'no visible hair, hairline or dark band', 'Hair: none visible', 'Teens are depicted as 18', 'Shaz has no son',
+  for (const s of ['Google Flow', 'no visible hair, hairline or dark band', 'Hair: none visible', 'Teens are depicted as 18', 'Only the cast you are given',
     'Never write "minor"', 'masterRenderRef', 'Match the attached approved master render', '@Image 1', 'isMain', 'assumptions',
     'warm cinematic key', 'catchlights', 'crisp white, cream or bright main garment', 'firefighter dad', 'heavy khaki-tan turnout trousers', '8) TALKING — caught mid-word'])
     assert.ok(role.includes(s), s);

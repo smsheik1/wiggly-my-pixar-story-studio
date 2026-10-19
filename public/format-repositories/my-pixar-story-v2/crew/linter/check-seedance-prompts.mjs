@@ -29,11 +29,20 @@ const unNegatedHit = (text, re) => {
   let m; while ((m = g.exec(text))) if (!/\b(no|not) $/i.test(text.slice(Math.max(0, m.index - 4), m.index))) return true;
   return false;
 };
-// Heard-only speaker label at the start of a [SHOTS] line ("@DadShaz, voiceover: {..}"): a voice, not an on-screen element.
+// Heard-only speaker label at the start of a [SHOTS] line ("@AdultTheo, voiceover: {..}"): a voice, not an on-screen element.
 const HEARD_SPEAKER_LABEL = /^(\s*)@[\w_]+(\s*,\s*(?:voice[- ]?over|off[- ]?camera)\s*:)/gim;
 // WIGGLY (r4-dry15): every SHOT block states its camera direction on one line: "Camera: <framing>, <angle>, <move>."
 export const CAMERA_LINE = /^\s*Camera:\s*([^,\n]+),\s*([^,\n]+),\s*([^\n]+?)\.?\s*$/m;
-const SUNGLASSES = /\bsun-?glasses\b/i;
+/** Each cast card's signature accessory as its head noun ('red knitted cap pushed back' -> cap), for the [SHOTS] re-description check. */
+export function accessoryWords(cast = []) {
+  const out = [];
+  for (const c of cast) {
+    const item = String(c?.signatureAccent ?? '').toLowerCase().split(/\b(?:pushed|pulled|worn|on|over|around|in|with|that|which|tucked|clipped|always)\b|[,;.(]/)[0];
+    const word = (item.match(/[a-z][a-z-]{2,}/g) ?? []).at(-1);
+    if (word) out.push({ tag: c.elementTag, word, re: new RegExp(`\\b${word.replace(/[-]/g, '[- ]?').replace(/s$/, '')}s?\\b`, 'i') });
+  }
+  return out;
+}
 const BREATHING = /\bbreath(?:e|es|ing)?\b/i;
 const BROKEN_HARD_STOP = /ends the instant[^.]*?\band do not\b/i;
 const normWords = (x) => String(x ?? '').toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -138,6 +147,7 @@ export function validateSeedancePrompts(data, input) {
   const err = (code, message, path) => issues.push({ severity: 'error', code, message, path });
   const segs = data?.segments ?? [];
   const cast = new Map((input?.cast ?? []).map((c) => [c.elementTag, c]));
+  const accessories = accessoryWords(input?.cast ?? []);
   const approved = new Map((input?.references ?? []).map((r) => [r.tag, r]));
   const locBySetting = new Map((input?.locations ?? []).map((l) => [l.settingName, l.elementName]));
   const srcSegs = new Map((input?.segments ?? []).map((s) => [s.segmentId, s]));
@@ -180,7 +190,7 @@ export function validateSeedancePrompts(data, input) {
         if (!t.includes(s.dialogue.line)) err('DIALOGUE_NOT_VERBATIM', `${sp}: line ${s.dialogue.line} is not in the prompt.`, `${sp}.dialogue`);
       }
     });
-    // WIGGLY (r4-dry15): camera direction, sunglasses placement, voice-only cast, [GOAL] grammar, breathing filler.
+    // WIGGLY (r4-dry15): camera direction, signature accessories only in the reference/continuity blocks, voice-only cast, [GOAL] grammar, breathing filler.
     const shotsText = seg.tenBlocks?.block5_shots ?? '';
     for (const b of shotBlocks(shotsText)) {
       const sp = `${p}.tenBlocks.block5_shots`;
@@ -192,10 +202,10 @@ export function validateSeedancePrompts(data, input) {
         const miss = ['framing', 'cameraAngle', 'cameraMove'].filter((k) => srcShot?.[k] && !line.includes(normWords(srcShot[k])));
         if (miss.length) issues.push({ severity: 'warning', code: 'CAMERA_DIRECTION_MISMATCH', message: `${p}: SHOT ${b.n} camera line does not match the stage play's ${miss.map((k) => `${k} "${srcShot[k]}"`).join(', ')}.`, path: sp });
       }
-      if (SUNGLASSES.test(withoutBraces(b.text))) err('REDESCRIBED_CHARACTER', `${p}: SHOT ${b.n} mentions sunglasses. The sunglasses live only in [REFERENCE MATERIALS], [CONTINUITY] and [MAINTAIN CONSISTENCY]; [SHOTS] uses the @tag only.`, sp);
+      for (const a of accessories) if (a.re.test(withoutBraces(b.text))) err('REDESCRIBED_CHARACTER', `${p}: SHOT ${b.n} mentions ${a.tag}'s signature accessory ('${a.word}'). It lives only in [REFERENCE MATERIALS], [CONTINUITY] and [MAINTAIN CONSISTENCY]; [SHOTS] uses the @tag only.`, sp);
       if (BREATHING.test(withoutBraces(b.text))) issues.push({ severity: 'warning', code: 'FILLER_BREATHING', message: `${p}: SHOT ${b.n} uses breathing as filler action; give a concrete action or hold instead.`, path: sp });
     }
-    (seg.shots ?? []).forEach((s, j) => { if (SUNGLASSES.test(s.action ?? '')) err('REDESCRIBED_CHARACTER', `${p}.shots.${j}: action mentions sunglasses; use the @tag only.`, `${p}.shots.${j}.action`); });
+    (seg.shots ?? []).forEach((s, j) => { for (const a of accessories) if (a.re.test(s.action ?? '')) err('REDESCRIBED_CHARACTER', `${p}.shots.${j}: action mentions ${a.tag}'s signature accessory ('${a.word}'); use the @tag only.`, `${p}.shots.${j}.action`); });
     const goal = seg.tenBlocks?.block3_goal ?? '';
     if (BROKEN_HARD_STOP.test(goal)) err('BROKEN_HARD_STOP', `${p}: [GOAL] hard stop is one broken sentence ("It ends the instant X ... and do not ..."). Write "It ends the instant X. Do not continue past that moment, do not resolve anything and do not add an ending."`, `${p}.tenBlocks.block3_goal`);
     const voiceOnly = src ? (src.voiceOnlyCast ?? segmentCastPresence(src, [...cast.keys()]).voiceOnlyCast) : [];

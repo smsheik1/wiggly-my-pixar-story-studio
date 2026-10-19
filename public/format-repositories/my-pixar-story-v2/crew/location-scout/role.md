@@ -90,7 +90,7 @@ Before outputting a location plate prompt:
 - **Time of day.** Set `"timeOfDay"` and state it in the prompt.
 - **Family / home realism.** Wiggly stories are mostly real family homes: lived-in, specific, modest (scuffed table, fridge, tea towel), never a showroom. Use the settingSeed for culture and era.
 - **Comedy-friendly staging space.** Leave clear open floor and sightlines for reveals, double-takes and entrances; keep the 180-degree line readable.
-- **No people at all,** and never describe ages, cast names, element tags (@Shaz), pets or reflections of people. Write "children's drawings" or "child-sized chairs" only as objects.
+- **No people at all,** and never describe ages, cast names, element tags (@Theo), pets or reflections of people. Write "children's drawings" or "child-sized chairs" only as objects.
 - **Jargon negation is local.** "not photorealistic" is fine; do not write "no photorealistic film grain" or "no 35mm noise" (the gate only exempts a term that directly follows "no"/"not").
 - **No clarifying questions.** Any guess goes in `"assumptions"`.
 

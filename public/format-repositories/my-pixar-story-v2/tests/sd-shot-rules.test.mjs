@@ -6,7 +6,7 @@ import { readFileSync, existsSync, mkdtempSync, writeFileSync, rmSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
-import { validateStoryDirectorOutput, SUNGLASSES_OVER_EYES, lookPhrases } from '../crew/linter/check-stage-play.mjs';
+import { validateStoryDirectorOutput, EYES_HIDDEN, lookPhrases } from '../crew/linter/check-stage-play.mjs';
 import { selectStoryDirectorInput } from '../crew/story-director/input.mjs';
 import { selectCharacterArchitectInput } from '../crew/character-architect/input.mjs';
 import { selectLocationScoutInput } from '../crew/location-scout/input.mjs';
@@ -47,14 +47,17 @@ test('UNTAGGED_CHARACTER: bare names fail', () => {
   const d = good(); shot0(d).whatWeSee = 'Shaz slaps a card down across the table from @Sister.';
   assert.ok(codes(d).includes('UNTAGGED_CHARACTER'));
 });
-test('SUNGLASSES_OVER_EYES: shots, cast and panels', () => {
-  for (const t of ['@Shaz wearing matte black sunglasses', 'sunglasses over his eyes', '@Shaz puts on his sunglasses', 'eyes hidden behind sunglasses', 'his sunglasses covering his eyes'])
-    assert.ok(SUNGLASSES_OVER_EYES.test(t), t);
-  for (const t of ['@Shaz, sunglasses pushed up on his forehead, grins', '@Shaz pushes his sunglasses higher up his forehead'])
-    assert.ok(!SUNGLASSES_OVER_EYES.test(t), t);
-  let d = good(); shot0(d).whatWeSee = '@Shaz slaps a card down, sunglasses over his eyes.'; assert.ok(codes(d).includes('SUNGLASSES_OVER_EYES'));
-  d = good(); d.cast[0].physicalDescription = 'Small boy, short black hair, matte black sunglasses, red t-shirt.'; assert.ok(codes(d).includes('SUNGLASSES_OVER_EYES'));
-  d = good(); d.storyboardSheets[0].panels[0].whatIsInFrame = 'Warm brown boy wearing dark sunglasses'; assert.ok(codes(d).includes('SUNGLASSES_OVER_EYES'));
+test('EYES_HIDDEN: any eyewear that hides the eyes, in shots, cast and panels (generic, not one family accessory)', () => {
+  for (const t of ['@Shaz wearing matte black sunglasses', 'sunglasses over his eyes', '@Shaz puts on his sunglasses', 'eyes hidden behind sunglasses', 'his sunglasses covering his eyes',
+    '@Gran lowers her ski goggles', 'mirrored shades on her face', 'reading glasses covering her eyes', 'eyes hidden behind dark glasses', '@Theo wearing tinted glasses'])
+    assert.ok(EYES_HIDDEN.test(t), t);
+  for (const t of ['@Shaz, sunglasses pushed up on his forehead, grins', '@Shaz pushes his sunglasses higher up his forehead', '@Gran peers over her reading glasses',
+    '@Gran, round reading glasses on her nose, eyes visible', 'ski goggles pushed up on his forehead', '@Theo wipes his glasses'])
+    assert.ok(!EYES_HIDDEN.test(t), t);
+  let d = good(); shot0(d).whatWeSee = '@Shaz slaps a card down, sunglasses over his eyes.'; assert.ok(codes(d).includes('EYES_HIDDEN'));
+  d = good(); d.cast[0].physicalDescription = 'Small boy, short black hair, matte black sunglasses, red t-shirt.'; assert.ok(codes(d).includes('EYES_HIDDEN'));
+  d = good(); d.cast[1].signatureAccent = 'dark aviator glasses'; assert.ok(codes(d).includes('EYES_HIDDEN'));
+  d = good(); d.storyboardSheets[0].panels[0].whatIsInFrame = 'Warm brown boy wearing dark sunglasses'; assert.ok(codes(d).includes('EYES_HIDDEN'));
 });
 test('TOO_MANY_AGE_VARIANTS: max 2 cards per real person (by realPerson, or name minus age words)', () => {
   const d = good(); const base = d.cast[0];
@@ -78,7 +81,7 @@ test('r4-dry5 Story Director output fails all six review rules', () => {
   const f = new URL('../runs/r4-dry5/outputs/story-director.json', import.meta.url);
   if (!existsSync(f)) return; // runs/ is local only
   const c = new Set(codes(JSON.parse(readFileSync(f)), { photoCharacters: REFS }));
-  for (const k of ['MISSING_CAMERA_DIRECTION', 'MISSING_LOCATION', 'REDESCRIBED_CHARACTER', 'SUNGLASSES_OVER_EYES', 'TOO_MANY_AGE_VARIANTS', 'GUESSED_SKIN_TONE']) assert.ok(c.has(k), k);
+  for (const k of ['MISSING_CAMERA_DIRECTION', 'MISSING_LOCATION', 'REDESCRIBED_CHARACTER', 'EYES_HIDDEN', 'TOO_MANY_AGE_VARIANTS', 'GUESSED_SKIN_TONE']) assert.ok(c.has(k), k);
 });
 test('SD input gets photo text (no paths); CA gets photoFile; LS gets location descriptions', () => {
   const sd = selectStoryDirectorInput({ inputs: { answers: { a: 1 }, photoReferences: REFS } });

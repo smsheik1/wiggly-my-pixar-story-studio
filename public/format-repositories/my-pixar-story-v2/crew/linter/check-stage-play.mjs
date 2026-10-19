@@ -101,8 +101,19 @@ export function lookPhrases(c) {
   }
   return [...out];
 }
-/** Sunglasses must sit pushed up on the forehead, never over the eyes. */
-export const SUNGLASSES_OVER_EYES = /sunglasses[^.;]{0,40}\b(over|covering|covers|cover|hid(?:e|es|ing)|shield(?:s|ing)?|block(?:s|ing)?|on)\s+(?:his |her |the |both )?(eyes|face|nose)\b|(?:behind|through)\s+(?:his |her |the |dark |black )*sunglasses|\b(?:eyes|face)\b[^.;]{0,20}\b(?:hidden|covered)\b[^.;]{0,20}sunglasses|sunglasses (?:on|down)\b(?![^.;]{0,20}forehead)|(?:puts?|slides?|sliding|putting|pulls?|pulling|lowers?|lowering|drops?|dropping) (?:on )?(?:his |her |the )?sunglasses(?: on| down)?\b(?![^.;]{0,30}(?:forehead|up))|wearing (?:dark |black |matte black |his |her )*sunglasses(?![^.;]{0,30}(?:forehead|pushed up))/i;
+/** Any eyewear, and eyewear that hides the eyes (dark/tinted glasses, goggles, visors). Generic: no character's accessory is named here. */
+export const EYEWEAR = String.raw`(?:\w*-?glasses|goggles|visors?|shades)`;
+export const DARK_EYEWEAR = String.raw`(?:(?:sun-?)glasses|shades|goggles|visors?|(?:dark|black|tinted|mirrored)(?: \w+)? glasses)`;
+/** Faces must act: eyes are never hidden. Eyewear that would hide them sits pushed up on the forehead. */
+export const EYES_HIDDEN = new RegExp([
+  String.raw`\b${DARK_EYEWEAR}[^.;]{0,40}\b(?:over|covering|covers|cover|hid(?:e|es|ing)|shield(?:s|ing)?|block(?:s|ing)?|on)\s+(?:his |her |their |the |both )?(?:eyes|face|nose)\b`,
+  String.raw`\b${EYEWEAR}[^.;]{0,40}\b(?:over|covering|covers|cover|hid(?:e|es|ing)|shield(?:s|ing)?|block(?:s|ing)?)\s+(?:his |her |their |the |both )?eyes\b`,
+  String.raw`(?:behind|through)\s+(?:his |her |their |the |dark |black )*${DARK_EYEWEAR}`,
+  String.raw`\b(?:eyes|face)\b[^.;]{0,20}\b(?:hidden|covered)\b[^.;]{0,20}${EYEWEAR}`,
+  String.raw`\b${DARK_EYEWEAR} (?:on|down)\b(?![^.;]{0,20}forehead)`,
+  String.raw`(?:puts?|slides?|sliding|putting|pulls?|pulling|lowers?|lowering|drops?|dropping) (?:on )?(?:his |her |their |the )?(?:\w+ ){0,2}?${DARK_EYEWEAR}(?: on| down)?\b(?![^.;]{0,30}(?:forehead|up))`,
+  String.raw`wearing (?:dark |black |matte black |tinted |his |her |their )*${DARK_EYEWEAR}(?![^.;]{0,30}(?:forehead|pushed up))`,
+].join('|'), 'i');
 export const MAX_CARDS_PER_PERSON = 2;
 export const MAX_ON_SCREEN = 2;
 export const FINALE_MIN_NARRATION_SEC = 10;
@@ -126,6 +137,19 @@ export function roleExampleLines(dir = new URL('../', import.meta.url)) {
   return out;
 }
 let EXAMPLES = null;
+// The family's own words: a finale line that quotes an answer sentence word for word (or nearly) is theirs, not a platitude we added.
+const words = (t) => String(t ?? '').toLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/[^a-z0-9' ]+/g, ' ').split(/\s+/).filter(Boolean);
+const allStrings = (v, out = []) => { if (typeof v === 'string') out.push(v); else if (Array.isArray(v)) v.forEach((x) => allStrings(x, out)); else if (v && typeof v === 'object') Object.values(v).forEach((x) => allStrings(x, out)); return out; };
+/** Answer sentences (split on . ! ? and line breaks) from every string in the answers. */
+export const answerSentences = (answers) => allStrings(answers).flatMap((t) => t.split(/(?<=[.!?])\s+|\n+/)).map((t) => t.trim()).filter(Boolean);
+const lcs = (a, b) => { let prev = new Array(b.length + 1).fill(0); for (const x of a) { const cur = [0]; for (let j = 0; j < b.length; j++) cur.push(x === b[j] ? prev[j] + 1 : Math.max(prev[j + 1], cur[j])); prev = cur; } return prev[b.length]; };
+export const NEAR_VERBATIM = 0.8;
+/** True when the line (braces ignored) reproduces >= 80% of its words, in order, from one answer sentence that itself says the same platitude. */
+export function quotesAnswer(line, answers, re = FINALE_PLATITUDE) {
+  const lw = words(String(line ?? '').replace(/[{}]/g, ''));
+  if (lw.length < 3) return false;
+  return answerSentences(answers).some((s) => re.test(s) && lcs(lw, words(s)) >= Math.ceil(lw.length * NEAR_VERBATIM));
+}
 export const recipientOf = (subject) => /story for ([A-Z][\w-]*)/i.exec(String(subject ?? ''))?.[1] ?? null;
 
 export function validateStoryDirectorOutput(data, input = {}) {
@@ -188,8 +212,8 @@ export function validateStoryDirectorOutput(data, input = {}) {
       if (shot.dialogue && RESUME_LINE.test(shot.dialogue.line ?? ''))
         err('RESUME_DIALOGUE', `Shot ${n} in segment ${seg.segmentId}: in-scene dialogue states resume facts ('${shot.dialogue.line}'). Use subtext in the scene; put facts in the narration.`, `${p}.dialogue`);
       const text = [shot.whatWeSee, shot.whatWeHear, shot.directorsNote, shot.tag].filter(Boolean).join(' ');
-      if (SUNGLASSES_OVER_EYES.test(text))
-        err('SUNGLASSES_OVER_EYES', `Shot ${n} in segment ${seg.segmentId}: sunglasses cover the eyes. @Shaz's sunglasses sit pushed up on his forehead, never over his eyes.`, p);
+      if (EYES_HIDDEN.test(text))
+        err('EYES_HIDDEN', `Shot ${n} in segment ${seg.segmentId}: eyewear hides a character's eyes. Eyes stay visible; eyewear that would hide them sits pushed up on the forehead, and shot text uses the @tag only.`, p);
       for (const [label, re, plain] of BANNED_JARGON) if (re.test(text))
         err('BANNED_JARGON', `Forbidden jargon '${label}' found in shot ${n}. Use plain language instead (e.g. '${plain}')`, p);
     });
@@ -222,8 +246,8 @@ export function validateStoryDirectorOutput(data, input = {}) {
     if (copied) err('GENERIC_FINAL_LINE', `The film's last line '${lastLine}' copies an example from the role files ('${copied}'). End on the family's own words that say or show the finaleThesis.`, `segments.${segments.length - 1}`);
   }
   if (segments.length > 1 && last) (last.shots ?? []).forEach((h, hi) => {
-    for (const k of ['dialogue', 'narration']) if (h[k]?.line && FINALE_PLATITUDE.test(h[k].line))
-      err('FINALE_PLATITUDE', `Final part, shot ${h.shotNumber ?? hi + 1}: '${h[k].line}' is a sweeping generalisation. Cut it; keep only wisdom tied to this family's life.`, `segments.${segments.length - 1}.shots.${hi}.${k}`);
+    for (const k of ['dialogue', 'narration']) if (h[k]?.line && FINALE_PLATITUDE.test(h[k].line) && !quotesAnswer(h[k].line, input?.answers))
+      err('FINALE_PLATITUDE', `Final part, shot ${h.shotNumber ?? hi + 1}: '${h[k].line}' is a sweeping generalisation that is not the family's own sentence. Cut it, or use the family's words from the answers as written; keep only wisdom tied to this family's life.`, `segments.${segments.length - 1}.shots.${hi}.${k}`);
   });
   if (filmTotal > MAX_TOTAL_SECONDS) err('RUNTIME_EXCEEDS_CAP', `Film runs ${filmTotal}s; the total cap is ${MAX_TOTAL_SECONDS}s.`, 'segments');
 
@@ -236,10 +260,10 @@ export function validateStoryDirectorOutput(data, input = {}) {
       warn('WEAK_SIGNATURE_ACCENT', `Cast ${c.elementTag ?? c.name}: signature accent is missing or too vague.`, p);
     if (c.age >= 13 && c.age <= 17)
       err('UNDERAGE_DEPICTION', `Cast ${c.elementTag ?? c.name} is age ${c.age}; teens are depicted as 18.`, p);
-    if ([c.physicalDescription, c.signatureAccent].some((look) => /sunglasses/i.test(look ?? '') && (SUNGLASSES_OVER_EYES.test(look) || !/forehead/i.test(look))))
-      err('SUNGLASSES_OVER_EYES', `Cast ${c.elementTag ?? c.name}: sunglasses must be described as pushed up on the forehead, never over the eyes.`, p);
+    if ([c.physicalDescription, c.signatureAccent].some((look) => new RegExp(DARK_EYEWEAR, 'i').test(look ?? '') && (EYES_HIDDEN.test(look) || !/forehead|pushed up/i.test(look))))
+      err('EYES_HIDDEN', `Cast ${c.elementTag ?? c.name}: eyewear that would hide the eyes must be described as pushed up on the forehead, never over the eyes.`, p);
     if (c.age === 18 && !c.ageNote)
-      err('MISSING_TRUE_AGE', `Cast ${c.elementTag}: shown as 18; record the true age from the answers math in ageNote (e.g. 'true age 15, 7 years older than Shaz at 8').`, p);
+      err('MISSING_TRUE_AGE', `Cast ${c.elementTag}: shown as 18; record the true age from the answers math in ageNote (e.g. 'true age 15, 7 years older than the maker at 8').`, p);
     const ph = (input?.photoCharacters ?? []).find((x) => x.id === c.photoRef);
     if (c.photoRef && !ph && (input?.photoCharacters ?? []).length)
       err('UNKNOWN_PHOTO_REF', `Cast ${c.elementTag}: photoRef '${c.photoRef}' is not one of the photoCharacters ids.`, p);
@@ -256,8 +280,8 @@ export function validateStoryDirectorOutput(data, input = {}) {
     if (/skin ?tone|complexion/i.test(a) && /assum|guess|no photo|without photo|not provided/i.test(a))
       err('GUESSED_SKIN_TONE', `Assumption ${i + 1} guesses skin tone ('${a.slice(0, 80)}'). Photo characters use their photo's skin tone; family resemblance follows them. Do not list it as an assumption.`, `assumptions.${i}`);
   storyboardSheetsOf(data).forEach((sh, si) => (sh.panels ?? []).forEach((pn, i) => {
-    if (SUNGLASSES_OVER_EYES.test(pn.whatIsInFrame ?? ''))
-      err('SUNGLASSES_OVER_EYES', `Storyboard sheet ${si + 1} panel ${pn.panelNumber ?? i + 1}: sunglasses must sit pushed up on the forehead.`, `storyboardSheets.${si}.panels.${i}`);
+    if (EYES_HIDDEN.test(pn.whatIsInFrame ?? ''))
+      err('EYES_HIDDEN', `Storyboard sheet ${si + 1} panel ${pn.panelNumber ?? i + 1}: eyes must stay visible; eyewear that would hide them sits pushed up on the forehead.`, `storyboardSheets.${si}.panels.${i}`);
   }));
 
   issues.push(...validateWritingTells('story-director', data));

@@ -21,7 +21,7 @@ Quote each one and rewrite it as a direct positive line before scoring anything 
 ### A. Story and structure tells (3 points each)
 - **Wrap-up moral.** The scene stops being the scene and explains what it all meant. "In the end, it was never about the car." End on the last concrete thing instead.
 - **Inspirational pivot.** A specific memory zooms out to a vague life lesson. "He got his license at seventeen. Sometimes freedom finds us." Stay in the memory.
-- **Specificity avoidance.** Generic stand-ins where the answers gave real details: "a car" for the faded 2000 Honda Accord Coupe, "a card game" for Yugioh, "every week" with the 8pm dropped. The oddly specific real details are the film.
+- **Specificity avoidance.** Generic stand-ins where the answers gave real details: "a car" when the answers named the exact make, year and colour, "a card game" when they named the game, "every week" when they gave the day and the time. The oddly specific real details are the film.
 - **Losing the answers' details.** A detail the maker wrote (name, age, object, time, quote) is softened, swapped or missing. Count each one.
 - **Staccato triplets / rule of three.** Three short lines or three parallel items hammered in a row. "He showed up. He listened. He stayed." Use two, or four, or one long line.
 - **Forced negation.** "It's not a setback, it's a setup." State it directly.
@@ -36,7 +36,7 @@ Quote each one and rewrite it as a direct positive line before scoring anything 
 - **Forced callbacks.** An earlier object or line is dragged back in only to tie a bow, with no reason in the scene.
 - **Kid dialogue that sounds written.** Children speak in complete, polished, quotable sentences. Real kids interrupt, repeat, mispronounce, brag, and say odd things.
 - **Platitudes.** Sweeping generalisations about life, love, family, men and women, "the world". Keep only wisdom the answers ground in this family.
-- **Setup/reveal and contrast pivot.** "Everyone thought it was just a car. It was freedom." "Different city. Different job. Same Shaz." Say the true thing once.
+- **Setup/reveal and contrast pivot.** "Everyone thought it was just a car. It was freedom." "Different city. Different job. Same Theo." Say the true thing once.
 - **Manufactured surprise.** "Here's the crazy part", "and that's when it hit me", "all along", "this whole time", "the only thing that mattered was X". Let the moment be the surprise.
 - **Over-explaining.** A line explains what the picture already shows, or a metaphor gets explained or milked across several shots ("the cards were our language... every hand was a sentence").
 - **Parallel restatement.** The same feeling said two or three ways in a row.

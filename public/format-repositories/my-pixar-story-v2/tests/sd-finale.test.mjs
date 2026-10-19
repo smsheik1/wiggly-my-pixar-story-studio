@@ -45,13 +45,33 @@ test('a last line copied from a role-file example still fails GENERIC_FINAL_LINE
   const r = validateStoryDirectorOutput(setLast(withMia(sd()), "{I don't have to ask anymore.}"), { ...inputs, photoCharacters: [] });
   assert.ok(r.issues.some((i) => i.code === 'GENERIC_FINAL_LINE' && /copies an example/.test(i.message)));
 });
-test('FINALE_PLATITUDE covers every finale line, not just the last', { timeout: 10000 }, () => {
+test('FINALE_PLATITUDE covers every finale line, not just the last (invented generalisations)', { timeout: 10000 }, () => {
   const o = setLast(withMia(sd()), '{I love you, Mia.}');
-  o.segments.at(-1).shots[1].narration = { speaker: '@DadShaz', line: '{Men and women are different. Do not let the world convince you.}' };
+  o.segments.at(-1).shots[1].narration = { speaker: '@DadShaz', line: '{Life is short and love is all that matters.}' };
   const iss = validateStoryDirectorOutput(o, { ...inputs, photoCharacters: [] }).issues.filter((i) => i.code === 'FINALE_PLATITUDE');
   assert.equal(iss.length, 1); assert.match(iss[0].path, /shots\.1\.narration/);
+  // Without the answers to compare against, r4-dry8's generalisation is still flagged.
   const r8 = JSON.parse(readFileSync(new URL('../benchmarks/r4-dry8/outputs/story-director.json', import.meta.url), 'utf8'));
-  assert.ok(codes(r8).includes('FINALE_PLATITUDE'));
+  assert.ok(codes(r8, {}).includes('FINALE_PLATITUDE'));
+});
+test("FINALE_PLATITUDE exempts a line that quotes the family's own answer word for word or nearly", { timeout: 10000 }, async () => {
+  const { quotesAnswer } = await import('../crew/linter/check-stage-play.mjs');
+  const answers = { finale: { wish: 'I want her to know that life is messier than the movies. Call me whenever you want.' }, other: ['Family is loud at our house.'] };
+  assert.ok(quotesAnswer('{I want her to know that life is messier than the movies.}', answers), 'verbatim');
+  assert.ok(quotesAnswer('{Life is messier than the movies.}', answers), 'trimmed filler');
+  assert.ok(quotesAnswer('{I want you to know that life is messier than the movies.}', answers), 'near-verbatim (one word changed)');
+  assert.ok(quotesAnswer('{Family is loud at our house.}', answers), 'answers nested in arrays');
+  assert.ok(!quotesAnswer('{Life is short, so hug the people you love.}', answers), 'invented generalisation');
+  assert.ok(!quotesAnswer('{Love is patient.}', answers), 'platitude the family never wrote');
+  assert.ok(!quotesAnswer('{Life is messier.}', {}), 'no answers, no exemption');
+  // Real r4 data: the maker wrote this generalisation, so the near-verbatim narration line is kept.
+  const r8 = JSON.parse(readFileSync(new URL('../benchmarks/r4-dry8/outputs/story-director.json', import.meta.url), 'utf8'));
+  assert.ok(!codes(r8).includes('FINALE_PLATITUDE'));
+  const o = setLast(withMia(sd()), '{I love you, Mia.}');
+  o.segments.at(-1).shots[1].narration = { speaker: '@DadShaz', line: '{Life is messier than the movies.}' };
+  assert.ok(!validateStoryDirectorOutput(o, { answers, photoCharacters: [] }).issues.some((i) => i.code === 'FINALE_PLATITUDE'));
+  o.segments.at(-1).shots[1].narration.line = '{Life is short, so hug the people you love.}';
+  assert.ok(validateStoryDirectorOutput(o, { answers, photoCharacters: [] }).issues.some((i) => i.code === 'FINALE_PLATITUDE'));
 });
 test('FINALE_TOO_THIN needs 10s of finale narration (was 15)', { timeout: 10000 }, () => {
   assert.equal(FINALE_MIN_NARRATION_SEC, 10);
