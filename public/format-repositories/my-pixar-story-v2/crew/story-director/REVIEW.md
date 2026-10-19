@@ -16,7 +16,7 @@ Fix: `3.4: restore "..." whole, split across 3.4-3.5`, not `tighten the middle`.
   dressing (couch, window) passes unless it becomes a beat or callback.
 - **R3 Setup and payoff:** Does every line that depends on an earlier fact still have that fact?
 - **R4 Cast in the scene:** Is everyone in a scene seen or heard in one of its shots?
-- **R5 Referents:** Is it clear who every pronoun means, especially in the finale?
+- **R5 Referents:** Is it clear who every pronoun means, especially in the finale (unclear if only the question named them)?
 - **R6 Finale:** Does the finale carry only the finaleThesis idea and end on a whole sentence plus an action or gesture?
 - **R7 Time framing:** Is every past moment played by an adult card framed as a memory?
 - **R8 Length:** Is runtime at or under `targetTotalRuntimeSec` and not longer than the previous draft, meeting the cut quota with no redundant beat

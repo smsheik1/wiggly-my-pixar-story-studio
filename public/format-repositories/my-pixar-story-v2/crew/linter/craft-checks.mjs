@@ -39,14 +39,24 @@ export function tightestSpan(lw, sw) {
  * that stretch is kept), so words were neither swapped nor squeezed out of the middle. Splitting a long sentence across
  * shots keeps every part whole; compressing it ("I went to a bootcamp, got a job at 19") does not.
  */
+// Answers reply to a question, so a pronoun there can lean on the question ("her" = the person asked about). Naming that
+// person, or saying "you" to them, keeps the family's sentence: pronouns, cast names and "you" match each other, and so
+// do the verb forms that agree with them.
+const PERSON = new Set('he him his himself she her hers herself they them their theirs themselves you your yours yourself'.split(' '));
+const AGREE = { is: 'be', are: 'be', was: 'be-past', were: 'be-past', has: 'have', have: 'have', does: 'do', do: 'do', "doesn't": "don't", "don't": "don't", "isn't": "aren't", "aren't": "aren't", "wasn't": "weren't", "weren't": "weren't" };
+export function personWords(data) {
+  return new Set((data?.cast ?? []).flatMap((c) => [c.name, c.realPerson]).flatMap((n) => words(n)));
+}
+export const canonWord = (w, names = new Set()) => PERSON.has(w) || names.has(w.replace(/'s$/, '')) ? '<person>' : AGREE[w] ?? w;
+
 export function verbatimShare(data, input = {}) {
-  const all = allStrings(input.answers);
+  const all = allStrings(input.answers), names = personWords(data), cw = (t) => words(t).map((w) => canonWord(w, names));
   const rows = spoken(data).filter((l) => l.source?.kind !== 'connective').map((l) => {
     const cited = l.source?.answer ? resolveAnswer(input.answers ?? {}, l.source.answer) : null;
-    const lw = words(String(l.line).replace(/[{}]/g, ''));
+    const lw = cw(String(l.line).replace(/[{}]/g, ''));
     let score = 0, compact = 0;
     for (const t of cited ? [cited, ...all] : all) {
-      const sp = tightestSpan(lw, words(t)), sc = lw.length ? sp.matched / lw.length : 0, cp = sp.matched / Math.max(1, sp.span);
+      const sp = tightestSpan(lw, cw(t)), sc = lw.length ? sp.matched / lw.length : 0, cp = sp.matched / Math.max(1, sp.span);
       if (sc > score + 1e-9 || (Math.abs(sc - score) < 1e-9 && cp > compact)) { score = sc; compact = cp; }
       if (cited && score >= NEAR_VERBATIM && compact >= NEAR_VERBATIM) break;
     }

@@ -184,3 +184,23 @@ test('patch: a prior with gate errors only inside the target part is patchable; 
   assert.deepEqual(ok.priorErrors, ['PRESENT_NEVER_SEEN']); assert.ok(logs.some((l) => /must fix it/.test(l)));
   await assert.rejects(runPatch({ from: 'prior', target: 'part:1', runsRoot: root, check: true, log: () => {} }), /PATCH_PRIOR_INVALID[\s\S]*PRESENT_NEVER_SEEN[\s\S]*outside part:1/);
 }));
+
+// Answers are interview replies: naming the person a question-pronoun meant keeps the line the family's own.
+import { verbatimShare as vShare } from '../crew/linter/craft-checks.mjs';
+const pronounCase = (lines, answer) => vShare({ cast: [{ name: 'Wren' }, { name: 'Theo' }], segments: [{ segmentId: 1, shots: lines.map((line, i) => ({ shotNumber: i + 1, narration: { speaker: '@Theo', line: `{${line}}`, source: { answer: 'finale.memory', kind: 'verbatim' } } })) }] }, { answers: { finale: { memory: answer } } });
+test('pronoun-to-name swap still counts as own words', () => {
+  const a = 'I would want her to understand that I love her very much even if I may not always show it.';
+  assert.equal(pronounCase(['I would want Wren to understand that I love her very much even if I may not always show it.'], a).own, 1);
+});
+test('pronoun-to-you swap with verb agreement still counts as own words', () => {
+  assert.equal(pronounCase(['I would want you to understand that I love you very much'], 'I would want her to understand that I love her very much').own, 1);
+  assert.equal(pronounCase(['You are the bravest one I know.'], 'She is the bravest one I know.').own, 1);
+  assert.equal(pronounCase(["Wren's laugh filled the whole house."], 'Her laugh filled the whole house.').own, 1);
+});
+test('the exact finale line (Mia) counts as own words', () => {
+  const r = vShare({ cast: [{ name: 'Mia' }], segments: [{ segmentId: 4, shots: [{ shotNumber: 2, narration: { line: '{I would want Mia to understand that I love her very much}', source: { answer: 'q.memory' } } }] }] }, { answers: { q: { memory: 'I would want her to understand that I love her very much even if I may not always show it.' } } });
+  assert.equal(r.own, 1);
+});
+test('a real rewording still fails', () => {
+  assert.equal(pronounCase(['I really hope Wren knows how much I care'], 'I would want her to understand that I love her very much').own, 0);
+});
