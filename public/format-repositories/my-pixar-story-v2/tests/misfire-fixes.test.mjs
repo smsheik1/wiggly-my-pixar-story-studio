@@ -147,3 +147,48 @@ test('fatal: a key-limit error during a self-review rewrite is not swallowed as 
     assert.equal(m.calls, 3, 'stopped at the failing rewrite: no round 2');
   } finally { await rm(runs, { recursive: true, force: true }); }
 });
+
+// ---------------- r5-dry2 misfires ----------------
+import { SeedanceSegmentSchema } from '../crew/seedance-compiler/schema.mjs';
+import { parseStringifiedFields } from '../graph/deep-agent-node.mjs';
+import { lookAlikeReason } from '../crew/linter/shot-locks.mjs';
+
+test('Seedance schema: a voice-over / off-camera speaker needs no picture attached to the part; an on-camera one still does', () => {
+  const seg = () => structuredClone(json('good-seedance-prompts.json').segments[0]);
+  const speakerIssues = (s) => { const r = SeedanceSegmentSchema.safeParse(s); return r.success ? [] : r.error.issues.filter((i) => i.path.join('.').endsWith('dialogue.speaker')); };
+  for (const mode of ['voiceover', 'off-camera']) {
+    const s = seg(); s.shots[0].dialogue = { speaker: '@Narrator', line: '{When I was 8 years old, I wanted to be a scientist.}', mode };
+    assert.deepEqual(speakerIssues(s), [], mode);
+  }
+  const s = seg(); s.shots[0].dialogue = { speaker: '@Narrator', line: '{When I was 8 years old, I wanted to be a scientist.}', mode: 'on-camera' };
+  const iss = speakerIssues(s); assert.equal(iss.length, 1); assert.match(iss[0].message, /speaks on camera but is not a bound cast reference.*voiceover/);
+  const d = seg(); d.shots[0].dialogue = { speaker: '@Narrator', line: '{Hi there.}' }; // mode defaults to on-camera
+  assert.equal(speakerIssues(d).length, 1);
+});
+
+test('Seedance gate: a heard-only speaker must still be in the stage-play cast', () => {
+  const d = json('good-seedance-prompts.json'); const s = d.segments[0];
+  s.shots[0].dialogue = { speaker: '@Nobody', line: '{A line.}', mode: 'voiceover' };
+  const st = { storyDirector: json('good-stage-play.json'), characterArchitect: { output: json('good-master-renders.json') }, locationScout: { output: json('good-location-plates.json') }, approvedAssets: json('good-approved-assets.json') };
+  assert.ok(validateSeedancePrompts(d, selectSeedanceCompilerInput(st)).issues.some((i) => i.code === 'SPEAKER_NOT_IN_CAST'));
+});
+
+test('submit tool: segments sent as a JSON string are parsed; non-JSON strings and wrong types are left for the schema to reject', async () => {
+  const js = { type: 'object', properties: { segments: { type: 'array' }, meta: { anyOf: [{ type: 'object' }, { type: 'null' }] }, title: { type: 'string' } } };
+  assert.deepEqual(parseStringifiedFields({ segments: '[{"a":1}]', meta: '{"b":2}', title: '[not parsed]' }, js), { segments: [{ a: 1 }], meta: { b: 2 }, title: '[not parsed]' });
+  assert.deepEqual(parseStringifiedFields({ segments: '{"a":1}' }, js), { segments: '{"a":1}' }, 'object where an array is wanted: untouched');
+  assert.deepEqual(parseStringifiedFields({ segments: '[broken' }, js), { segments: '[broken' });
+  const good = json('good-seedance-prompts.json');
+  const subs = []; const t = makeSubmitTool('seedance-compiler', subs);
+  assert.match(await t.func({ ...good, segments: JSON.stringify(good.segments) }), /submitted/);
+  assert.equal(subs.length, 1); assert.ok(Array.isArray(subs[0].segments) && subs[0].segments.length === good.segments.length);
+  const subs2 = []; const t2 = makeSubmitTool('seedance-compiler', subs2);
+  assert.match(await t2.func({ ...good, segments: 'not json' }), /SUBMISSION REJECTED.*\n- segments: Invalid input: expected array/);
+});
+
+test("look-alike reason: 'in the maker's family' is not described as blood resemblance", () => {
+  const c = (extra) => ({ elementTag: '@X', age: 25, gender: 'female', family: true, skinTone: 'light olive', designSpecs: { headsTall: 6 }, ...extra });
+  const why = lookAlikeReason(c({ designSpecs: { headsTall: 7.5 } }), c({ designSpecs: { headsTall: 6 } }));
+  assert.match(why, /both in the maker's family with the same skin tone/); assert.ok(!/resemblance/.test(why));
+  assert.ok(!/same family resemblance/.test(read('character-architect/role.md')));
+});

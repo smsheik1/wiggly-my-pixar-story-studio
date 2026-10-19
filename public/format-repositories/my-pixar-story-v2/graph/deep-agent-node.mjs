@@ -101,6 +101,26 @@ export function nullTolerant(js) {
   return out;
 }
 /** Drop nulls the contract does not allow (null on an optional field means "absent"); keep nulls on nullable fields. */
+/**
+ * r5-dry2: the Seedance Compiler once sent `segments` as a JSON string instead of an array. A top-level field whose
+ * schema wants an array/object but arrives as a string holding valid JSON of that type is parsed; anything else is
+ * left as is for the schema to reject with its normal message.
+ */
+export function parseStringifiedFields(args, js) {
+  if (!args || typeof args !== 'object' || Array.isArray(args) || !js?.properties) return args;
+  const wants = (p) => { const ts = [p?.type, ...(p?.anyOf ?? []).map((x) => x?.type)].flat().filter(Boolean); return { array: ts.includes('array'), object: ts.includes('object') }; };
+  let out = args;
+  for (const [k, p] of Object.entries(js.properties)) {
+    const v = args[k];
+    if (typeof v !== 'string' || !/^\s*[[{]/.test(v)) continue;
+    const w = wants(p);
+    if (!w.array && !w.object) continue;
+    let parsed;
+    try { parsed = JSON.parse(v); } catch { continue; }
+    if ((Array.isArray(parsed) && w.array) || (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && w.object)) out = { ...out, [k]: parsed };
+  }
+  return out;
+}
 export function dropDisallowedNulls(v, js) {
   js = nonNull(js);
   if (Array.isArray(v)) return v.map((x) => dropDisallowedNulls(x, js?.items));
@@ -144,7 +164,7 @@ export function makeSubmitTool(agent, submissions, { onSubmitted = () => {}, onG
   const js = toJsonSchema(toolZod);
   let invalid = 0;
   const t = new CodeValidatedTool({ func: async (args) => {
-    const r = schema.safeParse(prep(dropDisallowedNulls(args, js)));
+    const r = schema.safeParse(prep(dropDisallowedNulls(parseStringifiedFields(args, js), js)));
     if (r.success) { submissions.push(r.data); onSubmitted(r.data); return JSON.stringify({ submitted: true }); }
     const issues = zodIssues(r.error.issues);
     t.lastIssues = issues;

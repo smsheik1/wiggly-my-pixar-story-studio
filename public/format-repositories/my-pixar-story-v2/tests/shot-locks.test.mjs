@@ -95,14 +95,14 @@ test('SC: the speaker is on screen and leads the action', () => {
 });
 
 // ---- Character Architect: visual tells between look-alikes
-test('look-alike heuristic: same gender, same age band, and similar build or same family resemblance', () => {
+test("look-alike heuristic: same gender, same age band, and similar build or both in the maker's family with the same skin tone", () => {
   assert.deepEqual([5, 12, 13, 29, 30, 49, 50].map(ageBand), ['child', 'child', 'young adult', 'young adult', 'adult', 'adult', 'older adult']);
   const c = (age, headsTall, extra = {}) => ({ elementTag: '@X', age, gender: 'male', family: false, skinTone: 'deep brown', designSpecs: { headsTall }, ...extra });
   assert.ok(lookAlikeReason(c(8, 5), c(6, 5)));            // two boys, same build
   assert.equal(lookAlikeReason(c(8, 5), c(8, 5, { gender: 'female' })), null);
   assert.equal(lookAlikeReason(c(8, 5), c(35, 7.5)), null); // different age band
   assert.equal(lookAlikeReason(c(35, 7.5), c(45, 8.5)), null); // adults, different build, not family
-  assert.ok(lookAlikeReason(c(35, 7.5, { family: true }), c(45, 8.5, { family: true }))); // family resemblance
+  assert.ok(lookAlikeReason(c(35, 7.5, { family: true }), c(45, 8.5, { family: true }))); // both in the maker's family, same skin tone
   assert.equal(lookAlikeReason(c(35, 7.5, { family: true }), c(45, 8.5, { family: true, skinTone: 'pale peach' })), null);
   assert.ok(tellsDistinct('mustard yellow scarf', 'bright green rain boots'));
   assert.ok(!tellsDistinct('blue scarf', 'light blue scarf'));

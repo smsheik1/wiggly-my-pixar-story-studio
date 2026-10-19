@@ -193,7 +193,8 @@ export const ageBand = (age) => (age < 13 ? 'child' : age < 30 ? 'young adult' :
 export const BUILD_TOLERANCE = 0.5; // heads tall
 /**
  * Look-alike heuristic (documented in crew/character-architect/role.md): same gender AND same age band AND
- * (similar build: headsTall within 0.5) OR (same family resemblance: both family with the same skin tone).
+ * (similar build: headsTall within 0.5) OR (both in the maker's family with the same skin tone; 'family' includes
+ * in-laws and spouses, so this is never described as blood resemblance).
  * Returns the reason, or null.
  */
 export function lookAlikeReason(a, b) {
@@ -201,7 +202,7 @@ export function lookAlikeReason(a, b) {
   const build = Math.abs((a.designSpecs?.headsTall ?? 0) - (b.designSpecs?.headsTall ?? 0)) <= BUILD_TOLERANCE;
   const family = a.family && b.family && lockNorm(a.skinTone) === lockNorm(b.skinTone);
   if (!build && !family) return null;
-  return `both ${a.gender}, ${ageBand(a.age)}${build ? ', similar build' : ''}${family ? ', same family resemblance' : ''}`;
+  return `both ${a.gender}, ${ageBand(a.age)}${build ? ', similar build' : ''}${family ? ", both in the maker's family with the same skin tone" : ''}`;
 }
 /** Two tells are distinct when they differ and share under half of their key words. */
 export function tellsDistinct(x, y) {

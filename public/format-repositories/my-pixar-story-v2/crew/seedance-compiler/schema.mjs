@@ -103,8 +103,10 @@ export const SeedanceSegmentSchema = SeedanceSegmentBase.superRefine((seg, ctx) 
   const castTags = new Set(seg.references.filter((r) => r.kind === 'character').map((r) => r.tag));
   const locTags = new Set(seg.references.filter((r) => r.kind === 'location').map((r) => r.tag));
   seg.shots.forEach((s, i) => {
-    if (s.dialogue && !castTags.has(s.dialogue.speaker))
-      ctx.addIssue({ code: 'custom', path: ['shots', i, 'dialogue', 'speaker'], message: `speaker ${s.dialogue.speaker} is not a bound cast reference` });
+    // Voice-over / off-camera speakers are heard, not seen: they need no picture attached to this part (r5-dry2: the
+    // narrator was rejected in a part he never appears in). The gate still checks they are in the stage-play cast.
+    if (s.dialogue && s.dialogue.mode === 'on-camera' && !castTags.has(s.dialogue.speaker))
+      ctx.addIssue({ code: 'custom', path: ['shots', i, 'dialogue', 'speaker'], message: `speaker ${s.dialogue.speaker} speaks on camera but is not a bound cast reference (attach their picture to this part, or mark the line mode 'voiceover' / 'off-camera')` });
     if (!locTags.has(s.locationTag)) ctx.addIssue({ code: 'custom', path: ['shots', i, 'locationTag'], message: `locationTag ${s.locationTag} is not a bound location reference` });
   });
 });
