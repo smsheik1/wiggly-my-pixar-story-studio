@@ -336,18 +336,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       let giveUp = null;
       const submit = makeSubmitTool(agent, submissions, { maxInvalid: maxInvalidSubmits, ...(submitSchema ? { schema: submitSchema } : {}),
         onSubmitted: () => done.abort(new Error('submitted')), onGiveUp: (e) => { giveUp = e; done.abort(e); } });
-      const boundModel = new Proxy(model, {
-        get(target, prop, receiver) {
-          if (prop === '_generate') {
-            return (messages, options, runManager) => target._generate(messages, { ...options, runName, tags: [...(options?.tags ?? []), ...extraTags] }, runManager);
-          }
-          if (prop === 'invoke') {
-            return (messages, options) => target.invoke(messages, { ...options, runName, tags: [...(options?.tags ?? []), ...extraTags] });
-          }
-          return Reflect.get(target, prop, receiver);
-        },
-      });
-      const agentRun = workspaceAgent(boundModel, workspaceRoot, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], sysPrompt);
+      const agentRun = workspaceAgent(model, workspaceRoot, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], sysPrompt);
       const sig = signal ? AbortSignal.any([signal, done.signal]) : done.signal;
       try {
         await agentRun.invoke({ messages: [{ role: 'user', content }] }, { recursionLimit, signal: sig, runName, tags: [`agent:${agent}`, `attempt:${attempt}`, ...extraTags] });

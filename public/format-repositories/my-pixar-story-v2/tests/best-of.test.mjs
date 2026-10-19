@@ -340,7 +340,7 @@ test('both fail -> draft A proceeds and existing retry still works', { timeout: 
   assert.match(seenCritique[0], /Draft A/);
 }));
 
-test('TIE/garbage -> own-words tiebreak (higher verbatim share wins)', async () => {
+test('TIE/garbage -> own-words tiebreak (higher verbatim share wins)', { timeout: 10000 }, async () => {
   const draftA = withVerbatim('A', ['verbatim', 'verbatim', 'verbatim', 'connective']);
   const draftB = withVerbatim('B', ['verbatim', 'paraphrase', 'paraphrase', 'connective']);
 
@@ -362,7 +362,7 @@ test('TIE/garbage -> own-words tiebreak (higher verbatim share wins)', async () 
   assert.equal(res.bestOf.judged, true);
 });
 
-test('TIE/garbage -> tiebreak by fewer runtime seconds when own-words match', async () => {
+test('TIE/garbage -> tiebreak by fewer runtime seconds when own-words match', { timeout: 10000 }, async () => {
   const draftA = withVerbatim('A', ['verbatim', 'connective']);
   draftA.shapeBar.totalRuntimeSec = 95;
   const draftB = withVerbatim('B', ['verbatim', 'connective']);
@@ -385,7 +385,7 @@ test('TIE/garbage -> tiebreak by fewer runtime seconds when own-words match', as
   assert.equal(res.bestOf.reason, 'runtime');
 });
 
-test('TIE/garbage -> fallback to A when own-words and runtime are equal', async () => {
+test('TIE/garbage -> fallback to A when own-words and runtime are equal', { timeout: 10000 }, async () => {
   const draftA = withVerbatim('A', ['verbatim', 'connective']);
   draftA.shapeBar.totalRuntimeSec = 90;
   const draftB = withVerbatim('B', ['verbatim', 'connective']);
@@ -426,3 +426,11 @@ test('flag off: single draft run unchanged', { timeout: 10000 }, () => tmp(async
   assert.equal(out.masthead.title, 'Single Draft');
   assert.equal(out[REFLECTION], undefined);
 }));
+
+test('A threw and B failed the gate -> B proceeds (no judge)', { timeout: 10000 }, async () => {
+  let judged = false;
+  const model = { invoke: async () => { judged = true; return { content: 'WINNER: A' }; } };
+  const draftB = { masthead: { title: 'Draft B' }, segments: [] };
+  const r = await pickDraft({ draftA: null, draftB, errorA: new Error('boom'), gate: () => ({ issues: [{ severity: 'error', code: 'X', message: 'x' }] }), model });
+  assert.equal(r.winner, 'B'); assert.equal(r.winnerDraft, draftB); assert.equal(r.bestOf.reason, 'both-failed'); assert.equal(judged, false);
+});

@@ -2,7 +2,7 @@
 // gate each, judge if both pass, and pick the winner before the reflection loop.
 import { loadPick, V2_MODELS } from '../config/models.mjs';
 import { isFatalProviderError } from './provider-errors.mjs';
-import { runtimeOf } from './length-guard.mjs';
+import { runtimeOf, resolveTargetSeconds } from './length-guard.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -173,17 +173,18 @@ export async function pickDraft({
 
   // 2. Both fail -> keep current behavior (proceed with draft A; gate + existing retry handle it).
   if (!gateA.passes && !gateB.passes) {
-    if (errorA) throw errorA;
+    // A draft whose run threw has no output; fall back to the other one (which failed the gate).
+    const id = errorA ? 'B' : 'A';
     return {
-      winner: 'A',
-      winnerDraft: draftA,
-      gateIssues: gateA.issues,
-      bestOf: { drafts, judged: false, judgeReply: null, judgeReplyFile: null, winner: 'A', reason: 'both-failed' },
+      winner: id,
+      winnerDraft: id === 'A' ? draftA : draftB,
+      gateIssues: id === 'A' ? gateA.issues : gateB.issues,
+      bestOf: { drafts, judged: false, judgeReply: null, judgeReplyFile: null, winner: id, reason: 'both-failed' },
     };
   }
 
   // 3. Both pass -> judge call with the same model.
-  const targetRuntime = input?.targetTotalRuntimeSec ?? 90;
+  const targetRuntime = resolveTargetSeconds(input);
   const prompt = loadPick(agent);
   const messages = judgeMessages({
     draftA,
