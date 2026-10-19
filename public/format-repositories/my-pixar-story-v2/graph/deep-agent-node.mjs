@@ -10,6 +10,8 @@ import { createMiddleware } from 'langchain';
 import { noteStreamActivity } from './liveness.mjs';
 import { cutQuotaNote, judgeRewrite, runtimeOf } from './length-guard.mjs';
 export { cutQuotaNote, judgeRewrite, runtimeOf };
+import { parseFixShots, enforceScope, formatScopedRevisionInstructions } from './scoped-rewrite.mjs';
+export { parseFixShots, enforceScope };
 import { mkdir, writeFile, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, extname, relative } from 'node:path';
@@ -335,9 +337,12 @@ export function parseUntraceable(critique) {
   return null;
 }
 /** User message for a rewrite run: the draft plus the agent's own critique. */
-export const revisionMessage = ({ agent, draft, critique, round, rounds, scope = '' }) => [
+export const revisionMessage = ({ agent, draft, critique, round, rounds, scope = '', allowedShots }) => [
   `Revise your ${agent} draft (revision round ${round} of ${rounds}). Below are your current draft and your own critique of it.`,
   ...(scope ? [scope] : []),
+  ...(allowedShots && (allowedShots.size > 0 || (Array.isArray(allowedShots) && allowedShots.length > 0))
+    ? [formatScopedRevisionInstructions(allowedShots)]
+    : []),
   'Apply only the fixes your critique lists (its FIXES list, or its numbered problems), most important first. Change nothing else: every line, shot and field the critique does not name stays exactly as it is. Do not add anything the input does not support.',
   'Do not make the output longer (more parts or shots, a higher shapeBar.totalRuntimeSec) unless a listed fix requires it; when a fix can be a cut, cut. The result must still follow every rule in your SKILL.md and pass the gate.',
   `Finish by calling submit_${agent.replaceAll('-', '_')} with the complete revised JSON (the whole output, not a diff).`,
@@ -432,20 +437,40 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
         entry.changed = false; entry.stoppedEarly = true; stoppedEarly = true; log.push(entry);
         break;
       }
+      const isScoped = agent === 'story-director' && !input?.patch && !scope;
+      const fixShots = isScoped ? parseFixShots(critique) : null;
+      if (fixShots?.unscopedFixes?.length) entry.unscopedFixes = fixShots.unscopedFixes;
+      const totalFixCount = (fixShots?.size ?? 0) + (fixShots?.unscopedFixes?.length ?? 0);
+      if (isScoped && totalFixCount > 0 && fixShots.size === 0) { // fixes listed, none names a shot: nothing scoped to rewrite
+        entry.changed = false;
+        entry.skipped = 'no scoped fixes';
+        entry.runtimeAfter = runtimeOf(out);
+        log.push(entry);
+        continue;
+      }
       try {
-        const revised = await runOnce(revisionMessage({ agent, draft: out, critique, round, rounds, scope }), `${agent} reflection round ${round} rewrite`, [`reflection:${round}`]);
+        const revised = await runOnce(revisionMessage({ agent, draft: out, critique, round, rounds, scope, allowedShots: fixShots?.size ? fixShots : undefined }), `${agent} reflection round ${round} rewrite`, [`reflection:${round}`]);
+        let nextDraft = revised;
+        if (isScoped && fixShots?.size) {
+          const enforced = enforceScope(out, revised, fixShots);
+          if (enforced.reverted?.length) {
+            entry.reverted = enforced.reverted;
+            for (const id of enforced.reverted) console.log(`rewrite touched unnamed shot ${id}: reverted`);
+          }
+          nextDraft = enforced;
+        }
         let gateIssuesAfter = [];
-        try { gateIssuesAfter = gate ? (gate(revised)?.issues ?? []) : []; } catch { gateIssuesAfter = []; }
-        const judgment = judgeRewrite({ input, before: out, after: revised, gateBefore: gateIssues, gateAfter: gateIssuesAfter });
+        try { gateIssuesAfter = gate ? (gate(nextDraft)?.issues ?? []) : []; } catch { gateIssuesAfter = []; }
+        const judgment = judgeRewrite({ input, before: out, after: nextDraft, gateBefore: gateIssues, gateAfter: gateIssuesAfter });
         if (!judgment.accepted) {
           console.log(judgment.message);
           entry.changed = false;
           entry.rejected = judgment.rejected;
           entry.runtimeAfter = runtimeOf(out);
         } else {
-          entry.changed = JSON.stringify(revised) !== JSON.stringify(out);
+          entry.changed = JSON.stringify(nextDraft) !== JSON.stringify(out);
           prevDraft = out;
-          out = revised;
+          out = nextDraft;
           gateIssues = gateIssuesAfter;
           entry.runtimeAfter = runtimeOf(out);
           await writeFile(join(dir, `draft-${round}.json`), JSON.stringify(out, null, 2));

@@ -8,7 +8,7 @@ scenes (R4, R7, R2), then lines (R1, R5, R9). Do not fix lines in a beat that sh
 
 Answer each check PASS or FAIL. A FAIL cites the shot id (`part.shot`, or the field) and the exact quote; R1 also quotes the
 family's original sentence. No evidence, no FAIL.
-Fix: `3.4: restore "..." whole, split across 3.4-3.5`, not `tighten the middle`.
+Fix: `3.4: restore "..." whole, split across 3.4-3.5`, not `tighten the middle`. Every FIXES item must name the shot ids it touches (e.g. `3.4`, `2.1-2.2`); length fixes must name the specific shots to cut, never a blanket "cut to 90s".
 
 - **R1 Fidelity:** Is every line the family's own whole sentence wherever one fits (not shortened, merged or reworded)? Split, don't
   compress. A connective line passes only if short and needed to follow the next.
