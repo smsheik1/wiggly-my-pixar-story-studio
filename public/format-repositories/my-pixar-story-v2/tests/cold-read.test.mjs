@@ -12,6 +12,7 @@ import { deepAgentInvoke, REFLECTION } from '../graph/deep-agent-node.mjs';
 import { coldReadMessages, coldReadEnabled } from '../graph/cold-read.mjs';
 import { loadColdRead, V2_MODELS } from '../config/models.mjs';
 import { RunStoppedError } from '../graph/provider-errors.mjs';
+import { draftContext } from '../graph/best-of.mjs';
 
 class ScriptedModel extends BaseChatModel {
   constructor(script) {
@@ -36,6 +37,7 @@ const say = (t) => new AIMessage(t);
 const json = (f) => JSON.parse(readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const SUBMIT = 'submit_story_director';
 const titled = (t) => { const d = json('good-stage-play.json'); d.masthead.title = t; return d; };
+const submitDraft = () => call(SUBMIT, titled(draftContext.getStore()?.draftId === 'B' ? 'Draft B' : 'Draft zero'));
 const text = (msgs) => msgs.map((m) => (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))).join('\n');
 async function tmp(run) {
   const d = await mkdtemp(join(tmpdir(), 'wiggly-v2-cold-read-'));
@@ -128,7 +130,9 @@ test('call order is cold-read then critique per round; critique prompt contains 
   const seen = {};
   const m = new ScriptedModel([
     () => call('read_file', { file_path: '/skills/story-director/SKILL.md' }),
-    () => call(SUBMIT, titled('Draft zero')),
+    submitDraft,
+    submitDraft,
+    () => say('Draft zero wins.\nWINNER: A'),
     // Round 1: cold-read
     (msgs) => { seen.cold1 = text(msgs); return say(COLD_FAIL_NOTES); },
     // Round 1: critique (receives cold notes)
@@ -149,7 +153,7 @@ test('call order is cold-read then critique per round; critique prompt contains 
     gate: () => ({ issues: [] }),
   });
 
-  assert.equal(m.calls.length, 7, 'draft (2 turns) + r1 (cold-read + critique + rewrite) + r2 (cold-read + critique [SHIP early stop])');
+  assert.equal(m.calls.length, 9, 'drafts A+B (3 turns) + judge + r1 (cold-read + critique + rewrite) + r2 (cold-read + critique [SHIP early stop])');
   // Cold-read 1 contains draft zero and no questionnaire answers
   assert.match(seen.cold1, /Draft zero/);
   assert.ok(!seen.cold1.includes(DISTINCT_ANSWER));
@@ -180,7 +184,9 @@ test('call order is cold-read then critique per round; critique prompt contains 
 test('SHIP early stop still skips the rewrite even if cold notes list FAILs', { timeout: 10000 }, () => tmp(async (runs) => {
   const seen = {};
   const m = new ScriptedModel([
-    () => call(SUBMIT, titled('Draft zero')),
+    submitDraft,
+    submitDraft,
+    () => say('WINNER: A'),
     // Round 1: cold-read returns FAIL notes
     (msgs) => { seen.cold1 = text(msgs); return say(COLD_FAIL_NOTES); },
     // Round 1: critique ignores cold notes and says SHIP
@@ -195,8 +201,8 @@ test('SHIP early stop still skips the rewrite even if cold notes list FAILs', { 
     gate: () => ({ issues: [] }),
   });
 
-  // Only 3 calls: draft, cold-read, critique (SHIP stops early)
-  assert.equal(m.calls.length, 3, 'draft + cold-read + critique (rewrite skipped on SHIP)');
+  // 5 calls: drafts A+B, judge, cold-read, critique (SHIP stops early)
+  assert.equal(m.calls.length, 5, 'drafts A+B + judge + cold-read + critique (rewrite skipped on SHIP)');
   assert.equal(out.masthead.title, 'Draft zero');
   assert.match(seen.critique1, /Cold viewer notes/);
   const r = out[REFLECTION];
@@ -211,7 +217,9 @@ test('SHIP early stop still skips the rewrite even if cold notes list FAILs', { 
 test('disabled via config -> no extra call', { timeout: 10000 }, () => tmp(async (runs) => {
   const seen = {};
   const m = new ScriptedModel([
-    () => call(SUBMIT, titled('Draft zero')),
+    submitDraft,
+    submitDraft,
+    () => say('WINNER: A'),
     // Critique directly, no cold-read call
     (msgs) => { seen.critique1 = text(msgs); return say(SHIP_CRITIQUE); },
   ]);
@@ -227,8 +235,8 @@ test('disabled via config -> no extra call', { timeout: 10000 }, () => tmp(async
     gate: () => ({ issues: [] }),
   });
 
-  // Exactly 2 calls: draft + critique (no cold read)
-  assert.equal(m.calls.length, 2);
+  // Exactly 4 calls: drafts A+B + judge + critique (no cold read)
+  assert.equal(m.calls.length, 4);
   assert.ok(!seen.critique1.includes('Cold viewer notes'), 'critique must not contain cold notes when disabled');
   const dir = join(runs, 'cr-disabled_attempt-1', 'story-director', 'reflection');
   assert.ok(!existsSync(join(dir, 'round-1-cold-read.md')), 'round-1-cold-read.md must NOT exist');
@@ -247,7 +255,9 @@ test('other agents get no cold read', { timeout: 10000 }, () => {
 test('non-fatal error in cold-read is skipped and continues; fatal provider error rethrows', { timeout: 10000 }, () => tmp(async (runs) => {
   // 1. Non-fatal error: skipped
   const m1 = new ScriptedModel([
-    () => call(SUBMIT, titled('Draft zero')),
+    submitDraft,
+    submitDraft,
+    () => say('WINNER: A'),
     () => { throw new Error('Temporary 503 from model provider'); }, // cold-read throws non-fatal
     () => say(SHIP_CRITIQUE), // critique continues normally
   ]);
@@ -258,13 +268,15 @@ test('non-fatal error in cold-read is skipped and continues; fatal provider erro
     attempt: 1,
     gate: () => ({ issues: [] }),
   });
-  assert.equal(m1.calls.length, 3);
+  assert.equal(m1.calls.length, 5);
   assert.equal(out[REFLECTION].log[0].coldRead, undefined);
 
   // 2. Fatal provider error: rethrows
   const m2 = new ScriptedModel([
-    () => call(SUBMIT, titled('Draft zero')),
-    () => { throw new RunStoppedError('Provider credit exhausted'); }, // fatal provider error
+    submitDraft,
+    submitDraft,
+    () => say('WINNER: A'),
+    () => { throw new RunStoppedError('Provider credit exhausted'); }, // fatal provider error in cold-read
   ]);
   await assert.rejects(
     deepAgentInvoke({ createModel: async () => m2, runsRoot: runs, runId: 'cr-err-fatal' })({

@@ -23,6 +23,7 @@ export const V2_MODELS = Object.freeze({
     // Patch mode (graph/patch.mjs): one self-review round scoped to the target; --reflection-rounds overrides it.
     patchReflectionRounds: 1,
     coldRead: true,
+    bestOfDrafts: 2,
     imageSteps: { storyboard: NANO_BANANA } },
   'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 64000, /* r4-dry9: CA used 23.5k of 24k */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     reflectionRounds: 0, // off until proven on the Story Director
@@ -64,6 +65,15 @@ export function loadReview(agent) {
 export function loadColdRead(agent) {
   if (!V2_MODELS[agent]) throw new Error(`loadColdRead: unknown v2 agent "${agent}"`);
   const path = fileURLToPath(new URL(`${agent}/COLD-READ.md`, CREW));
+  return existsSync(path) ? readFileSync(path, 'utf8') : null;
+}
+/**
+ * The agent's judge prompt (crew/<agent>/PICK.md), used only for the best-of draft pick call,
+ * or null when the agent has none.
+ */
+export function loadPick(agent) {
+  if (!V2_MODELS[agent]) throw new Error(`loadPick: unknown v2 agent "${agent}"`);
+  const path = fileURLToPath(new URL(`${agent}/PICK.md`, CREW));
   return existsSync(path) ? readFileSync(path, 'utf8') : null;
 }
 export function loadSkill(agent) {

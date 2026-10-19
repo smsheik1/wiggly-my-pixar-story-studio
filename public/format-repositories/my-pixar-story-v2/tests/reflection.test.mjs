@@ -120,7 +120,7 @@ const otherAgents = (agent) => new ScriptedModel([() => call(`submit_${agent.rep
 const assets = () => json('good-approved-assets.json');
 class RoleModel extends ScriptedModel {
   constructor({ draft, critiques, revisions, onCritique = () => {}, onDraft = () => {} }) {
-    super([]); this.q = { draft: [draft], critiques: [...critiques], revisions: [...revisions] }; this.onCritique = onCritique; this.onDraft = onDraft; this.kinds = [];
+    super([]); this.q = { draft: Array.isArray(draft) ? [...draft] : [draft, draft], critiques: [...critiques], revisions: [...revisions] }; this.onCritique = onCritique; this.onDraft = onDraft; this.kinds = [];
   }
   async _generate(messages) {
     this.calls.push(messages);
@@ -143,7 +143,7 @@ test('graph: a gate-failing first draft fixed by the revisions passes on attempt
     critiques: ['1. Finale has no narration. VERDICT: REVISE', '1. Still no narration. VERDICT: REVISE'], onCritique: (t) => critiqueTexts.push(t) })));
   const s = await buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'g1' }, onEvent: (e) => events.push(e) }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
-  assert.deepEqual(sd.kinds.filter((k) => k !== 'after-submit'), ['draft', 'cold-read', 'critique', 'rewrite', 'cold-read', 'critique', 'rewrite']);
+  assert.deepEqual(sd.kinds.filter((k) => k !== 'after-submit'), ['draft', 'draft', 'cold-read', 'critique', 'rewrite', 'cold-read', 'critique', 'rewrite']);
   assert.match(critiqueTexts[0], /FINALE_TOO_THIN/); assert.match(critiqueTexts[0], /Thin draft/); assert.match(critiqueTexts[1], /Still thin/);
   assert.equal(s.attempts['story-director'], 1); assert.equal(s.storyDirector.masthead.title, 'Fixed');
   assert.ok(!s.gateIssues['story-director'].some((i) => i.code === 'FINALE_TOO_THIN'));
@@ -165,6 +165,6 @@ test('graph: if the final revision fails the gate, the existing retry runs (with
   const s = await buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'g2' } }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done'); assert.equal(s.attempts['story-director'], 2); assert.equal(s.storyDirector.masthead.title, 'Good final');
   assert.ok(s.validationErrors.find((v) => v.node === 'story-director').errors.some((i) => i.code === 'FINALE_TOO_THIN'));
-  assert.ok(!/FINALE_TOO_THIN/.test(drafts[0])); assert.match(drafts[1], /FINALE_TOO_THIN/, 'attempt 2 gets the gate errors of the final revision as retry notes');
+  assert.ok(!/FINALE_TOO_THIN/.test(drafts[0])); assert.match(drafts[2], /FINALE_TOO_THIN/, 'attempt 2 gets the gate errors of the final revision as retry notes');
   assert.deepEqual(s.reflections['story-director'].map((r) => r.attempt), [1, 2]);
 }));

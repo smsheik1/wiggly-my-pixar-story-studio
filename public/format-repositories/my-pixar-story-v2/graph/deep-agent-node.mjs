@@ -22,6 +22,7 @@ import { LocationScoutOutputSchema } from '../crew/location-scout/schema.mjs';
 import { SeedanceCompilerOutputSchema, SeedanceSubmitSchema, withAssembledPrompts } from '../crew/seedance-compiler/schema.mjs';
 import { loadSkill, loadReview, outputCap } from '../config/models.mjs';
 import { runColdRead } from './cold-read.mjs';
+import { bestOfEnabled, runBestOf } from './best-of.mjs';
 
 export const RUNS_ROOT = fileURLToPath(new URL('../runs/', import.meta.url));
 export const OUTPUT_SCHEMAS = {
@@ -329,13 +330,24 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     const model = await createModel(config, agent);
     const sysPrompt = systemPromptFor(agent, retryNotes, { photos: Object.keys(photoFiles).length > 0 });
     /** One Deep Agent run that ends in submit_<agent>; returns the submitted (schema-valid) object or throws. */
-    const runOnce = async (content, runName, extraTags = []) => {
+    const runOnce = async (content, runName, extraTags = [], workspaceRoot = root) => {
       const submissions = [];
       const done = new AbortController(); // ends the agent loop on a valid submit (or give-up)
       let giveUp = null;
       const submit = makeSubmitTool(agent, submissions, { maxInvalid: maxInvalidSubmits, ...(submitSchema ? { schema: submitSchema } : {}),
         onSubmitted: () => done.abort(new Error('submitted')), onGiveUp: (e) => { giveUp = e; done.abort(e); } });
-      const agentRun = workspaceAgent(model, root, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], sysPrompt);
+      const boundModel = new Proxy(model, {
+        get(target, prop, receiver) {
+          if (prop === '_generate') {
+            return (messages, options, runManager) => target._generate(messages, { ...options, runName, tags: [...(options?.tags ?? []), ...extraTags] }, runManager);
+          }
+          if (prop === 'invoke') {
+            return (messages, options) => target.invoke(messages, { ...options, runName, tags: [...(options?.tags ?? []), ...extraTags] });
+          }
+          return Reflect.get(target, prop, receiver);
+        },
+      });
+      const agentRun = workspaceAgent(boundModel, workspaceRoot, `openai:${config.model}`, `wiggly-v2-${agent}`, [submit], sysPrompt);
       const sig = signal ? AbortSignal.any([signal, done.signal]) : done.signal;
       try {
         await agentRun.invoke({ messages: [{ role: 'user', content }] }, { recursionLimit, signal: sig, runName, tags: [`agent:${agent}`, `attempt:${attempt}`, ...extraTags] });
@@ -351,8 +363,21 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       throw new Error(`${agent}: the deep agent finished without calling submit`);
     };
 
-    let out = await runOnce(task ?? `Produce the ${agent} output for this run.`, `${agent} deep agent`);
     const rounds = reflectionRoundsFor(config, reqRounds ?? (typeof reflectionRounds === 'object' && reflectionRounds ? reflectionRounds[agent] : reflectionRounds));
+    let out;
+    let bestOf = null;
+    let initialGateIssues = null;
+    if (bestOfEnabled(agent, config, { scope, task, rounds })) {
+      const picked = await runBestOf({
+        agent, input, model, gate, signal, runsRoot, root, task, runOnce,
+        prepareWorkspace: prepareRunWorkspace, state, assetFiles, photoFiles,
+      });
+      out = picked.winnerDraft;
+      bestOf = picked.bestOf;
+      initialGateIssues = picked.gateIssues;
+    } else {
+      out = await runOnce(task ?? `Produce the ${agent} output for this run.`, `${agent} deep agent`);
+    }
     if (!rounds) return out;
 
     const dir = join(root, 'reflection');
@@ -363,8 +388,10 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     const review = loadReview(agent); // the rubric, for the critique call only (never in the writer's prompt)
     const firstRuntime = runtimeOf(out);
     let prevDraft = null;
-    let gateIssues = [];
-    try { gateIssues = gate ? (gate(out)?.issues ?? []) : []; } catch { gateIssues = []; }
+    let gateIssues = initialGateIssues;
+    if (!gateIssues) {
+      try { gateIssues = gate ? (gate(out)?.issues ?? []) : []; } catch { gateIssues = []; }
+    }
     const log = [];
     let stoppedEarly = false;
     for (let round = 1; round <= rounds; round++) {
@@ -411,8 +438,8 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       }
       log.push(entry);
     }
-    await writeFile(join(dir, 'reflection.json'), JSON.stringify({ agent, attempt, rounds, roundsRun: log.length, stoppedEarly, rubric: Boolean(review), log }, null, 2));
-    Object.defineProperty(out, REFLECTION, { value: { rounds, roundsRun: log.length, stoppedEarly, log }, enumerable: false, configurable: true });
+    await writeFile(join(dir, 'reflection.json'), JSON.stringify({ agent, attempt, rounds, roundsRun: log.length, stoppedEarly, rubric: Boolean(review), ...(bestOf ? { bestOf } : {}), log }, null, 2));
+    Object.defineProperty(out, REFLECTION, { value: { rounds, roundsRun: log.length, stoppedEarly, ...(bestOf ? { bestOf } : {}), log }, enumerable: false, configurable: true });
     return out;
   };
 }
