@@ -88,7 +88,7 @@ test('the finale rules are generic: no maker-specific details in role rules or c
   const finaleRules = rules.filter((l) => /ONE idea|last line says/.test(l));
   assert.equal(finaleRules.length, 2);
   for (const l of finaleRules) assert.ok(!/Yugioh|Honda|eight o'clock|8pm|Chicago|Dallas|Disney|sunglasses|Mia|Shaz|maxim/i.test(l), l.slice(0, 80));
-  assert.ok(/whole/.test(finaleRules[0]) && /slogan/.test(finaleRules[0]) && /shot that shows it/.test(finaleRules[0]) && /callback/.test(finaleRules[0]));
+  assert.ok(/slogan/.test(finaleRules[0]) && /shot that shows it/.test(finaleRules[0]) && /callback/.test(finaleRules[0]));
   assert.ok(role.includes('"finaleThesis"'));
   assert.ok(!/15.20 seconds of narration|one concrete detail/.test(role));
   const checker = readFileSync(new URL('../crew/linter/check-stage-play.mjs', import.meta.url), 'utf8');
@@ -101,12 +101,12 @@ test('wisdom runs are broken by an on-screen action, never an inserted memory', 
   const list = doNotWriteList(); assert.match(list, /two wisdom or advice lines in a row in the finale; break a run with an on-screen action/);
   assert.ok(!/put a moment, action or callback/.test(list));
 });
-test('speech-rate fixes lengthen or split the shot, never shorten the words', { timeout: 10000 }, () => {
+test('speech-rate fixes lengthen or split the shot', { timeout: 10000 }, () => {
   const m = budgetMessage('Segment 2, shot 1 (0s-3s)', 12, 3);
-  assert.match(m, /lengthen this shot to 5s/); assert.match(m, /1s lead-in and tail/); assert.match(m, /split the line across two shots/); assert.match(m, /Never shorten or paraphrase/);
+  assert.match(m, /lengthen this shot to 5s/); assert.match(m, /1s lead-in and tail/); assert.match(m, /split the line across two shots/); assert.doesNotMatch(m, /Never shorten or paraphrase/);
   assert.ok(!/cut the line/.test(m));
   const role = readFileSync(new URL('../crew/story-director/role.md', import.meta.url), 'utf8');
-  assert.match(role, /Never shorten, paraphrase or compress the family's words to fit a shot length/);
+  assert.doesNotMatch(role, /Never shorten, paraphrase or compress the family.s words/);
 });
 test('output budgets at xhigh: Story Director 128k (r5-dry1 hit 64.2k of 64k), CA and SC 64k', { timeout: 10000 }, async () => {
   const { V2_MODELS } = await import('../config/models.mjs');

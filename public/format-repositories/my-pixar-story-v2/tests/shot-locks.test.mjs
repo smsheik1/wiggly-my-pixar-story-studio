@@ -61,7 +61,7 @@ test('SD: the speaker is on screen and leads, unless the line is voice-over', ()
 test('speech budget: 3 words/sec plus a 1s pad; the message says lengthen or split, never cut', () => {
   assert.deepEqual([1, 3, 4, 6, 7, 12, 18].map(secondsNeeded), [2, 2, 3, 3, 4, 5, 7]);
   const m = budgetMessage('Shot 1.2', 12, 3);
-  assert.match(m, /lengthen this shot to 5s/); assert.match(m, /split the line/); assert.match(m, /Never shorten or paraphrase/);
+  assert.match(m, /lengthen this shot to 5s/); assert.match(m, /split the line/); assert.doesNotMatch(m, /Never shorten or paraphrase/);
   has(sd((d) => { const s = d.segments[0].shots[1]; s.dialogue.line = '{I am a scientist and I have proof right here.}'; }), 'DIALOGUE_TIMING_BUDGET', '10 spoken words need 5s');
   has(sd((d) => { d.segments[0].shots[1].dialogue.line = `{${'word '.repeat(19).trim()}}`; }), 'DIALOGUE_TIMING_BUDGET', 'split it across two shots');
 });

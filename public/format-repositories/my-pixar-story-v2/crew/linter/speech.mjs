@@ -13,5 +13,5 @@ export const shotWords = (shot) => countWords(shot?.dialogue?.line) + countWords
 /** Exact, actionable feedback for an over-budget shot. */
 export function budgetMessage(label, words, secs) {
   const need = secondsNeeded(words);
-  return `${label}: ${words} spoken words need ${need}s (${words} words at ${WORDS_PER_SECOND} words/sec plus ${SPEECH_PAD_SEC}s lead-in and tail) but the shot is ${secs}s. Fix: lengthen this shot to ${need}s (shift the following timecodes; keep the segment <= 30s, moving a shot to the next part if needed) or split the line across two shots at a natural pause. Never shorten or paraphrase the line to fit.`;
+  return `${label}: ${words} spoken words need ${need}s (${words} words at ${WORDS_PER_SECOND} words/sec plus ${SPEECH_PAD_SEC}s lead-in and tail) but the shot is ${secs}s. Fix: lengthen this shot to ${need}s (shift the following timecodes; keep the segment <= 30s, moving a shot to the next part if needed) or split the line across two shots at a natural pause.`;
 }

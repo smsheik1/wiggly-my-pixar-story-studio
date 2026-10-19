@@ -120,7 +120,7 @@ export function checkStageShotLocks(data) {
       // one budget for everything spoken in the shot (dialogue then narration)
       const w = shotWords(shot), dur = (shot.endSec ?? 0) - (shot.startSec ?? 0);
       const longest = Math.max(countWords(shot.dialogue?.line), countWords(shot.narration?.line));
-      if (longest > MAX_LINE_WORDS) err('DIALOGUE_TIMING_BUDGET', `${where}: a ${longest}-word line is too long for one shot (max ${MAX_LINE_WORDS} words); split it across two shots at a natural pause, keeping every word.`, p);
+      if (longest > MAX_LINE_WORDS) err('DIALOGUE_TIMING_BUDGET', `${where}: a ${longest}-word line is too long for one shot (max ${MAX_LINE_WORDS} words); split it across two shots at a natural pause.`, p);
       else if (w && dur < secondsNeeded(w)) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`${where} (${shot.startSec}s-${shot.endSec}s)`, w, dur), p);
     });
   });

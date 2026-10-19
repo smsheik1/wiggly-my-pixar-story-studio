@@ -232,7 +232,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
   if (segments.length > 1 && last) {
     const narr = (last.shots ?? []).filter((h) => h.narration && (!finaleKey || ofKey(h.narration.source?.answer) === finaleKey)).reduce((n, h) => n + (h.endSec - h.startSec), 0);
     if (narr < FINALE_MIN_NARRATION_SEC)
-      err('FINALE_TOO_THIN', `Final part carries only ${narr}s of narration${finaleKey ? ` from '${finaleKey}'` : ''}; give the finale's one idea at least ${FINALE_MIN_NARRATION_SEC}s of narration in the family's own whole sentences (setup ~10s). Lengthen shots rather than shortening lines.`, `segments.${segments.length - 1}`);
+      err('FINALE_TOO_THIN', `Final part carries only ${narr}s of narration${finaleKey ? ` from '${finaleKey}'` : ''}; give the finale's one idea at least ${FINALE_MIN_NARRATION_SEC}s of narration from the finale answer.`, `segments.${segments.length - 1}`);
   }
   // WIGGLY: the recipient listens on screen in the finale; the last line is never copied from a role-file example.
   const recipient = recipientOf(input?.subject);
@@ -251,7 +251,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
   }
   if (segments.length > 1 && last) (last.shots ?? []).forEach((h, hi) => {
     for (const k of ['dialogue', 'narration']) if (h[k]?.line && FINALE_PLATITUDE.test(h[k].line) && !quotesAnswer(h[k].line, input?.answers))
-      err('FINALE_PLATITUDE', `Final part, shot ${h.shotNumber ?? hi + 1}: '${h[k].line}' is a sweeping generalisation that is not the family's own sentence. Cut it, or use the family's words from the answers as written; keep only wisdom tied to this family's life.`, `segments.${segments.length - 1}.shots.${hi}.${k}`);
+      err('FINALE_PLATITUDE', `Final part, shot ${h.shotNumber ?? hi + 1}: '${h[k].line}' is a sweeping generalisation that is not the family's own sentence. Cut it; keep only wisdom tied to this family's life in the answers.`, `segments.${segments.length - 1}.shots.${hi}.${k}`);
   });
   if (filmTotal > MAX_TOTAL_SECONDS) err('RUNTIME_EXCEEDS_CAP', `Film runs ${filmTotal}s; the total cap is ${MAX_TOTAL_SECONDS}s.`, 'segments');
 
