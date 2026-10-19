@@ -8,6 +8,7 @@
 import { isFatalProviderError, isStreamDrop, withCallRetry, CALL_RETRIES } from './provider-errors.mjs';
 import { createMiddleware } from 'langchain';
 import { noteStreamActivity } from './liveness.mjs';
+import { thinkingTap } from './thinking-tap.mjs';
 import { cutQuotaNote, judgeRewrite, runtimeOf } from './length-guard.mjs';
 export { cutQuotaNote, judgeRewrite, runtimeOf };
 import { parseFixShots, enforceScope, formatScopedRevisionInstructions } from './scoped-rewrite.mjs';
@@ -237,7 +238,8 @@ export function observingFetch(agent, base = globalThis.fetch, note = noteStream
     const res = await base(url, init);
     if (!res.body || !String(res.headers?.get?.('content-type') ?? '').includes('event-stream')) return res;
     const dec = new TextDecoder();
-    const tap = new TransformStream({ transform(chunk, ctl) { const a = sseActivity(dec.decode(chunk, { stream: true })); if (a.keepalives || a.reasoning) note(agent, a); ctl.enqueue(chunk); } });
+    const think = thinkingTap(agent);
+    const tap = new TransformStream({ transform(chunk, ctl) { const t = dec.decode(chunk, { stream: true }); const a = sseActivity(t); if (a.keepalives || a.reasoning) note(agent, a); think.feed(t); ctl.enqueue(chunk); }, flush() { think.end(); } });
     return new Response(res.body.pipeThrough(tap), { status: res.status, statusText: res.statusText, headers: res.headers });
   };
 }
