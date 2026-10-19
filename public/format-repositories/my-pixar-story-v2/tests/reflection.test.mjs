@@ -63,7 +63,7 @@ test('2 rounds happen: critique sees rules + answers + draft, rewrite sees the c
   assert.match(seen.r1, /revision round 1 of 2/); assert.match(seen.r1, /last line is off the idea/); assert.match(seen.r1, /Draft zero/);
   assert.match(seen.c2, /Revision one/); assert.ok(!/Draft zero/.test(seen.c2), 'round 2 critiques the revised draft'); assert.match(seen.c2, /currently passes/);
   assert.match(seen.r2, /shot 2 action is vague/);
-  assert.deepEqual(gateCalls, ['Draft zero', 'Revision one']);
+  assert.deepEqual(gateCalls, ['Draft zero', 'Revision one', 'Revision two']);
   // Saved for review: on the output (non-enumerable, never serialized) and on disk.
   const r = out[REFLECTION];
   assert.equal(r.rounds, 2); assert.equal(r.log.length, 2);
@@ -159,7 +159,7 @@ test('graph: if the final revision fails the gate, the existing retry runs (with
   const createModel = async (_c, agent) => {
     if (agent !== 'story-director') return otherAgents(agent);
     sdModels++;
-    return new RoleModel({ draft: titled('Draft'), revisions: [titled('Mid'), sdModels === 1 ? thin('Bad final') : titled('Good final')], critiques: ['critique a', 'critique b'], onDraft: (t) => drafts.push(t) });
+    return new RoleModel({ draft: thin('Draft'), revisions: [thin('Mid'), sdModels === 1 ? thin('Bad final') : titled('Good final')], critiques: ['critique a', 'critique b'], onDraft: (t) => drafts.push(t) });
   };
   const s = await buildGraph({ deepAgent: { createModel, runsRoot: runs, runId: 'g2' } }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done'); assert.equal(s.attempts['story-director'], 2); assert.equal(s.storyDirector.masthead.title, 'Good final');

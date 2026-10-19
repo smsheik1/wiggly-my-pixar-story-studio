@@ -6,6 +6,8 @@
 //   runs/<runId>/<agent>/skills/<agent>/SKILL.md   the agent's role.md
 // The agent finishes by calling submit_<agent>, whose Zod schema is the agent's schema.mjs output; returnDirect ends the run.
 import { isFatalProviderError } from './provider-errors.mjs';
+import { cutQuotaNote, judgeRewrite, runtimeOf } from './length-guard.mjs';
+export { cutQuotaNote, judgeRewrite, runtimeOf };
 import { mkdir, writeFile, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, extname, relative } from 'node:path';
@@ -237,25 +239,19 @@ export const REFLECTION_FOCUS = {
   ],
 };
 
-/** Runtime facts for the critic's length check: the target from the input, this draft's and the first draft's runtime. */
-const runtimeOf = (o) => (Number.isFinite(o?.shapeBar?.totalRuntimeSec) ? o.shapeBar.totalRuntimeSec : null);
-function runtimeNote(input, draft, firstRuntime) {
-  const now = runtimeOf(draft);
-  if (now == null) return '';
-  const target = input?.targetTotalRuntimeSec ?? input?.format?.targetTotalSeconds ?? null;
-  return `Runtime: this draft ${now}s${target ? `; target ${target}s` : ''}${firstRuntime != null && firstRuntime !== now ? `; first draft ${firstRuntime}s` : ''}. A revision must not be longer than the draft it fixes unless a fix requires it.`;
-}
+/** Runtime facts for the critic's length check: delegates to cutQuotaNote. */
+export const runtimeNote = cutQuotaNote;
 
 /**
  * Messages for one critique call: the agent reviews its own draft against its rules, the input and (if any) the gate.
  * With a review rubric (crew/<agent>/REVIEW.md, loadReview) the call is an editor's pass: score each rubric item
  * PASS/FAIL with evidence, list at most 8 fixes, end on VERDICT. Without one it uses the generic focus list.
  */
-export function critiqueMessages({ agent, skill, review = null, input, draft, round, rounds, gateIssues = [], trace = '', scope = '', firstRuntime = null }) {
+export function critiqueMessages({ agent, skill, review = null, input, draft, round, rounds, gateIssues = [], trace = '', scope = '', firstRuntime = null, prevDraft = null }) {
   const focus = REFLECTION_FOCUS[agent] ?? REFLECTION_FOCUS.default;
   const gate = gateIssues.filter((i) => i.severity === 'error');
   const warns = gateIssues.filter((i) => i.severity === 'warning');
-  const rt = runtimeNote(input, draft, firstRuntime);
+  const rt = cutQuotaNote(input, draft, prevDraft ?? firstRuntime, { firstRuntime });
   // Patch mode: the prior output is the draft's own baseline; do not send it twice.
   if (input?.patch?.currentOutput) input = { ...input, patch: { ...input.patch, currentOutput: '(the output before this patch; outside the target the draft must equal it exactly)' } };
   const system = review
@@ -364,16 +360,17 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     const skill = loadSkill(agent);
     const review = loadReview(agent); // the rubric, for the critique call only (never in the writer's prompt)
     const firstRuntime = runtimeOf(out);
+    let prevDraft = null;
+    let gateIssues = [];
+    try { gateIssues = gate ? (gate(out)?.issues ?? []) : []; } catch { gateIssues = []; }
     const log = [];
     let stoppedEarly = false;
     for (let round = 1; round <= rounds; round++) {
       if (signal?.aborted) throw signal.reason ?? new Error('aborted');
-      let gateIssues = [];
-      try { gateIssues = gate ? (gate(out)?.issues ?? []) : []; } catch { gateIssues = []; }
       const meta = { runName: `${agent} reflection round ${round} critique`, tags: [`agent:${agent}`, `attempt:${attempt}`, `reflection:${round}`], metadata: { agent, attempt, reflectionRound: round }, signal };
       let tr = null;
       try { tr = trace ? trace(out) : null; } catch { tr = null; }
-      const critique = replyText(await model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime }), meta)).trim();
+      const critique = replyText(await model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime, prevDraft }), meta)).trim();
       await writeFile(join(dir, `round-${round}-critique.md`), critique + '\n');
       const entry = { round, critique, critiqueFile: rel(`round-${round}-critique.md`), gateErrorsBefore: gateIssues.filter((i) => i.severity === 'error').length };
       if (tr?.data) { entry.trace = tr.data; entry.untraceable = parseUntraceable(critique); }
@@ -385,10 +382,23 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       }
       try {
         const revised = await runOnce(revisionMessage({ agent, draft: out, critique, round, rounds, scope }), `${agent} reflection round ${round} rewrite`, [`reflection:${round}`]);
-        entry.changed = JSON.stringify(revised) !== JSON.stringify(out);
-        out = revised; entry.runtimeAfter = runtimeOf(out);
-        await writeFile(join(dir, `draft-${round}.json`), JSON.stringify(out, null, 2));
-        entry.draftFile = rel(`draft-${round}.json`);
+        let gateIssuesAfter = [];
+        try { gateIssuesAfter = gate ? (gate(revised)?.issues ?? []) : []; } catch { gateIssuesAfter = []; }
+        const judgment = judgeRewrite({ input, before: out, after: revised, gateBefore: gateIssues, gateAfter: gateIssuesAfter });
+        if (!judgment.accepted) {
+          console.log(judgment.message);
+          entry.changed = false;
+          entry.rejected = judgment.rejected;
+          entry.runtimeAfter = runtimeOf(out);
+        } else {
+          entry.changed = JSON.stringify(revised) !== JSON.stringify(out);
+          prevDraft = out;
+          out = revised;
+          gateIssues = gateIssuesAfter;
+          entry.runtimeAfter = runtimeOf(out);
+          await writeFile(join(dir, `draft-${round}.json`), JSON.stringify(out, null, 2));
+          entry.draftFile = rel(`draft-${round}.json`);
+        }
       } catch (e) {
         if (signal?.aborted) throw signal.reason ?? e;
         if (isFatalProviderError(e)) throw e; // spent key / no credits: never swallowed as a failed rewrite
