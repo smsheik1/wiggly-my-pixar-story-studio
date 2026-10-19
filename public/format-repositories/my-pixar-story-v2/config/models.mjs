@@ -22,6 +22,7 @@ export const V2_MODELS = Object.freeze({
     reflectionRounds: 2,
     // Patch mode (graph/patch.mjs): one self-review round scoped to the target; --reflection-rounds overrides it.
     patchReflectionRounds: 1,
+    coldRead: true,
     imageSteps: { storyboard: NANO_BANANA } },
   'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 64000, /* r4-dry9: CA used 23.5k of 24k */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     reflectionRounds: 0, // off until proven on the Story Director
@@ -54,6 +55,15 @@ const TELLS_AGENTS = new Set(['story-director', 'seedance-compiler']);
 export function loadReview(agent) {
   if (!V2_MODELS[agent]) throw new Error(`loadReview: unknown v2 agent "${agent}"`);
   const path = fileURLToPath(new URL(`${agent}/REVIEW.md`, CREW));
+  return existsSync(path) ? readFileSync(path, 'utf8') : null;
+}
+/**
+ * The agent's cold-read prompt (crew/<agent>/COLD-READ.md), used only for the first-time viewer cold-read pass,
+ * or null when the agent has none.
+ */
+export function loadColdRead(agent) {
+  if (!V2_MODELS[agent]) throw new Error(`loadColdRead: unknown v2 agent "${agent}"`);
+  const path = fileURLToPath(new URL(`${agent}/COLD-READ.md`, CREW));
   return existsSync(path) ? readFileSync(path, 'utf8') : null;
 }
 export function loadSkill(agent) {
