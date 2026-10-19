@@ -17,7 +17,7 @@ export function outputCap(config) {
 }
 
 export const V2_MODELS = Object.freeze({
-  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 128000, /* r4-dry7: xhigh reasoning used all 32k 3x and never submitted; r5-dry1: one call used 64.2k of 64k (~53k reasoning) -> 2x headroom, well under the model's limit (MODEL_LIMITS) */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
+  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 128000, /* r4-dry7: xhigh reasoning used all 32k 3x and never submitted; r5-dry1: one call used 64.2k of 64k (~53k reasoning) -> 2x headroom, well under the model's limit (MODEL_LIMITS) */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'high' /* r5-dry4: xhigh draft calls ran > 6 min and were cut mid-stream ('Network connection lost') every time */,
     // Self-critique + rewrite rounds after the first draft (graph/deep-agent-node.mjs); the gate checks the final revision.
     reflectionRounds: 2,
     // Patch mode (graph/patch.mjs): one self-review round scoped to the target; --reflection-rounds overrides it.

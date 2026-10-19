@@ -8,9 +8,9 @@ test('every v2 crew agent has a model entry', () => {
   assert.ok(agents.length >= 6);
   for (const a of agents) assert.ok(V2_MODELS[a], `missing model entry for ${a}`);
 });
-test('story director: OpenRouter Muse Spark 1.3 contributor at xhigh', () => {
+test('story director: OpenRouter Muse Spark 1.3 contributor at high (r5-dry4: xhigh calls were cut at ~6 min)', () => {
   assert.deepEqual([V2_MODELS['story-director'].provider, V2_MODELS['story-director'].model, V2_MODELS['story-director'].effort],
-    ['openrouter', 'meta/muse-spark-1.3-contributor', 'xhigh']);
+    ['openrouter', 'meta/muse-spark-1.3-contributor', 'high']);
 });
 test('every image step is Nano Banana 2.1 via Google Flow', () => {
   let n = 0;

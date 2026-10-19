@@ -112,5 +112,6 @@ test('output budgets at xhigh: Story Director 128k (r5-dry1 hit 64.2k of 64k), C
   const { V2_MODELS } = await import('../config/models.mjs');
   assert.equal(V2_MODELS['story-director'].maxTokens, 128000);
   for (const a of ['character-architect', 'seedance-compiler']) assert.equal(V2_MODELS[a].maxTokens, 64000);
-  for (const a of ['story-director', 'character-architect', 'seedance-compiler']) assert.equal(V2_MODELS[a].effort, 'xhigh');
+  assert.equal(V2_MODELS['story-director'].effort, 'high'); // r5-dry4: xhigh draft calls were cut at ~6 min
+  for (const a of ['character-architect', 'seedance-compiler']) assert.equal(V2_MODELS[a].effort, 'xhigh');
 });
