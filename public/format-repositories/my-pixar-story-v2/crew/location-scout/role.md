@@ -51,9 +51,9 @@ Lighting continuity in multi-shot video generation depends entirely on a consist
 Every location plate prompt must follow this structured template:
 
 ```text
-A background plate from a stylized 3D animated feature film: storybook look, simplified chunky shapes with soft rounded edges, smooth clean materials, gently saturated colors. 16:9 widescreen environment plate, completely empty of people.
+A background plate from a 3D animated feature film: full-size, real-world-scale set with believable architecture and proportions, cinematic feature-animation look, naturally detailed but clean materials (visible wood grain, fabric weave, painted walls), soft natural lighting, gently saturated colors. 16:9 widescreen environment plate, completely empty of people.
 
-Room / Environment: [PRIMARY ENVIRONMENT TYPE AND MOOD] on a [TIME OF DAY / ATMOSPHERE], completely empty of people. [FOREGROUND STAGING ELEMENTS — rugs, carpet markers, baseline geometry where actors will stage]. [MIDGROUND ARCHITECTURE AND FURNITURE — simplified rounded chunky shapes, clean stylized materials]. [WALL DRESSING — a few simple items]. [MAXIMUM ONE SIGN — e.g. A hand-lettered paper banner reading '[TEXT]' strung across the wall in uneven capitals].
+Room / Environment: [PRIMARY ENVIRONMENT TYPE AND MOOD] on a [TIME OF DAY / ATMOSPHERE], completely empty of people. [FOREGROUND STAGING ELEMENTS — rugs, carpet markers, baseline geometry where actors will stage]. [MIDGROUND ARCHITECTURE AND FURNITURE — real-world proportions, naturally detailed clean materials]. [WALL DRESSING — a few simple items]. [MAXIMUM ONE SIGN — e.g. A hand-lettered paper banner reading '[TEXT]' strung across the wall in uneven capitals].
 
 Secondary Depth & Props: [RECEDING ELEMENTS — a few clear story props from the answers, no clutter].
 
@@ -88,7 +88,7 @@ Before outputting a location plate prompt:
 - **Location tags.** Cast `@Image N` tags are assigned by the Character Architect and are NOT known to you. Tag each location `"@Loc 1"`, `"@Loc 2"`… positionally, in order of first appearance.
 - **Setting coverage.** Each setting carries the Story Director's `description` of what the background must contain: build exactly that. Every stage-play setting gets exactly one entry; `"settingName"` matches the stage-play location string exactly. Scene ids are `"segmentId.shotNumber"` (e.g. `"1.3"`); a shot with no location inherits the previous shot's location. List every scene id that uses the plate; never invent one.
 - **Time of day.** Set `"timeOfDay"` and state it in the prompt.
-- **Stylized, not photographed.** Homes feel warm and specific to the family's answers (settingSeed for culture and era), but designed like an animated film set: simplified rounded chunky shapes, a few clear story props, gently saturated cohesive palette, soft simple lighting. Furniture and surfaces look clean, smooth and inviting (plump soft cushions, smooth painted wood). No lens, mm or depth-of-field terms in `promptText`.
+- **Stylized, not photographed.** Homes feel warm and specific to the family's answers (settingSeed for culture and era), but designed like a full-size animated feature film set: real-world scale and proportions, a few clear story props, gently saturated cohesive palette, soft natural lighting. Furniture is well-kept and inviting, with naturally detailed materials (wood grain, fabric weave, painted walls). No lens, mm or depth-of-field terms in `promptText`.
 - **Say what you want, not what you don't.** Describe the wanted material condition positively; never list unwanted textures, since the image model reads those words as things to draw. Exclusions name only people and text.
 - **Comedy-friendly staging space.** Leave clear open floor and sightlines for reveals, double-takes and entrances; keep the 180-degree line readable.
 - **No people at all,** and never describe ages, cast names, element tags (@Theo), pets or reflections of people. Write "children's drawings" or "child-sized chairs" only as objects.

@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { IMAGE_ENGINE, PLATE_MIN, PLATE_MAX, EMPTY_PHRASE } from '../location-scout/schema.mjs';
 
-export const HOUSE_STYLE = 'stylized 3D animated feature film: storybook look, simplified chunky shapes with soft rounded edges, smooth clean materials, gently saturated colors';
+export const HOUSE_STYLE = '3D animated feature film: full-size, real-world-scale set with believable architecture and proportions, cinematic feature-animation look, naturally detailed but clean materials (visible wood grain, fabric weave, painted walls), soft natural lighting, gently saturated colors';
 export const PLATE_OPENING = `A background plate from a ${HOUSE_STYLE}. 16:9 widescreen environment plate, ${EMPTY_PHRASE}.`;
 // WIGGLY false-positive fixes: negated lists ("no people, figures or crowds"), possessive room names
 // ("sister's bedroom", "dad's car"), objects ("action figures", "baby blue", "family photos" are not people).

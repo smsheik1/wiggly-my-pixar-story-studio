@@ -10,12 +10,12 @@ const STYLIZED = [
   ['* **Lens & Perspective:** 35mm (wide establishing) or 50mm (medium master). Deep staging with clear foreground, midground, and background layers.', '* **Framing:** a wide shot or medium shot in plain words, with clear foreground, midground and background layers.'],
   ['(warm white walls, honey-oak wood, scuffed painted cubbies, soft desaturated teal)', '(warm white walls, honey-oak wood, soft teal)'],
   ['Sets use **muted, warm, natural palettes**', 'Sets use a **gently saturated, cohesive palette**'],
-  ['shelves, desks, cubbies, textures with soft wear and tactile production CG materials]. [WALL DRESSING — drawings, textures, soft paint wear]', 'simplified rounded chunky shapes, clean stylized materials]. [WALL DRESSING — a few simple items]'],
+  ['shelves, desks, cubbies, textures with soft wear and tactile production CG materials]. [WALL DRESSING — drawings, textures, soft paint wear]', 'real-world proportions, naturally detailed clean materials]. [WALL DRESSING — a few simple items]'],
   ['stacking chairs, coat racks, aquarium tank, plants, small tactile details creating believable living space without clutter]', 'a few clear story props from the answers, no clutter]'],
   [' Warm ambient daylight bounce. Subtle atmospheric dust motes in light beams, no fog, no haze]', ' Soft simple bounce light, no fog, no haze]'],
   ['[FOCAL LENGTH, CAMERA HEIGHT, ANGLE — e.g. 35mm wide shot at adult chest height looking down at the carpet staging area, level horizon, deep depth of field keeping background readable]', '[SHOT SIZE, CAMERA HEIGHT, ANGLE — e.g. wide shot at adult chest height looking down at the carpet staging area, level horizon]'],
   [', no photorealistic film grain, no 35mm noise.', '.'],
-  ['feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon', 'stylized 3D animated feature film: storybook look, simplified chunky shapes with soft rounded edges, smooth clean materials, gently saturated colors'],
+  ['feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon', '3D animated feature film: full-size, real-world-scale set with believable architecture and proportions, cinematic feature-animation look, naturally detailed but clean materials (visible wood grain, fabric weave, painted walls), soft natural lighting, gently saturated colors'],
   ['Authors production CG background', 'Authors stylized 3D background'],
 ];
 const norm = (s) => STYLIZED.reduce((t, [a, b]) => t.replaceAll(a, b), s).replaceAll(' (and GPT Image 2)', '').replaceAll(' and GPT Image 2', '').replaceAll('Nano Banana Pro', 'Nano Banana 2.1 (Google Flow)');
