@@ -4,6 +4,7 @@ import { validateWritingTells } from './writing-tells.mjs';
 import { checkStageShotLocks, onScreenOf } from './shot-locks.mjs';
 import { words, lcs, answerSentences, NEAR_VERBATIM, checkAnswerSources, checkExtraCast } from './answer-sources.mjs';
 import { checkPropsTraceable } from './craft-checks.mjs';
+import { SCENE_KEYS } from '../story-director/input.mjs';
 export { answerSentences, NEAR_VERBATIM };
 // v2 deterministic validation gate for Story Director output.
 // BASE: Gemini's validateStoryDirectorOutput (same return shape, codes and message text).
@@ -221,10 +222,17 @@ export function validateStoryDirectorOutput(data, input = {}) {
     err('MISSING_FINALE_THESIS', 'Output has no finaleThesis. Name the one idea the finale is built around, in one plain sentence taken from the family\'s answers; every final-part line serves it.', 'finaleThesis');
   // WIGGLY: the closing idea gets room to breathe: >=10s of narration in the final part.
   const last = segments.at(-1);
+  // The finale answer (last scene key the answers hold) gets a part of its own; only its narration counts as finale.
+  const finaleKey = [...SCENE_KEYS].reverse().find((k) => input?.answers?.[k] != null) ?? null;
+  const ofKey = (a) => String(a ?? '').replace(/^answers\./, '').split('.')[0];
+  if (finaleKey && segments.length > 1 && last) {
+    const other = [...new Set((last.answerSources ?? []).map(ofKey).filter((k) => k !== finaleKey))];
+    if (other.length) err('FINALE_MIXED_SOURCES', `The final part also tells ${other.map((k) => `'${k}'`).join(', ')}. Give the finale its own part, built only from '${finaleKey}'; move the other answers' moments into earlier parts.`, `segments.${segments.length - 1}.answerSources`);
+  }
   if (segments.length > 1 && last) {
-    const narr = (last.shots ?? []).filter((h) => h.narration).reduce((n, h) => n + (h.endSec - h.startSec), 0);
+    const narr = (last.shots ?? []).filter((h) => h.narration && (!finaleKey || ofKey(h.narration.source?.answer) === finaleKey)).reduce((n, h) => n + (h.endSec - h.startSec), 0);
     if (narr < FINALE_MIN_NARRATION_SEC)
-      err('FINALE_TOO_THIN', `Final part carries only ${narr}s of narration; give the finale's one idea at least ${FINALE_MIN_NARRATION_SEC}s of narration in the family's own whole sentences (setup ~10s). Lengthen shots rather than shortening lines.`, `segments.${segments.length - 1}`);
+      err('FINALE_TOO_THIN', `Final part carries only ${narr}s of narration${finaleKey ? ` from '${finaleKey}'` : ''}; give the finale's one idea at least ${FINALE_MIN_NARRATION_SEC}s of narration in the family's own whole sentences (setup ~10s). Lengthen shots rather than shortening lines.`, `segments.${segments.length - 1}`);
   }
   // WIGGLY: the recipient listens on screen in the finale; the last line is never copied from a role-file example.
   const recipient = recipientOf(input?.subject);

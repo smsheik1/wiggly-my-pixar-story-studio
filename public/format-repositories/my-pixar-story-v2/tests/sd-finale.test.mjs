@@ -115,3 +115,19 @@ test('output budgets at xhigh: Story Director 128k (r5-dry1 hit 64.2k of 64k), C
   assert.equal(V2_MODELS['story-director'].effort, 'high'); // r5-dry4: xhigh draft calls were cut at ~6 min
   for (const a of ['character-architect', 'seedance-compiler']) assert.equal(V2_MODELS[a].effort, 'xhigh');
 });
+
+// The finale answer (last scene key present in the answers) gets its own part; only its narration counts toward the finale.
+const finaleOnly = (o) => { const last = o.segments.at(-1); last.answerSources = ['scene5LegacyFinale.memory'];
+  for (const h of last.shots) if (h.narration) h.narration.source = { answer: 'scene5LegacyFinale.memory' }; return o; };
+test('FINALE_MIXED_SOURCES: the last part citing another answer fails and asks for a finale part of its own', { timeout: 10000 }, () => {
+  assert.ok(!codes(finaleOnly(sd())).includes('FINALE_MIXED_SOURCES'));
+  const mixed = finaleOnly(sd()); mixed.segments.at(-1).answerSources.unshift('scene4Romance.memory');
+  const issue = validateStoryDirectorOutput(mixed, { ...inputs, photoCharacters: [] }).issues.find((i) => i.code === 'FINALE_MIXED_SOURCES');
+  assert.equal(issue?.severity, 'error'); assert.match(issue.message, /own part/); assert.match(issue.message, /'scene4Romance'/);
+  assert.ok(!codes(mixed, { ...inputs, answers: {} }).includes('FINALE_MIXED_SOURCES'), 'no answers, no check');
+});
+test('FINALE_TOO_THIN counts only finale-sourced narration', { timeout: 10000 }, () => {
+  const o = finaleOnly(sd()); assert.ok(!codes(o).includes('FINALE_TOO_THIN'));
+  for (const h of o.segments.at(-1).shots) if (h.narration) h.narration.source = { answer: 'scene4Romance.memory' };
+  assert.ok(codes(o).includes('FINALE_TOO_THIN'), 'romance narration in the last part is not finale narration');
+});
