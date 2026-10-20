@@ -8,9 +8,9 @@ test('every v2 crew agent has a model entry', () => {
   assert.ok(agents.length >= 6);
   for (const a of agents) assert.ok(V2_MODELS[a], `missing model entry for ${a}`);
 });
-test('story director: OpenRouter Muse Spark 1.3 contributor at high (r5-dry4: xhigh calls were cut at ~6 min)', () => {
+test('story director: OpenRouter Haiku 5.5 at high (r5-sd10 picked it over Muse)', () => {
   assert.deepEqual([V2_MODELS['story-director'].provider, V2_MODELS['story-director'].model, V2_MODELS['story-director'].effort],
-    ['openrouter', 'meta/muse-spark-1.3-contributor', 'high']);
+    ['openrouter', 'anthropic/claude-haiku-5.5', 'high']);
 });
 test('every image step is Nano Banana 2.1 via Google Flow', () => {
   let n = 0;
@@ -90,10 +90,11 @@ test('seedance compiler: muse xhigh, Seedance 2.5 480p disabled, upstream CA + L
 
 test('Story Director model: default unchanged, WIGGLY_SD_MODEL overrides with a known model, unknown throws', async () => {
   const { storyDirectorModel, DEFAULT_SD_MODEL, MODEL_LIMITS, V2_MODELS } = await import('../config/models.mjs');
-  assert.equal(DEFAULT_SD_MODEL, 'meta/muse-spark-1.3-contributor');
+  assert.equal(DEFAULT_SD_MODEL, 'anthropic/claude-haiku-5.5');
+  assert.equal(storyDirectorModel({ WIGGLY_SD_MODEL: 'meta/muse-spark-1.3-contributor' }), 'meta/muse-spark-1.3-contributor');
   assert.equal(storyDirectorModel({}), DEFAULT_SD_MODEL);
   assert.equal(storyDirectorModel({ WIGGLY_SD_MODEL: ' ' }), DEFAULT_SD_MODEL);
-  assert.equal(storyDirectorModel({ WIGGLY_SD_MODEL: 'anthropic/claude-haiku-5.5' }), 'anthropic/claude-haiku-5.5');
+  
   assert.throws(() => storyDirectorModel({ WIGGLY_SD_MODEL: 'nope/model' }), /not in MODEL_LIMITS/);
   assert.ok(V2_MODELS['story-director'].maxTokens <= MODEL_LIMITS['anthropic/claude-haiku-5.5'].maxCompletionTokens);
   if (!process.env.WIGGLY_SD_MODEL) assert.equal(V2_MODELS['story-director'].model, DEFAULT_SD_MODEL);

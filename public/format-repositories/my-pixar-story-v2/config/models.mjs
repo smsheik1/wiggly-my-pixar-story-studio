@@ -13,7 +13,8 @@ export const MODEL_LIMITS = Object.freeze({
   'meta/muse-spark-1.3-contributor': { contextLength: 1048576, maxCompletionTokens: 943718 },
   'anthropic/claude-haiku-5.5': { contextLength: 1000000, maxCompletionTokens: 128000 }, // checked 2026-10-20
 });
-export const DEFAULT_SD_MODEL = 'meta/muse-spark-1.3-contributor';
+// r5-sd10 side by side: Haiku 5.5 wrote the better script (natural, true lines). Muse stays available via WIGGLY_SD_MODEL.
+export const DEFAULT_SD_MODEL = 'anthropic/claude-haiku-5.5';
 /** Story Director model: WIGGLY_SD_MODEL (for side-by-side test runs) or the default; only models listed in MODEL_LIMITS. */
 export function storyDirectorModel(env = process.env) {
   const m = env.WIGGLY_SD_MODEL?.trim();
@@ -29,7 +30,7 @@ export function outputCap(config) {
 }
 
 export const V2_MODELS = Object.freeze({
-  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 128000, /* r4-dry7: xhigh reasoning used all 32k 3x and never submitted; r5-dry1: one call used 64.2k of 64k (~53k reasoning) -> 2x headroom, well under the model's limit (MODEL_LIMITS) */ kind: 'llm', provider: 'openrouter', model: storyDirectorModel(), effort: 'high' /* r5-dry4: xhigh draft calls ran > 6 min and were cut mid-stream ('Network connection lost') every time */,
+  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 128000, /* r4-dry7: xhigh reasoning used all 32k 3x and never submitted; r5-dry1: one call used 64.2k of 64k (~53k reasoning) -> 2x headroom, well under the model's limit (MODEL_LIMITS) */ kind: 'llm', provider: 'openrouter', model: storyDirectorModel(), effort: 'high' /* r5-dry4: xhigh draft calls ran > 6 min and were cut mid-stream ('Network connection lost') every time */ /* Haiku 5.5: reasoning_effort supported; high kept */,
     // Self-critique + rewrite rounds after the first draft (graph/deep-agent-node.mjs); the gate checks the final revision.
     reflectionRounds: 2,
     // Patch mode (graph/patch.mjs): one self-review round scoped to the target; --reflection-rounds overrides it.
