@@ -74,6 +74,9 @@ Dialogue drives shot length, shot count, segment boundaries, and voice tags. Cha
 ### 2.1 The Vernacular Rules
 Write dialogue the way the character actually speaks:
 * **For a Young Child (Age 4–7):** Flat declarative facts, total conviction, "not even", "one time", odd small details given the exact same weight as huge life-and-death stakes, sentences started and abruptly abandoned. Never write an adult writerly observation about danger or risk.
+* **For an Older Child (Age 8-12):** Short, direct, a little showing off; exaggerates ("the whole entire day"), argues the small point, asks blunt questions. Still no adult reflection.
+* **For a Young Adult (13-19, shown as 18):** Few words, dry or deflecting; says less than they feel, covers it with a joke or a shrug. Never a speech.
+* **For an Adult:** Plain and specific, with contractions; says the practical thing, not the feeling ("You eat yet?"). In narration, the narrator voice rule applies: first person, to the recipient, short spoken sentences.
 
 > **Wiggly addition:** **Narration is allowed alongside or instead of dialogue.** The maker speaks as a voiceover in an expressive generated voice; describe the narrator's delivery (age, timbre, pace, warmth) in their cast card's `voiceDescription`. Write it in a shot's `narration` field as `@Maker: {line}` (speaker is the maker's cast tag). It uses the same braces, timing budget and vernacular rules as dialogue. A line the answers quote is kept near word for word and marked `kind: "verbatim"`.
 
