@@ -88,7 +88,7 @@ test('cutQuotaNote: under-target and at-target wording', { timeout: 10000 }, () 
   assert.equal(cutQuotaNote({ targetTotalRuntimeSec: 90 }, {}), '');
 });
 
-test('judgeRewrite: length growth rejected and tolerance applied', { timeout: 10000 }, () => {
+test('judgeRewrite: growth allowed at/under target, rejected past it', { timeout: 10000 }, () => {
   const input = { targetTotalRuntimeSec: 90 };
   const d = (rt) => ({ shapeBar: { totalRuntimeSec: rt } });
 
@@ -103,27 +103,13 @@ test('judgeRewrite: length growth rejected and tolerance applied', { timeout: 10
   assert.equal(overGrow2.reason, 'grew');
   assert.equal(overGrow2.bySec, 2);
 
-  // Under target: +2s tolerance allowed
-  const underPlus2 = judgeRewrite({ input, before: d(80), after: d(82) });
-  assert.equal(underPlus2.accepted, true);
-
-  const underPlus1 = judgeRewrite({ input, before: d(80), after: d(81) });
-  assert.equal(underPlus1.accepted, true);
-
-  // Under target: +3s exceeds +2s tolerance -> rejected
-  const underPlus3 = judgeRewrite({ input, before: d(80), after: d(83) });
-  assert.equal(underPlus3.accepted, false);
-  assert.equal(underPlus3.reason, 'grew');
-  assert.equal(underPlus3.bySec, 3);
-
-  // At target: +2s tolerance allowed
+  // Growth is fine while the film stays at or under target (a swap for a stronger moment); past target it is rejected
+  assert.equal(judgeRewrite({ input, before: d(80), after: d(83) }).accepted, true);
+  assert.equal(judgeRewrite({ input, before: d(80), after: d(90) }).accepted, true);
+  const past = judgeRewrite({ input, before: d(80), after: d(91) });
+  assert.equal(past.accepted, false); assert.equal(past.reason, 'grew'); assert.equal(past.bySec, 11);
   const atPlus2 = judgeRewrite({ input, before: d(90), after: d(92) });
-  assert.equal(atPlus2.accepted, true);
-
-  const atPlus3 = judgeRewrite({ input, before: d(90), after: d(93) });
-  assert.equal(atPlus3.accepted, false);
-  assert.equal(atPlus3.reason, 'grew');
-  assert.equal(atPlus3.bySec, 3);
+  assert.equal(atPlus2.accepted, false); assert.equal(atPlus2.bySec, 2);
 
   // Equal or shorter runtime: accepted
   assert.equal(judgeRewrite({ input, before: d(90), after: d(90) }).accepted, true);

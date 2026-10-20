@@ -102,7 +102,7 @@ export function checkStageShotLocks(data) {
         for (const t of shot.enters ?? []) {
           if (!on.includes(t)) err('ENTRANCE_NOT_SHOWN', `${where}: ${t} enters here but is not on screen in this shot.`, `${p}.enters`);
           const early = order.slice(0, k).filter((m) => onScreenOf(shots[nums.indexOf(m)], castTags).includes(t));
-          if (early.length) err('APPEARS_BEFORE_ENTRANCE', `${where}: ${t} enters here but is already on screen in shot ${early.map((m) => `${id}.${m}`).join(', ')}.`, `${p}.enters`);
+          if (early.length) err('APPEARS_BEFORE_ENTRANCE', `${where}: ${t} enters here but is already on screen in shot ${early.map((m) => `${id}.${m}`).join(', ')}. Move the entrance to their first shot on screen, or take them out of the earlier shots.`, `${p}.enters`);
         }
         for (const t of shot.exits ?? []) {
           if (!on.includes(t)) err('EXIT_NOT_SHOWN', `${where}: ${t} exits here but is not on screen in this shot.`, `${p}.exits`);

@@ -63,8 +63,7 @@ export function countGateErrors(gate) {
 
 /**
  * Judge a rewritten draft against the draft it revised:
- * (1) Length guard: rejects if rewrite runtime > revised draft runtime.
- *     Allows up to +2s tolerance ONLY if revised draft was already at/under target.
+ * (1) Length guard: rejects a rewrite that grew AND ends over target (growth at/under target is allowed).
  *     If runtime is missing on either side, does not reject on length.
  * (2) Gate guard: rejects if rewrite has more error-severity gate issues than revised draft.
  */
@@ -75,8 +74,9 @@ export function judgeRewrite({ input, before, after, gateBefore = [], gateAfter 
 
   if (runtimeBefore != null && runtimeAfter != null) {
     const grewBy = runtimeAfter - runtimeBefore;
-    const tolerance = runtimeBefore <= target ? 2 : 0;
-    if (grewBy > tolerance) {
+    // Hard limit, not "never longer": a rewrite (e.g. a swap for a stronger moment) may grow while the film stays at or
+    // under target; over target it may not grow at all.
+    if (grewBy > 0 && runtimeAfter > target) {
       return {
         accepted: false,
         reason: 'grew',
