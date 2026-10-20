@@ -75,8 +75,6 @@ Write dialogue the way the character actually speaks:
 
 ### 2.2 Mathematical Timing Budget
 Dialogue directly calculates shot duration $\Delta t$:
-* **Single Short Line (3–5 words):** Budget **2 seconds** (e.g. `@Parent: {Okay, your turn.}`).
-* **Two-Line Exchange:** Budget **4 seconds** (a line [2s] + its reply [2s]).
 * **Silent Reaction / Business Beat:** Budget **2 to 3 seconds** (e.g. a held look, hands busy with a task).
 * **Closing Line & Camera Rise:** Budget **3 to 4 seconds**.
 * **Speech rate:** lines run at **3 words per second** plus a 1-second pad, so a shot lasts at least `ceil(words / 3 + 1)` whole seconds (its dialogue and narration words together). Lines longer than 18 words must be split across shots at a natural pause. The line sets the shot's length, never the other way round.
