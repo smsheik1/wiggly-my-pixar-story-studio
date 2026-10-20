@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { detectPanels, readingOrder, crop169, readGray } from '../scripts/lib/panel-detect.mjs';
+import { detectPanels, readingOrder, crop169, readGray, refineRect, fitPlan, edgeStats, isDirtyEdge } from '../scripts/lib/panel-detect.mjs';
 
 test('crop169: centre-crops tall and wide boxes to 16:9', () => {
   const a = crop169({ x: 0, y: 0, w: 400, h: 400 }); assert.ok(Math.abs(a.w / a.h - 16 / 9) < 0.02 && a.w === 400 && a.y > 0);
@@ -48,4 +48,21 @@ test('slice-storyboard: 3-over-2 sheet + blank box + labels -> 5 stills in order
   }
   writeFileSync(join(d, 'm6.json'), JSON.stringify({ sheets: [{ sheetId: '1', panels: [...shots, '1.6'].map((shotId, i) => ({ panelNumber: i + 1, shotId })) }] }));
   assert.throws(() => execFileSync('node', [script, '--manifest', join(d, 'm6.json'), '--sheets', join(d, 'sheets'), '--out', join(d, 'out6')], { stdio: 'pipe' }));
+});
+test('fitPlan: 1.5-2.1 crops to 16:9 keeping the top; outside pads; rect stays inside', () => {
+  const t = fitPlan({ x: 11, y: 21, w: 300, h: 190 }); // 1.58: taller than 16:9
+  assert.equal(t.mode, 'crop'); assert.equal(t.rect.y, 22); assert.ok(t.rect.y + t.rect.h <= 211 && Math.abs(t.rect.w / t.rect.h - 16 / 9) < 0.03);
+  const wd = fitPlan({ x: 0, y: 0, w: 400, h: 200 }); assert.equal(wd.mode, 'crop'); assert.equal(wd.rect.y, 0); assert.ok(wd.rect.x > 0);
+  assert.equal(fitPlan({ x: 0, y: 0, w: 300, h: 300 }).mode, 'pad'); assert.equal(fitPlan({ x: 0, y: 0, w: 500, h: 200 }).mode, 'pad');
+  const r = fitPlan({ x: 3, y: 3, w: 101, h: 101 }).rect; assert.ok(r.x >= 3 && r.y >= 3 && r.x + r.w <= 104 && r.y + r.h <= 104);
+});
+test('refineRect: steps past a wobbly border band; edges then hold no ink or paper', () => {
+  const w = 300, h = 200, g = new Uint8Array(w * h).fill(240);
+  for (let y = 20; y < 180; y++) for (let x = 20; x < 280; x++) {
+    const d = Math.min(x - 20, 279 - x, y - 20, 179 - y);
+    g[y * w + x] = d < 2 ? 200 : d < 7 ? 12 : 60 + ((x * 31 + y * 17) % 120); // 2px anti-alias, 5px ink, then textured content
+  }
+  const r = refineRect(g, w, h, { x0: 20, y0: 20, x1: 279, y1: 179 }, { paper: 240 });
+  assert.ok(r.x >= 27 && r.y >= 27 && r.x + r.w <= 273);
+  for (const side of ['top', 'bottom', 'left', 'right']) assert.equal(isDirtyEdge(edgeStats(g, w, r, side, { paper: 240 })), false, side);
 });
