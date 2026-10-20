@@ -85,10 +85,10 @@ test('the finale rules are generic: no maker-specific details in role rules or c
   const role = readFileSync(new URL('../crew/story-director/3-script-writer.md', import.meta.url), 'utf8');
   const rules = role.split('\n').filter((l) => /finale|last line|finaleThesis/i.test(l) && l.startsWith('* **'));
   assert.ok(rules.length >= 2);
-  const finaleRules = rules.filter((l) => /ONE idea|last line says/.test(l));
-  assert.equal(finaleRules.length, 2);
+  const finaleRules = rules.filter((l) => /ending grows out of the chosen story/.test(l));
+  assert.equal(finaleRules.length, 1, 'one finale rule (Shaz, 2026-10-20: family words or action, no fixed narration or gesture)');
   for (const l of finaleRules) assert.ok(!/Yugioh|Honda|eight o'clock|8pm|Chicago|Dallas|Disney|sunglasses|Mia|Shaz|maxim/i.test(l), l.slice(0, 80));
-  assert.ok(/slogan/.test(finaleRules[0]) && /shot that shows it/.test(finaleRules[0]) && /callback/.test(finaleRules[0]));
+  assert.ok(/platitude/.test(finaleRules[0]) && /own words/.test(finaleRules[0]) && /through action/.test(finaleRules[0]) && /shows it/.test(finaleRules[0]) && /callback/.test(finaleRules[0]));
   assert.ok(role.includes('"finaleThesis"'));
   assert.ok(!/15.20 seconds of narration|one concrete detail/.test(role));
   const checker = readFileSync(new URL('../crew/linter/check-stage-play.mjs', import.meta.url), 'utf8');

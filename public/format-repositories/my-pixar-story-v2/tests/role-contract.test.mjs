@@ -42,7 +42,8 @@ test('3-script-writer.md diverges from Gemini only by additions + engine swap', 
   // Approved rewrite (Shaz, 2026-10-20): section 1 became memory-film craft; the kindergarten / toy examples, the teacher
   // vernacular and the comedy checklist boxes (ordinary world, rule of three, gag ladder) left the role.
   const toy = /Miss Park|\bBen\b|\bWren\b|\bMia\b|Rule of Three|Ordinary world baseline|Running gag has|Authority \/ Teacher|Silent Reaction \/ Business Beat|Two-Line Exchange|Single Short Line/;
-  const missing = norm(g).replace(/^## 1\. [\s\S]*?(?=^## 2\.)/m, '').split('\n').filter((l) => !toy.test(l)).join('\n').split('\n').filter((l) => l.trim() && !l.startsWith('description:') && !roleNorm.includes(l));
+  // Approved renumbering (Shaz, 2026-10-20): with section 5 gone, the checklist is section 5.
+  const missing = norm(g).replace('## 6. Pre-Send Quality Checklist', '## 5. Pre-Send Quality Checklist').replace(/^## 1\. [\s\S]*?(?=^## 2\.)/m, '').split('\n').filter((l) => !toy.test(l)).join('\n').split('\n').filter((l) => l.trim() && !l.startsWith('description:') && !roleNorm.includes(l));
   assert.deepEqual(missing, []);
 });
 test('storyboard default style is 3D Pixar render, not painted (now in code)', () => {

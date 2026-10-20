@@ -21,7 +21,7 @@ Quote each one and rewrite it as a direct positive line before scoring anything 
 ### A. Story and structure tells (3 points each)
 - **Wrap-up moral.** The scene stops being the scene and explains what it all meant. "In the end, it was never about the car." End on the last concrete thing instead.
 - **Inspirational pivot.** A specific memory zooms out to a vague life lesson. "He got his license at seventeen. Sometimes freedom finds us." Stay in the memory.
-- **Specificity avoidance.** Generic stand-ins where the answers gave real details: "a car" when the answers named the exact make, year and colour, "a card game" when they named the game, "every week" when they gave the day and the time. The oddly specific real details are the film.
+- **Specificity avoidance.** Generic stand-ins where the answers gave real details: "a car" when the answers named the exact make, year and colour, "a card game" when they named the game, "every week" when they gave the day and the time. One telling true detail beats a generic one; it does not need every spec.
 - **Losing the answers' details.** A detail the maker wrote (name, age, object, time, quote) is softened, swapped or missing. Count each one.
 - **Staccato triplets / rule of three.** Three short lines or three parallel items hammered in a row. "He showed up. He listened. He stayed." Use two, or four, or one long line.
 - **Forced negation.** "It's not a setback, it's a setup." State it directly.
@@ -30,7 +30,7 @@ Quote each one and rewrite it as a direct positive line before scoring anything 
 - **Uniform beat structure.** Every part runs setup, twist, explanation, punchy closer. Read the last line of each part back to back: if all three are poetic and self-contained, at least one part must just stop on an ordinary moment.
 - **Characters announcing their feelings.** "I'm so proud of you." "I feel free." People show it: a grin, a pause, a joke, a thing they do.
 - **Everyone speaks in the same voice.** The 8-year-old, the teen sister, the mom and the dad all have the same rhythm and vocabulary. Each person needs their own words.
-- **The theme said out loud.** A character states what the film is about. "Family is what you make of it."
+- **The theme said out loud.** A character states a generic theme the answers never gave. "Family is what you make of it." The family's own closing words, quoted, are not this tell.
 - **Voiceover reading a resume.** Narration lists achievements, salaries, certifications and dates like a CV. Pick the one fact that carries feeling and tie it to an image.
 - **Stacked wisdom lines.** Three or more advice or moral lines in a row in the finale. Break them up with an on-screen action that shows what the words mean (a shot where someone does something), never by inserting an unrelated memory or callback.
 - **Forced callbacks.** An earlier object or line is dragged back in only to tie a bow, with no reason in the scene.
@@ -104,7 +104,7 @@ REWRITTEN LINES (only if score >= 16):
 ## Do-not-write list (loaded into the Story Director and Seedance Compiler)
 - No em dashes in spoken or narrated lines.
 - No "it's not X, it's Y" or any forced negation.
-- No wrap-up morals, no theme said out loud, no platitudes about life, love, family, men and women or "the world".
+- No generic morals or platitudes (about life, love, family, men and women or "the world") that the answers do not give. The family's own closing words, quoted, are allowed; otherwise show the closing idea through action.
 - No more than two wisdom or advice lines in a row in the finale; break a run with an on-screen action that shows the idea, never with an inserted memory or callback.
 - No three-beat staccato runs ("He showed up. He listened. He stayed.").
 - No characters announcing their feelings ("I'm so proud", "I feel free").
@@ -112,8 +112,8 @@ REWRITTEN LINES (only if score >= 16):
 - Every shot gets one specific action; a moving hold alone (breathing, blinking) is not enough.
 - Use contractions in speech ("don't", "it's", "I'll").
 - Kids talk like kids: short, interrupting, bragging, odd.
-- Keep the answers' oddly specific details exactly as written.
-- None of the flagged words or phrases in section C.
+- True details, told the way a person would say them (one telling detail, never a list of specs).
+- No stock words or phrases: testament, tapestry, journey (as a life metaphor), cherish, profound, resonate, embark, unwavering, "at the end of the day", "a stark reminder".
 
 ## What the code enforces
 The linter reads the JSON block below. Everything else in this file is for the writers and the critic.
