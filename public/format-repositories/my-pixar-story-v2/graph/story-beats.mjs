@@ -32,7 +32,7 @@ export function rewrittenBeats(critique) {
 
 /** The approved thesis: the first `Thesis:` line of the beats (markdown emphasis stripped), or null. */
 export function parseThesis(beats) {
-  const m = /^[\s>*_#-]*Thesis[*_]*\s*(?:for [^:\n]*)?:[*_\s]*(.+)$/im.exec(String(beats ?? ''));
+  const m = /^[\s>*_#-]*(?:\d+[.)][\s*_]*)?Thesis[*_]*\s*(?:for [^:\n]*)?:[*_\s]*(.+)$/im.exec(String(beats ?? ''));
   const t = m ? m[1].replace(/[*_]+/g, '').trim() : '';
   return t || null;
 }

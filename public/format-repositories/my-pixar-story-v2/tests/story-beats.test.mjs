@@ -43,7 +43,7 @@ test('prompts are generic: no JSON gate codes, no toy example names', () => {
 
 test('critique prompt: four scored story checks first, then the other checks, rebuild rule, no length growth', () => {
   const p = loadCritiquePrompt();
-  const order = ['**Core:**', '**Specific:**', '**Turn:**', '**Feel:**', '**Strongest material:**', '**People on screen:**', '**Said out loud:**'].map((k) => p.indexOf(k));
+  const order = ['**Core:**', '**Specific:**', '**Turn:**', '**Feel:**', '**Strongest approach:**', '**No lists:**', '**Closing idea:**', '**People on screen:**', '**Said out loud:**', '**True:**'].map((k) => p.indexOf(k));
   assert.ok(order.every((i) => i >= 0), 'all checks present');
   assert.deepEqual([...order].sort((a, b) => a - b), order, 'story scores listed first');
   assert.match(p, /1-5/); assert.match(p, /2 or lower/); assert.match(p, /from scratch/); assert.match(p, /must not grow/); assert.match(p, /## Rewritten beats/);
@@ -60,7 +60,7 @@ test('A -> B -> C order: beats see answers, critique sees beats, shots task carr
     ]);
     const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'sf' })({ agent: 'story-director', config: { model: 'x', storyBeats: true, reflectionRounds: 0 }, input: INPUT, attempt: 1 });
     assert.equal(m.calls.length, 3);
-    assert.match(seen.a, /Thesis first/); assert.match(seen.a, /always call me/);
+    assert.match(seen.a, /Two or three story approaches/); assert.match(seen.a, /always call me/);
     assert.match(seen.b, /Rewritten beats/); assert.match(seen.b, /Beat 1: first call/);
     assert.match(seen.c, /approved beats/); assert.match(seen.c, /Beat 1 \(rewritten\)/); assert.doesNotMatch(seen.c, /Beat 1: first call/);
     const dir = join(runs, 'sf_attempt-1', 'story-director', 'story');
@@ -129,4 +129,21 @@ test('approved thesis is pinned into finaleThesis, shown to the reviewer, and su
     assert.match(seen.c, /finaleThesis is exactly/); assert.match(seen.r, /approved thesis/); assert.ok(seen.r.includes(T));
     assert.equal(out.finaleThesis, T);
   } finally { await rm(runs, { recursive: true, force: true }); }
+});
+
+test('beats prompt: reveal, approaches, pick, then the closing idea, then beats and turn; one detail per beat; critique rewards no stacking', () => {
+  const b = loadBeatsPrompt();
+  const order = ['**What each memory reveals.**', '**Two or three story approaches.**', '**Pick one.**', '**The closing idea, only now.**', '**5 to 7 beats.**', '**The turn.**'].map((k) => b.indexOf(k));
+  assert.ok(order.every((i) => i >= 0), 'all steps present');
+  assert.deepEqual([...order].sort((a, c) => a - c), order, 'thesis comes after the approach is picked');
+  assert.match(b, /ONE true detail/); assert.match(b, /may be left out/); assert.match(b, /target runtime/);
+  const c = loadCritiquePrompt();
+  assert.match(c, /switch to it/); assert.match(c, /resume/); assert.match(c, /never narrow it/); assert.match(c, /More details do not score higher/);
+  for (const p of [b, c]) assert.doesNotMatch(p, /\u2014/, 'no em dashes');
+});
+
+test('thesis parse: approaches written before the Thesis line do not confuse it', () => {
+  const beats = '1. Reveals: x\n2. Approach A\n   - Thread: quiet love\n3. Pick: A\n4. Thesis: I love you even when I do not say it.\n5. Beat 1';
+  assert.equal(parseThesis(beats), 'I love you even when I do not say it.');
+  assert.equal(parseThesis(rewrittenBeats('scores\n## Rewritten beats\nApproach: A\nThesis: X and Y.\nBeat 1')), 'X and Y.');
 });
