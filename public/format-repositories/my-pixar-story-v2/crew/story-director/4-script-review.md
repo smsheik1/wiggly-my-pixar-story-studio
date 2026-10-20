@@ -31,7 +31,7 @@ same runtime. Fixes never make the film longer. List at most 8 fixes, most impor
 - **R3 Setup and payoff:** Does every line that depends on an earlier fact still have that fact?
 - **R4 Cast in the scene:** Is everyone in a scene seen or heard in one of its shots, and is the person on screen at every life stage the narration covers?
 - **R5 Referents:** Is it clear who every pronoun means, especially in the finale (unclear if only the question named them)?
-- **R6 Finale:** Does the finale deliver the approved thesis (given to you below; it is also `finaleThesis`) and end on a clear line plus an action or gesture? Judge whether the script delivers THAT thesis; never re-pick, narrow or split it (two connected ideas the family wrote as one thought are one idea), and no fix may change `finaleThesis` or drop a line that carries it. If you believe the thesis itself is wrong, say why and return STRUCTURAL.
+- **R6 Finale:** Does the ending grow out of the chosen story and land the approved thesis (given to you below; it is also `finaleThesis`) in the family's own words or through action, with no generic moral? Judge whether the script delivers THAT thesis; never re-pick, narrow or split it (two connected ideas the family wrote as one thought are one idea), and no fix may change `finaleThesis` or drop a line that carries it. If you believe the thesis itself is wrong, say why and return STRUCTURAL.
 - **R7 Time framing:** Is every past moment played by an adult card framed as a memory?
 - **R8 Length:** Is runtime at or under `targetTotalRuntimeSec`? Over it, name the weakest shots to cut.
 
