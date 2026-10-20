@@ -16,6 +16,10 @@ export function scratchLines(sd) {
   }
   return out;
 }
+/** Text sent to the TTS: terminal punctuation (Cartesia treats a line without it as unfinished and can cut or distort the end)
+ * plus a short trailing break so the last word, short exclamations above all, rings out instead of being clipped. */
+export const TAIL_BREAK = '<break time="500ms"/>';
+export const ttsTranscript = (text) => `${/[.!?,;:]["'\u201d\u2019]?$/.test(text.trim()) ? text.trim() : `${text.trim()}.`}${TAIL_BREAK}`;
 export const estimateUsd = (lines) => lines.reduce((n, l) => n + Array.from(l.text).length, 0) * CARTESIA_USD_PER_CHAR;
 
 /** Text a TTS engine may read oddly: symbols, all-caps abbreviations, digits. */

@@ -16,3 +16,10 @@ test('mixArgs: delays in ms, no normalisation, exact total', () => {
   const fc = a[a.indexOf('-filter_complex') + 1];
   assert.ok(fc.includes('adelay=4500:all=1') && fc.includes('amix=inputs=2:normalize=0') && fc.includes('atrim=0:9'));
 });
+
+test('TTS transcript ends with terminal punctuation and a tail break so short lines are not clipped', async () => {
+  const { ttsTranscript, TAIL_BREAK } = await import('../scripts/lib/scratch-audio.mjs');
+  assert.equal(ttsTranscript('I go first!'), `I go first!${TAIL_BREAK}`);
+  assert.equal(ttsTranscript('Because at that time in my life,'), `Because at that time in my life,${TAIL_BREAK}`);
+  assert.equal(ttsTranscript('But it was mine'), `But it was mine.${TAIL_BREAK}`);
+});

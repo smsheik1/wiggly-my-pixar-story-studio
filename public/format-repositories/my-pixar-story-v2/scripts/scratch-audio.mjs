@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { loadSecrets, defaultSecretsPath } from './lib/secrets.mjs';
-import { scratchLines, estimateUsd, oddities, overruns, mixArgs } from './lib/scratch-audio.mjs';
+import { scratchLines, ttsTranscript, estimateUsd, oddities, overruns, mixArgs } from './lib/scratch-audio.mjs';
 import { shotTimeline } from './lib/animatic.mjs';
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const MODEL = 'sonic-3.6-2026-08-27', VERSION = '2026-08-14'; // v1 studio.json generation.voice
@@ -30,7 +30,7 @@ for (const [i, l] of lines.entries()) {
   const path = join(out, 'lines', `${String(i + 1).padStart(2, '0')}-${l.shotId}-${l.kind}.wav`);
   if (!existsSync(path) || (await stat(path)).size < 1000) {
     const r = await fetch('https://api.cartesia.ai/tts/bytes', { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Cartesia-Version': VERSION, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model_id: MODEL, transcript: l.text, voice: { mode: 'id', id: voices[l.speaker] }, language: 'en', output_format: { container: 'wav', encoding: 'pcm_s16le', sample_rate: 44100 } }) });
+      body: JSON.stringify({ model_id: MODEL, transcript: ttsTranscript(l.text), voice: { mode: 'id', id: voices[l.speaker] }, language: 'en', output_format: { container: 'wav', encoding: 'pcm_s16le', sample_rate: 44100 } }) });
     if (!r.ok) { console.error(`STOP: Cartesia ${r.status} on line ${i + 1} (${l.shotId}): ${(await r.text()).slice(0, 200)}`); process.exit(4); }
     await writeFile(path, Buffer.from(await r.arrayBuffer()));
   }
