@@ -24,6 +24,7 @@ import { DynamicStructuredTool } from '@langchain/core/tools';
 import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
 import { CharacterArchitectOutputSchema } from '../crew/character-architect/schema.mjs';
 import { LocationScoutOutputSchema } from '../crew/location-scout/schema.mjs';
+import { StoryboardArtistOutputSchema } from '../crew/storyboard-artist/schema.mjs';
 import { SeedanceCompilerOutputSchema, SeedanceSubmitSchema, withAssembledPrompts } from '../crew/seedance-compiler/schema.mjs';
 import { loadSkill, loadReview, outputCap } from '../config/models.mjs';
 import { runColdRead } from './cold-read.mjs';
@@ -37,6 +38,7 @@ export const OUTPUT_SCHEMAS = {
   'story-director': StoryDirectorOutputSchema,
   'character-architect': CharacterArchitectOutputSchema,
   'location-scout': LocationScoutOutputSchema,
+  'storyboard-artist': StoryboardArtistOutputSchema,
   'seedance-compiler': SeedanceCompilerOutputSchema,
 };
 export const PERMISSIONS = [

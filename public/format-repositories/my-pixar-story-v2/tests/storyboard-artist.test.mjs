@@ -7,6 +7,8 @@ import { selectStoryboardArtistInput } from '../crew/storyboard-artist/input.mjs
 import { compileSheets, SB_SHEET_OPENING, SB_SHEET_LAYOUT, sbPanelLabel } from '../crew/storyboard-artist/compile.mjs';
 import { validateStoryboard, accessoriesIn } from '../crew/linter/check-storyboard.mjs';
 import { makeAnimaticApprovalNode, animaticRoute } from '../graph/graph.mjs';
+import { OUTPUT_SCHEMAS } from '../graph/deep-agent-node.mjs';
+import { AGENT_SPECS } from '../graph/graph.mjs';
 import { draftStoryboard } from './fixtures/storyboard-draft.mjs';
 
 // Generic synthetic cast: two siblings, a parent with headwear, a kid with eyewear.
@@ -94,4 +96,8 @@ test('animatic gate: approve freezes SD timings; rejections route to SD or the S
   assert.equal(animaticRoute(r1), 'story-director'); assert.equal(r1.revisionNotes['story-director'], 'shot 1.2 drags');
   const r2 = await n({ ...st, animaticApproval: { decision: 'reject', notes: 'panel 1.1 wrong outfit' } });
   assert.equal(animaticRoute(r2), 'storyboard-artist');
+});
+test('every graph agent has a submit-tool output schema (deep agent node)', () => {
+  for (const a of Object.keys(AGENT_SPECS)) assert.ok(OUTPUT_SCHEMAS[a]?.safeParse, a);
+  assert.equal(OUTPUT_SCHEMAS['storyboard-artist'].safeParse(good()).success, true);
 });
