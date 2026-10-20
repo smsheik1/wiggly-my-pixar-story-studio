@@ -10,7 +10,8 @@ export const MAX_SEGMENT_SECONDS = 30;
 export const VIDEO_ENGINES = Object.freeze({
   'seedance-2.5': Object.freeze({ provider: 'replicate', segmentMaxSec: 30, durations: null, continuation: 'extend' }),
   // Replicate bytedance/seedance-2.0-mini (checked 2026-10-20): duration 4-15s any whole second, prompt max 4000 chars, up to 9 reference images.
-  'seedance-2.0-mini': Object.freeze({ provider: 'replicate', model: 'bytedance/seedance-2.0-mini', segmentMaxSec: 15, durations: null, promptMaxChars: 4000, continuation: 'cut' }),
+  // Replicate caps the mini prompt at 4000 chars; 150 are reserved for the [ImageN] / [AudioN] tags added at send time.
+  'seedance-2.0-mini': Object.freeze({ provider: 'replicate', model: 'bytedance/seedance-2.0-mini', segmentMaxSec: 15, durations: null, promptMaxChars: 3850, continuation: 'cut' }),
   'omni-1.1-flash': Object.freeze({ provider: 'google-flow', segmentMaxSec: 10, durations: Object.freeze([4, 6, 8, 10]), continuation: 'cut', postNarration: true /* narration is TTS laid in post; Omni voices any words it is given */ }),
 });
 export const ENGINE_IDS = Object.keys(VIDEO_ENGINES);

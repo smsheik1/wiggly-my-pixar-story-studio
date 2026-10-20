@@ -123,12 +123,12 @@ test('role.md: post narration, device anchoring, simple hug contact, plain objec
   for (const x of [SILENT_LINE, 'postNarration', 'laptop or keyboard', 'side hug', 'flat-screen TV', 'fan of separate trading cards']) assert.ok(role.includes(x), x);
 });
 
-test('seedance-2.0-mini: 15s clips, any whole second, 4000-char prompt cap', () => {
+test('seedance-2.0-mini: 15s clips, any whole second, 3850-char prompt cap (4000 minus send-time tags)', () => {
   const i = selectSeedanceCompilerInput(state('seedance-2.0-mini'));
-  assert.deepEqual([i.segmentMaxSec, i.allowedDurationsSec, i.promptMaxChars, i.postNarration], [15, null, 4000, false]);
+  assert.deepEqual([i.segmentMaxSec, i.allowedDurationsSec, i.promptMaxChars, i.postNarration], [15, null, 3850, false]);
   assert.equal(engineDurationFor('seedance-2.0-mini', 12), 12);
   const d = clips({ 1: [[0, 1, 2], [3, 4, 5]], 2: [[0, 1, 2]] }, 'seedance-2.0-mini', { post: false });
-  assert.ok(codes(d, 'seedance-2.0-mini').includes('PROMPT_TOO_LONG') === d.segments.some((s) => s.compiledPrompt.length > 4000));
+  assert.ok(codes(d, 'seedance-2.0-mini').includes('PROMPT_TOO_LONG') === d.segments.some((s) => s.compiledPrompt.length > 3850));
   assert.ok(role.includes('promptMaxChars'));
 });
 
