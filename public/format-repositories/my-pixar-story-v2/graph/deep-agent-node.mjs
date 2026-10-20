@@ -344,6 +344,23 @@ export const isStructural = (critique) => parseVerdict(critique) === 'STRUCTURAL
 /** Early stop: SHIP, no rubric FAIL, every given story score 4+, no gate errors, so no rewrite runs. */
 export const shipsAsIs = (critique, gateIssues = []) => parseVerdict(critique) === 'SHIP' && !hasRubricFail(critique)
   && Object.values(parseStoryScores(critique) ?? {}).every((v) => v >= 4) && !gateIssues.some((i) => i.severity === 'error');
+/**
+ * The Story Director's final review as a gate issue: the last round's critique said STRUCTURAL or gave any story score of
+ * 2 or lower. Returns a STORY_REJECTED error issue (scores + the reviewer's reason) or null when the story was accepted.
+ */
+export function storyRejection(log = []) {
+  const last = [...log].reverse().find((e) => e && typeof e.critique === 'string');
+  if (!last || !isStructural(last.critique)) return null;
+  const scores = parseStoryScores(last.critique) ?? {};
+  const verdict = parseVerdict(last.critique);
+  const scoreText = Object.keys(scores).length ? Object.entries(scores).map(([k, v]) => `${k}=${v}`).join(', ') : 'none given';
+  const lines = last.critique.split('\n').map((l) => l.trim()).filter(Boolean);
+  const reasonLines = lines.filter((l) => /structural|story itself|does not work|doesn't work/i.test(l) && !/^VERDICT/i.test(l.replace(/[*_`\s]/g, '')));
+  const reason = (reasonLines.length ? reasonLines.join(' ') : lines.filter((l) => !/VERDICT/i.test(l)).slice(0, 3).join(' ')).slice(0, 800);
+  return { severity: 'error', code: 'STORY_REJECTED', path: 'segments',
+    message: `The final review rejected the story (round ${last.round}, verdict ${verdict ?? 'none'}; story scores ${scoreText}). A story score of 2 or lower or a STRUCTURAL verdict means the beats do not work; rebuild the story, not the lines. Reviewer: ${reason}`,
+    round: last.round, verdict, scores };
+}
 /** Structural rebuilds (beats again, then shots) allowed per attempt: config.maxStructuralRebuilds, default 1. */
 export const structuralCap = (config) => (Number.isInteger(config?.maxStructuralRebuilds) && config.maxStructuralRebuilds >= 0 ? config.maxStructuralRebuilds : 1);
 /** Asked of the critic when an answer trace is available: its own traceability findings as data. */
@@ -488,7 +505,9 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
             const rt = runtimeOf(next), cap = Math.max(resolveTargetSeconds(input), runtimeOf(out) ?? 0);
             const tooLong = rt != null && rt > cap;
             const moreErrors = gateAfter.filter((i) => i.severity === 'error').length > gateIssues.filter((i) => i.severity === 'error').length;
-            if (tooLong || moreErrors) { entry.changed = false; entry.rejected = { reason: tooLong ? 'too long' : 'gate', runtime: rt, cap }; entry.runtimeAfter = runtimeOf(out); }
+            if (tooLong || moreErrors) {
+              console.log(`structural rebuild ${structuralUsed} rejected (${tooLong ? `too long: ${rt}s > cap ${cap}s` : `more gate errors: ${gateAfter.filter((i) => i.severity === 'error').length} vs ${gateIssues.filter((i) => i.severity === 'error').length}`}); keeping the previous draft`);
+              entry.changed = false; entry.rejected = { reason: tooLong ? 'too long' : 'gate', runtime: rt, cap }; entry.runtimeAfter = runtimeOf(out); }
             else {
               entry.changed = true; prevDraft = out; out = next; gateIssues = gateAfter; entry.runtimeAfter = runtimeOf(out);
               await writeFile(join(dir, `draft-${round}.json`), JSON.stringify(out, null, 2)); entry.draftFile = rel(`draft-${round}.json`);
@@ -551,7 +570,9 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       log.push(entry);
     }
     await writeFile(join(dir, 'reflection.json'), JSON.stringify({ agent, attempt, rounds, roundsRun: log.length, stoppedEarly, rubric: Boolean(review), ...(bestOf ? { bestOf } : {}), log }, null, 2));
-    Object.defineProperty(out, REFLECTION, { value: { rounds, roundsRun: log.length, stoppedEarly, ...(bestOf ? { bestOf } : {}), log }, enumerable: false, configurable: true });
+    const rejection = agent === 'story-director' ? storyRejection(log) : null;
+    if (rejection) console.log(`story-director: ${rejection.message.slice(0, 300)}`);
+    Object.defineProperty(out, REFLECTION, { value: { rounds, roundsRun: log.length, stoppedEarly, ...(bestOf ? { bestOf } : {}), ...(rejection ? { storyRejection: rejection } : {}), log }, enumerable: false, configurable: true });
     return out;
   };
 }

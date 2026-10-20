@@ -154,7 +154,9 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
         done({ output: raw, issues }); continue;
       }
       if (spec.merge) out = spec.merge(kept, out, state);
-      const r = spec.gate(out, input, state);
+      const g = spec.gate(out, input, state);
+      // The final review rejected the story (STRUCTURAL or a story score <= 2): the gate fails so retry/escalation apply.
+      const r = refl?.storyRejection ? { ...g, isValid: false, issues: [...(g.issues ?? []), refl.storyRejection] } : g;
       done({ output: out, issues: r.issues, isValid: r.isValid });
       if (r.isValid) { ev({ type: 'passed', attempt }); return withReflections({ ...spec.write(out), attempts: { [agent]: attempt }, retryCounts: { [agent]: attempt - 1 }, gateIssues: { [agent]: r.issues }, validationErrors: log }); }
       issues = r.issues;
