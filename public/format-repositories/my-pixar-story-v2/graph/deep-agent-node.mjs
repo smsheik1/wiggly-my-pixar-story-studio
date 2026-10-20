@@ -28,6 +28,7 @@ import { SeedanceCompilerOutputSchema, SeedanceSubmitSchema, withAssembledPrompt
 import { loadSkill, loadReview, outputCap } from '../config/models.mjs';
 import { runColdRead } from './cold-read.mjs';
 import { bestOfEnabled, runBestOf } from './best-of.mjs';
+import { logCall } from './call-log.mjs';
 import { storyBeatsEnabled, runStoryBeats, runStoryPlans, shotsTask } from './story-beats.mjs';
 import { resolveTargetSeconds } from './length-guard.mjs';
 
@@ -237,7 +238,10 @@ export function sseActivity(text) {
 }
 export function observingFetch(agent, base = globalThis.fetch, note = noteStreamActivity) {
   return async (url, init) => {
-    const res = await base(url, init);
+    let body = null;
+    try { body = typeof init?.body === 'string' ? JSON.parse(init.body) : null; } catch { body = null; }
+    const t0 = Date.now();
+    const res = logCall({ agent, body, t0, res: await base(url, init) });
     if (!res.body || !String(res.headers?.get?.('content-type') ?? '').includes('event-stream')) return res;
     const dec = new TextDecoder();
     const think = thinkingTap(agent);
@@ -249,7 +253,7 @@ export async function openRouterModel(config, _agent, { apiKey = process.env.OPE
   const { ChatOpenAI } = await import('@langchain/openai');
   if (!apiKey) throw new Error('openRouterModel: OPENROUTER_API_KEY is not set');
   return new ChatOpenAI({ model: config.model, apiKey, maxTokens: outputCap(config),
-    streaming: true, configuration: { baseURL: 'https://openrouter.ai/api/v1', fetch: observingFetch(_agent) }, modelKwargs: { reasoning: { effort: config.effort }, include_reasoning: true } });
+    streaming: true, configuration: { baseURL: 'https://openrouter.ai/api/v1', fetch: observingFetch(_agent) }, modelKwargs: { reasoning: { effort: config.effort }, include_reasoning: true, usage: { include: true } } }); // usage: OpenRouter usage accounting (tokens + cost) in the last chunk
 }
 
 // ---- Reflection: the agent critiques its own draft, then rewrites it (config.reflectionRounds rounds) ----
