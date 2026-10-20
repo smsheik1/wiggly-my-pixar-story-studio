@@ -1,0 +1,41 @@
+{
+  "status": "done",
+  "placeholderAssets": true,
+  "approvedAssets": {
+    "@Image 1": "placeholder:master-render:image-1",
+    "@Image 2": "placeholder:master-render:image-2",
+    "@Image 3": "placeholder:master-render:image-3",
+    "@Image 4": "placeholder:master-render:image-4",
+    "@Image 5": "placeholder:master-render:image-5",
+    "@Image 6": "placeholder:master-render:image-6",
+    "@Image 7": "placeholder:master-render:image-7",
+    "@Loc 1": "placeholder:location-plate:loc-1",
+    "@Loc 2": "placeholder:location-plate:loc-2",
+    "@Loc 3": "placeholder:location-plate:loc-3",
+    "@Loc 4": "placeholder:location-plate:loc-4"
+  },
+  "pendingApproval": [],
+  "retryCounts": {
+    "story-director": 0,
+    "character-architect": 1,
+    "location-scout": 0,
+    "seedance-compiler": 0
+  },
+  "escalations": [],
+  "validationErrors": [
+    {
+      "node": "character-architect",
+      "attempt": 1,
+      "errors": [
+        {
+          "severity": "error",
+          "code": "BOBBLEHEAD_ADULT_VIOLATION",
+          "message": "Sister: Adult character (6.5 heads) contains child proportion token \"narrow shoulders\" in masterRenderPrompt. Bobblehead Anti-Pattern.",
+          "path": "characters.3.masterRenderPrompt.promptText",
+          "character": "Sister"
+        }
+      ],
+      "timestamp": "2026-10-16T15:34:51.490Z"
+    }
+  ]
+}

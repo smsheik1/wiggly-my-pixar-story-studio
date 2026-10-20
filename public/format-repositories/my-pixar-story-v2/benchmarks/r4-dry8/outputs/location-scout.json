@@ -1,0 +1,149 @@
+{
+  "locations": [
+    {
+      "locationId": "family-living-room",
+      "name": "Family Living Room",
+      "elementTag": "@Loc 1",
+      "emptySetGuarantee": true,
+      "singleSignRule": {
+        "hasSign": false,
+        "antiRuneExclusion": "No other text, no posters, no alphabet strips, no charts, no writing on chalkboards or walls"
+      },
+      "lightingAnchor": {
+        "keyLightDirection": "warm afternoon sunlight from tall windows on the left",
+        "sourceDescription": "soft warm afternoon daylight through unseen left windows",
+        "shadowCharacteristics": "long gentle shadows falling right across carpet"
+      },
+      "cameraStaging": {
+        "lensMm": 35,
+        "cameraElevation": "adult chest height looking slightly down toward carpet",
+        "stagingCoordinates": "large carpet centred with card markers; worn sofa screen-right; low table midground; open floor foreground for entrances"
+      },
+      "locationPlatePrompt": {
+        "targetEngine": "nano-banana-2.1",
+        "aspectRatio": "16:9",
+        "promptText": "A background plate from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. 16:9 widescreen environment plate, completely empty of people. Room / Environment: modest 1990s family living room on a warm afternoon, completely empty of people. Foreground staging with a large worn patterned carpet centred with a few scattered playing cards marking the floor play area and clear open floor around for entrances and double-takes. Midground with a worn fabric sofa along the right wall, a low scuffed wood coffee table, a small boxy TV on a honey-oak stand, and a low bookshelf with soft wear. Warm white walls with honey-oak trim and a few small children's drawings, muted teal cushion accents, no bright yellow or green walls. Secondary Depth & Props: receding coat corner, small potted plant, stacked cushions, table lamp, lived-in modest clutter without crowding, clear 180-degree sightlines. Lighting & Atmosphere: soft warm afternoon sunlight streaming from unseen tall windows on the left casting long gentle shadows across the carpet to the right, warm ambient bounce from the wood floor, subtle dust motes in light beams, no fog. Camera: 35mm wide shot at adult chest height looking slightly down toward the carpet staging area, level horizon, deep depth of field keeping background readable. Exclusions: completely empty of people, no humans, no silhouettes, no crowds, No other text, no posters, no alphabet strips, no charts, no writing on chalkboards or walls."
+      },
+      "settingName": "Family living room",
+      "timeOfDay": "afternoon",
+      "sceneIds": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5",
+        "1.6",
+        "1.7",
+        "1.8",
+        "3.1",
+        "3.2",
+        "3.3",
+        "3.4",
+        "3.5",
+        "3.6",
+        "3.7"
+      ]
+    },
+    {
+      "locationId": "dallas-driveway-honda",
+      "name": "Dallas Driveway with Honda",
+      "elementTag": "@Loc 2",
+      "emptySetGuarantee": true,
+      "singleSignRule": {
+        "hasSign": false,
+        "antiRuneExclusion": "No other text, no posters, no alphabet strips, no charts, no writing on chalkboards or walls"
+      },
+      "lightingAnchor": {
+        "keyLightDirection": "high bright midday sun from the right",
+        "sourceDescription": "bright Texas midday sun",
+        "shadowCharacteristics": "short crisp shadows falling left across concrete"
+      },
+      "cameraStaging": {
+        "lensMm": 35,
+        "cameraElevation": "adult chest height, straight on, level horizon",
+        "stagingCoordinates": "faded coupe centred facing street; driver-side door zone clear; open concrete foreground and sidewalk behind"
+      },
+      "locationPlatePrompt": {
+        "targetEngine": "nano-banana-2.1",
+        "aspectRatio": "16:9",
+        "promptText": "A background plate from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. 16:9 widescreen environment plate, completely empty of people. Room / Environment: 2000s Dallas suburban home driveway on a bright midday, completely empty of people. Foreground staging with a concrete driveway apron centred leading to the street with clear open concrete around a faded 2000-style two-door coupe parked facing the street for door and driver-seat staging and clean sightlines for entrances. Midground with a modest single-story house facade in warm white with natural wood trim and garage door, small dry lawn patch, low brick edging and sidewalk with soft sun wear. Secondary Depth & Props: receding street with curb, mailbox, trash bin, small shrubs and neighboring facades softly readable, lived-in modest details without clutter. Lighting & Atmosphere: bright Texas midday sun streaming high from the right casting short crisp shadows left across the concrete, warm ambient bounce from the drive, clear air with no fog. Camera: 35mm wide shot at adult chest height straight on toward the parked coupe and driveway, level horizon, deep depth of field keeping house and street readable. Exclusions: completely empty of people, no humans, no silhouettes, no crowds, No other text, no posters, no alphabet strips, no charts, no writing on chalkboards or walls."
+      },
+      "settingName": "Dallas driveway with Honda",
+      "timeOfDay": "midday",
+      "sceneIds": [
+        "2.1",
+        "2.2"
+      ]
+    },
+    {
+      "locationId": "small-home-desk-corner",
+      "name": "Small Home Desk Corner",
+      "elementTag": "@Loc 3",
+      "emptySetGuarantee": true,
+      "singleSignRule": {
+        "hasSign": false,
+        "antiRuneExclusion": "No other text, no posters, no alphabet strips, no charts, no writing on chalkboards or walls"
+      },
+      "lightingAnchor": {
+        "keyLightDirection": "soft morning daylight from window ahead and slightly left",
+        "sourceDescription": "warm morning daylight through sheer-curtained window",
+        "shadowCharacteristics": "long soft shadows falling back across desk and floor"
+      },
+      "cameraStaging": {
+        "lensMm": 35,
+        "cameraElevation": "adult chest height, straight on toward desk",
+        "stagingCoordinates": "honey-oak desk facing window centred; chair tucked in; open floor foreground"
+      },
+      "locationPlatePrompt": {
+        "targetEngine": "nano-banana-2.1",
+        "aspectRatio": "16:9",
+        "promptText": "A background plate from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. 16:9 widescreen environment plate, completely empty of people. Room / Environment: small modest 2000s home desk corner on a quiet morning, completely empty of people. Foreground staging with clear open floor before a simple honey-oak desk facing a window marking the seated work zone with a plain chair tucked in. Midground with the desk holding a closed simple laptop, small stack of papers and a mug, warm white walls with natural wood baseboards and soft paint wear, small muted teal storage box accent. Secondary Depth & Props: receding window with sheer curtain, small bookshelf, floor lamp, potted plant and wastebasket, modest lived-in details without clutter and clear 180-degree sightlines. Lighting & Atmosphere: soft warm morning daylight streaming from the window ahead and slightly left casting long gentle shadows back across the floor and desk, soft ambient bounce from wood floor, subtle dust motes in beams, no fog. Camera: 35mm wide shot at adult chest height straight on toward the desk and window, level horizon, deep depth of field keeping corner readable. Exclusions: completely empty of people, no humans, no silhouettes, no crowds, No other text, no posters, no alphabet strips, no charts, no writing on chalkboards or walls."
+      },
+      "settingName": "Small home desk corner",
+      "timeOfDay": "morning",
+      "sceneIds": [
+        "2.3",
+        "2.4"
+      ]
+    },
+    {
+      "locationId": "dallas-bedroom-night",
+      "name": "Dallas Bedroom at Night",
+      "elementTag": "@Loc 4",
+      "emptySetGuarantee": true,
+      "singleSignRule": {
+        "hasSign": false,
+        "antiRuneExclusion": "No other text, no posters, no alphabet strips, no charts, no writing on chalkboards or walls"
+      },
+      "lightingAnchor": {
+        "keyLightDirection": "warm lamplight from bedside lamp on the right",
+        "sourceDescription": "warm practical bedside lamp with faint cool moon fill",
+        "shadowCharacteristics": "soft long shadows pooling left across bedding and floor"
+      },
+      "cameraStaging": {
+        "lensMm": 35,
+        "cameraElevation": "adult chest height, straight on toward bed",
+        "stagingCoordinates": "bed centred against back wall; nightstand and lamp screen-right; open floor at foot of bed"
+      },
+      "locationPlatePrompt": {
+        "targetEngine": "nano-banana-2.1",
+        "aspectRatio": "16:9",
+        "promptText": "A background plate from a feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. 16:9 widescreen environment plate, completely empty of people. Room / Environment: modest 2000s Dallas bedroom at night, completely empty of people. Foreground staging with clear open floor at the foot of a neatly covered bed marking the standing and phone-viewing zone with rug and uncluttered sightlines. Midground with the bed centred against warm white walls, honey-oak headboard and nightstand on the right holding a warm glowing bedside lamp, folded blanket and simple phone shape on bedding. Quiet walls with soft paint wear and small muted wood frame accents, no dark or saturated wall colors. Secondary Depth & Props: receding closet door, small dresser, sheer-curtained window showing night blue, baseboards and soft bedding texture, modest lived-in details without clutter. Lighting & Atmosphere: warm practical lamplight glowing from the bedside lamp on the right casting soft long shadows left across bedding and floor, faint cool moon fill from the window, subtle phone-screen glow accent on bedding, no fog. Camera: 35mm wide shot at adult chest height straight on toward the bed and lamp corner, level horizon, deep depth of field keeping background readable. Exclusions: completely empty of people, no humans, no silhouettes, no crowds, No other text, no posters, no alphabet strips, no charts, no writing on chalkboards or walls."
+      },
+      "settingName": "Dallas bedroom at night",
+      "timeOfDay": "night",
+      "sceneIds": [
+        "2.5",
+        "2.6",
+        "2.7"
+      ]
+    }
+  ],
+  "assumptions": [
+    "Family living room script spans daytime and evening; single warm afternoon master assumed to serve both 1.x and 3.x beats.",
+    "No per-setting sign hints provided; assumed no signs for all locations.",
+    "No settingSeed beyond 1990s-2000s Dallas family home descriptions; assumed modest lived-in finishes with warm white walls, honey-oak wood and muted teal accents only, avoiding black, teal, mustard and green walls.",
+    "Driveway bright sun assumed midday; desk corner window light assumed morning; bedroom assumed night.",
+    "Approved assets file empty; no reference keys to bind."
+  ]
+}

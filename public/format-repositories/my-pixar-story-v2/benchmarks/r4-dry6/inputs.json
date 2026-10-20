@@ -1,0 +1,40 @@
+{
+  "subject": "Shaz, story for Mia, (parent)",
+  "answers": {
+    "scene1Childhood": {
+      "memory": "when i was 8 years old, i wanted to be a scientist, i didn't know why i wanted to be one, but whenever i said that i wanted to be one, my mom got very excited and seemed like she was proud of me. I didn't talk much, and i wore sunglasses everywhere, that was my signature style. i loved Yugioh and I used to watch it with my older sister and we used to watch Yugioh together, all of us, my little brother, 2 years younger than me, and my older sister who was 7 years older than me, we used to watch yugioh GX together, it was our thing. We were also obsessed with yugioh cards and battling each other."
+    },
+    "scene2TeenFreedom": {
+      "memory": "my first real taste of freedom was when i got my license when i was 17, for the first time, i didn't have to ask my friends for rides anymore, i could go wherever I wanted in my 2000 Honda Accord Coupe with the faded paint and no A/C. But it was mine. and i installed a radio aux cable converter so i could play my tunes with my friends. to this day it's one of the best cars i ever owned. because at that time in my life, it meant more to me than my newer car means to me now."
+    },
+    "scene3LeapOfFaith": {
+      "memory": "I graduated from high school early by doubling up on my 1st and 2nd semester of high school. I went to Mckinney Boyd High School and when I graduated early, I went to a coding bootcamp where i got my coding certifications in python and Ruby on Rails and with those, at the tender age of 19, i got my first software engineering job! I was only 19! I got a full salary, benefits, and everything! I felt like wow, i finally made it. My salary was 50k but I lived at home with my family so it felt like 6 figures. for the first time in my life, i didn't have to worry about money anymore. I actually did it."
+    },
+    "scene4Romance": {
+      "memory": "we met on a dating app for muslims. When we first met, I didn't think too much of it, and I didn't know she was going to become my wife. And it didn't help that she was all the way in Chicago when I was in Dallas so we were long distance for the majority of it. I only talked to her once a week on the phone. But what stood out to me about her was that every week at 8pm, she would show up on Facetime, and it was that consistency that made me fall in love with her. And she never made me feel bad for only talking to her once a week. I am naturally a very distant person, it takes me a while to catch feelings. She respected my autonomy and that made me want to get closer to her."
+    },
+    "scene5LegacyFinale": {
+      "memory": "I would want her to understand that I love her very much even if I may not always show it. A mother shows her love alot differently than a father does. And to my 8 year old self I would say, most of our life we are only taught the disney way of viewing the world, the world is much messier than that. I would want her to understand that good people can do bad things, and that you are what you think about. if you want to love someone, think about the good things they do, if you want to dislike someone, think about only the bad things they do. I would want him to understand that men and women are different and don't let the world convince you otherwise."
+    }
+  },
+  "photoReferences": [
+    {
+      "id": "shaz-child",
+      "name": "Shaz",
+      "realPerson": "Shaz",
+      "age": 8,
+      "skinTone": "light olive",
+      "description": "Slim eight-year-old boy with a narrow oval face, short straight black hair with a soft side-swept fringe, dark brown eyes, thick dark eyebrows.",
+      "photoNote": "From Shaz's own photo IMG_2901 (\"Perfect that's me\"). The photo file is rotated 90 degrees."
+    },
+    {
+      "id": "shaz-adult",
+      "name": "Shaz",
+      "realPerson": "Shaz",
+      "age": null,
+      "skinTone": "light olive",
+      "description": "Adult man, slim athletic build, short black hair faded at the sides and swept up on top, short full dark beard, dark brown eyes, defined jaw. Narrator and dad.",
+      "photoNote": "From Shaz's photo IMG_1456."
+    }
+  ]
+}

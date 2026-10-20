@@ -52,6 +52,18 @@ jobs:
           slow=$(printf '%s\n' "$changed" | node $kit/tests/needs-slow.mjs)
           echo "slow=$slow"
           echo "slow=$slow" >> "$GITHUB_OUTPUT"
+  v2-crew:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: public/format-repositories/my-pixar-story-v2/package-lock.json
+      - run: npm --prefix public/format-repositories/my-pixar-story-v2 ci
+      - run: npm --prefix public/format-repositories/my-pixar-story-v2 test
   studio:
     runs-on: ubuntu-latest
     timeout-minutes: 15

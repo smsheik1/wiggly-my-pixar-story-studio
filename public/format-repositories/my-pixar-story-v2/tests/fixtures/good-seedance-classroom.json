@@ -1,0 +1,172 @@
+{
+  "segments": [
+    {
+      "segmentId": 2,
+      "title": "Part 2: Who's Next",
+      "totalDurationSec": 27,
+      "shotCount": 5,
+      "attachedElements": [
+        "@classroom",
+        "@location1",
+        "@Mia",
+        "@Ben",
+        "@Miss_Park",
+        "@ben_drawing",
+        "@mia_drawing1"
+      ],
+      "tenBlocks": {
+        "block1_referenceMaterials": "@classroom = a sunny kindergarten classroom, rug and carpet mats, banner reading MY FAMILY.\n@location1 = the same classroom from the teacher's side, defining the camera side of the action.\n@Mia = a five-year-old girl, huge bright eyes, yellow hair clip.\n@Ben = a five-year-old boy, short brown hair, green jumper.\n@Miss_Park = a kind kindergarten teacher in a cardigan.\n@ben_drawing = Ben's crayon drawing of his dad as a giant.\n@mia_drawing1 = Mia's crayon drawing of her family.\nEach reference is one person or one object and appears once. No duplicates.",
+        "block2_voices": "@Ben VOICE: \"A five-year-old boy, soft, shy, quick and quiet.\"\n@Mia VOICE: \"A five-year-old girl, high bright voice, bursting with eagerness, fast.\"\n@Miss_Park VOICE: \"A warm adult woman, calm, encouraging, gentle classroom pace.\"",
+        "block3_goal": "A five-shot, twenty-seven-second segment inside a two-minute animated comedy. Ben finishes his show-and-tell and Miss Park asks who is next. It ends the instant Mia's first line finishes — do not continue into her story, do not resolve anything, do not add an ending. The comedy is played completely straight. Nobody in frame knows anything is funny.",
+        "block4_continuity": "Location: the room in @classroom, morning, throughout. Never leave it.\nThe camera stays on the same side of the action as in @location1 for the whole segment and never crosses to the other side. @Mia is on the right-hand arc and this never flips.\nTen children and one teacher, deliberate diversity, zero face repeats.\nCostume is fixed for the whole segment and never changes.",
+        "block5_shots": "SHOT 1 | 0–3s\nWide on the carpet in @classroom: @Ben finishes holding up @ben_drawing; the class claps.\nHard cut.\n\nSHOT 2 | 3–5s\nMedium on @Mia, bouncing on her mat, hand already half up.\nHard cut.\n\nSHOT 3 | 5–9s\nMedium on @Miss_Park beside @Ben.\n@Miss_Park: {Well done, Ben! That was great.}\n@Ben: {Thank you, Miss Park.}\nHard cut.\n\nSHOT 4 | 9–11s\nClose on @Miss_Park turning to the class.\n@Miss_Park: {Okay — so who's next?}\nHard cut.\n\nSHOT 5 | 11–27s\nMedium on @Mia shooting up off her mat, @mia_drawing1 clutched to her chest.\n@Mia: {Me! Me Miss Park! I want to go next!}\nHard cut.",
+        "block6_visualStyle": "Feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. Warm morning daylight, soft subsurface glow through ears and skin, tactile materials. Depth of field as a natural in-camera optical artifact.",
+        "block7_cameraAndPerformance": "Five shots separated by four hard cuts. The body plays broad. The face stays honest. No mugging, no pulled faces, no comic reactions. Anticipation: every move winds the opposite way first. Snap and settle with overshoot on arrival. Moving holds: held poses breathe and micro-shift. Overlap and secondary action: hair, cloth and attachments arrive a beat late. Eye life: micro-saccades, live catchlights, realistic blinks.",
+        "block8_audio": "Applause dying away, crayon scratching, small feet shuffling on carpet, quiet classroom room tone, subtle pizzicato strings.",
+        "block9_exclusions": "The only spoken words in the entire segment are the lines in braces. Nothing else written anywhere in this prompt is dialogue, and nobody speaks who is not named on a line. No extra cuts anywhere. No unison movement. No subtitles, no watermark, no logo.",
+        "block10_maintainConsistency": "Ten children and one teacher: @Mia, @Ben and @Miss_Park bound to their references. Children are 4.5 heads tall (long torso, short legs); @Miss_Park is 7 heads tall."
+      },
+      "compiledPrompt": "[REFERENCE MATERIALS]\n@classroom = a sunny kindergarten classroom, rug and carpet mats, banner reading MY FAMILY.\n@location1 = the same classroom from the teacher's side, defining the camera side of the action.\n@Mia = a five-year-old girl, huge bright eyes, yellow hair clip.\n@Ben = a five-year-old boy, short brown hair, green jumper.\n@Miss_Park = a kind kindergarten teacher in a cardigan.\n@ben_drawing = Ben's crayon drawing of his dad as a giant.\n@mia_drawing1 = Mia's crayon drawing of her family.\nEach reference is one person or one object and appears once. No duplicates.\n\n[VOICES]\n@Ben VOICE: \"A five-year-old boy, soft, shy, quick and quiet.\"\n@Mia VOICE: \"A five-year-old girl, high bright voice, bursting with eagerness, fast.\"\n@Miss_Park VOICE: \"A warm adult woman, calm, encouraging, gentle classroom pace.\"\n\n[GOAL]\nA five-shot, twenty-seven-second segment inside a two-minute animated comedy. Ben finishes his show-and-tell and Miss Park asks who is next. It ends the instant Mia's first line finishes — do not continue into her story, do not resolve anything, do not add an ending. The comedy is played completely straight. Nobody in frame knows anything is funny.\n\n[CONTINUITY]\nLocation: the room in @classroom, morning, throughout. Never leave it.\nThe camera stays on the same side of the action as in @location1 for the whole segment and never crosses to the other side. @Mia is on the right-hand arc and this never flips.\nTen children and one teacher, deliberate diversity, zero face repeats.\nCostume is fixed for the whole segment and never changes.\n\n[SHOTS]\nSHOT 1 | 0–3s\nWide on the carpet in @classroom: @Ben finishes holding up @ben_drawing; the class claps.\nHard cut.\n\nSHOT 2 | 3–5s\nMedium on @Mia, bouncing on her mat, hand already half up.\nHard cut.\n\nSHOT 3 | 5–9s\nMedium on @Miss_Park beside @Ben.\n@Miss_Park: {Well done, Ben! That was great.}\n@Ben: {Thank you, Miss Park.}\nHard cut.\n\nSHOT 4 | 9–11s\nClose on @Miss_Park turning to the class.\n@Miss_Park: {Okay — so who's next?}\nHard cut.\n\nSHOT 5 | 11–27s\nMedium on @Mia shooting up off her mat, @mia_drawing1 clutched to her chest.\n@Mia: {Me! Me Miss Park! I want to go next!}\nHard cut.\n\n[VISUAL STYLE]\nFeature-quality 3D animated film, production CG, not photorealistic and not flat cartoon. Warm morning daylight, soft subsurface glow through ears and skin, tactile materials. Depth of field as a natural in-camera optical artifact.\n\n[CAMERA AND PERFORMANCE]\nFive shots separated by four hard cuts. The body plays broad. The face stays honest. No mugging, no pulled faces, no comic reactions. Anticipation: every move winds the opposite way first. Snap and settle with overshoot on arrival. Moving holds: held poses breathe and micro-shift. Overlap and secondary action: hair, cloth and attachments arrive a beat late. Eye life: micro-saccades, live catchlights, realistic blinks.\n\n[AUDIO]\nApplause dying away, crayon scratching, small feet shuffling on carpet, quiet classroom room tone, subtle pizzicato strings.\n\n[EXCLUSIONS]\nThe only spoken words in the entire segment are the lines in braces. Nothing else written anywhere in this prompt is dialogue, and nobody speaks who is not named on a line. No extra cuts anywhere. No unison movement. No subtitles, no watermark, no logo.\n\n[MAINTAIN CONSISTENCY]\nTen children and one teacher: @Mia, @Ben and @Miss_Park bound to their references. Children are 4.5 heads tall (long torso, short legs); @Miss_Park is 7 heads tall.",
+      "generationPayload": {
+        "engine": "seedance-2.5",
+        "durationSec": 27,
+        "resolution": "480p",
+        "aspectRatio": "16:9",
+        "fps": 24
+      },
+      "segmentIndex": 1,
+      "extendsFrom": null,
+      "references": [
+        {
+          "tag": "@classroom",
+          "kind": "location",
+          "assetKey": "asset:placeholder:classroom"
+        },
+        {
+          "tag": "@location1",
+          "kind": "location",
+          "assetKey": "asset:placeholder:location1"
+        },
+        {
+          "tag": "@Mia",
+          "kind": "character",
+          "assetKey": "asset:placeholder:mia"
+        },
+        {
+          "tag": "@Ben",
+          "kind": "character",
+          "assetKey": "asset:placeholder:ben"
+        },
+        {
+          "tag": "@Miss_Park",
+          "kind": "character",
+          "assetKey": "asset:placeholder:miss_park"
+        },
+        {
+          "tag": "@ben_drawing",
+          "kind": "prop",
+          "assetKey": "asset:placeholder:ben_drawing"
+        },
+        {
+          "tag": "@mia_drawing1",
+          "kind": "prop",
+          "assetKey": "asset:placeholder:mia_drawing1"
+        }
+      ],
+      "shots": [
+        {
+          "shotNumber": 1,
+          "startSec": 0,
+          "endSec": 3,
+          "sceneId": "2.1",
+          "locationTag": "@classroom",
+          "cast": [
+            "@Mia",
+            "@Ben",
+            "@Miss_Park"
+          ],
+          "action": "Wide on the carpet in @classroom: @Ben finishes holding up @ben_drawing; the class claps.",
+          "sfx": [],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 2,
+          "startSec": 3,
+          "endSec": 5,
+          "sceneId": "2.2",
+          "locationTag": "@classroom",
+          "cast": [
+            "@Mia",
+            "@Ben",
+            "@Miss_Park"
+          ],
+          "action": "Medium on @Mia, bouncing on her mat, hand already half up.",
+          "sfx": [],
+          "cut": "Hard cut."
+        },
+        {
+          "shotNumber": 3,
+          "startSec": 5,
+          "endSec": 9,
+          "sceneId": "2.3",
+          "locationTag": "@classroom",
+          "cast": [
+            "@Mia",
+            "@Ben",
+            "@Miss_Park"
+          ],
+          "action": "Medium on @Miss_Park beside @Ben.",
+          "sfx": [],
+          "cut": "Hard cut.",
+          "dialogue": {
+            "speaker": "@Ben",
+            "line": "{Thank you, Miss Park.}",
+            "mode": "on-camera"
+          }
+        },
+        {
+          "shotNumber": 4,
+          "startSec": 9,
+          "endSec": 11,
+          "sceneId": "2.4",
+          "locationTag": "@classroom",
+          "cast": [
+            "@Mia",
+            "@Ben",
+            "@Miss_Park"
+          ],
+          "action": "Close on @Miss_Park turning to the class.",
+          "sfx": [],
+          "cut": "Hard cut.",
+          "dialogue": {
+            "speaker": "@Miss_Park",
+            "line": "{Okay — so who's next?}",
+            "mode": "on-camera"
+          }
+        },
+        {
+          "shotNumber": 5,
+          "startSec": 11,
+          "endSec": 27,
+          "sceneId": "2.5",
+          "locationTag": "@classroom",
+          "cast": [
+            "@Mia",
+            "@Ben",
+            "@Miss_Park"
+          ],
+          "action": "Medium on @Mia shooting up off her mat, @mia_drawing1 clutched to her chest.",
+          "sfx": [],
+          "cut": "Hard cut.",
+          "dialogue": {
+            "speaker": "@Mia",
+            "line": "{Me! Me Miss Park! I want to go next!}",
+            "mode": "on-camera"
+          }
+        }
+      ]
+    }
+  ],
+  "totalRuntimeSec": 27,
+  "assumptions": []
+}

@@ -1,0 +1,604 @@
+{
+  "masthead": {
+    "title": "Every Week at Eight",
+    "draftNumber": 1,
+    "oneLinePremise": "A quiet kid in sunglasses and Yugioh cards grows up distant and learns how to show love."
+  },
+  "shapeBar": {
+    "totalRuntimeSec": 90,
+    "parts": [
+      {
+        "name": "Part 1: Original",
+        "durationSec": 30
+      },
+      {
+        "name": "Part 2: Sequel",
+        "durationSec": 30
+      },
+      {
+        "name": "Part 3: Sequel 2",
+        "durationSec": 30
+      }
+    ]
+  },
+  "cast": [
+    {
+      "name": "Shaz",
+      "elementTag": "@Shaz",
+      "age": 8,
+      "oneWordRole": "dreamer",
+      "physicalDescription": "Slim eight-year-old boy with narrow oval face, short straight black hair with side-swept fringe, dark brown eyes, thick dark eyebrows, black sunglasses pushed up on his forehead with eyes fully visible",
+      "signatureAccent": "black sunglasses pushed up on forehead",
+      "voiceDescription": "Eight-year-old American boy, soft quiet timbre, slow hesitant pace, flat honest delivery, brightens when proud",
+      "skinTone": "light olive",
+      "gender": "male",
+      "family": true,
+      "realPerson": "Shaz",
+      "ageNote": null,
+      "photoRef": "shaz-child"
+    },
+    {
+      "name": "Dad Shaz",
+      "elementTag": "@DadShaz",
+      "age": 32,
+      "oneWordRole": "father",
+      "physicalDescription": "Adult man with slim athletic build, short black hair faded at sides and swept up on top, short full dark beard, dark brown eyes, defined jaw, black sunglasses pushed up on his forehead with eyes fully visible",
+      "signatureAccent": "black sunglasses pushed up on forehead",
+      "voiceDescription": "Early-thirties American dad, warm low steady timbre, slow calm pace, gentle storytelling delivery, steadies with emotion",
+      "skinTone": "light olive",
+      "gender": "male",
+      "family": true,
+      "realPerson": "Shaz",
+      "ageNote": null,
+      "photoRef": "shaz-adult"
+    },
+    {
+      "name": "Mom",
+      "elementTag": "@Mom",
+      "age": 38,
+      "oneWordRole": "mother",
+      "physicalDescription": "Medium build adult woman with round face, dark brown eyes, wearing a deep teal hijab fully covering hair and hairline with no visible hair",
+      "signatureAccent": "deep teal hijab",
+      "voiceDescription": "Late-thirties American mother, warm bright timbre, quick affectionate pace, cheerful proud delivery, softens when moved",
+      "skinTone": "light olive",
+      "gender": "female",
+      "family": true,
+      "realPerson": "Mom",
+      "ageNote": null,
+      "photoRef": null
+    },
+    {
+      "name": "Sister",
+      "elementTag": "@Sister",
+      "age": 18,
+      "oneWordRole": "sister",
+      "physicalDescription": "Tall slim teenage girl with narrow face, dark brown eyes, wearing a warm mustard hijab fully covering hair and hairline with no visible hair",
+      "signatureAccent": "warm mustard hijab",
+      "voiceDescription": "Eighteen-year-old American teen, bright clear timbre, quick playful pace, teasing warm delivery, giggles when excited",
+      "skinTone": "light olive",
+      "gender": "female",
+      "family": true,
+      "realPerson": "Sister",
+      "ageNote": "true age 15 (7 years older than Shaz at 8); shown as 18",
+      "photoRef": null
+    },
+    {
+      "name": "Brother",
+      "elementTag": "@Brother",
+      "age": 6,
+      "oneWordRole": "brother",
+      "physicalDescription": "Small six-year-old boy with round face, short straight black hair, dark brown eyes, small frame",
+      "signatureAccent": "bright green wristband",
+      "voiceDescription": "Six-year-old American boy, high clear timbre, fast eager pace, loud declarative delivery, bursts with excitement",
+      "skinTone": "light olive",
+      "gender": "male",
+      "family": true,
+      "realPerson": "Brother",
+      "ageNote": null,
+      "photoRef": null
+    },
+    {
+      "name": "Mama",
+      "elementTag": "@Mama",
+      "age": 29,
+      "oneWordRole": "wife",
+      "physicalDescription": "Medium build adult woman with oval face, dark brown eyes, wearing a deep plum hijab fully covering hair and hairline with no visible hair",
+      "signatureAccent": "deep plum hijab",
+      "voiceDescription": "Late-twenties American woman, soft warm timbre, slow steady pace, kind reassuring delivery, steadies when tender",
+      "skinTone": "light olive",
+      "gender": "female",
+      "family": true,
+      "realPerson": "Wife",
+      "ageNote": null,
+      "photoRef": null
+    },
+    {
+      "name": "Mia",
+      "elementTag": "@Mia",
+      "age": 6,
+      "oneWordRole": "daughter",
+      "physicalDescription": "Small six-year-old girl with round face, dark brown eyes, wearing a soft rose hijab fully covering hair and hairline with no visible hair",
+      "signatureAccent": "soft rose hijab",
+      "voiceDescription": "Six-year-old American girl, tiny clear timbre, slow curious pace, flat sincere delivery, quiets when listening",
+      "skinTone": "light olive",
+      "gender": "female",
+      "family": true,
+      "realPerson": "Mia",
+      "ageNote": "age not given in the answers; shown as a young child",
+      "photoRef": null
+    }
+  ],
+  "locations": [
+    {
+      "name": "Family living room",
+      "description": "1990s family living room, daytime and evening: worn sofa, low table, small TV, window light, carpet with cards"
+    },
+    {
+      "name": "Dallas driveway with Honda",
+      "description": "2000s Dallas home driveway, daytime: faded 2000 Honda Accord Coupe, concrete drive, bright sun"
+    },
+    {
+      "name": "Small home desk corner",
+      "description": "2000s small home desk corner, daytime: simple desk, laptop, chair, window light"
+    },
+    {
+      "name": "Dallas bedroom at night",
+      "description": "2000s Dallas bedroom at night: bed, lamp glow, phone screen light, quiet walls"
+    }
+  ],
+  "segments": [
+    {
+      "segmentId": 1,
+      "title": "Part 1: Original",
+      "targetDurationSec": 30,
+      "goalSummary": "Establish ordinary living room and escalating Yugioh battles with scientist warmth break. Uses 8 shots in 30 seconds. Hard stop on warm proud hold.",
+      "continuityLocks": [
+        "@Shaz center on carpet, @Brother left, @Sister right, 180-degree axis locked",
+        "Only 2 on screen per shot, cards stay in hands"
+      ],
+      "shots": [
+        {
+          "shotNumber": 1,
+          "startSec": 0,
+          "endSec": 4,
+          "location": "Family living room",
+          "framing": "wide",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@Shaz sits on the carpet breathing and blinking; @Brother sits beside him watching and breathing",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{When I was eight, I did not talk much.}"
+          },
+          "directorsNote": "Play this completely straight — if the baseline is wacky the Yugioh battles will not land.",
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 2,
+          "startSec": 4,
+          "endSec": 8,
+          "location": "Family living room",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@Sister leans forward pointing and breathing; @Shaz sits with head down holding cards loosely and breathing",
+          "dialogue": {
+            "speaker": "@Sister",
+            "line": "{Shaz, are you watching?}",
+            "isVoiceover": false,
+            "isOffCamera": false
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 3,
+          "startSec": 8,
+          "endSec": 12,
+          "location": "Family living room",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@Brother holds cards out breathing; @Shaz clamps cards to his chest breathing",
+          "dialogue": {
+            "speaker": "@Brother",
+            "line": "{Battle me! I have new cards!}",
+            "isVoiceover": false,
+            "isOffCamera": false
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 4,
+          "startSec": 12,
+          "endSec": 16,
+          "location": "Family living room",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@Sister shuffles cards breathing; @Shaz bounces on his knees clutching cards and breathing",
+          "dialogue": {
+            "speaker": "@Sister",
+            "line": "{My turn! Battle me next!}",
+            "isVoiceover": false,
+            "isOffCamera": false
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 5,
+          "startSec": 16,
+          "endSec": 20,
+          "location": "Family living room",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "slow push in",
+          "whatWeSee": "@Mom kneels beside @Shaz breathing; @Shaz looks up breathing",
+          "dialogue": {
+            "speaker": "@Mom",
+            "line": "{What do you want to be?}",
+            "isVoiceover": false,
+            "isOffCamera": false
+          },
+          "directorsNote": "Hold on @Mom — her proud reaction in the next shots pays off this question.",
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 6,
+          "startSec": 20,
+          "endSec": 24,
+          "location": "Family living room",
+          "framing": "close-up",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@Shaz looks up breathing and blinking; @Mom leans in breathing",
+          "dialogue": {
+            "speaker": "@Shaz",
+            "line": "{A scientist.}",
+            "isVoiceover": false,
+            "isOffCamera": false
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 7,
+          "startSec": 24,
+          "endSec": 27,
+          "location": "Family living room",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "slow push in",
+          "whatWeSee": "@Mom claps breathing; @Shaz smiles breathing",
+          "dialogue": {
+            "speaker": "@Mom",
+            "line": "{My scientist!}",
+            "isVoiceover": false,
+            "isOffCamera": false
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 8,
+          "startSec": 27,
+          "endSec": 30,
+          "location": "Family living room",
+          "framing": "wide",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@Shaz sits tall breathing and blinking; @Mom claps breathing",
+          "whatWeHear": "soft room tone, quiet TV murmur, gentle breathing",
+          "directorsNote": "Keep this as a moving hold — if frozen the warmth dies.",
+          "isContinuousMove": false
+        }
+      ]
+    },
+    {
+      "segmentId": 2,
+      "title": "Part 2: Sequel",
+      "targetDurationSec": 30,
+      "goalSummary": "Cover Honda freedom, McKinney Boyd job, and Muslim app romance why. Uses 7 shots in 30 seconds. Hard stop on eight o'clock closer.",
+      "continuityLocks": [
+        "@DadShaz driver seat left, car faces street, 180-degree axis locked",
+        "Desk corner faces window, bedroom night lamp stays right"
+      ],
+      "shots": [
+        {
+          "shotNumber": 1,
+          "startSec": 0,
+          "endSec": 4,
+          "location": "Dallas driveway with Honda",
+          "framing": "wide",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@DadShaz stands beside the car door breathing and blinking",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{At seventeen I drove my Honda with faded paint and no air.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 2,
+          "startSec": 4,
+          "endSec": 8,
+          "location": "Dallas driveway with Honda",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "slow push in",
+          "whatWeSee": "@DadShaz sits in the driver seat tapping and breathing",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{I did not ask for rides. I played my tunes with friends.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 3,
+          "startSec": 8,
+          "endSec": 13,
+          "location": "Small home desk corner",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@DadShaz sits at the desk typing and breathing",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{I finished at McKinney Boyd early and learned Python and Ruby on Rails.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 4,
+          "startSec": 13,
+          "endSec": 17,
+          "location": "Small home desk corner",
+          "framing": "close-up",
+          "cameraAngle": "eye level",
+          "cameraMove": "slow push in",
+          "whatWeSee": "@DadShaz leans back breathing and blinking",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{At nineteen my salary was fifty thousand and I lived at home.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 5,
+          "startSec": 17,
+          "endSec": 22,
+          "location": "Dallas bedroom at night",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@DadShaz holds the phone looking and breathing",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{We met on a Muslim app, Chicago to Dallas, once a week.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 6,
+          "startSec": 22,
+          "endSec": 26,
+          "location": "Dallas bedroom at night",
+          "framing": "close-up",
+          "cameraAngle": "eye level",
+          "cameraMove": "slow push in",
+          "whatWeSee": "@DadShaz looks at the phone breathing and blinking",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{I am distant and slow. She never made me feel bad.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 7,
+          "startSec": 26,
+          "endSec": 30,
+          "location": "Dallas bedroom at night",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@DadShaz watches breathing; @Mama smiles on the phone screen breathing",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{She respected me, so I grew closer every week at eight.}"
+          },
+          "directorsNote": "Do not show a second person in the room — the phone screen is the only company or the long-distance truth breaks.",
+          "isContinuousMove": false
+        }
+      ]
+    },
+    {
+      "segmentId": 3,
+      "title": "Part 3: Sequel 2",
+      "targetDurationSec": 30,
+      "goalSummary": "Give Dad to Mia wisdom with Mia listening. Uses 7 narrated shots in 30 seconds. Hard stop on every week at eight callback.",
+      "continuityLocks": [
+        "@DadShaz and @Mia on couch, @Mia chin on knees, 180-degree axis locked",
+        "Only narrator and Mia on screen in finale holds"
+      ],
+      "shots": [
+        {
+          "shotNumber": 1,
+          "startSec": 0,
+          "endSec": 5,
+          "location": "Family living room",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "slow push in",
+          "whatWeSee": "@DadShaz sits beside @Mia on the couch breathing; @Mia listens chin on knees breathing",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{Mia, I love you even when I do not show it.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 2,
+          "startSec": 5,
+          "endSec": 9,
+          "location": "Family living room",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@DadShaz looks toward @Mia breathing; @Mia listens breathing",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{The world is messier than the Disney way.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 3,
+          "startSec": 9,
+          "endSec": 13,
+          "location": "Family living room",
+          "framing": "close-up",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@DadShaz speaks softly breathing and blinking",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{Good people can do bad things, Mia.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 4,
+          "startSec": 13,
+          "endSec": 17,
+          "location": "Family living room",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@DadShaz gestures gently breathing",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{A mother shows love different than a father does.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 5,
+          "startSec": 17,
+          "endSec": 22,
+          "location": "Family living room",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "slow push in",
+          "whatWeSee": "@DadShaz leans forward breathing; @Mia watches breathing",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{You are what you think about. Think good to love, bad to dislike.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 6,
+          "startSec": 22,
+          "endSec": 26,
+          "location": "Family living room",
+          "framing": "close-up",
+          "cameraAngle": "eye level",
+          "cameraMove": "static",
+          "whatWeSee": "@DadShaz holds steady breathing and blinking",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{Men and women are different. Do not let the world convince you.}"
+          },
+          "isContinuousMove": false
+        },
+        {
+          "shotNumber": 7,
+          "startSec": 26,
+          "endSec": 30,
+          "location": "Family living room",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "slow push in",
+          "whatWeSee": "@DadShaz sits beside @Mia on the couch breathing; @Mia listens breathing",
+          "narration": {
+            "speaker": "@DadShaz",
+            "line": "{Think about the good things, Mia. Like Mama, every week at eight.}"
+          },
+          "directorsNote": "End on the concrete callback — without eight o'clock the wisdom floats away as generic advice.",
+          "isContinuousMove": false
+        }
+      ]
+    }
+  ],
+  "storyboardPrompt": {
+    "targetEngine": "nano-banana-2.1",
+    "fullPrompt": "An eight-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two even rows of four panels on a warm off-white page. Each panel is a 16:9 landscape rectangle with a thin dark border, evenly spaced, with a small hand-written shot number in the corner of each panel. Painted digital storyboard art — soft loose brushwork, simplified appealing character shapes, minimal facial detail, strong atmospheric lighting and clear colour design in every panel. Rich saturated colour, warm and cinematic, in the style of a feature animation colour script. Not photorealistic, not flat vector, not line art. Panel 1 [shot 1]: Wide shot at eye level. Boy with light olive skin and black sunglasses pushed up on his forehead sitting on carpet, small boy with light olive skin sitting beside him watching. Daytime window key from left, warm soft shadows, muted beige browns with one saturated accent. Panel 2 [shot 2]: Medium shot at eye level. Teenage girl with light olive skin wearing a warm mustard hijab fully covering hair and hairline with no visible hair leaning forward, boy with light olive skin and black sunglasses pushed up on his forehead nodding. Daytime window key from left, warm soft shadows, muted living room tones with mustard accent. Panel 3 [shot 3]: Medium shot at eye level. Small boy with light olive skin holding cards out, boy with light olive skin and black sunglasses pushed up on his forehead clamping cards to chest. Bright daytime key from window, warm shadows, muted beige with green accent. Panel 4 [shot 4]: Medium shot at eye level. Teenage girl with light olive skin wearing a warm mustard hijab fully covering hair and hairline with no visible hair shuffling cards, boy with light olive skin and black sunglasses pushed up on his forehead bouncing on knees. Daytime window key from left, warm shadows, muted tones with mustard accent. Panel 5 [shot 5]: Medium shot at eye level. Adult woman with light olive skin wearing a deep teal hijab fully covering hair and hairline with no visible hair kneeling, boy with light olive skin and black sunglasses pushed up on his forehead looking up. Soft evening window light from right, warm gentle shadows, muted tones with teal accent. Panel 6 [shot 6]: Close-up at eye level. Boy with light olive skin and black sunglasses pushed up on his forehead looking up, adult woman with light olive skin wearing a deep teal hijab fully covering hair and hairline with no visible hair leaning in. Warm lamp key from front, soft shadows, muted tones with teal accent. Panel 7 [shot 7]: Medium shot at eye level. Adult woman with light olive skin wearing a deep teal hijab fully covering hair and hairline with no visible hair clapping, boy with light olive skin and black sunglasses pushed up on his forehead smiling. Warm window key from left, glowing soft shadows, muted warm tones with teal accent. Panel 8 [shot 8]: Wide shot at eye level. Boy with light olive skin and black sunglasses pushed up on his forehead sitting tall, adult woman with light olive skin wearing a deep teal hijab fully covering hair and hairline with no visible hair clapping. Soft daytime window light, warm lingering shadows, muted beige with teal accent. Cohesive colour design across the whole sheet. No text or writing in the panels other than the shot numbers. No watermark, no logos, no border around the page.",
+    "panels": [
+      {
+        "panelNumber": 1,
+        "shotNumberRef": 1,
+        "shotSizeAndAngle": "Wide shot at eye level",
+        "whatIsInFrame": "Boy with light olive skin and black sunglasses pushed up on his forehead sitting on carpet, small boy with light olive skin sitting beside him watching",
+        "lightAndPalette": "Daytime window key from left, warm soft shadows, muted beige browns with one saturated accent"
+      },
+      {
+        "panelNumber": 2,
+        "shotNumberRef": 2,
+        "shotSizeAndAngle": "Medium shot at eye level",
+        "whatIsInFrame": "Teenage girl with light olive skin wearing a warm mustard hijab fully covering hair and hairline with no visible hair leaning forward, boy with light olive skin and black sunglasses pushed up on his forehead nodding",
+        "lightAndPalette": "Daytime window key from left, warm soft shadows, muted living room tones with mustard accent"
+      },
+      {
+        "panelNumber": 3,
+        "shotNumberRef": 3,
+        "shotSizeAndAngle": "Medium shot at eye level",
+        "whatIsInFrame": "Small boy with light olive skin holding cards out, boy with light olive skin and black sunglasses pushed up on his forehead clamping cards to chest",
+        "lightAndPalette": "Bright daytime key from window, warm shadows, muted beige with green accent"
+      },
+      {
+        "panelNumber": 4,
+        "shotNumberRef": 4,
+        "shotSizeAndAngle": "Medium shot at eye level",
+        "whatIsInFrame": "Teenage girl with light olive skin wearing a warm mustard hijab fully covering hair and hairline with no visible hair shuffling cards, boy with light olive skin and black sunglasses pushed up on his forehead bouncing on knees",
+        "lightAndPalette": "Daytime window key from left, warm shadows, muted tones with mustard accent"
+      },
+      {
+        "panelNumber": 5,
+        "shotNumberRef": 5,
+        "shotSizeAndAngle": "Medium shot at eye level",
+        "whatIsInFrame": "Adult woman with light olive skin wearing a deep teal hijab fully covering hair and hairline with no visible hair kneeling, boy with light olive skin and black sunglasses pushed up on his forehead looking up",
+        "lightAndPalette": "Soft evening window light from right, warm gentle shadows, muted tones with teal accent"
+      },
+      {
+        "panelNumber": 6,
+        "shotNumberRef": 6,
+        "shotSizeAndAngle": "Close-up at eye level",
+        "whatIsInFrame": "Boy with light olive skin and black sunglasses pushed up on his forehead looking up, adult woman with light olive skin wearing a deep teal hijab fully covering hair and hairline with no visible hair leaning in",
+        "lightAndPalette": "Warm lamp key from front, soft shadows, muted tones with teal accent"
+      },
+      {
+        "panelNumber": 7,
+        "shotNumberRef": 7,
+        "shotSizeAndAngle": "Medium shot at eye level",
+        "whatIsInFrame": "Adult woman with light olive skin wearing a deep teal hijab fully covering hair and hairline with no visible hair clapping, boy with light olive skin and black sunglasses pushed up on his forehead smiling",
+        "lightAndPalette": "Warm window key from left, glowing soft shadows, muted warm tones with teal accent"
+      },
+      {
+        "panelNumber": 8,
+        "shotNumberRef": 8,
+        "shotSizeAndAngle": "Wide shot at eye level",
+        "whatIsInFrame": "Boy with light olive skin and black sunglasses pushed up on his forehead sitting tall, adult woman with light olive skin wearing a deep teal hijab fully covering hair and hairline with no visible hair clapping",
+        "lightAndPalette": "Soft daytime window light, warm lingering shadows, muted beige with teal accent"
+      }
+    ]
+  },
+  "htmlScriptDocument": "<!doctype html><html><head><meta charset=\"utf-8\"><title>Every Week at Eight</title><link href=\"https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Karla:wght@400;700&family=Space+Mono:wght@400;700&display=swap\" rel=\"stylesheet\"><style>body{background:#E4E6D9;color:#22272A;font-family:Karla,sans-serif;margin:0;padding:32px}h1,h2,h3{font-family:Fraunces,serif}.mono{font-family:Space Mono,monospace}.card{background:#F2F3EA;border-radius:12px;padding:16px;margin:12px 0}.speaker{color:#C33A2C;font-weight:700}.label{color:#6B7280;font-family:Space Mono,monospace;font-size:12px}.rule{border-top:3px solid #C33A2C;margin:8px 0}.shape{display:flex;gap:4px;margin:12px 0}.seg{height:26px;display:flex;align-items:center;justify-content:center;color:#F2F3EA;font-family:Space Mono,monospace;font-size:12px}</style></head><body><div class=\"label\">DRAFT 1</div><h1>Every Week at Eight</h1><p>A quiet kid in sunglasses and Yugioh cards grows up distant and learns how to show love.</p><div class=\"shape\"><div class=\"seg\" style=\"flex:30;background:#22272A\">Part 1: Original 30s</div><div class=\"seg\" style=\"flex:30;background:#6B7280\">Part 2: Sequel 30s</div><div class=\"seg\" style=\"flex:30;background:#C33A2C\">Part 3: Sequel 2 30s</div></div><h2>How to Read This</h2><p>SHOT number and timecode show order. Where we are is the location. Camera shows framing, angle and move. What we see is action. Dialogue is @Speaker: {words}. Director note warns what breaks.</p><h2>Cast</h2><div class=\"card\"><span class=\"speaker\">Shaz @Shaz</span> <span class=\"mono\">8 dreamer</span><br>Slim eight-year-old boy with narrow oval face, short straight black hair with side-swept fringe, dark brown eyes, thick dark eyebrows, black sunglasses pushed up on his forehead with eyes fully visible<br><span class=\"label\">Accent: black sunglasses pushed up on forehead | Voice: Eight-year-old American boy, soft quiet timbre, slow hesitant pace, flat honest delivery, brightens when proud | Skin: light olive</span></div><div class=\"card\"><span class=\"speaker\">Dad Shaz @DadShaz</span> <span class=\"mono\">32 father</span><br>Adult man with slim athletic build, short black hair faded at sides and swept up on top, short full dark beard, dark brown eyes, defined jaw, black sunglasses pushed up on his forehead with eyes fully visible<br><span class=\"label\">Accent: black sunglasses pushed up on forehead | Voice: Early-thirties American dad, warm low steady timbre, slow calm pace, gentle storytelling delivery, steadies with emotion | Skin: light olive</span></div><div class=\"card\"><span class=\"speaker\">Mom @Mom</span> <span class=\"mono\">38 mother</span><br>Medium build adult woman with round face, dark brown eyes, wearing a deep teal hijab fully covering hair and hairline with no visible hair<br><span class=\"label\">Accent: deep teal hijab | Voice: Late-thirties American mother, warm bright timbre, quick affectionate pace, cheerful proud delivery, softens when moved | Skin: light olive</span></div><div class=\"card\"><span class=\"speaker\">Sister @Sister</span> <span class=\"mono\">18 sister true age 15 (7 years older than Shaz at 8); shown as 18</span><br>Tall slim teenage girl with narrow face, dark brown eyes, wearing a warm mustard hijab fully covering hair and hairline with no visible hair<br><span class=\"label\">Accent: warm mustard hijab | Voice: Eighteen-year-old American teen, bright clear timbre, quick playful pace, teasing warm delivery, giggles when excited | Skin: light olive</span></div><div class=\"card\"><span class=\"speaker\">Brother @Brother</span> <span class=\"mono\">6 brother</span><br>Small six-year-old boy with round face, short straight black hair, dark brown eyes, small frame<br><span class=\"label\">Accent: bright green wristband | Voice: Six-year-old American boy, high clear timbre, fast eager pace, loud declarative delivery, bursts with excitement | Skin: light olive</span></div><div class=\"card\"><span class=\"speaker\">Mama @Mama</span> <span class=\"mono\">29 wife</span><br>Medium build adult woman with oval face, dark brown eyes, wearing a deep plum hijab fully covering hair and hairline with no visible hair<br><span class=\"label\">Accent: deep plum hijab | Voice: Late-twenties American woman, soft warm timbre, slow steady pace, kind reassuring delivery, steadies when tender | Skin: light olive</span></div><div class=\"card\"><span class=\"speaker\">Mia @Mia</span> <span class=\"mono\">6 daughter age not given in the answers; shown as a young child</span><br>Small six-year-old girl with round face, dark brown eyes, wearing a soft rose hijab fully covering hair and hairline with no visible hair<br><span class=\"label\">Accent: soft rose hijab | Voice: Six-year-old American girl, tiny clear timbre, slow curious pace, flat sincere delivery, quiets when listening | Skin: light olive</span></div><h2>Part 1: Original | 0-30s</h2><div class=\"rule\"></div><div class=\"card\"><div class=\"label\">SHOT 1 | 0-4s | Family living room | wide eye level static</div>@Shaz sits on the carpet breathing and blinking; @Brother sits beside him watching and breathing<br><span class=\"speaker\">@DadShaz narration:</span> {When I was eight, I did not talk much.}</div><div class=\"card\"><div class=\"label\">SHOT 2 | 4-8s | Family living room | medium eye level static</div>@Sister leans forward pointing and breathing; @Shaz sits with head down holding cards loosely and breathing<br><span class=\"speaker\">@Sister:</span> {Shaz, are you watching?}</div><div class=\"card\"><div class=\"label\">SHOT 3 | 8-12s | Family living room | medium eye level static</div>@Brother holds cards out breathing; @Shaz clamps cards to his chest breathing<br><span class=\"speaker\">@Brother:</span> {Battle me! I have new cards!}</div><div class=\"card\"><div class=\"label\">SHOT 4 | 12-16s | Family living room | medium eye level static</div>@Sister shuffles cards breathing; @Shaz bounces on his knees clutching cards and breathing<br><span class=\"speaker\">@Sister:</span> {My turn! Battle me next!}</div><div class=\"card\"><div class=\"label\">SHOT 5 | 16-20s | Family living room | medium eye level slow push in</div>@Mom kneels beside @Shaz breathing; @Shaz looks up breathing<br><span class=\"speaker\">@Mom:</span> {What do you want to be?}</div><div class=\"card\"><div class=\"label\">SHOT 6 | 20-24s | Family living room | close-up eye level static</div>@Shaz looks up breathing and blinking; @Mom leans in breathing<br><span class=\"speaker\">@Shaz:</span> {A scientist.}</div><div class=\"card\"><div class=\"label\">SHOT 7 | 24-27s | Family living room | medium eye level slow push in</div>@Mom claps breathing; @Shaz smiles breathing<br><span class=\"speaker\">@Mom:</span> {My scientist!}</div><div class=\"card\"><div class=\"label\">SHOT 8 | 27-30s | Family living room | wide eye level static | no dialogue</div>@Shaz sits tall breathing and blinking; @Mom claps breathing<br><span class=\"label\">Hear: soft room tone, quiet TV murmur, gentle breathing</span></div><h2>Part 2: Sequel | 0-30s</h2><div class=\"rule\"></div><div class=\"card\"><div class=\"label\">SHOT 1 | 0-4s | Dallas driveway with Honda | wide eye level static</div>@DadShaz stands beside the car door breathing and blinking<br><span class=\"speaker\">@DadShaz narration:</span> {At seventeen I drove my Honda with faded paint and no air.}</div><div class=\"card\"><div class=\"label\">SHOT 2 | 4-8s | Dallas driveway with Honda | medium eye level slow push in</div>@DadShaz sits in the driver seat tapping and breathing<br><span class=\"speaker\">@DadShaz narration:</span> {I did not ask for rides. I played my tunes with friends.}</div><div class=\"card\"><div class=\"label\">SHOT 3 | 8-13s | Small home desk corner | medium eye level static</div>@DadShaz sits at the desk typing and breathing<br><span class=\"speaker\">@DadShaz narration:</span> {I finished at McKinney Boyd early and learned Python and Ruby on Rails.}</div><div class=\"card\"><div class=\"label\">SHOT 4 | 13-17s | Small home desk corner | close-up eye level slow push in</div>@DadShaz leans back breathing and blinking<br><span class=\"speaker\">@DadShaz narration:</span> {At nineteen my salary was fifty thousand and I lived at home.}</div><div class=\"card\"><div class=\"label\">SHOT 5 | 17-22s | Dallas bedroom at night | medium eye level static</div>@DadShaz holds the phone looking and breathing<br><span class=\"speaker\">@DadShaz narration:</span> {We met on a Muslim app, Chicago to Dallas, once a week.}</div><div class=\"card\"><div class=\"label\">SHOT 6 | 22-26s | Dallas bedroom at night | close-up eye level slow push in</div>@DadShaz looks at the phone breathing and blinking<br><span class=\"speaker\">@DadShaz narration:</span> {I am distant and slow. She never made me feel bad.}</div><div class=\"card\"><div class=\"label\">SHOT 7 | 26-30s | Dallas bedroom at night | medium eye level static</div>@DadShaz watches breathing; @Mama smiles on the phone screen breathing<br><span class=\"speaker\">@DadShaz narration:</span> {She respected me, so I grew closer every week at eight.}</div><h2>Part 3: Sequel 2 | 0-30s</h2><div class=\"rule\"></div><div class=\"card\"><div class=\"label\">SHOT 1 | 0-5s | Family living room | medium eye level slow push in</div>@DadShaz sits beside @Mia on the couch breathing; @Mia listens chin on knees breathing<br><span class=\"speaker\">@DadShaz narration:</span> {Mia, I love you even when I do not show it.}</div><div class=\"card\"><div class=\"label\">SHOT 2 | 5-9s | Family living room | medium eye level static</div>@DadShaz looks toward @Mia breathing; @Mia listens breathing<br><span class=\"speaker\">@DadShaz narration:</span> {The world is messier than the Disney way.}</div><div class=\"card\"><div class=\"label\">SHOT 3 | 9-13s | Family living room | close-up eye level static</div>@DadShaz speaks softly breathing and blinking<br><span class=\"speaker\">@DadShaz narration:</span> {Good people can do bad things, Mia.}</div><div class=\"card\"><div class=\"label\">SHOT 4 | 13-17s | Family living room | medium eye level static</div>@DadShaz gestures gently breathing<br><span class=\"speaker\">@DadShaz narration:</span> {A mother shows love different than a father does.}</div><div class=\"card\"><div class=\"label\">SHOT 5 | 17-22s | Family living room | medium eye level slow push in</div>@DadShaz leans forward breathing; @Mia watches breathing<br><span class=\"speaker\">@DadShaz narration:</span> {You are what you think about. Think good to love, bad to dislike.}</div><div class=\"card\"><div class=\"label\">SHOT 6 | 22-26s | Family living room | close-up eye level static</div>@DadShaz holds steady breathing and blinking<br><span class=\"speaker\">@DadShaz narration:</span> {Men and women are different. Do not let the world convince you.}</div><div class=\"card\"><div class=\"label\">SHOT 7 | 26-30s | Family living room | medium eye level slow push in</div>@DadShaz sits beside @Mia on the couch breathing; @Mia listens breathing<br><span class=\"speaker\">@DadShaz narration:</span> {Think about the good things, Mia. Like Mama, every week at eight.}</div><footer><div class=\"label\">Draft 1 | 22 shots | 90 seconds total</div></footer></body></html>",
+  "clarifyingQuestion": "What is Mia's current age so her on-screen depiction can be locked?",
+  "assumptions": [
+    "Mia's age not given in the answers; shown as 6 young child to allow finale listening",
+    "Mom's age not given; shown as 38 adult mother",
+    "Mama's age not given; shown as 29 adult wife",
+    "DadShaz adult age not given; shown as 32 early-thirties dad",
+    "Neutral set dressing (sofa, TV, car, desk, lamp, phone) assumed as obvious settings",
+    "Sister true age 15 calculated as 7 years older than Shaz at 8; depicted as 18 per teen rule",
+    "Brother true age 6 calculated as 2 years younger than Shaz at 8"
+  ]
+}

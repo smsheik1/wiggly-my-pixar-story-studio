@@ -1,0 +1,522 @@
+{
+  "assumptions": [
+    "Mia stays off-screen as the listener; her age was not given so drawing her would invent a fact.",
+    "Mom age assumed 38 and Wife age 26 for depiction only; answers give no adult ages and cast cards require an age outside 13-17.",
+    "Older sister story age 15 (8 plus 7) depicted and cast as 18 per teen rule; Teen Shaz story age 17 depicted and cast as 18 per teen rule.",
+    "Skin tone warm medium brown assumed for all family for consistent depiction; no photos or castDescriptions were provided.",
+    "Legacy wisdoms condensed to love plus think-good-things line to fit 60-second ceiling; Disney messy-world detail omitted but not contradicted.",
+    "Friends heard off-screen only in car music moment to avoid inventing new on-screen people; answers confirm friends existed."
+  ],
+  "cast": [
+    {
+      "age": 8,
+      "elementTag": "@Shaz",
+      "family": true,
+      "gender": "male",
+      "name": "Shaz",
+      "oneWordRole": "dreamer",
+      "physicalDescription": "8-year-old boy with warm medium brown skin, short black hair, round cheeks, small frame, wearing oversized dark sunglasses indoors",
+      "signatureAccent": "oversized black sunglasses worn in every indoor scene",
+      "skinTone": "warm medium brown",
+      "voiceDescription": "8-year-old American boy, soft low volume, flat steady tone, slow careful pace, short declarative sentences with long pauses",
+      "realPerson": "Shaz"
+    },
+    {
+      "age": 38,
+      "elementTag": "@Mom",
+      "family": true,
+      "gender": "female",
+      "name": "Mom",
+      "oneWordRole": "mother",
+      "physicalDescription": "Adult woman with warm medium brown skin, dark brown eyes, wearing a dusty rose hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, long modest dress",
+      "signatureAccent": "dusty rose hijab with soft folds",
+      "skinTone": "warm medium brown",
+      "voiceDescription": "Middle-aged American woman, bright warm tone, slightly high register, quick excited pace, cheerful laugh when proud, clear encouraging delivery",
+      "realPerson": "Mom"
+    },
+    {
+      "age": 18,
+      "elementTag": "@Sister",
+      "family": true,
+      "gender": "female",
+      "name": "Older Sister",
+      "oneWordRole": "sister",
+      "physicalDescription": "Young woman age 18 with warm medium brown skin, slim build, wearing a teal hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, long modest sleeves",
+      "signatureAccent": "teal hijab with neat wrap",
+      "skinTone": "warm medium brown",
+      "voiceDescription": "18-year-old American teen girl, lively mid-range voice, fast playful pace, teasing delivery that softens when kind",
+      "realPerson": "Older Sister"
+    },
+    {
+      "age": 6,
+      "elementTag": "@Brother",
+      "family": true,
+      "gender": "male",
+      "name": "Little Brother",
+      "oneWordRole": "brother",
+      "physicalDescription": "6-year-old boy with warm medium brown skin, short black hair, small round face, little frame sitting cross-legged on carpet",
+      "signatureAccent": "small red T-shirt with faded collar",
+      "skinTone": "warm medium brown",
+      "voiceDescription": "6-year-old American boy, high clear voice, fast excited pace, short shouted declarations, giggles between lines",
+      "realPerson": "Little Brother"
+    },
+    {
+      "age": 18,
+      "elementTag": "@Shaz_Teen",
+      "family": true,
+      "gender": "male",
+      "name": "Teen Shaz",
+      "oneWordRole": "driver",
+      "physicalDescription": "18-year-old young man with warm medium brown skin, short black hair, lean build, light mustache shadow, plain T-shirt and jeans",
+      "signatureAccent": "black aux cable looped from pocket",
+      "skinTone": "warm medium brown",
+      "voiceDescription": "18-year-old American teen boy, mid-range relaxed voice, unhurried confident pace, quiet pride when showing friends, short sentences",
+      "realPerson": "Teen Shaz"
+    },
+    {
+      "age": 19,
+      "elementTag": "@Shaz_Adult",
+      "family": true,
+      "gender": "male",
+      "name": "Adult Shaz",
+      "oneWordRole": "engineer",
+      "physicalDescription": "19-year-old young man with warm medium brown skin, short black hair, lean build, clean shave, plain button shirt",
+      "signatureAccent": "silver laptop held under arm",
+      "skinTone": "warm medium brown",
+      "voiceDescription": "19-year-old American man, calm low storyteller voice, steady slow pace, warm sincere delivery that grows tender at the end",
+      "realPerson": "Adult Shaz"
+    },
+    {
+      "age": 26,
+      "elementTag": "@Wife",
+      "family": true,
+      "gender": "female",
+      "name": "Wife",
+      "oneWordRole": "partner",
+      "physicalDescription": "Adult woman with warm medium brown skin, calm dark eyes, wearing a soft sage hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, modest long top",
+      "signatureAccent": "deep emerald phone case held in hand",
+      "skinTone": "warm medium brown",
+      "voiceDescription": "Adult American woman in her twenties, gentle mid-range voice, slow steady pace, consistent reassuring delivery, soft smile in tone",
+      "realPerson": "Wife"
+    }
+  ],
+  "clarifyingQuestion": "Should Mia appear on screen, and if so, what age should we draw her for depiction, or should she stay off-screen as the listener?",
+  "htmlScriptDocument": "<!doctype html><html><head><meta charset=\"utf-8\"><title>The Quiet Scientist - Draft 1</title><link href=\"https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Karla:wght@400;600&family=Space+Mono:wght@400;700&display=swap\" rel=\"stylesheet\"><style>body{background:#E4E6D9;color:#22272A;font-family:Karla,sans-serif;margin:0;padding:32px}h1,h2,h3{font-family:Fraunces,serif}.mono{font-family:'Space Mono',monospace}.card{background:#F2F3EA;border-radius:12px;padding:16px;margin:12px 0;border:1px solid #d6d8c8}.eyebrow{font-family:'Space Mono',monospace;color:#6B7280;letter-spacing:2px}.accent{color:#C33A2C}.shapebar{display:flex;height:28px;border-radius:8px;overflow:hidden;border:1px solid #22272A}.shapebar div{display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:12px}.secondary{color:#6B7280}.speaker{color:#C33A2C;font-weight:700}.part-rule{border-top:3px solid #C33A2C;padding-top:8px}</style></head><body><div class=\"eyebrow\">DRAFT 1</div><h1>The Quiet Scientist</h1><p>A quiet kid in sunglasses grows into old cars, first jobs and steady love — a warm comedy about saying little and meaning it.</p><h2>Shape Bar — 60s total</h2><div class=\"shapebar\"><div style=\"flex:30;background:#F2F3EA;\">Part 1: Original 30s</div><div style=\"flex:30;background:#e8e9dd;\">Part 2: Sequel 30s</div></div><p class=\"mono secondary\">Part 1: Original 30s | Part 2: Sequel 30s | Total 60s | 13 shots</p><h2>How to Read This</h2><div class=\"card\"><p><span class=\"mono\">SHOT 1 | 0-4s</span> = shot number and time in seconds. <b>Where we are</b> appears only when the place changes. <b>What we see</b> is plain visual action. <b>What we hear</b> appears when there is music or quiet with no talking. Dialogue looks like <span class=\"speaker\">@Mom: {My line.}</span>. Director's Note warns what breaks if you get it wrong.</p></div><h2>Cast</h2><div class=\"card\"><b>Shaz, 8, dreamer (@Shaz)</b><br>8-year-old boy with warm medium brown skin, short black hair, round cheeks, small frame, wearing oversized dark sunglasses indoors<br><span class=\"secondary\">Accent: oversized black sunglasses worn in every indoor scene | Voice: 8-year-old American boy, soft low volume, flat steady tone, slow careful pace, short declarative sentences with long pauses | Skin: warm medium brown</span></div><div class=\"card\"><b>Mom, 38, mother (@Mom)</b><br>Adult woman with warm medium brown skin, dark brown eyes, wearing a dusty rose hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, long modest dress<br><span class=\"secondary\">Accent: dusty rose hijab with soft folds | Voice: Middle-aged American woman, bright warm tone, slightly high register, quick excited pace, cheerful laugh when proud, clear encouraging delivery | Skin: warm medium brown</span></div><div class=\"card\"><b>Older Sister, 18, sister (@Sister)</b><br>Young woman age 18 with warm medium brown skin, slim build, wearing a teal hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, long modest sleeves<br><span class=\"secondary\">Accent: teal hijab with neat wrap | Voice: 18-year-old American teen girl, lively mid-range voice, fast playful pace, teasing delivery that softens when kind | Skin: warm medium brown</span></div><div class=\"card\"><b>Little Brother, 6, brother (@Brother)</b><br>6-year-old boy with warm medium brown skin, short black hair, small round face, little frame sitting cross-legged on carpet<br><span class=\"secondary\">Accent: small red T-shirt with faded collar | Voice: 6-year-old American boy, high clear voice, fast excited pace, short shouted declarations, giggles between lines | Skin: warm medium brown</span></div><div class=\"card\"><b>Teen Shaz, 18, driver (@Shaz_Teen)</b><br>18-year-old young man with warm medium brown skin, short black hair, lean build, light mustache shadow, plain T-shirt and jeans<br><span class=\"secondary\">Accent: black aux cable looped from pocket | Voice: 18-year-old American teen boy, mid-range relaxed voice, unhurried confident pace, quiet pride when showing friends, short sentences | Skin: warm medium brown</span></div><div class=\"card\"><b>Adult Shaz, 19, engineer (@Shaz_Adult)</b><br>19-year-old young man with warm medium brown skin, short black hair, lean build, clean shave, plain button shirt<br><span class=\"secondary\">Accent: silver laptop held under arm | Voice: 19-year-old American man, calm low storyteller voice, steady slow pace, warm sincere delivery that grows tender at the end | Skin: warm medium brown</span></div><div class=\"card\"><b>Wife, 26, partner (@Wife)</b><br>Adult woman with warm medium brown skin, calm dark eyes, wearing a soft sage hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, modest long top<br><span class=\"secondary\">Accent: deep emerald phone case held in hand | Voice: Adult American woman in her twenties, gentle mid-range voice, slow steady pace, consistent reassuring delivery, soft smile in tone | Skin: warm medium brown</span></div><h2 class=\"part-rule accent\">Part 1: Original | 0-30s</h2><div class=\"card\"><div class=\"mono\">SHOT 1 | 0-4s</div><p><b>Where we are:</b> Living room, daytime</p><p><b>What we see:</b> Warm living room with a small TV showing a card battle cartoon. Eight-year-old Shaz with warm medium brown skin sits center on the couch wearing oversized black sunglasses, breathing quietly and blinking with head down. Older sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair sits left, little brother age 6 with warm medium brown skin sits right holding cards, all watching.</p><p><span class=\"speaker\">@Shaz_Adult: {When I was eight, I barely talked at all.}</span></p><p><i>Director's Note: Play this completely ordinary — if the room feels special, the later payoff has nothing to stand out against.</i></p></div><div class=\"card\"><div class=\"mono\">SHOT 2 | 4-8s</div><p><b>What we see:</b> Shaz with warm medium brown skin lifts his chin from under the oversized sunglasses, chest rising and falling as he breathes, and sits upright in one clear pose. Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair leans in from the kitchen doorway, hands still, watching him and breathing calmly.</p><p><span class=\"speaker\">@Shaz: {I want to be a scientist.}</span></p><p><i>Director's Note: Hold his small upright pose with no big gestures — if he acts big, his quiet ladder breaks.</i></p></div><div class=\"card\"><div class=\"mono\">SHOT 3 | 8-11s</div><p><b>What we see:</b> Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair claps both hands once, shoulders lifting as she breathes and smiles. Shaz with warm medium brown skin stays seated behind sunglasses, blinking, chest moving with breath.</p><p><span class=\"speaker\">@Mom: {My scientist! So proud of you!}</span></p></div><div class=\"card\"><div class=\"mono\">SHOT 4 | 11-15s</div><p><b>What we see:</b> On the carpet, little brother age 6 with warm medium brown skin and big sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair kneel facing each other, breathing and shifting weight, placing Yugioh cards down. Shaz with warm medium brown skin watches from the couch edge with sunglasses on, legs swinging slightly as he breathes.</p><p><span class=\"speaker\">@Shaz_Adult: {We watched Yu-Gi-Oh GX together. Every battle counted.}</span></p></div><div class=\"card\"><div class=\"mono\">SHOT 5 | 15-19s</div><p><b>Where we are:</b> Outside a faded old coupe, daytime</p><p><b>What we see:</b> A faded coupe with dull paint parked at the curb with windows down. Teen Shaz age 18 with warm medium brown skin stands by the open driver door, breathing steadily, hand resting on the roof, looking at the car with steady eyes.</p><p><span class=\"speaker\">@Shaz_Adult: {My first freedom was my old Honda with no A-C.}</span></p></div><div class=\"card\"><div class=\"mono\">SHOT 6 | 19-24s</div><p><b>What we see:</b> Inside the coupe, Teen Shaz age 18 with warm medium brown skin sits in the driver seat, plugging a black aux cable into the radio, chest rising as he breathes, eyes steady on the dial.</p><p><b>What we hear:</b> Warm guitar riff from car speakers, soft engine hum.</p><p><span class=\"speaker\">@Shaz_Teen: {I wired the aux myself. Play your tunes.}</span></p></div><div class=\"card\"><div class=\"mono\">SHOT 7 | 24-30s | Continuous camera move</div><p><b>What we see:</b> From the side of the sunny street, the faded coupe rolls slowly forward with windows down. Teen Shaz age 18 with warm medium brown skin holds the wheel with both hands, breathing calmly, hair shifting in the wind, eyes forward.</p><p><span class=\"speaker\">@Shaz_Adult: {It was mine, and that meant everything.}</span></p><p><i>Director's Note: End on forward motion only — if you stop the car early, Part 2 job payoff starts flat.</i></p></div><h2 class=\"part-rule accent\">Part 2: Sequel | 0-30s</h2><div class=\"card\"><div class=\"mono\">SHOT 1 | 0-4s</div><p><b>Where we are:</b> Small desk at home, evening</p><p><b>What we see:</b> Adult Shaz age 19 with warm medium brown skin sits at a small desk with a silver laptop open, breathing steadily and blinking, fingers pausing over the keys. A soft lamp glows behind on a plain wall.</p><p><span class=\"speaker\">@Shaz_Adult: {I doubled up, graduated early, and learned to code.}</span></p></div><div class=\"card\"><div class=\"mono\">SHOT 2 | 4-9s</div><p><b>What we see:</b> Adult Shaz age 19 with warm medium brown skin stands in the modest living room holding the laptop to his chest, breathing with lift, body upright in one clear pose. Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair stands nearby with hands clasped, breathing and watching.</p><p><span class=\"speaker\">@Shaz_Adult: {I got the job! I'm nineteen!}</span><br><span class=\"secondary\">Narration </span><span class=\"speaker\">@Shaz_Adult: {Fifty K at home felt like six figures.}</span></p></div><div class=\"card\"><div class=\"mono\">SHOT 3 | 9-14s</div><p><b>Where we are:</b> Living room couch, night, phone glow</p><p><b>What we see:</b> Adult Shaz age 19 with warm medium brown skin sits on the couch edge at night, breathing slowly, holding a phone with both hands, eyes on the screen, blinking in the glow.</p><p><span class=\"speaker\">@Shaz_Adult: {We met far apart, Dallas to Chicago, once a week.}</span></p></div><div class=\"card\"><div class=\"mono\">SHOT 4 | 14-19s</div><p><b>What we see:</b> The phone screen shows Wife with warm medium brown skin in soft sage hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, breathing calmly and blinking with a soft smile. The thumb of Adult Shaz with warm medium brown skin holds the edge steady.</p><p><span class=\"speaker\">@Wife: {It's eight. I'm here.}</span></p><p><i>Director's Note: Play her arrival completely steady — if she acts surprised, the consistency love story loses its meaning.</i></p></div><div class=\"card\"><div class=\"mono\">SHOT 5 | 19-25s</div><p><b>What we see:</b> Adult Shaz age 19 with warm medium brown skin rests back on the couch, breathing slow, shoulders lowering in one clear relaxed pose, eyes soft on the phone. Wife with warm medium brown skin in soft sage hijab fully covering hair with no visible hair stays small on the screen, breathing and listening.</p><p><span class=\"speaker\">@Shaz_Adult: {She never rushed me, so I wanted to lean closer.}</span></p></div><div class=\"card\"><div class=\"mono\">SHOT 6 | 25-30s | Continuous camera move</div><p><b>What we see:</b> Adult Shaz age 19 with warm medium brown skin sits upright with hands resting still in his lap, breathing calmly with slight chest rise, eyes forward with honest gaze. Gentle daylight fills the room.</p><p><span class=\"speaker\">@Shaz_Adult: {Mia, I love you. Think good things and love grows.}</span></p><p><i>Director's Note: Keep this tender and still with no joke — if you push funny here, the whole letter to Mia breaks.</i></p></div><p class=\"mono secondary\">Draft 1 | 13 shots | 60s total | End.</p></body></html>",
+  "masthead": {
+    "draftNumber": 1,
+    "oneLinePremise": "A quiet kid in sunglasses grows into old cars, first jobs and steady love — a warm comedy about saying little and meaning it.",
+    "title": "The Quiet Scientist"
+  },
+  "segments": [
+    {
+      "continuityLocks": [
+        "Living room: Shaz center on couch with sunglasses on, sister left, brother right; camera stays south of couch to hold 180-degree axis",
+        "Honda: faded paint and open windows stay consistent; driver is @Shaz_Teen on left, travel direction left-to-right locked"
+      ],
+      "goalSummary": "Establish the ordinary quiet childhood living room and teen car freedom across 7 shots. Build the rule-of-three start with two straight quiet claims and escalate the sunglasses-to-aux ladder. Hard stop at 30 seconds on the car rolling forward before the job payoff.",
+      "segmentId": 1,
+      "shots": [
+        {
+          "dialogue": null,
+          "directorsNote": "Play this completely ordinary — if the room feels special, the later payoff has nothing to stand out against.",
+          "endSec": 4,
+          "isContinuousMove": false,
+          "location": "Home",
+          "narration": {
+            "line": "{When I was eight, I barely talked at all.}",
+            "speaker": "@Shaz_Adult"
+          },
+          "shotNumber": 1,
+          "startSec": 0,
+          "tag": null,
+          "whatWeHear": null,
+          "whatWeSee": "Warm living room with a small TV showing a card battle cartoon. Eight-year-old Shaz with warm medium brown skin sits center on the couch wearing oversized black sunglasses, breathing quietly and blinking with head down. Older sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair sits left, little brother age 6 with warm medium brown skin sits right holding cards, all watching.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "dialogue": {
+            "isOffCamera": false,
+            "isVoiceover": false,
+            "line": "{I want to be a scientist.}",
+            "speaker": "@Shaz"
+          },
+          "directorsNote": "Hold his small upright pose with no big gestures — if he acts big, his quiet ladder breaks.",
+          "endSec": 8,
+          "isContinuousMove": false,
+          "location": "Home",
+          "narration": null,
+          "shotNumber": 2,
+          "startSec": 4,
+          "tag": null,
+          "whatWeHear": null,
+          "whatWeSee": "Shaz with warm medium brown skin lifts his chin from under the oversized sunglasses, chest rising and falling as he breathes, and sits upright in one clear pose. Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair leans in from the kitchen doorway, hands still, watching him and breathing calmly.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "dialogue": {
+            "isOffCamera": false,
+            "isVoiceover": false,
+            "line": "{My scientist! So proud of you!}",
+            "speaker": "@Mom"
+          },
+          "directorsNote": null,
+          "endSec": 11,
+          "isContinuousMove": false,
+          "location": "Home",
+          "narration": null,
+          "shotNumber": 3,
+          "startSec": 8,
+          "tag": null,
+          "whatWeHear": null,
+          "whatWeSee": "Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair claps both hands once, shoulders lifting as she breathes and smiles. Shaz with warm medium brown skin stays seated behind sunglasses, blinking, chest moving with breath.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "dialogue": null,
+          "directorsNote": null,
+          "endSec": 15,
+          "isContinuousMove": false,
+          "location": "Home",
+          "narration": {
+            "line": "{We watched Yu-Gi-Oh GX together. Every battle counted.}",
+            "speaker": "@Shaz_Adult"
+          },
+          "shotNumber": 4,
+          "startSec": 11,
+          "tag": null,
+          "whatWeHear": null,
+          "whatWeSee": "On the carpet, little brother age 6 with warm medium brown skin and big sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair kneel facing each other, breathing and shifting weight, placing Yugioh cards down. Shaz with warm medium brown skin watches from the couch edge with sunglasses on, legs swinging slightly as he breathes.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "dialogue": null,
+          "directorsNote": null,
+          "endSec": 19,
+          "isContinuousMove": false,
+          "location": "Home",
+          "narration": {
+            "line": "{My first freedom was my old Honda with no A-C.}",
+            "speaker": "@Shaz_Adult"
+          },
+          "shotNumber": 5,
+          "startSec": 15,
+          "tag": null,
+          "whatWeHear": null,
+          "whatWeSee": "A faded coupe with dull paint parked at the curb with windows down. Teen Shaz age 18 with warm medium brown skin stands by the open driver door, breathing steadily, hand resting on the roof, looking at the car with steady eyes.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "dialogue": {
+            "isOffCamera": false,
+            "isVoiceover": false,
+            "line": "{I wired the aux myself. Play your tunes.}",
+            "speaker": "@Shaz_Teen"
+          },
+          "directorsNote": null,
+          "endSec": 24,
+          "isContinuousMove": false,
+          "location": "Home",
+          "narration": null,
+          "shotNumber": 6,
+          "startSec": 19,
+          "tag": null,
+          "whatWeHear": "Warm guitar riff from car speakers, soft engine hum.",
+          "whatWeSee": "Inside the coupe, Teen Shaz age 18 with warm medium brown skin sits in the driver seat, plugging a black aux cable into the radio, chest rising as he breathes, eyes steady on the dial.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "dialogue": null,
+          "directorsNote": "End on forward motion only — if you stop the car early, Part 2 job payoff starts flat.",
+          "endSec": 30,
+          "isContinuousMove": true,
+          "location": "Home",
+          "narration": {
+            "line": "{It was mine, and that meant everything.}",
+            "speaker": "@Shaz_Adult"
+          },
+          "shotNumber": 7,
+          "startSec": 24,
+          "tag": "Continuous camera move",
+          "whatWeHear": null,
+          "whatWeSee": "From the side of the sunny street, the faded coupe rolls slowly forward with windows down. Teen Shaz age 18 with warm medium brown skin holds the wheel with both hands, breathing calmly, hair shifting in the wind, eyes forward.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        }
+      ],
+      "targetDurationSec": 30,
+      "title": "Part 1: Original"
+    },
+    {
+      "continuityLocks": [
+        "Desk and couch: @Shaz_Adult is the only on-camera adult narrator; camera stays south of desk and couch to hold 180-degree axis",
+        "Phone: wife appears only on phone screen until final memory; sage hijab and emerald case stay consistent"
+      ],
+      "goalSummary": "Pay off the quiet-to-loud arc with job, weekly Facetime love and tender legacy across 6 shots. Complete the third-beat break from comedy into warmth. Hard stop at 30 seconds on the closing line to Mia with no new story after.",
+      "segmentId": 2,
+      "shots": [
+        {
+          "dialogue": null,
+          "directorsNote": null,
+          "endSec": 4,
+          "isContinuousMove": false,
+          "location": "Home",
+          "narration": {
+            "line": "{I doubled up, graduated early, and learned to code.}",
+            "speaker": "@Shaz_Adult"
+          },
+          "shotNumber": 1,
+          "startSec": 0,
+          "tag": null,
+          "whatWeHear": null,
+          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin sits at a small desk with a silver laptop open, breathing steadily and blinking, fingers pausing over the keys. A soft lamp glows behind on a plain wall.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "dialogue": {
+            "isOffCamera": false,
+            "isVoiceover": false,
+            "line": "{I got the job! I'm nineteen!}",
+            "speaker": "@Shaz_Adult"
+          },
+          "directorsNote": null,
+          "endSec": 9,
+          "isContinuousMove": false,
+          "location": "Home",
+          "narration": {
+            "line": "{Fifty K at home felt like six figures.}",
+            "speaker": "@Shaz_Adult"
+          },
+          "shotNumber": 2,
+          "startSec": 4,
+          "tag": null,
+          "whatWeHear": null,
+          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin stands in the modest living room holding the laptop to his chest, breathing with lift, body upright in one clear pose. Mom with warm medium brown skin in dusty rose hijab fully covering hair with no visible hair stands nearby with hands clasped, breathing and watching.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "dialogue": null,
+          "directorsNote": null,
+          "endSec": 14,
+          "isContinuousMove": false,
+          "location": "Home",
+          "narration": {
+            "line": "{We met far apart, Dallas to Chicago, once a week.}",
+            "speaker": "@Shaz_Adult"
+          },
+          "shotNumber": 3,
+          "startSec": 9,
+          "tag": null,
+          "whatWeHear": null,
+          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin sits on the couch edge at night, breathing slowly, holding a phone with both hands, eyes on the screen, blinking in the glow.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "dialogue": {
+            "isOffCamera": false,
+            "isVoiceover": false,
+            "line": "{It's eight. I'm here.}",
+            "speaker": "@Wife"
+          },
+          "directorsNote": "Play her arrival completely steady — if she acts surprised, the consistency love story loses its meaning.",
+          "endSec": 19,
+          "isContinuousMove": false,
+          "location": "Home",
+          "narration": null,
+          "shotNumber": 4,
+          "startSec": 14,
+          "tag": null,
+          "whatWeHear": null,
+          "whatWeSee": "The phone screen shows Wife with warm medium brown skin in soft sage hijab fully covering hair and hairline with no visible hair, no hairline and no dark band at forehead, breathing calmly and blinking with a soft smile. The thumb of Adult Shaz with warm medium brown skin holds the edge steady.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "dialogue": null,
+          "directorsNote": null,
+          "endSec": 25,
+          "isContinuousMove": false,
+          "location": "Home",
+          "narration": {
+            "line": "{She never rushed me, so I wanted to lean closer.}",
+            "speaker": "@Shaz_Adult"
+          },
+          "shotNumber": 5,
+          "startSec": 19,
+          "tag": null,
+          "whatWeHear": null,
+          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin rests back on the couch, breathing slow, shoulders lowering in one clear relaxed pose, eyes soft on the phone. Wife with warm medium brown skin in soft sage hijab fully covering hair with no visible hair stays small on the screen, breathing and listening.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        },
+        {
+          "dialogue": null,
+          "directorsNote": "Keep this tender and still with no joke — if you push funny here, the whole letter to Mia breaks.",
+          "endSec": 30,
+          "isContinuousMove": true,
+          "location": "Home",
+          "narration": {
+            "line": "{Mia, I love you. Think good things and love grows.}",
+            "speaker": "@Shaz_Adult"
+          },
+          "shotNumber": 6,
+          "startSec": 25,
+          "tag": "Continuous camera move",
+          "whatWeHear": null,
+          "whatWeSee": "Adult Shaz age 19 with warm medium brown skin sits upright with hands resting still in his lap, breathing calmly with slight chest rise, eyes forward with honest gaze. Gentle daylight fills the room.",
+          "framing": "medium",
+          "cameraAngle": "eye level",
+          "cameraMove": "static"
+        }
+      ],
+      "targetDurationSec": 30,
+      "title": "Part 2: Sequel"
+    }
+  ],
+  "shapeBar": {
+    "parts": [
+      {
+        "durationSec": 30,
+        "name": "Part 1: Original"
+      },
+      {
+        "durationSec": 30,
+        "name": "Part 2: Sequel"
+      }
+    ],
+    "totalRuntimeSec": 60
+  },
+  "storyboardSheets": [
+    {
+      "segmentId": 1,
+      "targetEngine": "nano-banana-2.1",
+      "fullPrompt": "An eight-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two even rows of four panels on a warm off-white page, each 16:9 panel with its exact label (part.shot, like 1.4) hand-written small in the corner, with no other codes; empty panels have no label. Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Panel 1, labelled \"1.1\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 2, labelled \"1.2\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 3, labelled \"1.3\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 4, labelled \"1.4\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 5, labelled \"1.5\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 6, labelled \"1.6\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 7, labelled \"1.7\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 8 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. No text other than the panel labels.",
+      "panels": [
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 1,
+          "shotNumberRef": 1,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 2,
+          "shotNumberRef": 2,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 3,
+          "shotNumberRef": 3,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 4,
+          "shotNumberRef": 4,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 5,
+          "shotNumberRef": 5,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 6,
+          "shotNumberRef": 6,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 7,
+          "shotNumberRef": 7,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        }
+      ]
+    },
+    {
+      "segmentId": 2,
+      "targetEngine": "nano-banana-2.1",
+      "fullPrompt": "An eight-panel colour storyboard sheet from a feature animation studio's pre-production, arranged in two even rows of four panels on a warm off-white page, each 16:9 panel with its exact label (part.shot, like 1.4) hand-written small in the corner, with no other codes; empty panels have no label. Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination, strong atmospheric lighting and clear colour design in every panel. Panel 1, labelled \"2.1\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 2, labelled \"2.2\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 3, labelled \"2.3\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 4, labelled \"2.4\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 5, labelled \"2.5\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 6, labelled \"2.6\": Wide shot at eye level. Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV. Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow. Panel 7 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. Panel 8 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text. No text other than the panel labels.",
+      "panels": [
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 1,
+          "shotNumberRef": 1,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 2,
+          "shotNumberRef": 2,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 3,
+          "shotNumberRef": 3,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 4,
+          "shotNumberRef": 4,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 5,
+          "shotNumberRef": 5,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        },
+        {
+          "lightAndPalette": "Daylight key from left window, warm soft shadows, muted beige room with saturated TV glow",
+          "panelNumber": 6,
+          "shotNumberRef": 6,
+          "shotSizeAndAngle": "Wide shot at eye level",
+          "whatIsInFrame": "Eight-year-old Shaz with warm medium brown skin in oversized sunglasses sitting center on couch, sister age 18 with warm medium brown skin in teal hijab fully covering hair with no visible hair on left, brother age 6 with warm medium brown skin on right, watching TV"
+        }
+      ]
+    }
+  ],
+  "locations": [
+    {
+      "name": "Home",
+      "description": "Modest family home interior, daytime, lived-in furniture."
+    }
+  ]
+}

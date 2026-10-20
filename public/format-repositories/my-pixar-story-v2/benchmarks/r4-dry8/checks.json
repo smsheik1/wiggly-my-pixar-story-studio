@@ -1,0 +1,355 @@
+{
+  "agents": {
+    "story-director": {
+      "status": "pass",
+      "errors": [],
+      "warnings": [],
+      "codeCounts": {}
+    },
+    "character-architect": {
+      "status": "pass",
+      "errors": [],
+      "warnings": [],
+      "codeCounts": {}
+    },
+    "location-scout": {
+      "status": "pass",
+      "errors": [],
+      "warnings": [],
+      "codeCounts": {}
+    },
+    "seedance-compiler": {
+      "status": "pass",
+      "errors": [],
+      "warnings": [],
+      "codeCounts": {}
+    }
+  },
+  "totals": {
+    "passed": 4,
+    "failed": 0,
+    "missing": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "structural": {
+    "castCount": 7,
+    "characterCount": 7,
+    "locationCount": 4,
+    "plateCount": 4,
+    "segmentCount": 3,
+    "shotCount": 22,
+    "shotsPerSegment": [
+      8,
+      7,
+      7
+    ],
+    "runtimeSec": 90,
+    "compiledRuntimeSec": 90,
+    "shotFieldCompleteness": {
+      "mean": 0.841,
+      "min": 0.833,
+      "incompleteShots": [
+        {
+          "segmentId": 1,
+          "shotNumber": 1,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 3,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 7,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 1,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 3,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 7,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 1,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 3,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 7,
+          "missing": [
+            "whatWeHear"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "segmentId": 1,
+          "shotNumber": 1,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 3,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 1,
+          "shotNumber": 7,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 1,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 3,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 2,
+          "shotNumber": 7,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 1,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 2,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 3,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 4,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 5,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 6,
+          "missing": [
+            "whatWeHear"
+          ]
+        },
+        {
+          "segmentId": 3,
+          "shotNumber": 7,
+          "missing": [
+            "whatWeHear"
+          ]
+        }
+      ]
+    },
+    "dialogueLines": 6,
+    "narrationLines": 15
+  },
+  "judges": {}
+}
