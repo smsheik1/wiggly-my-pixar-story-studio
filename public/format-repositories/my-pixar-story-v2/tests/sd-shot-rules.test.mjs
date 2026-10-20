@@ -131,7 +131,7 @@ test('RESUME_DIALOGUE: facts go in narration, not in-scene dialogue', () => {
   const e = good(); const n = e.segments[1].shots[0]; n.narration.line = '{I was nineteen, 50k a year.}';
   assert.ok(!codes(e).includes('RESUME_DIALOGUE'));
 });
-test('FINALE_TOO_THIN: final part needs >=10s of narration', () => {
+test('finale narration length is optional (no FINALE_TOO_THIN)', () => {
   const d = good(); d.segments.at(-1).shots.slice(1).forEach((h) => { delete h.narration; });
-  assert.ok(codes(d).includes('FINALE_TOO_THIN'));
+  assert.ok(!codes(d).includes('FINALE_TOO_THIN'));
 });

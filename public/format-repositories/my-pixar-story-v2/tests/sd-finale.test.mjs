@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { validateStoryDirectorOutput, recipientOf, FINALE_MIN_NARRATION_SEC } from '../crew/linter/check-stage-play.mjs';
+import { validateStoryDirectorOutput, recipientOf } from '../crew/linter/check-stage-play.mjs';
 import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
 import { budgetMessage } from '../crew/linter/speech.mjs';
 import { checkWritingTells, doNotWriteList } from '../crew/linter/writing-tells.mjs';
@@ -20,7 +20,9 @@ const setLast = (o, line) => { const s = o.segments.at(-1).shots.at(-1); s.narra
 
 test('r4-dry6 finale: recipient missing and no finaleThesis; no concrete-detail rule any more', { timeout: 10000 }, () => {
   const c = codes(sd());
-  assert.ok(c.includes('RECIPIENT_NOT_IN_FINALE')); assert.ok(c.includes('MISSING_FINALE_THESIS'));
+  assert.ok(c.includes('MISSING_FINALE_THESIS'));
+  const r = validateStoryDirectorOutput(sd(), { ...inputs, photoCharacters: [] }).issues.find((x) => x.code === 'RECIPIENT_NOT_IN_FINALE');
+  assert.equal(r?.severity, 'warning', 'recipient on screen in the finale is a choice, not a gate error');
 });
 test('a plain full sentence with no named object, place or time is a valid last line', { timeout: 10000 }, () => {
   for (const line of ['{I love you, Mia.}', '{You become what you think about, so think about good things.}', '{Be patient with people who love you differently.}']) {
@@ -73,13 +75,10 @@ test("FINALE_PLATITUDE exempts a line that quotes the family's own answer word f
   o.segments.at(-1).shots[1].narration.line = '{Life is short, so hug the people you love.}';
   assert.ok(validateStoryDirectorOutput(o, { answers, photoCharacters: [] }).issues.some((i) => i.code === 'FINALE_PLATITUDE'));
 });
-test('FINALE_TOO_THIN needs 10s of finale narration (was 15)', { timeout: 10000 }, () => {
-  assert.equal(FINALE_MIN_NARRATION_SEC, 10);
-  const fx = () => JSON.parse(readFileSync(new URL('./fixtures/good-stage-play.json', import.meta.url), 'utf8'));
-  const narrSec = (d) => d.segments.at(-1).shots.filter((h) => h.narration).reduce((n, h) => n + h.endSec - h.startSec, 0);
-  const keep = (d, secs) => { let n = 0; for (const h of d.segments.at(-1).shots) { if (h.narration && n + h.endSec - h.startSec <= secs) n += h.endSec - h.startSec; else delete h.narration; } return d; };
-  const ten = keep(fx(), 10); assert.equal(narrSec(ten), 10); assert.ok(!codes(ten, {}).includes('FINALE_TOO_THIN'));
-  const six = keep(fx(), 6); assert.ok(narrSec(six) < 10); assert.ok(codes(six, {}).includes('FINALE_TOO_THIN'));
+test('no fixed finale narration length: a finale with little narration is not a gate error', { timeout: 10000 }, () => {
+  const fx = JSON.parse(readFileSync(new URL('./fixtures/good-stage-play.json', import.meta.url), 'utf8'));
+  fx.segments.at(-1).shots.slice(1).forEach((h) => { delete h.narration; });
+  assert.ok(!codes(fx, {}).includes('FINALE_TOO_THIN'));
 });
 test('the finale rules are generic: no maker-specific details in role rules or checker keywords', { timeout: 10000 }, () => {
   const role = readFileSync(new URL('../crew/story-director/3-script-writer.md', import.meta.url), 'utf8');
@@ -116,18 +115,7 @@ test('output budgets at xhigh: Story Director 128k (r5-dry1 hit 64.2k of 64k), C
   for (const a of ['character-architect', 'seedance-compiler']) assert.equal(V2_MODELS[a].effort, 'xhigh');
 });
 
-// The finale answer (last scene key present in the answers) gets its own part; only its narration counts toward the finale.
-const finaleOnly = (o) => { const last = o.segments.at(-1); last.answerSources = ['scene5LegacyFinale.memory'];
-  for (const h of last.shots) if (h.narration) h.narration.source = { answer: 'scene5LegacyFinale.memory' }; return o; };
-test('FINALE_MIXED_SOURCES: the last part citing another answer fails and asks for a finale part of its own', { timeout: 10000 }, () => {
-  assert.ok(!codes(finaleOnly(sd())).includes('FINALE_MIXED_SOURCES'));
-  const mixed = finaleOnly(sd()); mixed.segments.at(-1).answerSources.unshift('scene4Romance.memory');
-  const issue = validateStoryDirectorOutput(mixed, { ...inputs, photoCharacters: [] }).issues.find((i) => i.code === 'FINALE_MIXED_SOURCES');
-  assert.equal(issue?.severity, 'error'); assert.match(issue.message, /own part/); assert.match(issue.message, /'scene4Romance'/);
-  assert.ok(!codes(mixed, { ...inputs, answers: {} }).includes('FINALE_MIXED_SOURCES'), 'no answers, no check');
-});
-test('FINALE_TOO_THIN counts only finale-sourced narration', { timeout: 10000 }, () => {
-  const o = finaleOnly(sd()); assert.ok(!codes(o).includes('FINALE_TOO_THIN'));
-  for (const h of o.segments.at(-1).shots) if (h.narration) h.narration.source = { answer: 'scene4Romance.memory' };
-  assert.ok(codes(o).includes('FINALE_TOO_THIN'), 'romance narration in the last part is not finale narration');
+test('the ending may draw on any answer: no FINALE_MIXED_SOURCES', { timeout: 10000 }, () => {
+  const mixed = sd(); mixed.segments.at(-1).answerSources = ['scene4Romance.memory', 'scene5LegacyFinale.memory'];
+  assert.ok(!codes(mixed).includes('FINALE_MIXED_SOURCES'));
 });

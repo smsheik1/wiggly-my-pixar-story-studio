@@ -4,7 +4,6 @@ import { validateWritingTells } from './writing-tells.mjs';
 import { checkStageShotLocks, onScreenOf } from './shot-locks.mjs';
 import { words, lcs, answerSentences, NEAR_VERBATIM, checkAnswerSources, checkExtraCast } from './answer-sources.mjs';
 import { checkPropsTraceable } from './craft-checks.mjs';
-import { SCENE_KEYS } from '../story-director/input.mjs';
 export { answerSentences, NEAR_VERBATIM };
 // v2 deterministic validation gate for Story Director output.
 // BASE: Gemini's validateStoryDirectorOutput (same return shape, codes and message text).
@@ -122,7 +121,6 @@ export const EYES_HIDDEN = new RegExp([
 ].join('|'), 'i');
 export const MAX_CARDS_PER_PERSON = 3; // one card per life stage: child (<13), young adult (13-19, shown as 18), adult
 export const MAX_ON_SCREEN = 2;
-export const FINALE_MIN_NARRATION_SEC = 10;
 /** Resume facts in spoken in-scene dialogue (they belong in narration). */
 export const RESUME_LINE = /\b(salary|salaries|\d+\s?k\b|\$\s?\d|benefits|certifications?|bootcamp|graduated|semester|years? old|full[- ]time|promotion|job offer)\b/i;
 const AGE_WORDS = /\b(teen|teenage|young|younger|adult|grown|grown-up|older|old|dad|father|kid|child|little|baby|boy|man)\b/gi;
@@ -225,26 +223,14 @@ export function validateStoryDirectorOutput(data, input = {}) {
   // WIGGLY: the finale is built around one idea, named in finaleThesis.
   if (!String(data?.finaleThesis ?? '').trim())
     err('MISSING_FINALE_THESIS', 'Output has no finaleThesis. Name the one idea the finale is built around, in one plain sentence taken from the family\'s answers; every final-part line serves it.', 'finaleThesis');
-  // WIGGLY: the closing idea gets room to breathe: >=10s of narration in the final part.
+  // The ending grows out of the chosen story (any answers, any amount of narration): no part-source or narration-length rule.
   const last = segments.at(-1);
-  // The finale answer (last scene key the answers hold) gets a part of its own; only its narration counts as finale.
-  const finaleKey = [...SCENE_KEYS].reverse().find((k) => input?.answers?.[k] != null) ?? null;
-  const ofKey = (a) => String(a ?? '').replace(/^answers\./, '').split('.')[0];
-  if (finaleKey && segments.length > 1 && last) {
-    const other = [...new Set((last.answerSources ?? []).map(ofKey).filter((k) => k !== finaleKey))];
-    if (other.length) err('FINALE_MIXED_SOURCES', `The final part also tells ${other.map((k) => `'${k}'`).join(', ')}. Give the finale its own part, built only from '${finaleKey}'; move the other answers' moments into earlier parts.`, `segments.${segments.length - 1}.answerSources`);
-  }
-  if (segments.length > 1 && last) {
-    const narr = (last.shots ?? []).filter((h) => h.narration && (!finaleKey || ofKey(h.narration.source?.answer) === finaleKey)).reduce((n, h) => n + (h.endSec - h.startSec), 0);
-    if (narr < FINALE_MIN_NARRATION_SEC)
-      err('FINALE_TOO_THIN', `Final part carries only ${narr}s of narration${finaleKey ? ` from '${finaleKey}'` : ''}; give the finale's one idea at least ${FINALE_MIN_NARRATION_SEC}s of narration from the finale answer.`, `segments.${segments.length - 1}`);
-  }
-  // WIGGLY: the recipient listens on screen in the finale; the last line is never copied from a role-file example.
+  // The recipient on screen in the finale is a choice, not a rule: a warning only. The last line is never copied from a role-file example.
   const recipient = recipientOf(input?.subject);
   if (recipient && segments.length > 1 && last) {
     const card = cast.find((c) => norm(c.realPerson ?? c.name) === norm(recipient) || norm(c.elementTag).replace(/^@/, '') === norm(recipient));
     const seen = card && (last.shots ?? []).some((h) => String(h.whatWeSee ?? '').includes(card.elementTag));
-    if (!seen) err('RECIPIENT_NOT_IN_FINALE', `${recipient} (the recipient) is ${card ? `not on screen in the final part; put ${card.elementTag}` : `not in the cast; add a cast card for ${recipient} and put her`} on screen listening in at least one final-part shot (max 2 on screen: the narrator and ${recipient}).`, `segments.${segments.length - 1}`);
+    if (!seen) warn('RECIPIENT_NOT_IN_FINALE', `${recipient} (the recipient) is ${card ? `not on screen in the final part; put ${card.elementTag}` : `not in the cast; add a cast card for ${recipient} and put her`} on screen listening in at least one final-part shot (max 2 on screen: the narrator and ${recipient}).`, `segments.${segments.length - 1}`);
   }
   const lastLine = [...(last?.shots ?? [])].reverse().map((h) => h.narration?.line ?? h.dialogue?.line).find(Boolean);
   // No concrete-detail requirement: a plain full sentence from the family is a good last line (a forced detail broke r4's ending).

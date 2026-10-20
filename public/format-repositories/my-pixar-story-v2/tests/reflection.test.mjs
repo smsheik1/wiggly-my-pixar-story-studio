@@ -116,7 +116,8 @@ test('a rewrite that never resubmits keeps the previous valid draft and records 
 // ---- Through the graph: the gate checks the FINAL revision; retries/escalation unchanged ----
 // Inside a LangGraph node the deep agent takes one extra model turn after a valid submit (pre-existing, every agent),
 // so the graph tests use a role-aware fake instead of a strict script: it answers by what it is asked.
-const thin = (t) => { const d = titled(t); d.segments.at(-1).shots.forEach((h) => { delete h.narration; }); return d; };
+// A draft with a real gate error (FINALE_TOO_THIN left with the old finale rule): an em dash in a narrated line.
+const thin = (t) => { const d = titled(t); const h = d.segments.at(-1).shots.find((x) => x.narration); h.narration.line = h.narration.line.replace(/ /, ' \u2014 '); return d; };
 const otherAgents = (agent) => new ScriptedModel([() => call(`submit_${agent.replaceAll('-', '_')}`, json(FIX[agent]))]);
 const assets = () => json('good-approved-assets.json');
 class RoleModel extends ScriptedModel {
@@ -145,9 +146,9 @@ test('graph: a gate-failing first draft fixed by the revisions passes on attempt
   const s = await buildGraph({ deepAgent: { finalReview: false, storyBeats: false, createModel, runsRoot: runs, runId: 'g1' }, onEvent: (e) => events.push(e) }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
   assert.deepEqual(sd.kinds.filter((k) => k !== 'after-submit'), ['draft', 'draft', 'cold-read', 'critique', 'rewrite', 'cold-read', 'critique', 'rewrite']);
-  assert.match(critiqueTexts[0], /FINALE_TOO_THIN/); assert.match(critiqueTexts[0], /Thin draft/); assert.match(critiqueTexts[1], /Still thin/);
+  assert.match(critiqueTexts[0], /WRITING_TELL_EM_DASH/); assert.match(critiqueTexts[0], /Thin draft/); assert.match(critiqueTexts[1], /Still thin/);
   assert.equal(s.attempts['story-director'], 1); assert.equal(s.storyDirector.masthead.title, 'Fixed');
-  assert.ok(!s.gateIssues['story-director'].some((i) => i.code === 'FINALE_TOO_THIN'));
+  assert.ok(!s.gateIssues['story-director'].some((i) => i.code === 'WRITING_TELL_EM_DASH'));
   const res = events.filter((e) => e.agent === 'story-director' && e.type === 'attempt-result');
   assert.equal(res.length, 1); assert.equal(res[0].output.masthead.title, 'Fixed');
   const refl = s.reflections['story-director'];
@@ -165,7 +166,7 @@ test('graph: if the final revision fails the gate, the existing retry runs (with
   };
   const s = await buildGraph({ deepAgent: { finalReview: false, storyBeats: false, createModel, runsRoot: runs, runId: 'g2' } }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done'); assert.equal(s.attempts['story-director'], 2); assert.equal(s.storyDirector.masthead.title, 'Good final');
-  assert.ok(s.validationErrors.find((v) => v.node === 'story-director').errors.some((i) => i.code === 'FINALE_TOO_THIN'));
-  assert.ok(!/FINALE_TOO_THIN/.test(drafts[0])); assert.match(drafts[2], /FINALE_TOO_THIN/, 'attempt 2 gets the gate errors of the final revision as retry notes');
+  assert.ok(s.validationErrors.find((v) => v.node === 'story-director').errors.some((i) => i.code === 'WRITING_TELL_EM_DASH'));
+  assert.ok(!/WRITING_TELL_EM_DASH/.test(drafts[0])); assert.match(drafts[2], /WRITING_TELL_EM_DASH/, 'attempt 2 gets the gate errors of the final revision as retry notes');
   assert.deepEqual(s.reflections['story-director'].map((r) => r.attempt), [1, 2]);
 }));
