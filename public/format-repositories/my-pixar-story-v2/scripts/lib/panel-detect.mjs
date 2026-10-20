@@ -49,12 +49,18 @@ export function detectPanels(gray, w, h, { dark = 80, minFrac = 0.12, edgeDark =
   // drop boxes nested inside another candidate
   cand = cand.filter((c) => !cand.some((o) => o !== c && o.x0 <= c.x0 && o.y0 <= c.y0 && o.x1 >= c.x1 && o.y1 >= c.y1));
   const all = cand.map((c) => {
-    // interior: step in past the border on each side
-    let t = 0; const cy = ((c.y0 + c.y1) / 2) | 0;
-    while (t < (c.x1 - c.x0) / 4 && lab[cy * w + c.x0 + t] === c.id) t++;
-    const pad = t + 2; const x = c.x0 + pad, y = c.y0 + pad, ww = c.x1 - c.x0 - 2 * pad, hh = c.y1 - c.y0 - 2 * pad;
+    // interior: border thickness = smallest median run of border pixels in from each edge (dark content that touches the
+    // border on some scan lines does not inflate it), capped at 8% of the box
+    const bw = c.x1 - c.x0, bh = c.y1 - c.y0, cap = Math.max(2, Math.round(Math.min(bw, bh) * 0.08));
+    const run = (x, y, dx, dy) => { let t = 0; while (t < cap && lab[(y + dy * t) * w + (x + dx * t)] === c.id) t++; return t; };
+    const med = (a) => a.sort((p, q) => p - q)[a.length >> 1];
+    const ks = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
+    const t = Math.min(med(ks.map((f) => run(c.x0 + Math.round(bw * f), c.y0, 0, 1))), med(ks.map((f) => run(c.x0 + Math.round(bw * f), c.y1, 0, -1))),
+      med(ks.map((f) => run(c.x0, c.y0 + Math.round(bh * f), 1, 0))), med(ks.map((f) => run(c.x1, c.y0 + Math.round(bh * f), -1, 0))));
+    const pad = t + 2; const x = c.x0 + pad, y = c.y0 + pad, ww = bw - 2 * pad, hh = bh - 2 * pad;
     let s = 0, s2 = 0, n = 0;
-    for (let yy = y; yy < y + hh; yy += 3) for (let xx = x; xx < x + ww; xx += 3) { const v = gray[yy * w + xx]; s += v; s2 += v * v; n++; }
+    const mx = Math.round(ww * 0.04), my = Math.round(hh * 0.04); // variance on the inner area only (no border anti-aliasing)
+    for (let yy = y + my; yy < y + hh - my; yy += 3) for (let xx = x + mx; xx < x + ww - mx; xx += 3) { const v = gray[yy * w + xx]; s += v; s2 += v * v; n++; }
     const std = Math.sqrt(Math.max(0, s2 / n - (s / n) ** 2));
     return { x, y, w: ww, h: hh, std: +std.toFixed(1), blank: std < blankStd };
   });
