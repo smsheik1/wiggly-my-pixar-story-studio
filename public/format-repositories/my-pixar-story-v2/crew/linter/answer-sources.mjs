@@ -1,7 +1,7 @@
 // WIGGLY answer tracing (deterministic). Every spoken/narrated line in the Story Director's output carries
 // source: { answer: '<path into input.answers>', kind?: 'connective' }, and every part
 // lists answerSources (the answers whose memories it depicts). This checks each cited answer exists and that the
-// line really comes from it: its facts come from that answer (lines are written freely, not quoted), and names / numbers / times in a line appear in the answer it cites (so a detail cannot be
+// line really comes from it: its facts come from that answer (lines are written freely; only a line marked 'verbatim' must be near word for word), and names / numbers / times in a line appear in the answer it cites (so a detail cannot be
 // borrowed from a different answer). Spelling variants (case, hyphens, possessives, plurals, one-letter typos,
 // digits vs number words) count as the same word.
 // The LLM audit in scripts/trace-answers.mjs (extract facts -> trace each fact) stays a post-run report; this is
@@ -9,7 +9,6 @@
 
 export const SOURCE_KINDS = ['verbatim', 'paraphrase', 'connective'];
 export const NEAR_VERBATIM = 0.8; // share of the line's words reproduced in order from one answer passage
-export const PARAPHRASE_MIN = 0.5; // share of the line's key words found in the cited answer
 export const CONNECTIVE_MAX_WORDS = 12;
 /** Connective (unsourced, scene-setting) lines allowed before a warning: max(2, 20% of all lines). */
 export const connectiveCap = (lines) => Math.max(2, Math.floor(lines * 0.2));
@@ -165,10 +164,12 @@ export function traceLines(data, input = {}) {
         row.problems.push({ code: 'LINE_FACT_NOT_IN_SOURCE', fact: n, foundIn: found((t) => textHasWord(t, n)) });
       for (const v of numbersIn(d.line)) if (!scopeNums.has(v))
         row.problems.push({ code: 'LINE_FACT_NOT_IN_SOURCE', fact: String(v), foundIn: found((t) => numbersIn(t).has(v)) });
-      if (!conn) {
-        row.score = keyWordScore(d.line, text, free);
-        if (row.score < PARAPHRASE_MIN) row.problems.push({ code: 'LINE_SOURCE_MISMATCH' });
-      } else if (words(d.line).length > CONNECTIVE_MAX_WORDS) row.problems.push({ code: 'CONNECTIVE_LINE_LONG' });
+      // Wording is free: only facts are checked. A line marked 'verbatim' presents itself as the family's own words, so it
+      // must be near word for word; every other line is never word-matched against its answer.
+      if (src.kind === 'verbatim') {
+        row.score = verbatimScore(d.line, text);
+        if (row.score < NEAR_VERBATIM) row.problems.push({ code: 'LINE_NOT_VERBATIM' });
+      } else if (conn && words(d.line).length > CONNECTIVE_MAX_WORDS) row.problems.push({ code: 'CONNECTIVE_LINE_LONG' });
     }
   }));
   return rows;
@@ -194,7 +195,7 @@ export function checkAnswerSources(data, input = {}) {
     else if (p.code === 'LINE_FACT_NOT_IN_SOURCE') err(p.code, r.kind === 'connective'
       ? `${at} is marked connective but states '${p.fact}'. Connective lines carry no facts (names, numbers, times)${p.foundIn.length ? `; '${p.fact}' is in '${p.foundIn.join("', '")}', so cite that answer` : '; the family never wrote it, so drop it'}.`
       : `${at} says '${p.fact}', which is not in the answer it cites ('${r.answer}')${p.foundIn.length ? `; it appears in '${p.foundIn.join("', '")}' instead. Do not move a detail from one memory into another: cite that answer, or drop the detail` : '. Do not invent names, numbers or times; use only what the family wrote'}.`, `${r.path}.line`);
-    else if (p.code === 'LINE_SOURCE_MISMATCH') warn(p.code, `${at} cites '${r.answer}' but only ${pct(r.score)} of its key words are in that answer. Check it tells that answer's facts and cite the answer it really comes from.`, `${r.path}.source`);
+    else if (p.code === 'LINE_NOT_VERBATIM') err(p.code, `${at} is marked kind 'verbatim' (the family's own words) but only ${pct(r.score)} of it is word for word in '${r.answer}'. Quote their sentence near word for word, or drop kind 'verbatim' and write the line in your own natural words (only its facts must match).`, `${r.path}.source.kind`);
     else if (p.code === 'CONNECTIVE_LINE_LONG') warn(p.code, `${at} is a connective line of ${words(r.line).length} words (max ${CONNECTIVE_MAX_WORDS}). Connective lines only set the scene; anything longer should come from an answer.`, `${r.path}.line`);
   }
   const conn = rows.filter((r) => r.kind === 'connective');

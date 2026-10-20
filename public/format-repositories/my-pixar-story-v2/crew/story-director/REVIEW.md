@@ -9,8 +9,11 @@ scenes (R4, R7, R2), then lines (R1, R5, R9). Do not fix lines in a beat that sh
 Answer each check PASS or FAIL. A FAIL cites the shot id (`part.shot`, or the field) and the exact quote; R1 also names the answer. No evidence, no FAIL.
 Fix: `3.4: Theo's age is 9 in the answers, not 10`, not `tighten the middle`. Every FIXES item must name the shot ids it touches (e.g. `3.4`, `2.1-2.2`); length fixes must name the specific shots to cut, never a blanket "cut to 90s".
 
-- **R1 Fidelity:** Does every line tell only facts in the answers, clearly and naturally? A connective line passes only if short and
-  needed to follow the next.
+- **R1 Fidelity:** Are the facts in every line true to the answers (no invented or moved names, numbers, times, places or events)?
+  Wording is free: a line in natural words of its own passes; never FAIL a line for not matching the answer's wording, and
+  never fix one by copying the questionnaire wording back in. A line that reads like a survey reply fails (quote it). A line
+  marked as the family's own words must quote them near word for word. A connective line passes only if short and needed to
+  follow the next.
 - **R2 Invented details:** Is every object, place, name, age and event in the answers, cast notes or photo notes? Neutral set
   dressing (couch, window) passes unless it becomes a beat or callback.
 - **R3 Setup and payoff:** Does every line that depends on an earlier fact still have that fact?

@@ -65,12 +65,13 @@ test('answer ids are key paths into answers; unknown ids and missing sources fai
   assert.deepEqual(codes(run([['{Patience is just love that waits.}', 'childhood.memory', 'verbatim']])), []);
 });
 
-test('lines are written freely from the answer: rewording passes; a line sharing nothing with its answer only warns', () => {
+test('lines are written freely from the answer: rewording passes; no word-overlap check; only lines marked verbatim must quote', () => {
   assert.deepEqual(codes(run([['{She said patience is just love that waits.}', 'childhood.memory']])), []);
   assert.deepEqual(codes(run([['{Gran told me patience means waiting, with love.}', 'childhood.memory']])), [], 'natural rewording is fine');
-  assert.deepEqual(codes(run([['{Gran told me waiting with love is patience.}', 'childhood.memory', 'verbatim']])), [], 'old kinds are accepted, never word-checked');
-  const off = run([['{We raced go-karts down the hill.}', 'childhood.memory']]);
-  assert.deepEqual(codes(off), ['LINE_SOURCE_MISMATCH']); assert.equal(off[0].severity, 'warning'); assert.match(off[0].message, /0% of its key words/);
+  const fake = run([['{Gran told me waiting with love is patience.}', 'childhood.memory', 'verbatim']]);
+  assert.deepEqual(codes(fake), ['LINE_NOT_VERBATIM'], 'a line marked as the family\'s own words must be near word for word'); assert.equal(fake[0].severity, 'error');
+  assert.deepEqual(codes(run([['{Gran told me waiting with love is patience.}', 'childhood.memory', 'paraphrase']])), [], 'paraphrase is never word-checked');
+  assert.deepEqual(codes(run([['{We raced go-karts down the hill.}', 'childhood.memory']])), [], 'wording is free: no word-overlap check (facts are checked separately)');
 });
 
 test('a detail borrowed from a different answer fails and names the answer it is really in (the "8pm" failure)', () => {
