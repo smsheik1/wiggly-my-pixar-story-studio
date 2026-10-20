@@ -1,6 +1,7 @@
 // Story Director v2 output contract (Zod, plain JS).
 // BASE: Gemini's StoryDirectorOutputSchema (gemini-schema.ts). Wiggly additions are marked "WIGGLY".
 import { z } from 'zod';
+import { withRenderedArtifacts, buildStoryboardSheets } from '../../scripts/lib/sd-render.mjs';
 /** 'none' / 'n/a' / 'no accessory' etc. count as empty: no accessory. */
 export const NO_ACCESSORY = /^(?:none|n\/?a|nil|null|-+|no (?:signature |always[- ]worn |worn )?(?:accent|accessor(?:y|ies)|item)s?(?: given| stated)?)\.?$/i;
 /** The accent text, or '' when there is none (missing, empty, whitespace, 'none'). */
@@ -124,11 +125,12 @@ export const StoryboardSheetSchema = z.object({
   panels: z.array(StoryboardPanelSchema).min(1).max(MAX_PANELS_PER_SHEET, `A storyboard sheet has at most ${MAX_PANELS_PER_SHEET} panels`),
 });
 
-/** Read storyboard sheets from new outputs, or from old single-sheet `storyboardPrompt` run outputs (segment 1). */
+/** Storyboard sheets of an output: the attached ones (parsed outputs carry code-built sheets; old run outputs carry
+ * model-written ones or a single-sheet `storyboardPrompt`), else built in code from the shots (scripts/lib/sd-render.mjs). */
 export function storyboardSheetsOf(d) {
   if (Array.isArray(d?.storyboardSheets)) return d.storyboardSheets;
   if (d?.storyboardPrompt) return [{ segmentId: d.segments?.[0]?.segmentId ?? 1, ...d.storyboardPrompt }];
-  return [];
+  return Array.isArray(d?.segments) ? buildStoryboardSheets(d) : [];
 }
 
 // WIGGLY: the defined set of story locations; every shot names one of these exactly.
@@ -152,9 +154,8 @@ export const StoryDirectorOutputSchema = z.object({
   cast: z.array(CastCardSchema).min(1),
   locations: z.array(StoryLocationSchema).min(1).describe('WIGGLY: every background the film needs, each used by at least one shot'),
   segments: z.array(ScriptSegmentSchema).min(1),
-  // WIGGLY: one storyboard sheet (max 8 panels) per part, extra sheets when a part has >8 shots; every shot drawn once.
-  storyboardSheets: z.array(StoryboardSheetSchema).min(1),
-  htmlScriptDocument: z.string().min(200).describe('Rendered HTML card deck formatted in Fraunces, Karla, Space Mono and warm paper palette'),
+  // WIGGLY: storyboardSheets and htmlScriptDocument are no longer written by the model; parseStagePlay builds them in
+  // code from this JSON (scripts/lib/sd-render.mjs), so any model-written copies are dropped.
   // WIGGLY
   clarifyingQuestion: z.string().min(1).nullable().default(null),
   assumptions: z.array(z.string()).default([]),
@@ -193,5 +194,5 @@ export function parseStagePlay(input) {
   }
   const r = StoryDirectorOutputSchema.safeParse(obj);
   if (!r.success) throw new StagePlayParseError(r.error.issues);
-  return { ...r.data, cast: dropEmptyAccents(r.data.cast) };
+  return withRenderedArtifacts({ ...r.data, cast: dropEmptyAccents(r.data.cast) });
 }

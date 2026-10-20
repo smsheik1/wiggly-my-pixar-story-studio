@@ -112,7 +112,7 @@ test('scope: shot and part targets; cast/locations append-only; finaleThesis onl
   assert.deepEqual(codes(checkPatchScope(d, fin, parseTarget('part:1', d))), ['PATCH_OUTSIDE_TARGET']);
   const panel = structuredClone(d); panel.storyboardSheets[0].panels[1].whatIsInFrame = '@Shaz, close, chin down, warm medium brown skin.';
   assert.deepEqual(checkPatchScope(d, panel, parseTarget('shot:1.2', d)), []);
-  assert.deepEqual(codes(checkPatchScope(d, panel, parseTarget('shot:1.3', d))), ['PATCH_OUTSIDE_TARGET']);
+  assert.deepEqual(checkPatchScope(d, panel, parseTarget('shot:1.3', d)), [], 'storyboard sheets are rebuilt in code, never a patch violation');
 });
 
 // ---- downstream impact
@@ -192,7 +192,8 @@ test('patch run: a new run with only the target changed; only the affected part 
   for (const f of ['character-architect.json', 'location-scout.json']) assert.equal(await out(f), await priorOut(f), f);
   const nsd = JSON.parse(await out('story-director.json')), psd = sd();
   assert.equal(nsd.segments[0].shots[1].dialogue.line, NEW);
-  assert.deepEqual(diffPaths(psd, nsd).map((c) => c.path.join('.')), ['segments.0.shots.1.dialogue.line'], 'unchanged parts stay identical');
+  const derived = /^(storyboardSheets|htmlScriptDocument)\b/; // rebuilt in code from the JSON
+  assert.deepEqual(diffPaths(psd, nsd).map((c) => c.path.join('.')).filter((x) => !derived.test(x)), ['segments.0.shots.1.dialogue.line'], 'unchanged parts stay identical');
   const nsc = JSON.parse(await out('seedance-compiler.json')), psc = normalizePrior({ seedanceCompiler: JSON.parse(await priorOut('seedance-compiler.json')) }).seedanceCompiler;
   assert.deepEqual(nsc.segments[1], psc.segments[1], 'part 2 prompt reused unchanged');
   assert.equal(nsc.totalRuntimeSec, psc.totalRuntimeSec);

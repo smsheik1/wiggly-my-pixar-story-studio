@@ -88,7 +88,8 @@ test('rounds = 0 behaves exactly as before: one draft, no extra model calls, no 
     const id = `zero${config.reflectionRounds ?? 'u'}`;
     const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: id })({ agent: 'story-director', config, input: INPUT, attempt: 1, gate: () => assert.fail('gate is not called without reflection') });
     assert.equal(m.calls.length, 3);
-    assert.deepEqual(out, parseStagePlay(json(FIX['story-director'])));
+    const { storyboardSheets: _sb, htmlScriptDocument: _html, ...want } = parseStagePlay(json(FIX['story-director'])); // the graph's parse adds these in code
+    assert.deepEqual(out, want);
     assert.equal(out[REFLECTION], undefined);
     assert.ok(!existsSync(join(runs, `${id}_attempt-1`, 'story-director', 'reflection')));
   }

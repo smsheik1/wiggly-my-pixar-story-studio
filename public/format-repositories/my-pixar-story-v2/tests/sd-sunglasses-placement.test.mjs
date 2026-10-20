@@ -12,7 +12,7 @@ const good = () => JSON.parse(readFileSync(new URL('./fixtures/good-stage-play.j
 const codes = (d) => validateStoryDirectorOutput(d).issues.filter((i) => i.severity === 'error').map((i) => i.code);
 
 test('role.md: signature accessories only in cast cards and storyboard panels, never in shot text; eyes visible', () => {
-  assert.match(role, /Accessories live ONLY in the cast cards and the storyboard panel lines/);
+  assert.match(role, /Accessories live ONLY in the cast cards \(code copies them into the storyboard panels\)/);
   assert.match(role, /never mentions the accessory/);
   assert.match(role, /so it never drops out between shots/);
   assert.match(role, /eyes are always visible/);

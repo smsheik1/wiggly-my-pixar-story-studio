@@ -81,14 +81,10 @@ test('RUNTIME_EXCEEDS_CAP at 180s', () => {
 test('schema: parse failures throw StagePlayParseError with paths', () => {
   assert.throws(() => parseStagePlay('{nope'), StagePlayParseError);
   const bad = (fn, re) => { const d = good(); fn(d); assert.throws(() => parseStagePlay(d), (e) => e instanceof StagePlayParseError && re.test(e.message)); };
-  bad((d) => { delete d.htmlScriptDocument; }, /htmlScriptDocument/);
-  bad((d) => { d.storyboardSheets[0].targetEngine = 'gpt-image-2'; }, /targetEngine/);
-  bad((d) => { d.storyboardSheets[0].fullPrompt += '\nx'; }, /single line/);
   bad((d) => { delete d.cast[0].skinTone; }, /skinTone/);
   bad((d) => { d.cast[2].age = 15; }, /depicted as 18/);
   bad((d) => { d.segments[0].shots[1].dialogue.speaker = '@Dad'; }, /not a cast elementTag/);
   bad((d) => { d.segments[0].shots[0].startSec = 1; }, /start at 0/);
-  bad((d) => { const p = d.storyboardSheets[0].panels; while (p.length < 9) p.push({ ...p[0] }); }, /at most 8 panels/);
   bad((d) => { d.segments[0].targetDurationSec = 31; }, /targetDurationSec/);
 });
 test('schema: defaults (family true, clarifyingQuestion null, assumptions [])', () => {

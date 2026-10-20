@@ -38,12 +38,9 @@ export const BANNED_JARGON = [
 // Shared speech rate (3 words/sec + 1s lead/tail pad, crew/linter/speech.mjs); same rule as the Seedance Compiler gate.
 export function lineBudget(words) { return words > MAX_LINE_WORDS ? null : secondsNeeded(words); }
 // WIGGLY storyboard sheets -------------------------------------------------------
-export const SHEET_OPENING = "An eight-panel colour storyboard sheet";
-export const SHEET_LAYOUT = 'two even rows of four panels';
-/** The exact text a real panel line starts with, e.g. 'Panel 4, labelled "1.4":'. */
-export const panelLabel = (k, seg, shot) => `Panel ${k}, labelled "${seg}.${shot}":`;
-/** The exact line for an unused slot on an eight-panel sheet. */
-export const emptyPanelLine = (k) => `Panel ${k} [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text.`;
+// Sheets are built in code (scripts/lib/sd-render.mjs); these checks guard that builder and old model-written outputs.
+export { SHEET_OPENING, SHEET_LAYOUT, panelLabel, emptyPanelLine } from '../../scripts/lib/sd-render.mjs';
+import { SHEET_OPENING, SHEET_LAYOUT, panelLabel, emptyPanelLine } from '../../scripts/lib/sd-render.mjs';
 /** Every shot in exactly one panel, in story order; max 8 per sheet; labels use the real part + shot numbers. */
 export function checkStoryboardSheets(data, err) {
   const sheets = storyboardSheetsOf(data);
@@ -64,7 +61,9 @@ export function checkStoryboardSheets(data, err) {
       else if (seen.has(key)) err('STORYBOARD_DUPLICATE_SHOT', `Part ${sh.segmentId} shot ${pn.shotNumberRef} is drawn twice (sheet ${seen.get(key) + 1} and sheet ${si + 1}); every shot gets exactly one panel.`, `${p}.panels.${i}`);
       else { seen.set(key, si); order.push(key); }
       const t = String(pn.whatIsInFrame ?? '').toLowerCase();
-      if (!SKIN_WORDS.some((w) => t.includes(w)))
+      const shot = segs.find((sg) => sg.segmentId === sh.segmentId)?.shots?.find((h) => h.shotNumber === pn.shotNumberRef);
+      const nobody = Array.isArray(shot?.onScreen) && shot.onScreen.length === 0; // an empty frame has no skin to name
+      if (!nobody && !SKIN_WORDS.some((w) => t.includes(w)))
         err('MISSING_SKIN_TONE_IN_PANEL', `Storyboard sheet ${si + 1} panel ${pn.panelNumber ?? i + 1} does not name skin tone.`, `${p}.panels.${i}`);
       if (!fp.includes(panelLabel(i + 1, sh.segmentId, pn.shotNumberRef)))
         err('STORYBOARD_PANEL_LABEL', `Storyboard sheet ${si + 1}: fullPrompt must label panel ${i + 1} as '${panelLabel(i + 1, sh.segmentId, pn.shotNumberRef)}' (the real part.shot).`, `${p}.fullPrompt`);

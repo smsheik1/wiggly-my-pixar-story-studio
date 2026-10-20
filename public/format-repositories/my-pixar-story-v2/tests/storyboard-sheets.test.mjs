@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateStoryDirectorOutput, panelLabel, emptyPanelLine, SHEET_OPENING, SHEET_LAYOUT } from '../crew/linter/check-stage-play.mjs';
-import { StoryDirectorOutputSchema, storyboardSheetsOf } from '../crew/story-director/schema.mjs';
+import { StoryDirectorOutputSchema, storyboardSheetsOf, parseStagePlay } from '../crew/story-director/schema.mjs';
 
 const good = () => JSON.parse(readFileSync(new URL('./fixtures/good-stage-play.json', import.meta.url), 'utf8'));
 const codes = (d) => validateStoryDirectorOutput(d).issues.filter((i) => i.severity === 'error').map((i) => i.code);
@@ -46,7 +46,7 @@ test('over 8 panels -> STORYBOARD_PANEL_COUNT and schema rejects; a 9+ shot part
   const nums = d.segments[0].shots.map((s) => s.shotNumber);
   const big = good(); big.segments = d.segments; big.storyboardSheets = [sheet(d, 1, nums), d.storyboardSheets[1]];
   assert.ok(sbCodes(big).includes('STORYBOARD_PANEL_COUNT'));
-  assert.equal(StoryDirectorOutputSchema.safeParse(big).success, false);
+  assert.deepEqual(parseStagePlay(big).storyboardSheets.map((s) => [s.segmentId, s.panels.length]), [[1, 8], [1, 3], [2, 3]], 'parse rebuilds the sheets in code');
   d.storyboardSheets = [sheet(d, 1, nums.slice(0, 8)), sheet(d, 1, nums.slice(8)), d.storyboardSheets[1]];
   assert.deepEqual(sbCodes(d), []);
 });

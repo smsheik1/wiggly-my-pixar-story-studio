@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
 
 const role = readFileSync(new URL('../crew/story-director/role.md', import.meta.url), 'utf8');
+const render = readFileSync(new URL('../scripts/lib/sd-render.mjs', import.meta.url), 'utf8');
 const gemini = readFileSync(new URL('./fixtures/gemini-SKILL.md', import.meta.url), 'utf8');
 test('role.md documents every top-level output key', () => {
   for (const k of Object.keys(StoryDirectorOutputSchema.shape)) assert.ok(role.includes(`"${k}"`), `role.md missing ${k}`);
@@ -32,16 +33,21 @@ test('role.md diverges from Gemini only by additions + engine swap', () => {
     .replaceAll('Painted digital storyboard art — soft loose brushwork, simplified appealing character shapes, minimal facial detail,',
       'Each panel is a polished 3D Pixar-style animated film render with appealing stylized characters, soft global illumination,');
   const roleNorm = norm(role);
-  const missing = norm(gemini).split('\n').filter((l) => l.trim() && !l.startsWith('description:') && !roleNorm.includes(l));
+  // Approved removal (Shaz, 2026-10-20): code builds the HTML deck and storyboard sheets (scripts/lib/sd-render.mjs), so
+  // Gemini's deck format (typography, document structure) and all of section 5, plus their checklist lines, left the role.
+  const g = gemini.replace(/^Deliver the finalized screenplay[\s\S]*?(?=^### The Shot Card Anatomy)/m, '')
+    .replace(/^## 4\. The HTML Script Card Deck Format\n/m, '').replace(/^## 5\. [\s\S]*?(?=^## 6\.)/m, '')
+    .replace(/^- \[ \] Storyboard prompt names skin tone in every panel line\.\n/m, '');
+  const missing = norm(g).split('\n').filter((l) => l.trim() && !l.startsWith('description:') && !roleNorm.includes(l));
   assert.deepEqual(missing, []);
 });
-test('storyboard default style is 3D Pixar render, not painted', () => {
-  assert.ok(role.includes('polished 3D Pixar-style animated film render'));
-  assert.ok(!/loose brushwork/.test(role));
+test('storyboard default style is 3D Pixar render, not painted (now in code)', () => {
+  assert.ok(render.includes('polished 3D Pixar-style animated film render'));
+  assert.ok(!/loose brushwork/.test(render) && !/loose brushwork/.test(role));
 });
-test('storyboard template is one eight-panel sheet per part with exact "P.S" labels and empty slots', () => {
-  assert.ok(role.includes('Panel 1, labelled "P.S":') && role.includes('"storyboardSheets"'));
-  assert.ok(role.includes('Panel 8 [empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text.'));
-  assert.ok(!role.includes('[Part P, shot S]') && !role.includes('[LAYOUT]') && !/four panels on the top row|a single row of/.test(role));
-  assert.ok(!/Panel 8 \[shot 8\]/.test(role) && !role.includes('"storyboardPrompt"'));
+test('role no longer asks the model for the HTML deck or storyboard sheets; code owns the eight-panel template', () => {
+  assert.ok(!role.includes('"storyboardSheets"') && !role.includes('"htmlScriptDocument": "') && !role.includes('Panel 1, labelled "P.S":'));
+  assert.ok(role.includes('Code builds the HTML script card deck and the storyboard sheet prompts'));
+  assert.ok(render.includes('two even rows of four panels') && render.includes('[empty]: a plain blank off-white frame with a thin dark border, clearly empty, no characters, no drawing, no text.'));
+  assert.ok(!role.includes('"storyboardPrompt"'));
 });

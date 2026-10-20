@@ -52,7 +52,7 @@ export function diffPaths(a, b, path = []) {
 /** Plain-language description of what a target may change (shown to the agent and printed by the CLI). */
 export function describeScope(t) {
   const ripple = 'its shot\'s endSec, and the startSec/endSec of the later shots in the same part shifted by exactly the same number of seconds (with the part\'s targetDurationSec, shapeBar.parts duration and shapeBar.totalRuntimeSec moved by that amount) if the line needs a longer shot';
-  const common = 'masthead.draftNumber, assumptions and htmlScriptDocument (the rendered deck) may be updated to match.';
+  const common = 'masthead.draftNumber and assumptions may be updated to match (the HTML deck and storyboard sheets are rebuilt in code).';
   if (t.kind === 'line') return `Only the ${t.line} line of shot ${t.segmentId}.${t.shotNumber} (segments[${t.si}].shots[${t.hi}].${t.line}: speaker, line, flags, source) may change, plus ${ripple}, and segments[${t.si}].answerSources. ${common} Everything else is locked.`;
   if (t.kind === 'shot') return `Only shot ${t.segmentId}.${t.shotNumber} (segments[${t.si}].shots[${t.hi}], every field except shotNumber and startSec) may change, plus ${ripple}; the present and props of the scene lock that contains it; segments[${t.si}].answerSources; that shot's storyboard panel and the fullPrompt of its sheet; and new cast cards or locations appended at the end of cast / locations (existing ones are locked). ${common} The number of shots in the part is locked (target the part to add or remove shots).`;
   return `Only part ${t.segmentId} (segments[${t.si}], every field except segmentId) may change, plus its shapeBar.parts entry and shapeBar.totalRuntimeSec, its storyboard sheets, and new cast cards or locations appended at the end of cast / locations (existing ones are locked).${t.isFinal ? ' This is the final part, so finaleThesis may change too.' : ''} ${common} Every other part is locked.`;
@@ -81,8 +81,8 @@ export function checkPatchScope(prior, next, target) {
   for (const ch of changes) {
     const p = ch.path, [k0, k1, k2, k3, k4] = p;
     const at = pathText(p);
-    // always allowed: derived or bookkeeping fields
-    if (k0 === 'htmlScriptDocument' || k0 === 'assumptions' || (k0 === 'masthead' && k1 === 'draftNumber')) continue;
+    // always allowed: derived or bookkeeping fields (the deck and storyboard sheets are rebuilt in code from the JSON)
+    if (k0 === 'htmlScriptDocument' || k0 === 'storyboardSheets' || k0 === 'assumptions' || (k0 === 'masthead' && k1 === 'draftNumber')) continue;
     if (k0 === 'finaleThesis' && t.kind === 'part' && isFinal) continue;
     // append-only cast and locations (shot and part targets)
     if ((k0 === 'cast' || k0 === 'locations') && p.length === 1) {
