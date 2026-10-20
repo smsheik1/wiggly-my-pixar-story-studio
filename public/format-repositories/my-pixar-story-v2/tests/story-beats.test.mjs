@@ -1,0 +1,73 @@
+// Story first: beats (A) + critique/rewrite (B) plain-text calls before the shots call (C). Scripted model, zero network.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { AIMessage } from '@langchain/core/messages';
+import { deepAgentInvoke, STORY } from '../graph/deep-agent-node.mjs';
+import { storyBeatsEnabled, rewrittenBeats, loadBeatsPrompt, loadCritiquePrompt } from '../graph/story-beats.mjs';
+import { V2_MODELS } from '../config/models.mjs';
+
+class ScriptedModel extends BaseChatModel {
+  constructor(script) { super({}); this.script = script; this.calls = []; }
+  _llmType() { return 'scripted'; }
+  bindTools() { return this; }
+  async _generate(messages) { this.calls.push(messages); const step = this.script.shift(); assert.ok(step, 'unexpected call'); return { generations: [{ text: '', message: step(messages) }] }; }
+}
+const call = (name, args) => new AIMessage({ content: '', tool_calls: [{ name, args, id: 'c' + Math.random().toString(36).slice(2, 7), type: 'tool_call' }] });
+const say = (t) => new AIMessage(t);
+const text = (msgs) => msgs.map((m) => (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))).join('\n');
+const play = () => JSON.parse(readFileSync(new URL('./fixtures/good-stage-play.json', import.meta.url), 'utf8'));
+const INPUT = { subject: 'Test family', answers: { finale: 'I want her to know she can always call me.' } };
+
+test('config and gating: on for the Story Director only, off in patch mode', () => {
+  assert.equal(V2_MODELS['story-director'].storyBeats, true);
+  assert.equal(storyBeatsEnabled('story-director', { storyBeats: true }), true);
+  assert.equal(storyBeatsEnabled('story-director', { storyBeats: true }, { scope: 'part 2' }), false);
+  assert.equal(storyBeatsEnabled('story-director', { storyBeats: true }, { task: 'patch' }), false);
+  assert.equal(storyBeatsEnabled('character-architect', { storyBeats: true }), false);
+  assert.equal(storyBeatsEnabled('story-director', {}), false);
+  assert.equal(rewrittenBeats('1. ok\n## Rewritten beats\nThesis: X'), 'Thesis: X');
+});
+
+test('prompts are generic: no JSON gate codes, no toy example names', () => {
+  for (const p of [loadBeatsPrompt(), loadCritiquePrompt()]) {
+    assert.ok(p && p.length < 3000);
+    assert.doesNotMatch(p, /\b(Theo|Gran|Wren|Ben|Miss Park)\b/);
+    assert.doesNotMatch(p, /\b[A-Z]+_[A-Z_]+\b/, 'no gate codes');
+  }
+});
+
+test('A -> B -> C order: beats see answers, critique sees beats, shots task carries the rewritten beats; artifacts saved', async () => {
+  const runs = await mkdtemp(join(tmpdir(), 'wiggly-beats-'));
+  try {
+    const seen = {};
+    const m = new ScriptedModel([
+      (msgs) => { seen.a = text(msgs); return say('Thesis: she can always call.\nBeat 1: first call.'); },
+      (msgs) => { seen.b = text(msgs); return say('1. Build: fine.\n## Rewritten beats\nThesis: she can always call.\nBeat 1 (rewritten): the first call.'); },
+      (msgs) => { seen.c = text(msgs); return call('submit_story_director', play()); },
+    ]);
+    const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'sf' })({ agent: 'story-director', config: { model: 'x', storyBeats: true, reflectionRounds: 0 }, input: INPUT, attempt: 1 });
+    assert.equal(m.calls.length, 3);
+    assert.match(seen.a, /Thesis first/); assert.match(seen.a, /always call me/);
+    assert.match(seen.b, /Rewritten beats/); assert.match(seen.b, /Beat 1: first call/);
+    assert.match(seen.c, /approved beats/); assert.match(seen.c, /Beat 1 \(rewritten\)/); assert.doesNotMatch(seen.c, /Beat 1: first call/);
+    const dir = join(runs, 'sf_attempt-1', 'story-director', 'story');
+    assert.match(await readFile(join(dir, 'beats.md'), 'utf8'), /first call/);
+    assert.match(await readFile(join(dir, 'critique.md'), 'utf8'), /Build: fine/);
+    assert.match(await readFile(join(dir, 'approved-beats.md'), 'utf8'), /rewritten/);
+    assert.equal(out[STORY].files.length, 3);
+  } finally { await rm(runs, { recursive: true, force: true }); }
+});
+
+test('off: exactly the old single shots call', async () => {
+  const runs = await mkdtemp(join(tmpdir(), 'wiggly-beats-'));
+  try {
+    const m = new ScriptedModel([() => call('submit_story_director', play())]);
+    await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'off' })({ agent: 'story-director', config: { model: 'x', reflectionRounds: 0 }, input: INPUT });
+    assert.equal(m.calls.length, 1);
+  } finally { await rm(runs, { recursive: true, force: true }); }
+});

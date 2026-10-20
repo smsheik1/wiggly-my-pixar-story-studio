@@ -28,6 +28,7 @@ import { SeedanceCompilerOutputSchema, SeedanceSubmitSchema, withAssembledPrompt
 import { loadSkill, loadReview, outputCap } from '../config/models.mjs';
 import { runColdRead } from './cold-read.mjs';
 import { bestOfEnabled, runBestOf } from './best-of.mjs';
+import { storyBeatsEnabled, runStoryBeats, shotsTask } from './story-beats.mjs';
 
 export const RUNS_ROOT = fileURLToPath(new URL('../runs/', import.meta.url));
 export const OUTPUT_SCHEMAS = {
@@ -253,6 +254,8 @@ export async function openRouterModel(config, _agent, { apiKey = process.env.OPE
 // ---- Reflection: the agent critiques its own draft, then rewrites it (config.reflectionRounds rounds) ----
 /** Symbol under which deepAgentInvoke attaches the reflection log to its output (never serialized, never parsed). */
 export const REFLECTION = Symbol.for('wiggly.v2.reflection');
+/** Symbol for the story-first artifacts (beats, critique, approved beats) attached to the Story Director output. */
+export const STORY = Symbol.for('wiggly.v2.story');
 /** Rounds of self-critique + rewrite for an agent: config.reflectionRounds (integer >= 0), default 0. */
 export const reflectionRoundsFor = (config, override) => {
   const n = override ?? config?.reflectionRounds ?? 0;
@@ -359,8 +362,9 @@ export const revisionMessage = ({ agent, draft, critique, round, rounds, scope =
  * draft is followed by N rounds of critique (a plain model call) + rewrite (a Deep Agent run that resubmits).
  * Critiques and every draft are saved under runs/<runId>/attempt-N/<agent>/reflection/, and the log is attached to
  * the returned object under REFLECTION. N = 0 is exactly the single-draft behaviour.
+ * storyBeats (boolean, optional) overrides config.storyBeats (graph/story-beats.mjs: beats + critique calls before the shots call).
  */
-export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60, maxInvalidSubmits = 3, reflectionRounds, callRetry = {} } = {}) {
+export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60, maxInvalidSubmits = 3, reflectionRounds, storyBeats, callRetry = {} } = {}) {
   // Patch mode (graph/patch.mjs) adds: task (the first user message), scope (shown to the critic and the rewrite),
   // rounds (reflection rounds for this run; overrides config and the reflectionRounds option) and submitSchema.
   return async ({ agent, config, input, attempt = 1, retryNotes = '', state = {}, signal, gate, trace, task, scope = '', rounds: reqRounds, submitSchema }) => {
@@ -395,17 +399,22 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     let out;
     let bestOf = null;
     let initialGateIssues = null;
+    // Story first: calls A (beats) and B (critique + rewrite) before call C (shots). Artifacts in <attempt>/<agent>/story/.
+    const story = storyBeatsEnabled(agent, storyBeats === undefined ? config : { ...config, storyBeats }, { scope, task, patch: Boolean(input?.patch) })
+      ? await runStoryBeats({ agent, input, model, dir: join(root, 'story'), signal, attempt, callRetry: { onRetry: logRetry(agent), ...callRetry } }) : null;
+    const shotsMsg = story ? shotsTask(agent, story.approved) : undefined;
     if (bestOfEnabled(agent, config, { scope, task, rounds })) {
       const picked = await runBestOf({
-        agent, input, model, gate, signal, runsRoot, root, task, runOnce,
+        agent, input, model, gate, signal, runsRoot, root, task: shotsMsg, runOnce,
         prepareWorkspace: prepareRunWorkspace, state, assetFiles, photoFiles,
       });
       out = picked.winnerDraft;
       bestOf = picked.bestOf;
       initialGateIssues = picked.gateIssues;
     } else {
-      out = await runOnce(task ?? `Produce the ${agent} output for this run.`, `${agent} deep agent`);
+      out = await runOnce(task ?? shotsMsg ?? `Produce the ${agent} output for this run.`, `${agent} deep agent`);
     }
+    if (story) Object.defineProperty(out, STORY, { value: { files: story.files.map((f) => relative(runsRoot, join(root, 'story', f))) }, enumerable: false, configurable: true });
     if (!rounds) return out;
 
     const dir = join(root, 'reflection');

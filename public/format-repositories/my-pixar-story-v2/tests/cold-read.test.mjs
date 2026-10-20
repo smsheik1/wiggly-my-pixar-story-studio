@@ -145,7 +145,7 @@ test('call order is cold-read then critique per round; critique prompt contains 
     (msgs) => { seen.critique2 = text(msgs); return say(SHIP_CRITIQUE); },
   ]);
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'cr-order' })({
+  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'cr-order' })({
     agent: 'story-director',
     config: V2_MODELS['story-director'],
     input: INPUT,
@@ -193,7 +193,7 @@ test('SHIP early stop still skips the rewrite even if cold notes list FAILs', { 
     (msgs) => { seen.critique1 = text(msgs); return say(SHIP_CRITIQUE); },
   ]);
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'cr-early-stop' })({
+  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'cr-early-stop' })({
     agent: 'story-director',
     config: V2_MODELS['story-director'],
     input: INPUT,
@@ -227,7 +227,7 @@ test('disabled via config -> no extra call', { timeout: 10000 }, () => tmp(async
   const disabledConfig = { ...V2_MODELS['story-director'], coldRead: false };
   assert.equal(coldReadEnabled('story-director', disabledConfig), false);
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'cr-disabled' })({
+  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'cr-disabled' })({
     agent: 'story-director',
     config: disabledConfig,
     input: INPUT,
@@ -261,7 +261,7 @@ test('non-fatal error in cold-read is skipped and continues; fatal provider erro
     () => { throw new Error('cold read reply could not be parsed'); }, // cold-read throws non-fatal, non-retryable (a 503 would be retried in place first)
     () => say(SHIP_CRITIQUE), // critique continues normally
   ]);
-  const out = await deepAgentInvoke({ createModel: async () => m1, runsRoot: runs, runId: 'cr-err-skip' })({
+  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m1, runsRoot: runs, runId: 'cr-err-skip' })({
     agent: 'story-director',
     config: V2_MODELS['story-director'],
     input: INPUT,
@@ -279,7 +279,7 @@ test('non-fatal error in cold-read is skipped and continues; fatal provider erro
     () => { throw new RunStoppedError('Provider credit exhausted'); }, // fatal provider error in cold-read
   ]);
   await assert.rejects(
-    deepAgentInvoke({ createModel: async () => m2, runsRoot: runs, runId: 'cr-err-fatal' })({
+    deepAgentInvoke({ storyBeats: false, createModel: async () => m2, runsRoot: runs, runId: 'cr-err-fatal' })({
       agent: 'story-director',
       config: V2_MODELS['story-director'],
       input: INPUT,

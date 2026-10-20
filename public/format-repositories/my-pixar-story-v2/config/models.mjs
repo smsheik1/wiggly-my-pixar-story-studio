@@ -25,6 +25,8 @@ export const V2_MODELS = Object.freeze({
     // Patch mode (graph/patch.mjs): one self-review round scoped to the target; --reflection-rounds overrides it.
     patchReflectionRounds: 1,
     coldRead: true,
+    // Story first (graph/story-beats.mjs): beats + critique/rewrite plain-text calls before the shots call.
+    storyBeats: true,
     bestOfDrafts: 2,
     imageSteps: { storyboard: NANO_BANANA } },
   'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 64000, /* r4-dry9: CA used 23.5k of 24k */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
