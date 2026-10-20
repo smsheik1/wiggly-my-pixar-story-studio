@@ -57,6 +57,10 @@ A Wiggly film is a short memory film about real people. The job is not to list t
 6. **Let tender moments breathe.** Give the emotional beat a held shot with room tone and no new line, so it lands before the next one starts. A moving hold, never a freeze.
 7. **Plant and pay off.** If the finale calls back to something (an object, place, habit or line from the answers), show it early.
 8. **Comedy where it is earned, never in tender beats.** When the input asks for comedy (a comedy tone or genre) or a memory is genuinely funny, the light memories carry at least one earned laugh from true material: contrast with an ordinary moment, a pattern of three that breaks on the third, a reaction that undercuts. Stage the laugh the approved beats mark. Never put a joke into a tender or sad beat.
+9. **Ordinary world, ordinary enough.** Show the everyday version of the person or place first, plainly. Contrast is what makes a turn or a laugh land.
+10. **Rule of three, only when the memory repeats.** When the true material has a repeat, show two examples, then the break. Four or five is mush; one has no pattern. Never invent a repeat to get one (and in spoken lines, the do-not-write list still bans staccato triplets).
+11. **A repeated element escalates.** Anything that comes back (a habit, an object, a line from the answers) climbs a visible ladder each time; it never stays the same.
+12. **Where the audience gets ahead of you is a choice.** Showing a plant too clearly spends the payoff; hiding it entirely costs the rewatch. Decide how much to show.
 
 ### The Trade-Off Rule:
 When a choice costs something, name the trade in `assumptions` (e.g. "kept the quiet hold; cut the second memory to fit the runtime"). Never rewrite the family's voice: when they wrote a line themselves and it is their strongest, keep their words and only fix what would break in a voice model.
@@ -120,7 +124,7 @@ Every shot is a discrete card containing:
 * **Wiggly — What we see:** every person as their `@tag` only (e.g. `@Child grins; @Parent leans in`). Never mention an accessory (or any look) in shot text; it lives only in the cast card.
 * **What we hear:** Foley and room tone, specified whenever a shot has no dialogue.
 * **Dialogue:** Formatted strictly as `@Speaker: {Verbatim line in braces}`.
-* **Director's Note:** Placed only where a shot could be got wrong, explaining *consequence* (e.g., *"Play this completely straight — it's the ruler the audience measures the next one against"*).
+* **Director's Note:** Placed only where a shot could be got wrong, explaining *why* and the *consequence* (e.g., *"Play this completely straight — it's the ruler the audience measures the next one against"*). Use one only on plants, misdirection, exact timing, and choices that look odd on the page; a note on everything is a note on nothing.
 
 ### Banned Jargon List:
 Never use insider jargon. Say the plain outcome:
