@@ -5,7 +5,7 @@
 // Usage: node scripts/scratch-audio.mjs --sd <story-director.json> --voices <voices.json> --out <dir> [--max-usd 0.5] [--secrets <file>]
 //   voices.json: { "<@Tag>": "<cartesia voice id>", ... } (speaker tags from the SD). Audio stays out of git.
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { loadSecrets, defaultSecretsPath } from './lib/secrets.mjs';
@@ -19,8 +19,11 @@ const out = arg('--out'); const maxUsd = +arg('--max-usd', '0.5'); await mkdir(j
 const lines = scratchLines(sd);
 const missing = [...new Set(lines.map((l) => l.speaker))].filter((s) => !voices[s]);
 if (missing.length) throw new Error(`no voice for ${missing.join(', ')} in --voices`);
-const est = estimateUsd(lines);
-console.log(`${lines.length} lines, ${lines.reduce((n, l) => n + l.text.length, 0)} chars, estimate $${est.toFixed(4)} (cap $${maxUsd})`);
+const linePath = (l, i) => join(out, 'lines', `${String(i + 1).padStart(2, '0')}-${l.shotId}-${l.kind}.wav`);
+const cached = (l, i) => existsSync(linePath(l, i)) && statSync(linePath(l, i)).size >= 1000;
+const todo = lines.filter((l, i) => !cached(l, i)); // only uncached lines are billed
+const est = estimateUsd(todo);
+console.log(`${lines.length} lines (${todo.length} to generate, ${todo.reduce((n, l) => n + l.text.length, 0)} chars), estimate $${est.toFixed(4)} (cap $${maxUsd})`);
 if (est > maxUsd) { console.error('STOP: estimate exceeds the cap; nothing generated'); process.exit(3); }
 const key = loadSecrets(arg('--secrets') ?? defaultSecretsPath(), (n) => n === 'CARTESIA_API_KEY').CARTESIA_API_KEY;
 if (!key) throw new Error('CARTESIA_API_KEY missing');
