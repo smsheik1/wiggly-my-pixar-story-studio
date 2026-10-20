@@ -86,7 +86,10 @@ test('a staged shot longer than the cap is a reported blocker, never cut', () =>
 test('narration: voiceover shots say no one on screen speaks; [VOICES] says off-screen narrator; no mumbling excluded', () => {
   const strip = (fn) => { const d = clips(); fn(d.segments[4].tenBlocks); d.segments[4].compiledPrompt = assembleCompiledPrompt(d.segments[4].tenBlocks); return codes(d); };
   assert.ok(strip((tb) => { tb.block5_shots = tb.block5_shots.replaceAll('No one on screen speaks; every on-screen mouth stays closed.\n', ''); }).includes('VOICEOVER_MOUTHS_OPEN'));
-  assert.ok(strip((tb) => { tb.block2_voices = tb.block2_voices.replaceAll('An off-screen narrator, never seen. ', ''); }).includes('NARRATOR_NOT_OFF_SCREEN'));
+  assert.ok(strip((tb) => { tb.block2_voices = tb.block2_voices.replaceAll('An off-screen narrator voice; @Shaz on screen never speaks these lines. ', ''); }).includes('NARRATOR_NOT_OFF_SCREEN'));
+  { const d = clips(); const s = d.segments[4]; // 2a: @Shaz narrates while on screen, so "never seen" is wrong
+    s.tenBlocks.block2_voices = s.tenBlocks.block2_voices.replace('An off-screen narrator voice; @Shaz on screen never speaks these lines. ', 'An off-screen narrator, never seen. '); s.compiledPrompt = assembleCompiledPrompt(s.tenBlocks);
+    assert.ok(codes(d).includes('NARRATOR_NOT_OFF_SCREEN'), 'never seen rejected for an on-screen narrator'); }
   assert.ok(strip((tb) => { tb.block9_exclusions = tb.block9_exclusions.replace(/ No humming[^.]*\./, ''); }).includes('MUMBLE_NOT_EXCLUDED'));
 });
 test('wardrobe: the Look line restates the signature garment', () => {

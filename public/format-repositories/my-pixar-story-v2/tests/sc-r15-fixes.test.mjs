@@ -81,6 +81,8 @@ test('VOICE_ONLY_REFERENCE when a voice-only speaker is attached; passes once re
   for (const sh of s.shots) sh.cast = sh.cast.filter((c) => c !== '@Shaz');
   block(d, 1, 'block1_referenceMaterials', (t) => t.split('\n').filter((l) => !l.startsWith('@Shaz =')).join('\n'));
   shots(d, 1, shazHeardOnly);
+  // no longer on screen, so the narrator voice is "never seen"
+  block(d, 1, 'block2_voices', (t) => t.replace('An off-screen narrator voice; @Shaz on screen never speaks these lines. ', 'An off-screen narrator, never seen. '));
   const c = errs(d, narratorOnly());
   assert.deepEqual(c.filter((k) => !k.startsWith('WRITING')), [], 'nothing else fails either');
   for (const k of ['VOICE_ONLY_REFERENCE', 'UNREGISTERED_ELEMENT_TAG', 'MISSING_CAST_REFERENCE']) assert.ok(!c.includes(k), c.join(','));

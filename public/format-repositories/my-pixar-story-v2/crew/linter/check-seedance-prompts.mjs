@@ -264,8 +264,11 @@ export function validateSeedancePrompts(data, input) {
     for (const b of shotBlocks(shotsText)) for (const m of b.text.matchAll(/^\s*(@[\w_]+)\s*,\s*(?:voice[- ]?over|off[- ]?camera)\s*:/gim)) heardHere.add(m[1]);
     for (const tag of heardHere) {
       const line = voices.split('\n').find((l) => l.trim().startsWith(tag)) ?? '';
-      if (!/off[- ]screen narrator/i.test(line) || !/never seen/i.test(line))
-        err('NARRATOR_NOT_OFF_SCREEN', `${p}: ${tag} is heard only (voiceover / off camera) here, so their [VOICES] line describes them as "an off-screen narrator, never seen".`, `${p}.tenBlocks.block2_voices`);
+      // The narrator's own character can be on screen in the clip (the adult self): then the voice is still off screen, but not "never seen".
+      const seen = (seg.shots ?? []).some((s) => (s.cast ?? []).includes(tag));
+      const want = seen ? `An off-screen narrator voice; ${tag} on screen never speaks these lines.` : 'An off-screen narrator, never seen.';
+      if (!/off[- ]screen narrator/i.test(line) || !(seen ? /never speaks these lines/i : /never seen/i).test(line))
+        err('NARRATOR_NOT_OFF_SCREEN', `${p}: ${tag} has voiceover / off-camera lines here, so their [VOICES] line starts "${want}"`, `${p}.tenBlocks.block2_voices`);
     }
     if (heardHere.size && !NO_MUMBLE.test(`${seg.tenBlocks?.block8_audio ?? ''}\n${seg.tenBlocks?.block9_exclusions ?? ''}`))
       err('MUMBLE_NOT_EXCLUDED', `${p}: this clip has narration, so [EXCLUSIONS] says "${NO_MUMBLE_LINE}"`, `${p}.tenBlocks.block9_exclusions`);

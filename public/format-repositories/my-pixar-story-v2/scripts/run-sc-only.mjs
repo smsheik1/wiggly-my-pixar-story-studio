@@ -31,7 +31,7 @@ const keyUsage = async () => { const r = await fetch('https://openrouter.ai/api/
 const out = join(RUNS_ROOT, runId, 'outputs');
 const rd = async (f) => JSON.parse(await readFile(join(out, f), 'utf8'));
 const [sd, ca, ls, prev] = await Promise.all(['story-director.json', 'character-architect.json', 'location-scout.json', 'state.json'].map(rd));
-if (prev.status !== 'awaiting-approval') throw new Error(`run ${runId} is ${prev.status}, not awaiting-approval`);
+if (!['awaiting-approval', 'done'].includes(prev.status)) throw new Error(`run ${runId} is ${prev.status}, not awaiting-approval or done`);
 const inputs = inputsFromProject(JSON.parse(await readFile(projectPath, 'utf8')));
 const refs = await loadPhotoReferences(defaultPhotoRefsPath(projectPath)); if (refs.length) inputs.photoReferences = refs;
 const approvedAssets = { ...(prev.approvedAssets ?? {}), ...placeholderAssets(prev.pendingApproval ?? []) };

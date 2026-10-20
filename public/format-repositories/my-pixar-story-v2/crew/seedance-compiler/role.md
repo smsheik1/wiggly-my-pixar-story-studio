@@ -32,7 +32,7 @@ Binds each uploaded asset tag to a concise, plain English visual description.
 Contains verbatim voice definitions for every speaking character.
 * Format: `@Speaker VOICE: "Age, nationality, timbre, pace, emotional shifts, delivery."`
 * These voice blocks must be identical across all segments in a series to maintain vocal continuity.
-* **Wiggly:** a speaker who is only heard in this clip (voiceover / off camera) is described as `An off-screen narrator, never seen.` at the start of their voice line (`NARRATOR_NOT_OFF_SCREEN`).
+* **Wiggly:** a speaker with voiceover / off-camera lines in this clip starts their voice line with `An off-screen narrator, never seen.` when they are not on screen in the clip, or `An off-screen narrator voice; @Tag on screen never speaks these lines.` when their own character is on screen in it (`NARRATOR_NOT_OFF_SCREEN`).
 
 ### Block 3: `[GOAL]`
 A 2–3 sentence executive summary of the segment:
