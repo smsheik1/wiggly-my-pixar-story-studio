@@ -17,7 +17,7 @@ export const DesignSpecsSchema = z.object({
   dominantSilhouette: z.string().min(5).describe('Shape reading in pure black silhouette'),
   exaggeration: z.string().min(5).describe('The one exaggerated feature'),
   counterpart: z.string().min(5).describe('Neighbouring features kept small'),
-  skinZoning: z.enum(['light', 'deep']).describe('Light: pink nose, translucent red ears; Deep: red-orange nose, plum-red flush, grey-violet'),
+  skinZoning: z.enum(['light', 'deep']).describe('deep for dark or brown skin, light otherwise; the Skin line always describes even, healthy skin'),
   signatureAccent: OptionalAccent.describe("Copied from the cast card's signatureAccent when it has one; omit when the card has none. Never invented"),
   isChildProportionRiderApplied: z.boolean().describe('Long torso, short legs, enlarged head; MUST be false for adults'),
   cleanSkinGuarantee: z.boolean().default(true).describe('No tattoos/ink'),
