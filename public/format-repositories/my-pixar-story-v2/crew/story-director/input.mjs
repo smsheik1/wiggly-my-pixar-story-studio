@@ -33,6 +33,10 @@ export const StoryDirectorInput = z.object({
   }).strict().prefault({}),
 }).strict();
 
+/** The family's story direction: copied from the project input to the graph inputs and into the Story Director input.
+ * One list for every entry point (scripts/run-rehearsal.mjs inputsFromProject) so a field cannot be dropped on the way. */
+export const STORY_DIRECTION_KEYS = ['targetTotalRuntimeSec', 'settingSeed', 'voiceNoteTranscript', 'toneDirectives'];
+
 /** Filter shared pipeline state down to the Story Director's slice (drops photos, URLs, secrets, other agents' outputs). */
 export function selectStoryDirectorInput(state = {}) {
   const p = state.project ?? state;
@@ -47,7 +51,7 @@ export function selectStoryDirectorInput(state = {}) {
     photoCharacters: (inputs.photoReferences ?? p.photoReferences ?? [])
       .map(({ id, name, realPerson, age, skinTone, description }) => ({ id, name, realPerson: realPerson ?? name, age: age ?? null, skinTone, description })),
     format: p.format ?? {},
-    ...pick(inputs, ['targetTotalRuntimeSec', 'settingSeed', 'voiceNoteTranscript', 'toneDirectives']),
+    ...pick(inputs, STORY_DIRECTION_KEYS),
   });
 }
 

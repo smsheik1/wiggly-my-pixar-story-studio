@@ -7,6 +7,7 @@
 //   [--reflection-rounds N | agent=N[,agent=N]] self-review rounds override for this run only (N = every agent; e.g.
 //     story-director=0 for a no-review comparison run); default: config/models.mjs reflectionRounds
 //   [--max-usd 2] hard spend cap: polls the OpenRouter key usage and exits (code 3) once this run spends more
+import { STORY_DIRECTION_KEYS } from '../crew/story-director/input.mjs';
 import { FATAL_CODE } from '../graph/provider-errors.mjs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -27,7 +28,7 @@ import { startBudgetGuard } from './lib/budget.mjs';
 const OUTPUT_KEYS = { 'story-director': (s) => s.storyDirector, 'character-architect': (s) => s.characterArchitect?.output,
   'location-scout': (s) => s.locationScout?.output, 'seedance-compiler': (s) => s.seedanceCompiler?.output };
 
-/** Map a studio project (inputs.subject object or string, inputs.answers) to graph inputs. No fallback story. */
+/** Map a studio project (inputs.subject object or string, inputs.answers, and the story direction fields) to graph inputs. No fallback story. */
 export function inputsFromProject(project) {
   const inp = project?.inputs ?? project ?? {};
   const answers = inp.answers;
@@ -36,7 +37,8 @@ export function inputsFromProject(project) {
   const subject = typeof s === 'string' ? s
     : [s?.preferredName ?? s?.fullName, s?.recipientName && `story for ${s.recipientName}`, s?.relationshipToRecipient && `(${s.relationshipToRecipient})`].filter(Boolean).join(', ');
   return { subject, answers, ...(inp.castDescriptions ? { castDescriptions: inp.castDescriptions } : {}),
-    ...(inp.photoReferences ? { photoReferences: inp.photoReferences } : {}) };
+    ...(inp.photoReferences ? { photoReferences: inp.photoReferences } : {}),
+    ...Object.fromEntries(STORY_DIRECTION_KEYS.filter((k) => inp[k] !== undefined).map((k) => [k, inp[k]])) };
 }
 
 /** Photo references sidecar: --photo-refs <file>, else <project>-photo-refs.json next to the project. Never inside the repo. */
