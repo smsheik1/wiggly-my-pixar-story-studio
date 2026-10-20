@@ -41,6 +41,14 @@ test('prompts are generic: no JSON gate codes, no toy example names', () => {
   }
 });
 
+test('critique prompt: four scored story checks first, then the other checks, rebuild rule, no length growth', () => {
+  const p = loadCritiquePrompt();
+  const order = ['**Core:**', '**Specific:**', '**Turn:**', '**Feel:**', '**Strongest material:**', '**People on screen:**', '**Said out loud:**'].map((k) => p.indexOf(k));
+  assert.ok(order.every((i) => i >= 0), 'all checks present');
+  assert.deepEqual([...order].sort((a, b) => a - b), order, 'story scores listed first');
+  assert.match(p, /1-5/); assert.match(p, /2 or lower/); assert.match(p, /from scratch/); assert.match(p, /must not grow/); assert.match(p, /## Rewritten beats/);
+});
+
 test('A -> B -> C order: beats see answers, critique sees beats, shots task carries the rewritten beats; artifacts saved', async () => {
   const runs = await mkdtemp(join(tmpdir(), 'wiggly-beats-'));
   try {
