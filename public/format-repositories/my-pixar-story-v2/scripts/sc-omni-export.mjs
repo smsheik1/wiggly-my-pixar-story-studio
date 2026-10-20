@@ -19,7 +19,10 @@ const plan = out.segments.map((s) => {
   const id = s.clipId ?? String(s.segmentId);
   const src = input.segments.find((x) => x.segmentId === s.segmentId);
   if (s.totalDurationSec > 10) bad.push(`${id} >10s`);
-  for (const b of shotBlocks(s.tenBlocks.block5_shots)) if (/,\s*(voice[- ]?over|off[- ]?camera)\s*:/i.test(b.text) && !/No one on screen speaks; every on-screen mouth stays closed\./.test(b.text)) bad.push(`${id} SHOT ${b.n} no mouths line`);
+  for (const b of shotBlocks(s.tenBlocks.block5_shots)) if (/,\s*(voice[- ]?over|off[- ]?camera)\s*:/i.test(b.text)) bad.push(`${id} SHOT ${b.n} has a voiceover line`);
+  s.shots.forEach((x, j) => { const ss = src.shots.find((y) => y.sceneId === x.sceneId); const b = shotBlocks(s.tenBlocks.block5_shots)[j];
+    if (ss?.narration && !b.text.includes('Silent scene apart from ambience')) bad.push(`${id} SHOT ${j + 1} no silent line`); });
+  for (const m of s.compiledPrompt.matchAll(/^(@[\w_]+):\s*(\{[^}]*\})/gm)) console.log('  ON-CAMERA', id, m[1], m[2]);
   const onScr = new Set(s.shots.flatMap((x) => x.cast)); for (const ref of s.references) if (ref.kind === 'character' && !onScr.has(ref.tag)) bad.push(`${id} extra ref ${ref.tag}`);
   const p = { clipId: id, sourcePart: s.segmentId, sourceShots: s.sourceShotNumbers ?? src.shots.map((x) => x.shotNumber), sourceStartSec: s.sourceStartSec ?? 0, trueLenSec: s.totalDurationSec, durationSec: s.generationPayload.durationSec, refs: s.references.map((x) => x.tag), promptChars: s.compiledPrompt.length };
   console.log(JSON.stringify(p)); return { ...p, s };
