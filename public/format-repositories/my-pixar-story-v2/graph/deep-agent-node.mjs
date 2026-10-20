@@ -289,7 +289,7 @@ export const runtimeNote = cutQuotaNote;
  * With a review rubric (crew/<agent>/REVIEW.md, loadReview) the call is an editor's pass: score each rubric item
  * PASS/FAIL with evidence, list at most 8 fixes, end on VERDICT. Without one it uses the generic focus list.
  */
-export function critiqueMessages({ agent, skill, review = null, input, draft, round, rounds, gateIssues = [], trace = '', scope = '', firstRuntime = null, prevDraft = null, coldNotes = '' }) {
+export function critiqueMessages({ agent, skill, review = null, input, draft, round, rounds, gateIssues = [], trace = '', scope = '', firstRuntime = null, prevDraft = null, coldNotes = '', thesis = null }) {
   const focus = REFLECTION_FOCUS[agent] ?? REFLECTION_FOCUS.default;
   const gate = gateIssues.filter((i) => i.severity === 'error');
   const warns = gateIssues.filter((i) => i.severity === 'warning');
@@ -304,6 +304,7 @@ export function critiqueMessages({ agent, skill, review = null, input, draft, ro
     { role: 'user', content: [
       ...(scope ? [scope] : []),
       'The input for this run (/references/input.json):', '```json', JSON.stringify(input ?? {}), '```',
+      ...(thesis ? [`The approved thesis (picked first, from the family's words; R6 judges whether the script delivers it, and no fix may change it): "${thesis}"`] : []),
       'Your current draft:', '```json', JSON.stringify(draft), '```',
       gate.length ? `The deterministic gate currently fails this draft; the rewrite must fix these:\n${gate.map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n')}` : 'The deterministic gate currently passes this draft; the rewrite must keep it passing.',
       ...(review && warns.length ? [`Gate warnings (not blocking; check each against the rubric and list a fix only if it is a real problem):\n${warns.map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n')}`] : []),
@@ -417,6 +418,9 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     const story = storyOn
       ? await runStoryBeats({ agent, input, model, dir: join(root, 'story'), signal, attempt, callRetry: { onRetry: logRetry(agent), ...callRetry } }) : null;
     const shotsMsg = story ? shotsTask(agent, story.approved) : undefined;
+    let thesis = story?.thesis ?? null;
+    // The thesis is picked once, in the beats; the shots and every rewrite keep it word for word.
+    const pinThesis = (o) => (thesis && o && typeof o === 'object' ? Object.assign(o, { finaleThesis: thesis }) : o);
     if (bestOfEnabled(agent, config, { scope, task, rounds })) {
       const picked = await runBestOf({
         agent, input, model, gate, signal, runsRoot, root, task: shotsMsg, runOnce,
@@ -428,6 +432,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     } else {
       out = await runOnce(task ?? shotsMsg ?? `Produce the ${agent} output for this run.`, `${agent} deep agent`);
     }
+    out = pinThesis(out);
     if (story) Object.defineProperty(out, STORY, { value: { files: story.files.map((f) => relative(runsRoot, join(root, 'story', f))) }, enumerable: false, configurable: true });
     if (!rounds) return out;
 
@@ -452,7 +457,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       const meta = { runName: `${agent} reflection round ${round} critique`, tags: [`agent:${agent}`, `attempt:${attempt}`, `reflection:${round}`], metadata: { agent, attempt, reflectionRound: round }, signal };
       let tr = null;
       try { tr = trace ? trace(out) : null; } catch { tr = null; }
-      const critique = replyText(await withCallRetry(() => model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime, prevDraft, coldNotes: cold?.notes ?? '' }), meta), { onRetry: logRetry(agent), signal, ...callRetry })).trim();
+      const critique = replyText(await withCallRetry(() => model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime, prevDraft, coldNotes: cold?.notes ?? '', thesis }), meta), { onRetry: logRetry(agent), signal, ...callRetry })).trim();
       await writeFile(join(dir, `round-${round}-critique.md`), critique + '\n');
       const entry = { round, critique, critiqueFile: rel(`round-${round}-critique.md`), gateErrorsBefore: gateIssues.filter((i) => i.severity === 'error').length };
       if (cold) { entry.coldRead = cold.notes; entry.coldReadFile = cold.file; }
@@ -475,7 +480,8 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
             const rebuilt = await runStoryBeats({ agent, input, model, dir: join(root, `story-rebuild-${structuralUsed}`), signal, attempt, notes: critique, callRetry: { onRetry: logRetry(agent), ...callRetry } });
             if (!rebuilt) throw new Error('beats rebuild returned nothing');
             entry.rebuildFiles = rebuilt.files.map((f) => relative(runsRoot, join(root, `story-rebuild-${structuralUsed}`, f)));
-            const next = await runOnce(shotsTask(agent, rebuilt.approved), `${agent} structural rebuild ${structuralUsed}`, [`reflection:${round}`, 'structural']);
+            if (rebuilt.thesis) thesis = rebuilt.thesis;
+            const next = pinThesis(await runOnce(shotsTask(agent, rebuilt.approved), `${agent} structural rebuild ${structuralUsed}`, [`reflection:${round}`, 'structural']));
             let gateAfter = [];
             try { gateAfter = gate ? (gate(next)?.issues ?? []) : []; } catch { gateAfter = []; }
             // Hard limit only: a rebuild may differ in length from the draft it replaces but never runs past the target (or that draft, if longer).
@@ -510,7 +516,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       }
       try {
         const revised = await runOnce(revisionMessage({ agent, draft: out, critique, round, rounds, scope, allowedShots: fixShots?.size ? fixShots : undefined }), `${agent} reflection round ${round} rewrite`, [`reflection:${round}`]);
-        let nextDraft = revised;
+        let nextDraft = pinThesis(revised);
         if (isScoped && fixShots?.size) {
           const enforced = enforceScope(out, revised, fixShots);
           if (enforced.reverted?.length) {

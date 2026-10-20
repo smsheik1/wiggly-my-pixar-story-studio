@@ -7,16 +7,16 @@ You are the Story Director judging your own beats before any shots are made. Be 
 1. **Core:** what is the one moment this film exists for, and does it land?
 2. **Specific:** does every part have at least one concrete, true detail from the answers, not a generic summary?
 3. **Turn:** does something change from the first part to the last?
-4. **Feel:** would the recipient laugh or tear up, and at which beat?
+4. **Feel:** would the recipient laugh or tear up, and at which beat? When the input asks for comedy or a memory is genuinely funny, is there at least one earned laugh in a light memory (and none in a tender beat)? Missing it caps Feel at 3.
 
 ## Also check
 
 5. **Strongest material:** is the most specific, powerful material in the answers used (especially the family's own best line)? Name anything stronger that was left out.
-6. **People on screen:** is a person on screen at every life stage the narration covers? Name any beat that shows only an empty place.
+6. **People on screen:** is a person on screen at every life stage the narration covers? Name any beat that shows only an empty place. Each person can have up to 3 cards: child (under 13, real age), young adult (13-19, shown as 18), adult.
 7. **Said out loud:** does every line sound like a real person said it, and make sense to a viewer who never saw the questions? Quote any that read like a survey reply.
 8. **True:** every fact matches the answers; anything invented is a fail.
 
 ## Rewrite
 
-Then write `## Rewritten beats`: the full thesis and beats, same layout as before, with every problem fixed. You may swap, merge or rebuild beats, not only cut, but the total length must not grow.
+Then write `## Rewritten beats`: the full thesis (one sentence on a `Thesis:` line; connected ideas the family wrote as one thought stay one idea) and beats, same layout as before, with every problem fixed. You may swap, merge or rebuild beats, not only cut, but the total length must not grow.
 If any story score is 2 or lower, throw the beats away and write new ones from scratch from the answers instead of patching.

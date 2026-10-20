@@ -11,7 +11,7 @@ test('role.md documents every top-level output key', () => {
 });
 test('role.md keeps Gemini base text, memory-film craft and Wiggly additions; toy examples gone', () => {
   for (const s of ['Direct, Don\'t Transcribe', 'The one moment that matters', 'The specific true detail', 'The turn', 'The reaction shot',
-    'Let tender moments breathe', 'Comedy is a tool, not a default', 'The 30-Second Hard Ceiling Law', 'Human Approval Gate'])
+    'Let tender moments breathe', 'Comedy where it is earned, never in tender beats', 'The 30-Second Hard Ceiling Law', 'Human Approval Gate'])
     assert.ok(role.includes(s), s);
   assert.doesNotMatch(role, /\b(Theo|Gran|Wren|Ben|Miss Park|kindergarten|hitman|Rung \d|Rule of Three)\b/);
   for (const s of ['Nano Banana 2.1', 'Google Flow', 'hijab', 'depicted as 18', 'Only the people in the answers exist', 'cloned storyteller voice',

@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { AIMessage } from '@langchain/core/messages';
 import { deepAgentInvoke, STORY } from '../graph/deep-agent-node.mjs';
-import { storyBeatsEnabled, rewrittenBeats, loadBeatsPrompt, loadCritiquePrompt } from '../graph/story-beats.mjs';
+import { storyBeatsEnabled, rewrittenBeats, loadBeatsPrompt, loadCritiquePrompt, parseThesis } from '../graph/story-beats.mjs';
 import { V2_MODELS } from '../config/models.mjs';
 
 class ScriptedModel extends BaseChatModel {
@@ -103,5 +103,30 @@ test('STRUCTURAL review sends the draft back to beats (A+B with the notes) and a
     assert.deepEqual(log[0].storyScores, { core: 2, specific: 3, turn: 2, feel: 2 });
     assert.equal(log[1].structuralSkipped, 'cap reached');
     assert.equal(m.script.length, 0);
+  } finally { await rm(runs, { recursive: true, force: true }); }
+});
+
+test('thesis: parsed from the Thesis: line; prompts carry one-sentence thesis, 3 card types and earned comedy', () => {
+  assert.equal(parseThesis('**Thesis:** Love shows up, even quietly.\nBeat 1'), 'Love shows up, even quietly.');
+  assert.equal(parseThesis('Thesis for X: A and B.'), 'A and B.'); assert.equal(parseThesis('no thesis'), null);
+  for (const p of [loadBeatsPrompt(), loadCritiquePrompt()]) { assert.match(p, /young adult \(.*13-19.*18\)/); assert.match(p, /Thesis:/); }
+  assert.match(loadBeatsPrompt(), /one thought are one idea/); assert.match(loadBeatsPrompt(), /at least one earned laugh/); assert.match(loadCritiquePrompt(), /earned laugh/);
+});
+
+test('approved thesis is pinned into finaleThesis, shown to the reviewer, and survives a rewrite that tries to change it', async () => {
+  const runs = await mkdtemp(join(tmpdir(), 'wiggly-beats-'));
+  try {
+    const seen = {};
+    const draft = (t, th) => { const d = play(); d.masthead.title = t; d.finaleThesis = th; return d; };
+    const m = new ScriptedModel([
+      () => say('Thesis: Show up quietly, and think about the good in people.\nBeat 1: x'), () => say('fine\n## Rewritten beats\nThesis: Show up quietly, and think about the good in people.\nBeat 1: y'),
+      (msgs) => { seen.c = text(msgs); return call('submit_story_director', draft('First', 'Something else')); },
+      (msgs) => { seen.r = text(msgs); return say('S1 Core: 4 - x\nS2 Specific: 4 - x\nS3 Turn: 4 - x\nS4 Feel: 4 - x\nR6 Finale: FAIL\n- 5.1 "x" -> y\nFIXES:\n1. 1.1: tighten.\nVERDICT: REVISE'); },
+      () => call('submit_story_director', draft('Second', 'Only the first idea')),
+    ]);
+    const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'th' })({ agent: 'story-director', config: { model: 'x', storyBeats: true, reflectionRounds: 1, coldRead: false }, input: INPUT, attempt: 1, gate: () => ({ issues: [] }) });
+    const T = 'Show up quietly, and think about the good in people.';
+    assert.match(seen.c, /finaleThesis is exactly/); assert.match(seen.r, /approved thesis/); assert.ok(seen.r.includes(T));
+    assert.equal(out.finaleThesis, T);
   } finally { await rm(runs, { recursive: true, force: true }); }
 });

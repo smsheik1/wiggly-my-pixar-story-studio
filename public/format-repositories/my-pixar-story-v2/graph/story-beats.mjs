@@ -30,10 +30,18 @@ export function rewrittenBeats(critique) {
   return (m ? critique.slice(m.index + m[0].length) : critique).trim();
 }
 
+/** The approved thesis: the first `Thesis:` line of the beats (markdown emphasis stripped), or null. */
+export function parseThesis(beats) {
+  const m = /^[\s>*_#-]*Thesis[*_]*\s*(?:for [^:\n]*)?:[*_\s]*(.+)$/im.exec(String(beats ?? ''));
+  const t = m ? m[1].replace(/[*_]+/g, '').trim() : '';
+  return t || null;
+}
+
 /** The first user message of call C. */
 export const shotsTask = (agent, beats) => [`Produce the ${agent} output for this run.`, '',
   'Story first: these are the approved beats (thesis and beats, already critiqued). Turn them into the shots JSON:',
-  'keep their thesis, moments, people on screen and lines; your SKILL.md rules decide format, timing and length.', '', beats].join('\n');
+  'keep their thesis, moments, people on screen and lines; your SKILL.md rules decide format, timing and length.',
+  ...(parseThesis(beats) ? [`finaleThesis is exactly: "${parseThesis(beats)}"`] : []), '', beats].join('\n');
 
 /** Calls A and B. Returns { beats, critique, approved, files } or null if either call fails (non-fatal: C runs as before). */
 export async function runStoryBeats({ agent = 'story-director', input, model, dir, signal, attempt = 1, callRetry = {}, notes = '' }) {
@@ -47,7 +55,7 @@ export async function runStoryBeats({ agent = 'story-director', input, model, di
     const approved = critique ? rewrittenBeats(critique) || beats : beats;
     if (critique) await writeFile(join(dir, 'critique.md'), critique + '\n');
     await writeFile(join(dir, 'approved-beats.md'), approved + '\n');
-    return { beats, critique, approved, files: ['beats.md', ...(critique ? ['critique.md'] : []), 'approved-beats.md'] };
+    return { beats, critique, approved, thesis: parseThesis(approved) ?? parseThesis(beats), files: ['beats.md', ...(critique ? ['critique.md'] : []), 'approved-beats.md'] };
   } catch (e) {
     if (signal?.aborted) throw signal.reason ?? e;
     if (isFatalProviderError(e)) throw e;
