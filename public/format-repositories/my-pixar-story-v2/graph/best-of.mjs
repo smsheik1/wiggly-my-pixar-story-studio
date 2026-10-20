@@ -1,5 +1,5 @@
-// Best-of-2 first drafts for the Story Director: generate two drafts in parallel,
-// gate each, judge if both pass, and pick the winner before the reflection loop.
+// Best-of first drafts for the Story Director: write up to 3 drafts in parallel (one per story approach from the plan,
+// or two of the same task without a plan), gate each, judge the passing ones, and pick the winner before the review loop.
 import { withCallRetry } from './provider-errors.mjs';
 import { loadPick, V2_MODELS } from '../config/models.mjs';
 import { isFatalProviderError } from './provider-errors.mjs';
@@ -31,50 +31,38 @@ export function bestOfEnabled(agent, config, { scope = '', task = null, rounds =
 
 
 /**
- * Chat messages for the judge call: sees ONLY the two scripts and the cold-read criteria.
+ * Chat messages for the judge call: sees ONLY the scripts and the cold-read criteria.
  * Contains no input.json, no questionnaire answers, and no trace table.
+ * Call as judgeMessages({ draftA, draftB, ... }), judgeMessages(draftA, draftB, opts) or judgeMessages({ drafts: [{ id, draft }], ... }).
  */
 export function judgeMessages(aOrOpts, bOrOpts, opts = {}) {
-  let draftA, draftB, options;
-  if (aOrOpts && typeof aOrOpts === 'object' && ('draftA' in aOrOpts || 'draftB' in aOrOpts)) {
-    draftA = aOrOpts.draftA;
-    draftB = aOrOpts.draftB;
+  let list, options;
+  if (aOrOpts && typeof aOrOpts === 'object' && Array.isArray(aOrOpts.drafts)) {
+    options = aOrOpts; list = aOrOpts.drafts.map((d) => ({ id: d.id, draft: d.draft, runtime: d.runtime ?? runtimeOf(d.draft) }));
+  } else if (aOrOpts && typeof aOrOpts === 'object' && ('draftA' in aOrOpts || 'draftB' in aOrOpts)) {
     options = aOrOpts;
+    list = [{ id: 'A', draft: aOrOpts.draftA, runtime: aOrOpts.runtimeA ?? runtimeOf(aOrOpts.draftA) }, { id: 'B', draft: aOrOpts.draftB, runtime: aOrOpts.runtimeB ?? runtimeOf(aOrOpts.draftB) }];
   } else {
-    draftA = aOrOpts;
-    draftB = bOrOpts;
     options = opts ?? {};
+    list = [{ id: 'A', draft: aOrOpts, runtime: options.runtimeA ?? runtimeOf(aOrOpts) }, { id: 'B', draft: bOrOpts, runtime: options.runtimeB ?? runtimeOf(bOrOpts) }];
   }
   const targetRuntime = options.targetRuntime ?? 90;
-  const runtimeA = options.runtimeA ?? runtimeOf(draftA);
-  const runtimeB = options.runtimeB ?? runtimeOf(draftB);
   const prompt = options.prompt ?? loadPick('story-director');
-
   return [
     { role: 'system', content: prompt },
     {
       role: 'user',
       content: [
         `Target total runtime: ${targetRuntime}s.`,
-        `Draft A runtime: ${runtimeA}s.`,
-        `Draft B runtime: ${runtimeB}s.`,
-        '',
-        '--- Draft A ---',
-        '```json',
-        JSON.stringify(draftA ?? {}, null, 2),
-        '```',
-        '',
-        '--- Draft B ---',
-        '```json',
-        JSON.stringify(draftB ?? {}, null, 2),
-        '```',
+        ...list.map((d) => `Draft ${d.id} runtime: ${d.runtime}s.`),
+        ...list.flatMap((d) => ['', `--- Draft ${d.id} ---`, '```json', JSON.stringify(d.draft ?? {}, null, 2), '```']),
       ].join('\n'),
     },
   ];
 }
 
 /**
- * Parses the winner from the judge reply text: last line WINNER: A, WINNER: B, or WINNER: TIE.
+ * Parses the winner from the judge reply text: last line WINNER: A, B, C, or TIE.
  * Unparseable replies return 'TIE'.
  */
 export function parseWinner(reply) {
@@ -82,7 +70,7 @@ export function parseWinner(reply) {
   const lines = text.trim().split('\n').map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return 'TIE';
   const last = lines.at(-1).replace(/^\*+|\*+$/g, '').trim();
-  const m = /^WINNER:\s*([AB]|TIE)\b/i.exec(last);
+  const m = /^WINNER:\s*([ABC]|TIE)\b/i.exec(last);
   if (!m) return 'TIE';
   return m[1].toUpperCase();
 }
@@ -104,224 +92,75 @@ function checkGate(gate, draft) {
 }
 
 /**
- * Evaluates two drafts, gates each, and invokes the judge model if both pass.
- * Returns { winner, winnerDraft, gateIssues, bestOf }.
+ * Gates every candidate draft and picks one: the only passing draft wins; when none passes, the first draft that exists
+ * proceeds (the gate and the node's retry handle it); when two or more pass, the judge picks among the passing ones
+ * (a TIE or unreadable reply falls back to the runtime closest to the target, then the first).
+ * candidates: [{ id, draft, error }]. Returns { winner, winnerDraft, gateIssues, bestOf }.
  */
-export async function pickDraft({
-  draftA,
-  draftB,
-  errorA = null,
-  errorB = null,
-  gate,
-  model,
-  input = {},
-  agent = 'story-director',
-  dir = null,
-  rel = null,
-  signal = null,
-} = {}) {
-  if (errorA && errorB) throw errorA;
+export async function pickBest({ candidates = [], gate, model, input = {}, agent = 'story-director', dir = null, rel = null, signal = null } = {}) {
+  if (candidates.length && candidates.every((c) => c.error)) throw candidates[0].error;
+  const rows = candidates.map((c) => ({ ...c, gate: c.error ? { passes: false, errors: 0, issues: [] } : checkGate(gate, c.draft), runtime: c.draft ? runtimeOf(c.draft) : 0 }));
+  const drafts = rows.map((r) => ({ id: r.id, gateErrors: r.gate.errors, runtime: r.runtime, ...(r.label ? { approach: r.label } : {}) }));
+  const done = (r, judged, reason, judgeFile = null) => ({ winner: r.id, winnerDraft: r.draft, gateIssues: r.gate.issues,
+    bestOf: { drafts, judged, judgeReply: judgeFile, judgeReplyFile: judgeFile, winner: r.id, reason } });
+  const passing = rows.filter((r) => r.gate.passes);
+  if (passing.length === 1) return done(passing[0], false, 'gate');
+  if (passing.length === 0) return done(rows.find((r) => !r.error), false, 'both-failed');
 
-  const gateA = errorA ? { passes: false, errors: 0, issues: [] } : checkGate(gate, draftA);
-  const gateB = errorB ? { passes: false, errors: 0, issues: [] } : checkGate(gate, draftB);
-
-  const runtimeA = draftA ? runtimeOf(draftA) : 0;
-  const runtimeB = draftB ? runtimeOf(draftB) : 0;
-
-  const drafts = [
-    { id: 'A', gateErrors: gateA.errors, runtime: runtimeA },
-    { id: 'B', gateErrors: gateB.errors, runtime: runtimeB },
-  ];
-
-  // 1. Exactly one passes -> it wins.
-  if (gateA.passes && !gateB.passes) {
-    return {
-      winner: 'A',
-      winnerDraft: draftA,
-      gateIssues: gateA.issues,
-      bestOf: { drafts, judged: false, judgeReply: null, judgeReplyFile: null, winner: 'A', reason: 'gate' },
-    };
-  }
-  if (!gateA.passes && gateB.passes) {
-    return {
-      winner: 'B',
-      winnerDraft: draftB,
-      gateIssues: gateB.issues,
-      bestOf: { drafts, judged: false, judgeReply: null, judgeReplyFile: null, winner: 'B', reason: 'gate' },
-    };
-  }
-
-  // 2. Both fail -> keep current behavior (proceed with draft A; gate + existing retry handle it).
-  if (!gateA.passes && !gateB.passes) {
-    // A draft whose run threw has no output; fall back to the other one (which failed the gate).
-    const id = errorA ? 'B' : 'A';
-    return {
-      winner: id,
-      winnerDraft: id === 'A' ? draftA : draftB,
-      gateIssues: id === 'A' ? gateA.issues : gateB.issues,
-      bestOf: { drafts, judged: false, judgeReply: null, judgeReplyFile: null, winner: id, reason: 'both-failed' },
-    };
-  }
-
-  // 3. Both pass -> judge call with the same model.
   const targetRuntime = resolveTargetSeconds(input);
-  const prompt = loadPick(agent);
-  const messages = judgeMessages({
-    draftA,
-    draftB,
-    targetRuntime,
-    runtimeA,
-    runtimeB,
-    prompt,
-  });
-
-  let judgeReply = '';
-  let parsedWinner = null;
-  let judgeFile = null;
-
+  const messages = judgeMessages({ drafts: passing.map((r) => ({ id: r.id, draft: r.draft, runtime: r.runtime })), targetRuntime, prompt: loadPick(agent) });
+  let parsed = 'TIE', judgeFile = null;
   try {
-    const meta = {
-      runName: `${agent} best-of judge`,
-      tags: [`agent:${agent}`, 'best-of', 'judge'],
-      signal,
-    };
+    const meta = { runName: `${agent} best-of judge`, tags: [`agent:${agent}`, 'best-of', 'judge'], signal };
     const res = await withCallRetry(() => model.invoke(messages, meta), { signal: meta?.signal });
-    judgeReply = replyText(res).trim();
-    if (dir && judgeReply) {
-      const filename = 'judge-reply.md';
-      await writeFile(join(dir, filename), judgeReply + '\n');
-      if (rel) judgeFile = rel(filename);
-    }
-    parsedWinner = parseWinner(judgeReply);
+    const judgeReply = replyText(res).trim();
+    if (dir && judgeReply) { await writeFile(join(dir, 'judge-reply.md'), judgeReply + '\n'); if (rel) judgeFile = rel('judge-reply.md'); }
+    parsed = parseWinner(judgeReply);
   } catch (e) {
     if (signal?.aborted) throw signal.reason ?? e;
     if (isFatalProviderError(e)) throw e;
-    parsedWinner = 'TIE';
+    parsed = 'TIE';
   }
-
-  let winner;
-  let reason;
-
-  if (parsedWinner === 'A') {
-    winner = 'A';
-    reason = 'judge';
-  } else if (parsedWinner === 'B') {
-    winner = 'B';
-    reason = 'judge';
-  } else {
-    // Unparseable/TIE/throw -> runtime closest to the target, then A.
-    const target = resolveTargetSeconds(input), offA = Math.abs(runtimeA - target), offB = Math.abs(runtimeB - target);
-    if (offA !== offB) { winner = offA < offB ? 'A' : 'B'; reason = 'runtime'; }
-    else { winner = 'A'; reason = 'fallback'; }
-  }
-
-  const winnerDraft = winner === 'A' ? draftA : draftB;
-  const gateIssues = winner === 'A' ? gateA.issues : gateB.issues;
-
-  return {
-    winner,
-    winnerDraft,
-    gateIssues,
-    bestOf: {
-      drafts,
-      judged: true,
-      judgeReply: judgeFile,
-      judgeReplyFile: judgeFile,
-      winner,
-      reason,
-    },
-  };
+  const chosen = passing.find((r) => r.id === parsed);
+  if (chosen) return done(chosen, true, 'judge', judgeFile);
+  // Unparseable/TIE/throw (or a winner that did not pass) -> runtime closest to the target, then the first.
+  const off = (r) => Math.abs(r.runtime - targetRuntime);
+  const best = Math.min(...passing.map(off));
+  const closest = passing.filter((r) => off(r) === best);
+  return done(closest[0], true, closest.length === 1 ? 'runtime' : 'fallback', judgeFile);
 }
 
+/** Two-draft form of pickBest (kept for callers and tests). */
+export async function pickDraft({ draftA, draftB, errorA = null, errorB = null, ...rest } = {}) {
+  return pickBest({ candidates: [{ id: 'A', draft: draftA, error: errorA }, { id: 'B', draft: draftB, error: errorB }], ...rest });
+}
+
+const DRAFT_IDS = ['A', 'B', 'C'];
 /**
- * Runs parallel generation of drafts A and B in separate workspaces, saves them,
- * and calls pickDraft.
+ * Writes the drafts in parallel, each in its own workspace, saves them and picks one (pickBest).
+ * tasks: one first-user-message per draft (one per story approach), up to 3; default two drafts of the same task.
+ * labels: optional approach label per draft, recorded in bestOf.drafts.
  */
 export async function runBestOf({
-  agent,
-  input,
-  model,
-  gate,
-  signal,
-  runsRoot,
-  root,
-  task,
-  runOnce,
-  prepareWorkspace,
-  state = {},
-  assetFiles = {},
-  photoFiles = {},
+  agent, input, model, gate, signal, runsRoot, root, task, tasks, labels = [], runOnce, prepareWorkspace, state = {}, assetFiles = {}, photoFiles = {},
 } = {}) {
-  const wsA = await prepareWorkspace({
-    runsRoot: join(root, 'workspaces'),
-    runId: 'draft-A',
-    agent,
-    input,
-    approvedAssets: state.approvedAssets ?? {},
-    assetFiles,
-    photoFiles,
-  });
-  const wsB = await prepareWorkspace({
-    runsRoot: join(root, 'workspaces'),
-    runId: 'draft-B',
-    agent,
-    input,
-    approvedAssets: state.approvedAssets ?? {},
-    assetFiles,
-    photoFiles,
-  });
-
-  const [resA, resB] = await Promise.all([
-    draftContext.run({ draftId: 'A' }, async () => {
+  const list = (tasks?.length ? tasks : [task, task]).slice(0, DRAFT_IDS.length).map((t) => t ?? `Produce the ${agent} output for this run.`);
+  const results = await Promise.all(list.map(async (t, i) => {
+    const id = DRAFT_IDS[i];
+    const ws = await prepareWorkspace({ runsRoot: join(root, 'workspaces'), runId: `draft-${id}`, agent, input, approvedAssets: state.approvedAssets ?? {}, assetFiles, photoFiles });
+    return draftContext.run({ draftId: id }, async () => {
       try {
-        const draft = await runOnce(
-          task ?? `Produce the ${agent} output for this run.`,
-          `${agent} deep agent draft A`,
-          ['draft:A'],
-          wsA.root
-        );
-        return { id: 'A', draft, error: null };
+        return { id, label: labels[i] ?? null, draft: await runOnce(t, `${agent} deep agent draft ${id}`, [`draft:${id}`], ws.root), error: null };
       } catch (e) {
         if (signal?.aborted) throw signal.reason ?? e;
         if (isFatalProviderError(e)) throw e;
-        return { id: 'A', draft: null, error: e };
+        return { id, label: labels[i] ?? null, draft: null, error: e };
       }
-    }),
-    draftContext.run({ draftId: 'B' }, async () => {
-      try {
-        const draft = await runOnce(
-          task ?? `Produce the ${agent} output for this run.`,
-          `${agent} deep agent draft B`,
-          ['draft:B'],
-          wsB.root
-        );
-        return { id: 'B', draft, error: null };
-      } catch (e) {
-        if (signal?.aborted) throw signal.reason ?? e;
-        if (isFatalProviderError(e)) throw e;
-        return { id: 'B', draft: null, error: e };
-      }
-    }),
-  ]);
-
+    });
+  }));
   const dir = join(root, 'reflection');
   await mkdir(dir, { recursive: true });
   const rel = (f) => relative(runsRoot, join(dir, f));
-
-  if (resA.draft) await writeFile(join(dir, 'draft-A.json'), JSON.stringify(resA.draft, null, 2));
-  if (resB.draft) await writeFile(join(dir, 'draft-B.json'), JSON.stringify(resB.draft, null, 2));
-
-  return await pickDraft({
-    draftA: resA.draft,
-    draftB: resB.draft,
-    errorA: resA.error,
-    errorB: resB.error,
-    gate,
-    model,
-    input,
-    agent,
-    dir,
-    rel,
-    signal,
-  });
+  for (const r of results) if (r.draft) await writeFile(join(dir, `draft-${r.id}.json`), JSON.stringify(r.draft, null, 2));
+  return pickBest({ candidates: results, gate, model, input, agent, dir, rel, signal });
 }

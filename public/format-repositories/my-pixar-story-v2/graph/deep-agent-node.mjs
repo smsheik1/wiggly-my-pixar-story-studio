@@ -28,7 +28,7 @@ import { SeedanceCompilerOutputSchema, SeedanceSubmitSchema, withAssembledPrompt
 import { loadSkill, loadReview, outputCap } from '../config/models.mjs';
 import { runColdRead } from './cold-read.mjs';
 import { bestOfEnabled, runBestOf } from './best-of.mjs';
-import { storyBeatsEnabled, runStoryBeats, shotsTask } from './story-beats.mjs';
+import { storyBeatsEnabled, runStoryBeats, runStoryPlans, shotsTask } from './story-beats.mjs';
 import { resolveTargetSeconds } from './length-guard.mjs';
 
 export const RUNS_ROOT = fileURLToPath(new URL('../runs/', import.meta.url));
@@ -432,13 +432,27 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     let initialGateIssues = null;
     // Story first: calls A (beats) and B (critique + rewrite) before call C (shots). Artifacts in <attempt>/<agent>/story/.
     const storyOn = storyBeatsEnabled(agent, storyBeats === undefined ? config : { ...config, storyBeats }, { scope, task, patch: Boolean(input?.patch) });
-    const story = storyOn
-      ? await runStoryBeats({ agent, input, model, dir: join(root, 'story'), signal, attempt, callRetry: { onRetry: logRetry(agent), ...callRetry } }) : null;
+    // With best-of on, the plan's approaches each get a critiqued story and a full draft (up to 3), and the judge picks.
+    const multi = storyOn && bestOfEnabled(agent, config, { scope, task, rounds });
+    const storyRetry = { onRetry: logRetry(agent), ...callRetry };
+    const plans = multi ? await runStoryPlans({ agent, input, model, dir: join(root, 'story'), signal, attempt, callRetry: storyRetry }) : null;
+    let story = plans ? plans[0]
+      : storyOn && !multi ? await runStoryBeats({ agent, input, model, dir: join(root, 'story'), signal, attempt, callRetry: storyRetry }) : null;
     const shotsMsg = story ? shotsTask(agent, story.approved) : undefined;
     let thesis = story?.thesis ?? null;
     // The thesis is picked once, in the beats; the shots and every rewrite keep it word for word.
     const pinThesis = (o) => (thesis && o && typeof o === 'object' ? Object.assign(o, { finaleThesis: thesis }) : o);
-    if (bestOfEnabled(agent, config, { scope, task, rounds })) {
+    if (plans && plans.length >= 2) {
+      const picked = await runBestOf({
+        agent, input, model, gate, signal, runsRoot, root, runOnce, tasks: plans.map((p) => shotsTask(agent, p.approved)), labels: plans.map((p) => p.label),
+        prepareWorkspace: prepareRunWorkspace, state, assetFiles, photoFiles,
+      });
+      story = plans['ABC'.indexOf(picked.winner)] ?? plans[0];
+      thesis = story.thesis ?? null;
+      out = picked.winnerDraft;
+      bestOf = picked.bestOf;
+      initialGateIssues = picked.gateIssues;
+    } else if (bestOfEnabled(agent, config, { scope, task, rounds })) {
       const picked = await runBestOf({
         agent, input, model, gate, signal, runsRoot, root, task: shotsMsg, runOnce,
         prepareWorkspace: prepareRunWorkspace, state, assetFiles, photoFiles,
@@ -450,7 +464,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
       out = await runOnce(task ?? shotsMsg ?? `Produce the ${agent} output for this run.`, `${agent} deep agent`);
     }
     out = pinThesis(out);
-    if (story) Object.defineProperty(out, STORY, { value: { files: story.files.map((f) => relative(runsRoot, join(root, 'story', f))) }, enumerable: false, configurable: true });
+    if (story) Object.defineProperty(out, STORY, { value: { files: story.files.map((f) => relative(runsRoot, join(story.dir ?? join(root, 'story'), f))), ...(story.label ? { approach: story.label } : {}) }, enumerable: false, configurable: true });
     if (!rounds) return out;
 
     const dir = join(root, 'reflection');
