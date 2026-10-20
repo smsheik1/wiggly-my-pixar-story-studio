@@ -131,3 +131,7 @@ test('seedance-2.0-mini: 15s clips, any whole second, 4000-char prompt cap', () 
   assert.ok(codes(d, 'seedance-2.0-mini').includes('PROMPT_TOO_LONG') === d.segments.some((s) => s.compiledPrompt.length > 4000));
   assert.ok(role.includes('promptMaxChars'));
 });
+
+test('role.md: a device faces its user; no screen content unless over-the-shoulder or insert', () => {
+  for (const x of ['a device faces its user', 'its screen toward her and its back to the camera', 'over-the-shoulder shot or a screen insert', 'never "glowing"']) assert.ok(role.includes(x), x);
+});
