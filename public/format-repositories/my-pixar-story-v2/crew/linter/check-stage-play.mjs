@@ -119,7 +119,7 @@ export const EYES_HIDDEN = new RegExp([
   String.raw`(?:puts?|slides?|sliding|putting|pulls?|pulling|lowers?|lowering|drops?|dropping) (?:on )?(?:his |her |their |the )?(?:\w+ ){0,2}?${DARK_EYEWEAR}(?: on| down)?\b(?![^.;]{0,30}(?:forehead|up))`,
   String.raw`wearing (?:dark |black |matte black |tinted |his |her |their )*${DARK_EYEWEAR}(?![^.;]{0,30}(?:forehead|pushed up))`,
 ].join('|'), 'i');
-export const MAX_CARDS_PER_PERSON = 2;
+export const MAX_CARDS_PER_PERSON = 3; // one card per life stage: child (<13), young adult (13-19, shown as 18), adult
 export const MAX_ON_SCREEN = 2;
 export const FINALE_MIN_NARRATION_SEC = 10;
 /** Resume facts in spoken in-scene dialogue (they belong in narration). */
@@ -274,11 +274,11 @@ export function validateStoryDirectorOutput(data, input = {}) {
     if (ph && !norm(c.skinTone).includes(norm(ph.skinTone)))
       err('SKIN_TONE_NOT_FROM_PHOTO', `Cast ${c.elementTag}: skinTone must be the photo's '${ph.skinTone}', not '${c.skinTone}'.`, p);
   });
-  // WIGGLY: at most 2 cards (age variants) per real person.
+  // WIGGLY: at most 3 cards (child, young adult, adult) per real person.
   const people = new Map();
   for (const c of cast) { const k = personKey(c); people.set(k, [...(people.get(k) ?? []), c.elementTag]); }
   for (const [k, tagsOf] of people) if (tagsOf.length > MAX_CARDS_PER_PERSON)
-    err('TOO_MANY_AGE_VARIANTS', `${tagsOf.length} cast cards depict the same person '${k}' (${tagsOf.join(', ')}); max ${MAX_CARDS_PER_PERSON} (main age + one other).`, 'cast');
+    err('TOO_MANY_AGE_VARIANTS', `${tagsOf.length} cast cards depict the same person '${k}' (${tagsOf.join(', ')}); max ${MAX_CARDS_PER_PERSON} (one per life stage: child, young adult shown as 18, adult).`, 'cast');
   // WIGGLY: photo characters are never guessed.
   if ((input?.photoCharacters ?? []).length) for (const [i, a] of (data?.assumptions ?? []).entries())
     if (/skin ?tone|complexion/i.test(a) && /assum|guess|no photo|without photo|not provided/i.test(a))

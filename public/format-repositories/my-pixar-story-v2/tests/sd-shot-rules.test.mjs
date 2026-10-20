@@ -59,13 +59,14 @@ test('EYES_HIDDEN: any eyewear that hides the eyes, in shots, cast and panels (g
   d = good(); d.cast[1].signatureAccent = 'dark aviator glasses'; assert.ok(codes(d).includes('EYES_HIDDEN'));
   d = good(); d.storyboardSheets[0].panels[0].whatIsInFrame = 'Warm brown boy wearing dark sunglasses'; assert.ok(codes(d).includes('EYES_HIDDEN'));
 });
-test('TOO_MANY_AGE_VARIANTS: max 2 cards per real person (by realPerson, or name minus age words)', () => {
+test('TOO_MANY_AGE_VARIANTS: max 3 cards per real person, one per life stage (by realPerson, or name minus age words)', () => {
   const d = good(); const base = d.cast[0];
   d.cast.push({ ...base, name: 'Dad Shaz', elementTag: '@DadShaz', age: 34 });
-  assert.ok(!codes(d).includes('TOO_MANY_AGE_VARIANTS'));
-  d.cast.push({ ...base, name: 'Teen Shaz', elementTag: '@TeenShaz', age: 18 });
+  d.cast.push({ ...base, name: 'Teen Shaz', elementTag: '@TeenShaz', age: 18, ageNote: 'true age 17; shown as 18' });
+  assert.ok(!codes(d).includes('TOO_MANY_AGE_VARIANTS'), 'child + young adult + adult is allowed');
+  d.cast.push({ ...base, name: 'Old Shaz', elementTag: '@OldShaz', age: 70 });
   assert.ok(codes(d).includes('TOO_MANY_AGE_VARIANTS'));
-  const e = good(); for (const n of ['Teen Shaz', 'Adult Shaz']) e.cast.push({ ...e.cast[0], name: n, elementTag: '@' + n.replace(' ', ''), realPerson: undefined });
+  const e = good(); for (const n of ['Teen Shaz', 'Adult Shaz', 'Grown Shaz']) e.cast.push({ ...e.cast[0], name: n, elementTag: '@' + n.replace(' ', ''), realPerson: undefined });
   assert.ok(codes(e).includes('TOO_MANY_AGE_VARIANTS'));
 });
 test('photo characters: skin tone copied from the photo; guessed skin tone assumption fails', () => {

@@ -102,7 +102,7 @@ export const CastCardSchema = z.object({
   skinTone: z.string().min(3).describe('Plain-words skin tone; repeated in every panel and shot that shows them'),
   gender: z.enum(['female', 'male']),
   family: z.boolean().default(true).describe('Member of the maker’s family (hijab rule applies to female family)'),
-  realPerson: z.string().min(1).describe("WIGGLY: the real person this card depicts, e.g. 'Theo'. At most 2 cards (age variants) per real person"),
+  realPerson: z.string().min(1).describe("WIGGLY: the real person this card depicts, e.g. 'Theo'. Up to 3 cards (child under 13, young adult shown as 18, adult) per real person"),
   ageNote: z.string().min(3).nullable().default(null).describe("WIGGLY: the true age from the answers math when the depicted age differs, e.g. 'true age 15 (7 years older than the maker at 8); shown as 18'"),
   photoRef: z.string().min(1).nullable().default(null).describe('WIGGLY: id of the photoCharacters entry this card is drawn from, or null when no photo exists'),
 }).refine((c) => !(c.age >= 13 && c.age <= 17), { message: 'Teens are depicted as 18: age 13-17 is not allowed', path: ['age'] });
