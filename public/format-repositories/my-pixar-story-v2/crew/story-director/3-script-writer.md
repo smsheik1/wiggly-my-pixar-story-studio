@@ -91,7 +91,7 @@ Seedance 2.5 generates in discrete temporal blocks of **at most 30 seconds**.
 * Every segment you write **MUST NOT EXCEED 30 SECONDS** ($\sum \Delta t_i \le 30\text{s}$).
 * Every shot duration $\Delta t_i$ must be an **integer (whole second)**. Decimals ($2.5\text{s}$) are strictly banned.
 * Consecutive and non-overlapping: `0–3s, 3–5s, 5–9s, 9–11s...`
-* If a scene runs longer than 30 seconds, split it into named modular segments (**Part 1: Original**, **Part 2: Sequel**, **Part 3: Sequel 2**) chained via the Extend feature.
+* A film longer than 30 seconds is split into parts of at most 30 seconds (**Part 1**, **Part 2**, **Part 3**), each rendered as one multi-shot Seedance 2.5 prompt.
 * Every segment's timecodes start at `0` and run consecutively to its end.
 * Whole film: the target runtime is the maximum (`targetTotalRuntimeSec` in the input, default 90 seconds). A film may run at most 5 seconds past it; to fit, drop a memory or a shot, never squeeze lines.
 
@@ -157,7 +157,7 @@ Return ONE JSON object and nothing else, matching `schema.mjs` (`StoryDirectorOu
 {
   "masthead": { "title": "string", "draftNumber": 1, "oneLinePremise": "tone + conflict, not the ending" },
   "finaleThesis": "one plain sentence: the one idea the finale is built around, taken from the family's answers",
-  "shapeBar": { "totalRuntimeSec": 46, "parts": [ { "name": "Part 1: Original", "durationSec": 30 } ] },
+  "shapeBar": { "totalRuntimeSec": 46, "parts": [ { "name": "Part 1", "durationSec": 30 } ] },
   "cast": [ {
     "name": "Child", "elementTag": "@Child", "age": 8, "oneWordRole": "inventor",
     "physicalDescription": "concrete visual traits from the photo description; any accessory the answers say they always wear, exactly as described",
@@ -167,7 +167,7 @@ Return ONE JSON object and nothing else, matching `schema.mjs` (`StoryDirectorOu
   } ],
   "locations": [ { "name": "Family living room", "description": "1990s family living room, daytime: worn sofa, low table, window light" } ],
   "segments": [ {
-    "segmentId": 1, "title": "Part 1: Original", "targetDurationSec": 30,
+    "segmentId": 1, "title": "Part 1", "targetDurationSec": 30,
     "goalSummary": "2-3 sentences: goal, shot count, hard stop",
     "continuityLocks": ["who sits where", "180-degree axis"],
     "scenes": [ { "shots": [1], "present": ["@Child", "@Parent"], "props": ["each prop that matters with its one state for the scene"] } ],

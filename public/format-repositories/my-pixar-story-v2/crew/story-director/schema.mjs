@@ -69,7 +69,7 @@ export const ShotCardSchema = z.object({
 }).refine((shot) => shot.endSec > shot.startSec, { message: 'endSec must be strictly greater than startSec' });
 
 export const ScriptSegmentSchema = z.object({
-  segmentId: z.number().int().positive().describe('Segment index (e.g. 1 for Original, 2 for Sequel, 3 for Sequel 2)'),
+  segmentId: z.number().int().positive().describe('Part index: 1, 2, 3 (each part is at most 30s, one multi-shot render)'),
   title: z.string().min(3).describe("Part title, e.g. 'Part 1: Ben's Presentation'"),
   targetDurationSec: z.number().int().min(1).max(30).describe('Total segment duration in seconds — HARD CEILING IS 30s'),
   goalSummary: z.string().min(10).describe('2-3 sentences explaining goal, shot count, and the hard narrative stop'),
