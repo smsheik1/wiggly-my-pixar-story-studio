@@ -87,7 +87,7 @@ test('SC: the visual tell is part of the locked Look line', () => {
   assert.equal(lockPhrases(st.storyDirector.cast[2], st.characterArchitect.output.characters[2]).at(-1).kind, 'tell');
 });
 test('SC: eyes stay visible even inside the lock lines', () => {
-  has(sc(shots(out(), 0, (t) => t.replace('Look @Shaz: red plastic sunglasses pushed up on his forehead.', 'Look @Shaz: red plastic sunglasses pushed up on his forehead; sunglasses covering his eyes.'))), 'EYES_HIDDEN');
+  has(sc(shots(out(), 0, (t) => t.replace('Look @Shaz: red plastic sunglasses pushed up on his forehead;', 'Look @Shaz: red plastic sunglasses pushed up on his forehead; sunglasses covering his eyes;'))), 'EYES_HIDDEN');
 });
 test('SC: the speaker is on screen and leads the action', () => {
   const d = out(); d.segments[0].shots[2].cast = ['@Shaz']; has(sc(d), 'SPEAKER_NOT_ON_SCREEN');

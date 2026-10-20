@@ -152,7 +152,7 @@ test('G11 schema: blocks 2/3 swapped -> sequential order refine (and OUT_OF_ORDE
 test('G12 "Mia: {..}" without @ -> MISSING_SPEAKER_HANDLE_AT', () =>
   hasCode(one(T(cls(), (t) => t.replace('@Mia: {Me!', 'Mia: {Me!'), 0, 'block5_shots')), 'MISSING_SPEAKER_HANDLE_AT'));
 test('G13 schema: payload durationSec 30 vs total 27 -> duration mismatch', () => {
-  const d = cls(); d.segments[0].generationPayload.durationSec = 30; assert.throws(() => parseSeedancePrompts(d), /must equal totalDurationSec/);
+  const d = cls(); d.segments[0].generationPayload.durationSec = 30; assert.throws(() => parseSeedancePrompts(d), /must be 27/);
 });
 test('MISSING_SCHEMA_BLOCK and MISSING_REFERENCE_CLOSING_LAW', () => {
   hasCode(one(T(cls(), (t) => t.replace('[VISUAL STYLE]', '[STYLE]'))), 'MISSING_SCHEMA_BLOCK');

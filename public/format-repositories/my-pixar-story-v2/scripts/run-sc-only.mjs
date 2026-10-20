@@ -6,6 +6,7 @@
 // Budget guard: polls the OpenRouter key and aborts if this run spends more than --max-usd (default 0.05).
 // Usage: node scripts/run-sc-only.mjs --project runs/<id>/project.json --run-id <id> [--max-usd 0.05] [--secrets <file>]
 //   [--suffix v2]   write seedance-compiler-v2.json / sc-state-v2.json instead of overwriting the first SC output
+//   [--engine seedance-2.5|omni-1.1-flash]  target video engine (default seedance-2.5); sets the SC clip cap
 //   [--audit-id <id>] audit folder runs/<id>/ (default <runId>-sc)
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -35,7 +36,8 @@ const inputs = inputsFromProject(JSON.parse(await readFile(projectPath, 'utf8'))
 const refs = await loadPhotoReferences(defaultPhotoRefsPath(projectPath)); if (refs.length) inputs.photoReferences = refs;
 const approvedAssets = { ...(prev.approvedAssets ?? {}), ...placeholderAssets(prev.pendingApproval ?? []) };
 log(`approving ${Object.keys(approvedAssets).length} tags with placeholder keys (no image generation)`);
-const state = { inputs, storyDirector: sd, characterArchitect: { output: ca }, locationScout: { output: ls }, approvedAssets };
+const engine = arg('--engine'); if (engine) log(`target engine ${engine}`);
+const state = { inputs, ...(engine ? { videoEngine: engine } : {}), storyDirector: sd, characterArchitect: { output: ca }, locationScout: { output: ls }, approvedAssets };
 
 const b0 = await keyUsage(); log(`key remaining at start: $${b0.remaining?.toFixed(4)}; abort above $${maxUsd} spent`);
 const guard = setInterval(async () => { try { const b = await keyUsage(); const spent = b.usage - b0.usage; log(`[budget] spent $${spent.toFixed(4)}, remaining $${b.remaining?.toFixed(4)}`);

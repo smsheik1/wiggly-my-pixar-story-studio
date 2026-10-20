@@ -1,6 +1,8 @@
 import { doNotWriteList } from '../crew/linter/writing-tells.mjs';
 // v2 target model & provider map (static). Not wired into any pipeline yet.
 import { readFileSync, existsSync } from 'node:fs';
+import { VIDEO_ENGINES } from '../crew/seedance-compiler/schema.mjs';
+export { VIDEO_ENGINES };
 import { fileURLToPath } from 'node:url';
 export const NANO_BANANA = Object.freeze({ provider: 'google-flow', model: 'nano-banana-2.1', promptLines: 'single' });
 
@@ -40,7 +42,7 @@ export const V2_MODELS = Object.freeze({
     video: { provider: 'replicate', model: 'bytedance/seedance-2.5', resolution: '480p', enabled: false,
              note: 'not yet enabled: Seedance testing only after all upstream agents are proven' },
     reflectionRounds: 0,
-    targetEngines: { video: 'seedance-2.5' }, segmentMaxSec: 30, continuation: 'extend',
+    targetEngines: { video: 'seedance-2.5' }, videoEngines: Object.keys(VIDEO_ENGINES) /* selectable: state.videoEngine or run-sc-only --engine */, segmentMaxSec: 30 /* per engine: VIDEO_ENGINES[engine].segmentMaxSec (omni-1.1-flash 10s, 4/6/8/10) */, continuation: 'extend',
     contract: { output: 'crew/seedance-compiler/schema.mjs', input: 'crew/seedance-compiler/input.mjs', gate: 'crew/linter/check-seedance-prompts.mjs' } },
   vera: { downstreamAgents: [], maxTokens: 8000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh' },
   linter: { downstreamAgents: [], maxTokens: 0, kind: 'code', provider: 'none', model: 'none' },

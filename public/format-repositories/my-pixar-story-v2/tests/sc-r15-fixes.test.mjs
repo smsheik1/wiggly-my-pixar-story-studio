@@ -43,10 +43,10 @@ test('role.md requires the camera line from the stage play', () => {
 
 // 2 sunglasses: since change 5 (shot locks) the accessory is REQUIRED in every shot, as the exact cast-card wording
 test('signature accessory: the exact locked wording is required per on-screen shot; missing or reworded fails', () => {
-  const lock = 'Look @Shaz: red plastic sunglasses pushed up on his forehead.';
+  const lock = 'Look @Shaz: red plastic sunglasses pushed up on his forehead; crisp bright red cotton t-shirt.';
   assert.ok(out().segments[0].tenBlocks.block5_shots.includes(lock));
   assert.ok(errs(shots(out(), 0, (t) => t.replace(`${lock}\n`, ''))).includes('ACCESSORY_MISSING'));
-  assert.ok(errs(shots(out(), 0, (t) => t.replace(lock, 'Look @Shaz: red sunglasses up on his head.'))).includes('ACCESSORY_REWORDED'));
+  assert.ok(errs(shots(out(), 0, (t) => t.replace(lock, 'Look @Shaz: red sunglasses up on his head; crisp bright red cotton t-shirt.'))).includes('ACCESSORY_REWORDED'));
   // a shot action may mention it; the old "never in [SHOTS]" ban is gone
   const d = out(); d.segments[0].shots[1].action = '@Shaz, red plastic sunglasses pushed up on his forehead, lowers his chin.';
   assert.ok(!errs(d).some((c) => /REDESCRIBED|ACCESSORY/.test(c)));

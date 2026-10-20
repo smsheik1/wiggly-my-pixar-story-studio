@@ -5,6 +5,20 @@ import { ASSET_KEY } from '../character-architect/schema.mjs';
 export const VIDEO_ENGINE = 'seedance-2.5';
 export const VIDEO_RESOLUTION = '480p';
 export const MAX_SEGMENT_SECONDS = 30;
+// WIGGLY: target video engines. segmentMaxSec = longest clip the engine renders; durations = the clip lengths it offers
+// (null = any whole second up to the cap). A staged part longer than the cap is split into clips at shot boundaries.
+export const VIDEO_ENGINES = Object.freeze({
+  'seedance-2.5': Object.freeze({ provider: 'replicate', segmentMaxSec: 30, durations: null, continuation: 'extend' }),
+  'omni-1.1-flash': Object.freeze({ provider: 'google-flow', segmentMaxSec: 10, durations: Object.freeze([4, 6, 8, 10]), continuation: 'cut' }),
+});
+export const ENGINE_IDS = Object.keys(VIDEO_ENGINES);
+/** generationPayload.durationSec for a clip: the smallest duration the engine offers that is >= the clip's true length. */
+export function engineDurationFor(engine, lenSec) {
+  const e = VIDEO_ENGINES[engine];
+  if (!e) return undefined;
+  if (!e.durations) return lenSec <= e.segmentMaxSec ? lenSec : undefined;
+  return e.durations.find((d) => d >= lenSec);
+}
 export const MAX_TOTAL_SECONDS = 180;
 export const REF_TAG = /^@(?:Image|Loc) \d+$/;
 export const SLOT_TAG = /^@(?:Image|Loc)\b/i;
@@ -55,7 +69,7 @@ export const TenBlocksSchema = z.object({
 }).strict();
 
 export const GenerationPayloadSchema = z.object({
-  engine: z.literal(VIDEO_ENGINE).default(VIDEO_ENGINE),
+  engine: z.enum(ENGINE_IDS).default(VIDEO_ENGINE),
   durationSec: z.number().int().min(1).max(MAX_SEGMENT_SECONDS),
   resolution: z.literal(VIDEO_RESOLUTION).default(VIDEO_RESOLUTION), // WIGGLY: 480p only
   aspectRatio: z.literal('16:9').default('16:9'),
@@ -80,6 +94,11 @@ export const SeedanceSegmentBase = z.object({
   extendsFrom: z.number().int().positive().nullable().default(null).describe('null for the first segment; otherwise the previous segmentIndex'),
   references: z.array(ReferenceSchema).min(1),
   shots: z.array(CompiledShotSchema).min(1),
+  // WIGGLY clips: when a staged part is longer than the engine's clip cap it is split into consecutive clips at shot
+  // boundaries. segmentId stays the source part; shots restart at 0 and keep the source sceneId.
+  clipId: z.string().regex(/^\d+[a-z]$/, 'clipId is the part id plus a letter, e.g. "2a"').optional(),
+  sourceShotNumbers: z.array(z.number().int().positive()).min(1).optional().describe('the staged shotNumbers this clip covers, in order'),
+  sourceStartSec: z.number().int().nonnegative().default(0).describe('where this clip starts inside its staged part'),
 }).strict();
 
 export const SeedanceSegmentSchema = SeedanceSegmentBase.superRefine((seg, ctx) => {
@@ -87,8 +106,13 @@ export const SeedanceSegmentSchema = SeedanceSegmentBase.superRefine((seg, ctx) 
   pos.forEach((p, i) => { if (p < 0) ctx.addIssue({ code: 'custom', path: ['compiledPrompt'], message: `missing block header ${BLOCK_HEADERS[i]}` }); });
   const present = pos.filter((p) => p >= 0);
   if (present.some((p, i) => i > 0 && p < present[i - 1])) ctx.addIssue({ code: 'custom', path: ['compiledPrompt'], message: 'block headers must appear in sequential order' });
-  if (seg.generationPayload.durationSec !== seg.totalDurationSec)
-    ctx.addIssue({ code: 'custom', path: ['generationPayload', 'durationSec'], message: `generationPayload.durationSec (${seg.generationPayload.durationSec}) must equal totalDurationSec (${seg.totalDurationSec})` });
+  const wantDur = engineDurationFor(seg.generationPayload.engine, seg.totalDurationSec);
+  if (seg.generationPayload.durationSec !== wantDur)
+    ctx.addIssue({ code: 'custom', path: ['generationPayload', 'durationSec'], message: wantDur === undefined
+      ? `totalDurationSec ${seg.totalDurationSec}s is longer than ${seg.generationPayload.engine} renders (${VIDEO_ENGINES[seg.generationPayload.engine].segmentMaxSec}s): split the part into clips at shot boundaries`
+      : `generationPayload.durationSec (${seg.generationPayload.durationSec}) must be ${wantDur} (${VIDEO_ENGINES[seg.generationPayload.engine].durations ? `the smallest ${seg.generationPayload.engine} duration >= the clip's ${seg.totalDurationSec}s` : `equal to totalDurationSec`})` });
+  if (seg.sourceShotNumbers && seg.sourceShotNumbers.length !== seg.shots.length)
+    ctx.addIssue({ code: 'custom', path: ['sourceShotNumbers'], message: `sourceShotNumbers lists ${seg.sourceShotNumbers.length} shots but the clip has ${seg.shots.length}` });
   if (seg.shotCount !== seg.shots.length) ctx.addIssue({ code: 'custom', path: ['shotCount'], message: `shotCount ${seg.shotCount} != ${seg.shots.length} shots` });
   let t = 0;
   seg.shots.forEach((s, i) => {

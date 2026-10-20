@@ -149,16 +149,20 @@ export function checkSeedanceShotLocks(seg, src, blocks, input, p) {
   const cards = new Map((input?.cast ?? []).map((c) => [c.elementTag, c]));
   const chars = new Map((input?.characters ?? []).map((c) => [c.elementTag, c]));
   const castTags = new Set(cards.keys());
-  const staged = src.shots.reduce((n, s) => n + (s.endSec - s.startSec), 0);
-  if (seg.totalDurationSec !== staged) err('SEGMENT_DURATION_NOT_AS_STAGED', `${p}: totalDurationSec is ${seg.totalDurationSec}s but the stage-play part runs ${staged}s. Keep every shot's timecodes exactly as staged.`, `${p}.totalDurationSec`);
+  // WIGGLY clips: a clip covers some of the part's shots; its timecodes restart at 0, offset by sourceStartSec.
+  const inClip = new Set((seg.shots ?? []).map((s) => s.sceneId));
+  const isClip = !!seg.sourceShotNumbers || !!seg.clipId || (seg.sourceStartSec ?? 0) > 0;
+  const off = seg.sourceStartSec ?? 0;
+  const staged = src.shots.filter((s) => !isClip || inClip.has(s.sceneId)).reduce((n, s) => n + (s.endSec - s.startSec), 0);
+  if (seg.totalDurationSec !== staged) err('SEGMENT_DURATION_NOT_AS_STAGED', `${p}: totalDurationSec is ${seg.totalDurationSec}s but the staged ${isClip ? 'shots in this clip run' : 'part runs'} ${staged}s. Keep every shot's timecodes exactly as staged.`, `${p}.totalDurationSec`);
   const sp = `${p}.tenBlocks.block5_shots`;
   (seg.shots ?? []).forEach((s, j) => {
     const at = `${p}.shots.${j}`;
     const srcShot = src.shots.find((x) => x.sceneId === s.sceneId);
     if (!srcShot) return; // UNKNOWN_SCENE_REF reports it
     const label = `${p}: SHOT ${s.shotNumber} (scene ${s.sceneId})`;
-    if (s.startSec !== srcShot.startSec || s.endSec !== srcShot.endSec)
-      err('SHOT_TIMING_NOT_AS_STAGED', `${label} runs ${s.startSec}-${s.endSec}s but the stage play has ${srcShot.startSec}-${srcShot.endSec}s. Copy the stage play's timecodes; never shorten a shot.`, at);
+    if (s.startSec + off !== srcShot.startSec || s.endSec + off !== srcShot.endSec)
+      err('SHOT_TIMING_NOT_AS_STAGED', `${label} runs ${s.startSec}-${s.endSec}s but the stage play has ${srcShot.startSec - off}-${srcShot.endSec - off}s${off ? ` in this clip (staged ${srcShot.startSec}-${srcShot.endSec}s, clip starts at ${off}s)` : ''}. Copy the stage play's timecodes; never shorten a shot.`, at);
     const w = Math.max(shotWords(srcShot), countWords(s.dialogue?.line)), dur = s.endSec - s.startSec;
     if (w && dur < secondsNeeded(w)) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`${label} (${s.startSec}s-${s.endSec}s)`, w, dur), `${at}.dialogue`);
     const want = onScreenOf(srcShot, castTags).filter((t) => castTags.has(t));

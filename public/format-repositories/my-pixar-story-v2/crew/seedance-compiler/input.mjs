@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import { CastCardSchema, DialogueLineSchema, NarrationLineSchema } from '../story-director/schema.mjs';
 import { ASSET_KEY } from '../character-architect/schema.mjs';
+import { VIDEO_ENGINES, ENGINE_IDS, VIDEO_ENGINE } from './schema.mjs';
 
 const KEY = z.string().regex(ASSET_KEY, 'asset key must be a local asset key, not a URL or file path');
 
@@ -84,7 +85,12 @@ export const SeedanceCompilerInput = z.object({
   references: z.array(ReferenceElement).min(1),
   voiceRegistry: z.array(VoiceRegistryEntry).default([]),
   videoSettings: VideoSettings.prefault({}),
-}).strict().superRefine((d, ctx) => {
+  // WIGGLY: the video engine these prompts are for, its clip cap and the clip lengths it offers (null = any whole second).
+  targetEngine: z.enum(ENGINE_IDS).default(VIDEO_ENGINE),
+  segmentMaxSec: z.number().int().positive().max(30).optional(),
+  allowedDurationsSec: z.array(z.number().int().positive()).nullable().optional(),
+}).strict().transform((d) => ({ ...d, segmentMaxSec: d.segmentMaxSec ?? VIDEO_ENGINES[d.targetEngine].segmentMaxSec,
+  allowedDurationsSec: d.allowedDurationsSec !== undefined ? d.allowedDurationsSec : (VIDEO_ENGINES[d.targetEngine].durations ? [...VIDEO_ENGINES[d.targetEngine].durations] : null) })).superRefine((d, ctx) => {
   d.segments.forEach((seg, i) => {
     let t = 0;
     for (const s of seg.shots) {
@@ -163,5 +169,6 @@ export function selectSeedanceCompilerInput(state = {}) {
   ];
   const audio = p.voiceAudioRefs ?? {};
   const voiceRegistry = (sd.cast ?? []).map((c) => ({ speakerTag: c.elementTag, verbatimVoicePrompt: c.voiceDescription, ...(audio[c.elementTag] ? { audioReference: audio[c.elementTag] } : {}) }));
-  return SeedanceCompilerInput.parse({ cast: sd.cast ?? [], segments, characters, locations, references, voiceRegistry, videoSettings: p.videoSettings ?? {} });
+  const targetEngine = p.videoEngine ?? state.videoEngine ?? VIDEO_ENGINE;
+  return SeedanceCompilerInput.parse({ cast: sd.cast ?? [], segments, characters, locations, references, voiceRegistry, videoSettings: p.videoSettings ?? {}, targetEngine });
 }

@@ -11,12 +11,19 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { segmentCastPresence } from '../seedance-compiler/input.mjs';
 import { checkSeedanceShotLocks } from './shot-locks.mjs';
-import { VIDEO_ENGINE, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX_TOTAL_SECONDS, BLOCK_HEADERS, headerPositions } from '../seedance-compiler/schema.mjs';
+import { VIDEO_ENGINE, VIDEO_ENGINES, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX_TOTAL_SECONDS, BLOCK_HEADERS, headerPositions } from '../seedance-compiler/schema.mjs';
 
 import { WORDS_PER_SECOND } from './speech.mjs';
 export { WORDS_PER_SECOND };
 const heardOnly = (d) => !!(d?.isVoiceover || d?.isOffCamera || /^(voiceover|off[- _]?camera)$/i.test(d?.mode ?? ''));
 export const DIALOGUE_EXCLUSION = 'The only spoken words in the entire segment are the lines in braces';
+export const MOUTHS_CLOSED_LINE = 'No one on screen speaks; every on-screen mouth stays closed.';
+const MOUTHS_CLOSED_SPEAK = /no one on screen speaks/i;
+const MOUTHS_CLOSED_LIPS = /mouths?\b[^.\n]{0,30}\bstays? closed/i;
+export const NO_MUMBLE_LINE = 'No humming, mumbling, breaths-as-words or partial words from anyone on screen.';
+const NO_MUMBLE = /no humming, mumbling/i;
+/** The signature garment of a Character Architect main outfit: its first item ('teal zip hoodie, jeans, ...' -> 'teal zip hoodie'). */
+export const garmentOf = (outfit) => String(outfit ?? '').split(/[,;]/)[0].trim().replace(/\.$/, '');
 export const REFERENCE_CLOSING = 'Each reference is one person or one object and appears once';
 const SHOT_HEADER = /SHOT\s+(\d+)\s*\|\s*([0-9.]+)[–-]([0-9.]+)s/g;
 const NON_SPEAKER_LABELS = ['Camera', 'Room', 'Lighting', 'Pose', 'Eyes', 'Face', 'Silhouette', 'Hair', 'Wardrobe', 'Background', 'SHOT', 'Location', 'Identity'];
@@ -65,7 +72,8 @@ export function splitBlocks(text) {
 }
 
 /** Gemini base: one segment. */
-export function validateSeedanceSegment(seg, { pathPrefix = '' } = {}) {
+export function validateSeedanceSegment(seg, { pathPrefix = '', engine = VIDEO_ENGINE } = {}) {
+  const cap = VIDEO_ENGINES[engine]?.segmentMaxSec ?? MAX_SEGMENT_SECONDS;
   const issues = [];
   const P = (s) => (pathPrefix ? `${pathPrefix}.${s}` : s);
   const err = (code, message, path = 'compiledPrompt') => issues.push({ severity: 'error', code, message, path: P(path) });
@@ -89,7 +97,7 @@ export function validateSeedanceSegment(seg, { pathPrefix = '' } = {}) {
     const s = Number(a), e = Number(b);
     if (!(e > s)) err('INVALID_TIMECODE_RANGE', `SHOT ${m[1]}: end must be after start.`);
     if (s !== prevEnd) err('TIMECODE_DISCONTINUITY', `SHOT ${m[1]} starts at ${s}s; expected ${prevEnd}s.`);
-    if (e > MAX_SEGMENT_SECONDS) err('RUNTIME_CEILING_EXCEEDED', `SHOT ${m[1]} ends at ${e}s, past the ${MAX_SEGMENT_SECONDS}s ceiling.`);
+    if (e > cap) err('RUNTIME_CEILING_EXCEEDED', `SHOT ${m[1]} ends at ${e}s, past the ${cap}s ${engine} clip ceiling.`);
     prevEnd = e;
   });
   // 3 cut terminators / pans
@@ -128,7 +136,7 @@ export function validateSeedanceSegment(seg, { pathPrefix = '' } = {}) {
   for (const [label, re] of PHYSICS) if (!re.test(cam)) warn('MISSING_ANIMATION_PHYSICS', `[CAMERA AND PERFORMANCE] should cover '${label}'.`, 'tenBlocks.block7_cameraAndPerformance');
   // WIGGLY: payload + structured shots agree with headers
   const gp = seg?.generationPayload ?? {};
-  if (gp.engine !== VIDEO_ENGINE) err('WRONG_ENGINE', `engine must be ${VIDEO_ENGINE}, not '${gp.engine}'.`, 'generationPayload.engine');
+  if (gp.engine !== engine) err('WRONG_ENGINE', `engine must be ${engine}, not '${gp.engine}'.`, 'generationPayload.engine');
   if (/\b(kling|veo|sora|runway|hailuo|higgsfield|volcano engine|seedance[- ]?(?:1|2\.0|2\.1))\b/i.test(t)) err('WRONG_ENGINE', 'Prompt names another video engine.');
   if (gp.resolution !== VIDEO_RESOLUTION) err('WRONG_RESOLUTION', `resolution must be ${VIDEO_RESOLUTION}, not '${gp.resolution}'.`, 'generationPayload.resolution');
   if (/\b(720p|1080p|2k|4k)\b/i.test(t)) err('WRONG_RESOLUTION', 'Prompt asks for a different resolution.');
@@ -151,10 +159,37 @@ export function validateSeedancePrompts(data, input) {
   const approved = new Map((input?.references ?? []).map((r) => [r.tag, r]));
   const locBySetting = new Map((input?.locations ?? []).map((l) => [l.settingName, l.elementName]));
   const srcSegs = new Map((input?.segments ?? []).map((s) => [s.segmentId, s]));
+  const engine = input?.targetEngine ?? VIDEO_ENGINE;
+  const cap = input?.segmentMaxSec ?? VIDEO_ENGINES[engine]?.segmentMaxSec ?? MAX_SEGMENT_SECONDS;
+  const voiceTags = new Set();
   let total = 0;
+  // WIGGLY clips: a staged part longer than the engine cap is split into consecutive clips at shot boundaries.
+  for (const [id, src] of srcSegs) {
+    for (const sh of src.shots) if (sh.endSec - sh.startSec > cap)
+      err('SHOT_LONGER_THAN_CLIP_CAP', `BLOCKER: stage-play shot ${sh.sceneId} runs ${sh.endSec - sh.startSec}s, longer than ${engine}'s ${cap}s clip; it cannot be split mid-shot. The Story Director must restage it (report it in "assumptions" as BLOCKER).`, 'segments');
+    const clips = segs.map((s, k) => [s, k]).filter(([s]) => s.segmentId === id);
+    if (!clips.length) continue;
+    const covered = clips.flatMap(([s]) => (s.shots ?? []).map((x) => x.sceneId));
+    const want = src.shots.map((x) => x.sceneId);
+    if (covered.join() !== want.join()) err('CLIP_SPLIT_NOT_AT_SHOTS', `Part ${id}: its clips cover shots [${covered.join(', ')}] but the stage play has [${want.join(', ')}]. Each staged shot goes into exactly one clip, in order, never split mid-shot.`, `segments.${clips[0][1]}`);
+    const idx = clips.map(([, k]) => k);
+    if (idx.some((k, j) => j && k !== idx[j - 1] + 1)) err('CLIP_SPLIT_NOT_AT_SHOTS', `Part ${id}: its clips must be consecutive segments.`, 'segments');
+    if (clips.length > 1) clips.forEach(([s, k], j) => {
+      const wantId = `${id}${String.fromCharCode(97 + j)}`;
+      if (s.clipId !== wantId) err('CLIP_ID', `segments.${k}: clip ${j + 1} of part ${id} has clipId "${s.clipId ?? ''}"; use "${wantId}".`, `segments.${k}.clipId`);
+    });
+    for (const [s, k] of clips) {
+      const first = src.shots.find((x) => x.sceneId === s.shots?.[0]?.sceneId);
+      if (first && (s.sourceStartSec ?? 0) !== first.startSec) err('CLIP_SOURCE_OFFSET', `segments.${k}: sourceStartSec is ${s.sourceStartSec ?? 0} but its first shot ${first.sceneId} starts at ${first.startSec}s in the staged part.`, `segments.${k}.sourceStartSec`);
+      const nums = (s.shots ?? []).map((x) => src.shots.find((y) => y.sceneId === x.sceneId)?.shotNumber);
+      if (s.sourceShotNumbers && s.sourceShotNumbers.join() !== nums.join()) err('CLIP_SOURCE_SHOTS', `segments.${k}: sourceShotNumbers [${s.sourceShotNumbers.join(', ')}] must be the staged shots [${nums.join(', ')}].`, `segments.${k}.sourceShotNumbers`);
+      if (clips.length > 1 && !s.sourceShotNumbers) err('CLIP_SOURCE_SHOTS', `segments.${k}: a split clip records its staged shots in sourceShotNumbers.`, `segments.${k}.sourceShotNumbers`);
+      if ((s.totalDurationSec ?? 0) > cap) err('CLIP_OVER_ENGINE_CAP', `segments.${k}: ${s.totalDurationSec}s is longer than ${engine}'s ${cap}s clip. Split the part into clips at shot boundaries.`, `segments.${k}.totalDurationSec`);
+    }
+  }
   segs.forEach((seg, i) => {
     const p = `segments.${i}`;
-    issues.push(...validateSeedanceSegment(seg, { pathPrefix: p }).issues);
+    issues.push(...validateSeedanceSegment(seg, { pathPrefix: p, engine }).issues);
     const t = seg.compiledPrompt ?? '';
     total += seg.totalDurationSec ?? 0;
     if (i > 0 && seg.extendsFrom !== i) err('MISSING_EXTEND', `${p}: segment ${i + 1} must extend from segment ${i}.`, `${p}.extendsFrom`);
@@ -196,7 +231,7 @@ export function validateSeedancePrompts(data, input) {
       const m = b.text.match(CAMERA_LINE);
       if (!m) { err('MISSING_CAMERA_DIRECTION', `${p}: SHOT ${b.n} needs a "Camera: <framing>, <angle>, <move>." line (from the stage play's framing, cameraAngle, cameraMove).`, sp); }
       else {
-        const srcShot = src?.shots.find((x) => x.shotNumber === b.n);
+        const srcShot = src?.shots.find((x) => x.sceneId === seg.shots?.[b.n - 1]?.sceneId) ?? (seg.shots ? undefined : src?.shots.find((x) => x.shotNumber === b.n));
         const line = normWords(m[0]);
         const miss = ['framing', 'cameraAngle', 'cameraMove'].filter((k) => srcShot?.[k] && !line.includes(normWords(srcShot[k])));
         if (miss.length) issues.push({ severity: 'warning', code: 'CAMERA_DIRECTION_MISMATCH', message: `${p}: SHOT ${b.n} camera line does not match the stage play's ${miss.map((k) => `${k} "${srcShot[k]}"`).join(', ')}.`, path: sp });
@@ -206,6 +241,41 @@ export function validateSeedancePrompts(data, input) {
     // WIGGLY shot locks (change 5): presence, Look lock (accessories + visual tell word for word), prop states, eyes visible,
     // speaker on screen and leading, timecodes as staged, speech length. Replaces the old "accessory never in [SHOTS]" rule.
     issues.push(...checkSeedanceShotLocks(seg, src, shotBlocks(shotsText), input, p));
+    // WIGGLY (Omni r5-dry6): on-screen characters lip-synced the off-screen narrator. Every shot with a heard-only line
+    // says plainly that no one on screen speaks and every mouth stays closed; [VOICES] calls the narrator off screen, never seen.
+    for (const b of shotBlocks(shotsText)) {
+      const heard = [...b.text.matchAll(/^\s*(@[\w_]+)\s*,\s*(?:voice[- ]?over|off[- ]?camera)\s*:/gim)].map((m) => m[1]);
+      for (const h of heard) voiceTags.add(h);
+      if (heard.length && !(MOUTHS_CLOSED_SPEAK.test(b.text) && MOUTHS_CLOSED_LIPS.test(b.text)))
+        err('VOICEOVER_MOUTHS_OPEN', `${p}: SHOT ${b.n} has a voiceover / off-camera line, so it also says "${MOUTHS_CLOSED_LINE}"`, `${p}.tenBlocks.block5_shots`);
+    }
+    // Wardrobe lock: the Look line restates the signature garment too (Omni dropped hoodies when only the accessory was named).
+    const outfit = new Map((input?.characters ?? []).filter((c) => c.mainOutfit).map((c) => [c.elementTag, garmentOf(c.mainOutfit)]));
+    (seg.shots ?? []).forEach((s, j) => {
+      const b = shotBlocks(shotsText)[j]; if (!b) return;
+      for (const tag of s.cast ?? []) {
+        const g = outfit.get(tag); if (!g) continue;
+        const look = b.text.split('\n').find((l) => new RegExp(`^\\s*Look ${tag}:`).test(l)) ?? '';
+        if (!normWords(look).includes(normWords(g))) err('GARMENT_MISSING', `${p}: SHOT ${b.n}: ${tag} is on screen, so their Look line restates their signature garment "${g}" word for word.`, `${p}.tenBlocks.block5_shots`);
+      }
+    });
+    const voices = seg.tenBlocks?.block2_voices ?? '';
+    const heardHere = new Set((seg.shots ?? []).filter((s) => s.dialogue && heardOnly(s.dialogue)).map((s) => s.dialogue.speaker));
+    for (const b of shotBlocks(shotsText)) for (const m of b.text.matchAll(/^\s*(@[\w_]+)\s*,\s*(?:voice[- ]?over|off[- ]?camera)\s*:/gim)) heardHere.add(m[1]);
+    for (const tag of heardHere) {
+      const line = voices.split('\n').find((l) => l.trim().startsWith(tag)) ?? '';
+      if (!/off[- ]screen narrator/i.test(line) || !/never seen/i.test(line))
+        err('NARRATOR_NOT_OFF_SCREEN', `${p}: ${tag} is heard only (voiceover / off camera) here, so their [VOICES] line describes them as "an off-screen narrator, never seen".`, `${p}.tenBlocks.block2_voices`);
+    }
+    if (heardHere.size && !NO_MUMBLE.test(`${seg.tenBlocks?.block8_audio ?? ''}\n${seg.tenBlocks?.block9_exclusions ?? ''}`))
+      err('MUMBLE_NOT_EXCLUDED', `${p}: this clip has narration, so [EXCLUSIONS] says "${NO_MUMBLE_LINE}"`, `${p}.tenBlocks.block9_exclusions`);
+    // Per-clip references: only the people and places actually in this clip's shots (an extra picture invites an extra person).
+    const onCam = new Set((seg.shots ?? []).flatMap((s) => [...(s.cast ?? []), ...(s.dialogue && !heardOnly(s.dialogue) ? [s.dialogue.speaker] : [])]));
+    const locs = new Set((seg.shots ?? []).map((s) => s.locationTag));
+    for (const r of seg.references ?? []) {
+      const extra = (r.kind === 'character' && !onCam.has(r.tag)) || (r.kind === 'location' && !locs.has(r.tag));
+      if (extra) issues.push({ severity: engine === VIDEO_ENGINE ? 'warning' : 'error', code: 'REFERENCE_NOT_IN_CLIP', message: `${p}: ${r.tag} is attached but is not in any of this clip's shots; attach only who and where is on screen in this clip.`, path: `${p}.references` });
+    }
     const goal = seg.tenBlocks?.block3_goal ?? '';
     if (BROKEN_HARD_STOP.test(goal)) err('BROKEN_HARD_STOP', `${p}: [GOAL] hard stop is one broken sentence ("It ends the instant X ... and do not ..."). Write "It ends the instant X. Do not continue past that moment, do not resolve anything and do not add an ending."`, `${p}.tenBlocks.block3_goal`);
     const voiceOnly = src ? (src.voiceOnlyCast ?? segmentCastPresence(src, [...cast.keys()]).voiceOnlyCast) : [];
@@ -216,7 +286,8 @@ export function validateSeedancePrompts(data, input) {
       if (where.length) err('VOICE_ONLY_REFERENCE', `${p}: ${tag} is only heard in this part (voiceover / off camera), so attach no image of them: remove from ${where.join(', ')}.`, `${p}.references`);
     }
     // On-camera stage-play speakers must be bound; narration and voiceover are audio only.
-    for (const sh of src?.shots ?? []) if (sh.dialogue && !heardOnly(sh.dialogue)) present.add(sh.dialogue.speaker);
+    const clipScenes = new Set((seg.shots ?? []).map((x) => x.sceneId));
+    for (const sh of src?.shots ?? []) if (clipScenes.has(sh.sceneId) || !seg.sourceShotNumbers) if (sh.dialogue && !heardOnly(sh.dialogue)) present.add(sh.dialogue.speaker);
     for (const tag of present) {
       if (!bound.has(tag)) err('MISSING_CAST_REFERENCE', `${p}: ${tag} appears or speaks but has no bound reference.`, `${p}.references`);
       const c = cast.get(tag);
