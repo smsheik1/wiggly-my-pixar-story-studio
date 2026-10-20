@@ -7,6 +7,7 @@
 // Usage: node scripts/run-sc-only.mjs --project runs/<id>/project.json --run-id <id> [--max-usd 0.05] [--secrets <file>]
 //   [--suffix v2]   write seedance-compiler-v2.json / sc-state-v2.json instead of overwriting the first SC output
 //   [--engine seedance-2.5|omni-1.1-flash]  target video engine (default seedance-2.5); sets the SC clip cap
+//   [--segment-max N]  shorter clip cap than the engine's (never longer)
 //   [--audit-id <id>] audit folder runs/<id>/ (default <runId>-sc)
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -37,7 +38,8 @@ const refs = await loadPhotoReferences(defaultPhotoRefsPath(projectPath)); if (r
 const approvedAssets = { ...(prev.approvedAssets ?? {}), ...placeholderAssets(prev.pendingApproval ?? []) };
 log(`approving ${Object.keys(approvedAssets).length} tags with placeholder keys (no image generation)`);
 const engine = arg('--engine'); if (engine) log(`target engine ${engine}`);
-const state = { inputs, ...(engine ? { videoEngine: engine } : {}), storyDirector: sd, characterArchitect: { output: ca }, locationScout: { output: ls }, approvedAssets };
+const segMax = arg('--segment-max') ? +arg('--segment-max') : undefined; if (segMax) log(`clip cap ${segMax}s`);
+const state = { inputs, ...(engine ? { videoEngine: engine } : {}), ...(segMax ? { segmentMaxSec: segMax } : {}), storyDirector: sd, characterArchitect: { output: ca }, locationScout: { output: ls }, approvedAssets };
 
 const b0 = await keyUsage(); log(`key remaining at start: $${b0.remaining?.toFixed(4)}; abort above $${maxUsd} spent`);
 const guard = setInterval(async () => { try { const b = await keyUsage(); const spent = b.usage - b0.usage; log(`[budget] spent $${spent.toFixed(4)}, remaining $${b.remaining?.toFixed(4)}`);

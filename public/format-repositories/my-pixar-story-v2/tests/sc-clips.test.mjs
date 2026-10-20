@@ -135,3 +135,8 @@ test('seedance-2.0-mini: 15s clips, any whole second, 4000-char prompt cap', () 
 test('role.md: a device faces its user; no screen content unless over-the-shoulder or insert', () => {
   for (const x of ['a device faces its user', 'its screen toward her and its back to the camera', 'over-the-shoulder shot or a screen insert', 'never "glowing"']) assert.ok(role.includes(x), x);
 });
+
+test('segmentMaxSec override: a shorter clip cap than the engine, never longer', () => {
+  assert.equal(selectSeedanceCompilerInput({ ...state(), segmentMaxSec: 15 }).segmentMaxSec, 15);
+  assert.equal(selectSeedanceCompilerInput({ ...state('omni-1.1-flash'), segmentMaxSec: 15 }).segmentMaxSec, 10);
+});

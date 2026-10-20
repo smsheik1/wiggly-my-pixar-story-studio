@@ -172,5 +172,5 @@ export function selectSeedanceCompilerInput(state = {}) {
   const audio = p.voiceAudioRefs ?? {};
   const voiceRegistry = (sd.cast ?? []).map((c) => ({ speakerTag: c.elementTag, verbatimVoicePrompt: c.voiceDescription, ...(audio[c.elementTag] ? { audioReference: audio[c.elementTag] } : {}) }));
   const targetEngine = p.videoEngine ?? state.videoEngine ?? VIDEO_ENGINE;
-  return SeedanceCompilerInput.parse({ cast: sd.cast ?? [], segments, characters, locations, references, voiceRegistry, videoSettings: p.videoSettings ?? {}, targetEngine });
+  return SeedanceCompilerInput.parse({ cast: sd.cast ?? [], segments, characters, locations, references, voiceRegistry, videoSettings: p.videoSettings ?? {}, targetEngine, ...((p.segmentMaxSec ?? state.segmentMaxSec) ? { segmentMaxSec: Math.min(p.segmentMaxSec ?? state.segmentMaxSec, VIDEO_ENGINES[targetEngine].segmentMaxSec) } : {}) });
 }
