@@ -44,7 +44,7 @@ test('storyRejection: STRUCTURAL and score <= 2 reject with scores and reason; S
 
 test('graph: a STRUCTURAL final review fails the gate, the node escalates, downstream agents never run', async () => {
   const invoke = invokeWith(STRUCTURAL);
-  const s = await buildGraph({ invoke }).invoke(initial());
+  const s = await buildGraph({ storyboard: false, invoke }).invoke(initial());
   assert.notEqual(s.status, 'done');
   assert.ok(s.gateIssues['story-director'].some((i) => i.code === 'STORY_REJECTED'));
   assert.ok(invoke.calls.every((a) => a === 'story-director'), invoke.calls.join(','));
@@ -53,7 +53,7 @@ test('graph: a STRUCTURAL final review fails the gate, the node escalates, downs
 
 test('graph: a SHIP final review with every story score >= 4 passes and the pipeline finishes', async () => {
   const invoke = invokeWith(SHIP);
-  const s = await buildGraph({ invoke }).invoke(initial());
+  const s = await buildGraph({ storyboard: false, invoke }).invoke(initial());
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
   assert.ok(!s.gateIssues['story-director'].some((i) => i.code === 'STORY_REJECTED'));
   assert.deepEqual([...new Set(invoke.calls)].sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director']);
@@ -61,7 +61,7 @@ test('graph: a SHIP final review with every story score >= 4 passes and the pipe
 
 test('graph: a REVISE final review with a story score of 2 fails the gate', async () => {
   const invoke = invokeWith(REVISE_2);
-  const s = await buildGraph({ invoke }).invoke(initial());
+  const s = await buildGraph({ storyboard: false, invoke }).invoke(initial());
   assert.notEqual(s.status, 'done');
   assert.ok(s.gateIssues['story-director'].some((i) => i.code === 'STORY_REJECTED' && /S|Turn|=2/.test(i.message)));
   assert.ok(invoke.calls.every((a) => a === 'story-director'));

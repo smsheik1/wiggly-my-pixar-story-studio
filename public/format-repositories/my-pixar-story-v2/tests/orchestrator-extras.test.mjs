@@ -14,21 +14,21 @@ const initial = (extra = {}) => ({ inputs: { subject: 'Shaz', answers: GOOD_ANSW
 const fake = (override = {}) => { const calls = []; const fn = async (r) => { calls.push(r); const o = override[r.agent]; if (o) return o(r); return JSON.stringify(json(FIX[r.agent])); }; fn.calls = calls; return fn; };
 
 test('5: agent fails once then passes -> retryCounts exactly 1, validationErrors logged once', async () => {
-  const s = await buildGraph({ invoke: fake({ 'location-scout': (r) => { const o = json(FIX['location-scout']); if (r.attempt === 1) o.locations[0].locationPlatePrompt.promptText += ' A boy sits at the table.'; return JSON.stringify(o); } }) })
+  const s = await buildGraph({ storyboard: false, invoke: fake({ 'location-scout': (r) => { const o = json(FIX['location-scout']); if (r.attempt === 1) o.locations[0].locationPlatePrompt.promptText += ' A boy sits at the table.'; return JSON.stringify(o); } }) })
     .invoke(initial({ approvedAssets: json('good-approved-assets.json') }));
   assert.equal(s.status, 'done'); assert.equal(s.retryCounts['location-scout'], 1); assert.equal(s.retryCounts['story-director'], 0);
   const log = s.validationErrors.filter((v) => v.node === 'location-scout');
   assert.equal(log.length, 1); assert.equal(log[0].attempt, 1); assert.ok(log[0].errors.length && !Number.isNaN(Date.parse(log[0].timestamp)));
 });
 test('1: 3 exhausted attempts -> status failed + escalation + 3 log entries; failed wins in reducer', async () => {
-  const s = await buildGraph({ invoke: fake({ 'story-director': () => '{bad' }) }).invoke(initial());
+  const s = await buildGraph({ storyboard: false, invoke: fake({ 'story-director': () => '{bad' }) }).invoke(initial());
   assert.equal(s.status, 'failed'); assert.equal(s.escalations[0].agent, 'story-director'); assert.equal(s.retryCounts['story-director'], 2);
   assert.deepEqual(s.validationErrors.map((v) => v.attempt), [1, 2, 3]);
   for (const st of ['running', 'done', 'awaiting-approval', 'escalated']) { assert.equal(statusReducer('failed', st), 'failed'); assert.equal(statusReducer(st, 'failed'), 'failed'); }
 });
 for (const agent of Object.keys(FIX)) {
   test(`2: ${agent} model throw counts as an attempt, message fed back`, async () => {
-    const s = await buildGraph({ invoke: fake({ [agent]: (r) => { if (r.attempt === 1) throw new Error('upstream 503 boom'); return JSON.stringify(json(FIX[agent])); } }) })
+    const s = await buildGraph({ storyboard: false, invoke: fake({ [agent]: (r) => { if (r.attempt === 1) throw new Error('upstream 503 boom'); return JSON.stringify(json(FIX[agent])); } }) })
       .invoke(initial({ approvedAssets: json('good-approved-assets.json') }));
     assert.equal(s.status, 'done'); assert.equal(s.attempts[agent], 2); assert.equal(s.retryCounts[agent], 1);
     assert.match(s.validationErrors.find((v) => v.node === agent).errors[0].message, /upstream 503 boom/);
@@ -36,7 +36,7 @@ for (const agent of Object.keys(FIX)) {
 }
 test('2: retry prompt carries the thrown message', async () => {
   const inv = fake({ 'story-director': (r) => { if (r.attempt === 1) throw new Error('timeout xyz'); return JSON.stringify(json(FIX['story-director'])); } });
-  await buildGraph({ invoke: inv }).invoke(initial());
+  await buildGraph({ storyboard: false, invoke: inv }).invoke(initial());
   assert.match(inv.calls.find((c) => c.agent === 'story-director' && c.attempt === 2).retryNotes, /timeout xyz/);
 });
 test('3: per-character gate prefixes errors with the character name', () => {
@@ -53,7 +53,7 @@ test('3: one bad character keeps the others; retry merges only the failed one', 
     else o.characters[0].name += ' REDONE';
     return JSON.stringify(o);
   } });
-  const s = await buildGraph({ invoke: inv }).invoke(initial({ approvedAssets: json('good-approved-assets.json') }));
+  const s = await buildGraph({ storyboard: false, invoke: inv }).invoke(initial({ approvedAssets: json('good-approved-assets.json') }));
   const c0 = s.characterArchitect.output.characters.find((c) => c.elementTag === keepTag);
   assert.match(c0.name, /KEPT$/); assert.equal(s.retryCounts['character-architect'], 1);
   assert.equal(s.characterArchitect.output.characters.length, good.characters.length);
@@ -98,10 +98,10 @@ test('7: rehearsal prints escalating agent and gate errors; no fallback story', 
 });
 test('transient network error retries the same attempt (no attempt burned); persistent ones still fail', async () => {
   let n = 0;
-  const s = await buildGraph({ invoke: fake({ 'story-director': () => { if (n++ < 2) throw new Error('Network connection lost.'); return JSON.stringify(json(FIX['story-director'])); } }) })
+  const s = await buildGraph({ storyboard: false, invoke: fake({ 'story-director': () => { if (n++ < 2) throw new Error('Network connection lost.'); return JSON.stringify(json(FIX['story-director'])); } }) })
     .invoke(initial({ approvedAssets: json('good-approved-assets.json') }));
   assert.equal(s.status, 'done'); assert.equal(s.attempts['story-director'], 1); assert.equal(s.retryCounts['story-director'], 0);
   let m = 0;
-  const s2 = await buildGraph({ invoke: fake({ 'story-director': () => { m++; throw new Error('Network connection lost.'); } }) }).invoke(initial());
+  const s2 = await buildGraph({ storyboard: false, invoke: fake({ 'story-director': () => { m++; throw new Error('Network connection lost.'); } }) }).invoke(initial());
   assert.equal(s2.status, 'failed'); assert.equal(m, 9);
 });

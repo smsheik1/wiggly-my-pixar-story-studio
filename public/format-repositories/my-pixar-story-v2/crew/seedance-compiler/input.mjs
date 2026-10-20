@@ -90,6 +90,8 @@ export const SeedanceCompilerInput = z.object({
   segmentMaxSec: z.number().int().positive().max(30).optional(),
   allowedDurationsSec: z.array(z.number().int().positive()).nullable().optional(),
   promptMaxChars: z.number().int().positive().optional().describe('longest compiledPrompt the engine accepts'),
+  // WIGGLY: shot timings approved on the animatic; clips keep these exact holds.
+  approvedShotTimings: z.array(z.object({ shotId: z.string(), startSec: z.number(), endSec: z.number(), durationSec: z.number() }).passthrough()).optional(),
   postNarration: z.boolean().optional().describe('true: narration / voiceover / off-camera lines are added in post; never put their words in the prompt'),
 }).strict().transform((d) => ({ ...d, ...(d.promptMaxChars ?? VIDEO_ENGINES[d.targetEngine].promptMaxChars ? { promptMaxChars: d.promptMaxChars ?? VIDEO_ENGINES[d.targetEngine].promptMaxChars } : {}), postNarration: d.postNarration ?? !!VIDEO_ENGINES[d.targetEngine].postNarration, segmentMaxSec: d.segmentMaxSec ?? VIDEO_ENGINES[d.targetEngine].segmentMaxSec,
   allowedDurationsSec: d.allowedDurationsSec !== undefined ? d.allowedDurationsSec : (VIDEO_ENGINES[d.targetEngine].durations ? [...VIDEO_ENGINES[d.targetEngine].durations] : null) })).superRefine((d, ctx) => {
@@ -172,5 +174,5 @@ export function selectSeedanceCompilerInput(state = {}) {
   const audio = p.voiceAudioRefs ?? {};
   const voiceRegistry = (sd.cast ?? []).map((c) => ({ speakerTag: c.elementTag, verbatimVoicePrompt: c.voiceDescription, ...(audio[c.elementTag] ? { audioReference: audio[c.elementTag] } : {}) }));
   const targetEngine = p.videoEngine ?? state.videoEngine ?? VIDEO_ENGINE;
-  return SeedanceCompilerInput.parse({ cast: sd.cast ?? [], segments, characters, locations, references, voiceRegistry, videoSettings: p.videoSettings ?? {}, targetEngine, ...((p.segmentMaxSec ?? state.segmentMaxSec) ? { segmentMaxSec: Math.min(p.segmentMaxSec ?? state.segmentMaxSec, VIDEO_ENGINES[targetEngine].segmentMaxSec) } : {}) });
+  return SeedanceCompilerInput.parse({ cast: sd.cast ?? [], segments, characters, locations, references, voiceRegistry, videoSettings: p.videoSettings ?? {}, targetEngine, ...(state.approvedShotTimings ? { approvedShotTimings: state.approvedShotTimings.map(({ shotId, startSec, endSec, durationSec }) => ({ shotId, startSec, endSec, durationSec })) } : {}), ...((p.segmentMaxSec ?? state.segmentMaxSec) ? { segmentMaxSec: Math.min(p.segmentMaxSec ?? state.segmentMaxSec, VIDEO_ENGINES[targetEngine].segmentMaxSec) } : {}) });
 }

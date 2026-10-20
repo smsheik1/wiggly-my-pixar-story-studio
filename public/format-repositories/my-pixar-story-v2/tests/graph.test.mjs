@@ -5,10 +5,11 @@ import { MemorySaver, Command } from '@langchain/langgraph';
 import { buildGraph, retryNotes, requiredAssetTags } from '../graph/graph.mjs';
 import { parseInitialState, statusReducer } from '../graph/state.mjs';
 import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
+import { draftStoryboard } from './fixtures/storyboard-draft.mjs';
 
 const json = (f) => JSON.parse(readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const FIX = { 'story-director': 'good-stage-play.json', 'character-architect': 'good-master-renders.json', 'location-scout': 'good-location-plates.json', 'seedance-compiler': 'good-seedance-prompts.json' };
-const initial = (extra = {}) => ({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60, settingSeed: 'suburban home' }, ...extra });
+const initial = (extra = {}) => ({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60, settingSeed: 'suburban home' }, animaticApproval: { decision: 'approve' }, ...extra });
 const assets = () => json('good-approved-assets.json');
 
 /** Fake model: returns fixtures; `bad` maps agent -> number of leading bad attempts (or Infinity). Records every call. */
@@ -24,6 +25,7 @@ function fakeInvoke(bad = {}) {
       else o.segments[0].tenBlocks.block6_visualStyle += ' Render in 1080p.';
       return JSON.stringify(o);
     }
+    if (req.agent === 'storyboard-artist') return JSON.stringify(draftStoryboard(req.input));
     return JSON.stringify(json(FIX[req.agent]));
   };
   fn.calls = calls;
@@ -34,7 +36,7 @@ test('happy path: all four agents run, Muse Spark 1.3 max, status done, outputs 
   const invoke = fakeInvoke();
   const s = await buildGraph({ invoke }).invoke(initial({ approvedAssets: assets() }));
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
-  assert.deepEqual(invoke.calls.map((c) => c.agent).sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director']);
+  assert.deepEqual(invoke.calls.map((c) => c.agent).sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director', 'storyboard-artist']);
   assert.ok(invoke.calls.every((c) => c.model === (c.agent === 'story-director' ? 'anthropic/claude-haiku-5.5' : 'meta/muse-spark-1.3-contributor') && c.effort === (c.agent === 'story-director' ? 'high' : 'xhigh') && c.skill > 500));
   assert.ok(s.storyDirector.segments.length === 2 && s.characterArchitect.output.characters.length === 3);
   assert.equal(s.locationScout.output.locations[0].elementTag, '@Loc 1');
@@ -45,7 +47,7 @@ test('both parallel branches run after the Story Director and before the compile
   const invoke = fakeInvoke();
   await buildGraph({ invoke }).invoke(initial({ approvedAssets: assets() }));
   const order = invoke.calls.map((c) => c.agent);
-  assert.equal(order[0], 'story-director'); assert.equal(order[3], 'seedance-compiler');
+  assert.equal(order[0], 'story-director'); assert.equal(order[3], 'storyboard-artist'); assert.equal(order[4], 'seedance-compiler');
   assert.deepEqual(order.slice(1, 3).sort(), ['character-architect', 'location-scout']);
   const ls = invoke.calls.find((c) => c.agent === 'location-scout').input;
   assert.ok(!('cast' in ls) && ls.settings[0].name === 'Kitchen');
@@ -97,7 +99,7 @@ test('human interrupt: pauses for approval, resumes with approvedAssets, finishe
 test('parallel outputs merge without clobbering; reducers', async () => {
   const s = await buildGraph({ invoke: fakeInvoke() }).invoke(initial({ approvedAssets: assets(), locationScout: { hints: { Kitchen: { singleSignText: 'LAB' } } } }));
   assert.ok(s.locationScout.hints && s.locationScout.output, 'hints and output coexist');
-  assert.deepEqual(Object.keys(s.gateIssues).sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director']);
+  assert.deepEqual(Object.keys(s.gateIssues).sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director', 'storyboard-artist']);
   assert.equal(statusReducer('failed', 'done'), 'failed'); assert.equal(statusReducer('running', 'awaiting-approval'), 'awaiting-approval');
   assert.deepEqual(requiredAssetTags(s), ['@Image 1', '@Image 2', '@Image 3', '@Loc 1']);
 });

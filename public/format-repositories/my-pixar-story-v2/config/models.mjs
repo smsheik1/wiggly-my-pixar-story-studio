@@ -57,6 +57,10 @@ export const V2_MODELS = Object.freeze({
     reflectionRounds: 0,
     targetEngines: { video: 'seedance-2.5' }, videoEngines: Object.keys(VIDEO_ENGINES) /* selectable: state.videoEngine or run-sc-only --engine */, segmentMaxSec: 30 /* per engine: VIDEO_ENGINES[engine].segmentMaxSec (omni-1.1-flash 10s, 4/6/8/10) */, continuation: 'extend',
     contract: { output: 'crew/seedance-compiler/schema.mjs', input: 'crew/seedance-compiler/input.mjs', gate: 'crew/linter/check-seedance-prompts.mjs' } },
+  'storyboard-artist': { role: 'Storyboard Artist', upstreamAgents: ['story-director', 'character-architect', 'location-scout'], downstreamAgents: ['seedance-compiler'], maxTokens: 32000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
+    reflectionRounds: 0,
+    imageSteps: { storyboard: NANO_BANANA }, // made by hand in Google Flow; code only writes prompts
+    contract: { output: 'crew/storyboard-artist/schema.mjs', input: 'crew/storyboard-artist/input.mjs', gate: 'crew/linter/check-storyboard.mjs' } },
   vera: { downstreamAgents: [], maxTokens: 8000, kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh' },
   linter: { downstreamAgents: [], maxTokens: 0, kind: 'code', provider: 'none', model: 'none' },
 });

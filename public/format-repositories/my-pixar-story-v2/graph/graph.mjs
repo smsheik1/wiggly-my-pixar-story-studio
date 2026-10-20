@@ -1,5 +1,7 @@
 // v2 LangGraph orchestrator. Seedance video generation is NOT part of the graph (prompts only).
-//   START -> story-director -> [character-architect || location-scout] -> join -> asset-approval -> seedance-compiler -> END
+//   START -> story-director -> [character-architect || location-scout] -> join -> asset-approval (characters + backgrounds)
+//     -> storyboard-artist -> animatic-approval -> seedance-compiler -> END
+//   animatic rejected: timing/dialogue -> story-director; a bad panel -> storyboard-artist (parent notes ride along).
 // Each agent node: selector -> invoke(model) -> schema parse -> linter gate; gate/parse issues feed the retry prompt;
 // after MAX_ATTEMPTS failures the node escalates (status 'escalated') and the graph stops.
 import { RunnableLambda } from '@langchain/core/runnables';
@@ -23,6 +25,11 @@ import { selectSeedanceCompilerInput } from '../crew/seedance-compiler/input.mjs
 import { parseSeedancePrompts } from '../crew/seedance-compiler/schema.mjs';
 import { validateCharacterArchitectOutput } from '../crew/linter/check-character-sheets.mjs';
 import { validateSeedancePrompts } from '../crew/linter/check-seedance-prompts.mjs';
+import { selectStoryboardArtistInput } from '../crew/storyboard-artist/input.mjs';
+import { parseStoryboard } from '../crew/storyboard-artist/schema.mjs';
+import { compileSheets } from '../crew/storyboard-artist/compile.mjs';
+import { validateStoryboard } from '../crew/linter/check-storyboard.mjs';
+import { shotTimeline } from '../scripts/lib/animatic.mjs';
 
 export const MAX_ATTEMPTS = 3;
 export const MAX_TRANSIENT_RETRIES = 2;
@@ -75,6 +82,10 @@ export const AGENT_SPECS = {
     select: selectLocationScoutInput, parse: parseLocationPlates, gate: (out, input) => validateLocationPlates(out, input),
     write: (out) => ({ locationScout: { output: out } }),
   },
+  'storyboard-artist': {
+    select: selectStoryboardArtistInput, parse: parseStoryboard, gate: (out, input) => validateStoryboard(out, input),
+    write: (out, input) => ({ storyboardArtist: { output: out, sheets: compileSheets(out, input) } }),
+  },
   'seedance-compiler': {
     select: selectSeedanceCompilerInput, parse: parseSeedancePrompts, gate: (out, input) => validateSeedancePrompts(out, input),
     write: (out) => ({ seedanceCompiler: { output: out } }),
@@ -87,6 +98,9 @@ export function retryNotes(issues = []) {
   return 'Your previous output failed the deterministic gate. Fix every error below and resend the full JSON:\n' +
     issues.filter((i) => i.severity === 'error').map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n');
 }
+
+/** Parent notes from a rejected animatic, shown to the agent the rejection was routed to. */
+export const reviewerNotes = (state, agent) => (state?.revisionNotes?.[agent] ? `The reviewer rejected the animatic and sent it back to you. Address this and resend the full JSON:\n${state.revisionNotes[agent]}` : '');
 
 /** Build one agent node around an injectable invoke({ agent, config, skill, input, attempt, retryNotes }) -> string|object. */
 export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs = AGENT_SPECS, skill = loadSkill, now = () => new Date().toISOString(), onEvent = () => {}, runTag, liveness, timeouts = {}, runStop } = {}) {
@@ -131,7 +145,7 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
       ev({ type: 'attempt', attempt, input });
       const done = (o) => ev({ type: 'attempt-result', attempt, ...o });
       let raw;
-      const req = { agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues), state, gate: (o) => spec.gate(o, input, state), ...(spec.trace ? { trace: (o) => spec.trace(o, input) } : {}),
+      const req = { agent, config: V2_MODELS[agent], skill: skill(agent), input, attempt, retryNotes: retryNotes(issues) || reviewerNotes(state, agent), state, gate: (o) => spec.gate(o, input, state), ...(spec.trace ? { trace: (o) => spec.trace(o, input) } : {}),
         ...(spec.request ? spec.request(input, state) : {}) }; // patch mode: task, scope, rounds, submitSchema
       let transient = 0;
       for (;;) {
@@ -158,7 +172,7 @@ export function makeAgentNode(agent, invoke, { maxAttempts = MAX_ATTEMPTS, specs
       // The final review rejected the story (STRUCTURAL or a story score <= 2): the gate fails so retry/escalation apply.
       const r = refl?.storyRejection ? { ...g, isValid: false, issues: [...(g.issues ?? []), refl.storyRejection] } : g;
       done({ output: out, issues: r.issues, isValid: r.isValid });
-      if (r.isValid) { ev({ type: 'passed', attempt }); return withReflections({ ...spec.write(out), attempts: { [agent]: attempt }, retryCounts: { [agent]: attempt - 1 }, gateIssues: { [agent]: r.issues }, validationErrors: log }); }
+      if (r.isValid) { ev({ type: 'passed', attempt }); return withReflections({ ...spec.write(out, input), attempts: { [agent]: attempt }, retryCounts: { [agent]: attempt - 1 }, gateIssues: { [agent]: r.issues }, validationErrors: log }); }
       issues = r.issues;
       if (spec.carry) kept = { ...(kept ?? {}), ...spec.carry(out, issues) };
     }
@@ -206,10 +220,29 @@ export function makeApprovalNode({ useInterrupt = false, autoApprove } = {}) {
   };
 }
 
+/**
+ * Animatic approval gate (after the storyboard sheets are made in Flow, sliced and cut to scratch audio).
+ * state.animaticApproval / interrupt resume: { decision: 'approve' } or { decision: 'reject', target, notes }.
+ * Approve: the SD shot timings are frozen into approvedShotTimings for the Seedance Compiler.
+ */
+export function makeAnimaticApprovalNode({ useInterrupt = false, autoApprove } = {}) {
+  return async (state) => {
+    let d = state.animaticApproval;
+    if (!d && autoApprove) d = { decision: 'approve' };
+    if (!d && useInterrupt) d = interrupt({ kind: 'animatic-approval', sheets: (state.storyboardArtist?.sheets ?? []).map((s) => s.sheetId) });
+    if (!d) return { status: 'awaiting-approval', pendingApproval: ['animatic'] };
+    if (d.decision === 'approve') return { approvedShotTimings: shotTimeline(state.storyDirector), animaticApproval: null, pendingApproval: [] };
+    const target = d.target === 'story-director' ? 'story-director' : 'storyboard-artist';
+    return { animaticApproval: { ...d, target, routed: true }, revisionNotes: { [target]: d.notes ?? 'Revise.' }, pendingApproval: [] };
+  };
+}
+/** Where the animatic gate sends the run: rejected -> its target, approved -> compiler. */
+export const animaticRoute = (s) => (halted(s) ? END : s.animaticApproval?.decision === 'reject' ? s.animaticApproval.target : 'seedance-compiler');
+
 const halted = (s) => ['escalated', 'failed', 'awaiting-approval'].includes(s.status);
 
 /** Build and compile the v2 graph. Default invoke runs each agent as a Deep Agent; inject a fake invoke in tests. */
-export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer, onEvent, runTag, autoApprove, liveness, timeouts } = {}) {
+export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer, onEvent, runTag, autoApprove, autoApproveAnimatic = false, storyboard = true, liveness, timeouts } = {}) {
   if (invoke === undefined) invoke = deepAgentInvoke(deepAgent);
   if (typeof invoke !== 'function') throw new Error('buildGraph: invoke must be a function');
   const runStop = new AbortController(); // shared by every node: a fatal provider error stops the whole run
@@ -220,13 +253,21 @@ export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS,
     .addNode('location-scout', node('location-scout'))
     .addNode('join', async () => ({}))
     .addNode('asset-approval', makeApprovalNode({ useInterrupt, autoApprove }))
+    .addNode('storyboard-artist', async (s) => {
+      const r = await node('storyboard-artist')(s);
+      return s.animaticApproval?.routed ? { ...r, animaticApproval: null, revisionNotes: { 'storyboard-artist': '', 'story-director': '' } } : r; // a fresh board clears a routed rejection
+    })
+    .addNode('animatic-approval', makeAnimaticApprovalNode({ useInterrupt, autoApprove: autoApproveAnimatic }))
     .addNode('seedance-compiler', node('seedance-compiler'))
     .addNode('finish', async (s) => (halted(s) ? {} : { status: 'done' }))
     .addEdge(START, 'story-director')
     .addConditionalEdges('story-director', (s) => (halted(s) ? END : ['character-architect', 'location-scout']), ['character-architect', 'location-scout', END])
     .addEdge(['character-architect', 'location-scout'], 'join')
     .addConditionalEdges('join', (s) => (halted(s) ? END : 'asset-approval'), ['asset-approval', END])
-    .addConditionalEdges('asset-approval', (s) => (halted(s) ? END : 'seedance-compiler'), ['seedance-compiler', END])
+    // storyboard: false keeps the old 4-agent path (assets approved -> compiler), used by the older graph tests.
+    .addConditionalEdges('asset-approval', (s) => (halted(s) ? END : storyboard ? 'storyboard-artist' : 'seedance-compiler'), ['storyboard-artist', 'seedance-compiler', END])
+    .addConditionalEdges('storyboard-artist', (s) => (halted(s) ? END : 'animatic-approval'), ['animatic-approval', END])
+    .addConditionalEdges('animatic-approval', animaticRoute, ['seedance-compiler', 'story-director', 'storyboard-artist', END])
     .addEdge('seedance-compiler', 'finish')
     .addEdge('finish', END);
   return g.compile(checkpointer ? { checkpointer } : undefined);

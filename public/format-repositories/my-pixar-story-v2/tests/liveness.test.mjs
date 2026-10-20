@@ -57,7 +57,7 @@ test('timeout counts as failed attempt; message reaches retry feedback; next att
     if (r.agent === 'story-director' && r.attempt === 1) return new Promise(() => {}); // hangs, never streams
     return JSON.stringify(json({ 'story-director': 'good-stage-play.json', 'character-architect': 'good-master-renders.json', 'location-scout': 'good-location-plates.json' }[r.agent]));
   };
-  const s = await buildGraph({ invoke, liveness: l, timeouts: { firstTokenMs: 30, idleMs: 1000, pollMs: 5 } }).invoke({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60 } });
+  const s = await buildGraph({ storyboard: false, invoke, liveness: l, timeouts: { firstTokenMs: 30, idleMs: 1000, pollMs: 5 } }).invoke({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60 } });
   assert.equal(s.status, 'awaiting-approval'); assert.equal(s.retryCounts['story-director'], 1);
   assert.match(s.validationErrors[0].errors[0].message, /model call timed out/);
   assert.match(calls.find((c) => c.agent === 'story-director' && c.attempt === 2).retryNotes, /model call timed out/);

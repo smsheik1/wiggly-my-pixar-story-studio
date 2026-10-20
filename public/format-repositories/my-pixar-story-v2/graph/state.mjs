@@ -7,12 +7,14 @@
 //   locationScout.hints            per-setting LS hints
 //   locationScout.output           LS output
 //   approvedAssets                 { '@Image N' | '@Loc N' -> local asset key }, set by the human approval gate
+//   storyboardArtist.output/.sheets Storyboard Artist panels + compiled sheet prompts (made by hand in Google Flow)
+//   animaticApproval / approvedShotTimings  parent's animatic decision; approved timings go to the Seedance Compiler
 //   seedanceCompiler.output        compiled Seedance prompts (no video generation in the graph)
 import { z } from 'zod';
 import { Annotation } from '@langchain/langgraph';
 import { ASSET_KEY } from '../crew/character-architect/schema.mjs';
 
-export const AGENTS = ['story-director', 'character-architect', 'location-scout', 'seedance-compiler'];
+export const AGENTS = ['story-director', 'character-architect', 'location-scout', 'storyboard-artist', 'seedance-compiler'];
 export const STATUSES = ['running', 'done', 'awaiting-approval', 'escalated', 'failed'];
 
 const Issue = z.object({ severity: z.string(), code: z.string(), message: z.string(), path: z.string().optional() }).passthrough();
@@ -29,6 +31,11 @@ export const PipelineStateSchema = z.object({
   locationScout: z.object({ hints: z.record(z.string(), z.unknown()).optional(), output: z.unknown().optional() }).default({}),
   approvedAssets: z.record(z.string().regex(/^@(?:Image|Loc) \d+$/), z.string().regex(ASSET_KEY)).optional(),
   seedanceCompiler: z.object({ output: z.unknown().optional() }).default({}),
+  storyboardArtist: z.object({ output: z.unknown().optional(), sheets: z.unknown().optional() }).default({}),
+  // parent decision on the animatic: { decision: 'approve' } | { decision: 'reject', target: 'story-director'|'storyboard-artist', notes }
+  animaticApproval: z.object({ decision: z.enum(['approve', 'reject']), target: z.enum(['story-director', 'storyboard-artist']).optional(), notes: z.string().optional() }).nullable().optional(),
+  approvedShotTimings: z.array(z.object({ shotId: z.string(), startSec: z.number(), endSec: z.number(), durationSec: z.number() }).passthrough()).optional(),
+  revisionNotes: z.record(z.string(), z.string()).default({}),
   attempts: z.record(z.string(), z.number().int()).default({}),
   gateIssues: z.record(z.string(), z.array(Issue)).default({}),
   escalations: z.array(EscalationSchema).default([]),
@@ -58,6 +65,10 @@ export const PipelineAnnotation = Annotation.Root({
   locationScout: Annotation({ reducer: mergeSlot, default: () => ({}) }),
   approvedAssets: Annotation({ reducer: replace, default: () => undefined }),
   seedanceCompiler: Annotation({ reducer: mergeSlot, default: () => ({}) }),
+  storyboardArtist: Annotation({ reducer: mergeSlot, default: () => ({}) }),
+  animaticApproval: Annotation({ reducer: replace, default: () => undefined }),
+  approvedShotTimings: Annotation({ reducer: replace, default: () => undefined }),
+  revisionNotes: Annotation({ reducer: mergeObj, default: () => ({}) }),
   attempts: Annotation({ reducer: mergeObj, default: () => ({}) }),
   gateIssues: Annotation({ reducer: mergeObj, default: () => ({}) }),
   escalations: Annotation({ reducer: (a = [], b = []) => [...a, ...b], default: () => [] }),

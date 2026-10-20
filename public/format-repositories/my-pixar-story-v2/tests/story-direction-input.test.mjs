@@ -31,7 +31,7 @@ test('absent fields stay absent (the Story Director schema defaults apply, nothi
 test('graph: the Story Director receives tone, setting, voice note and runtime from the project', async () => {
   const seen = [];
   const invoke = async (req) => { if (req.agent === 'story-director') seen.push(req.input); return JSON.stringify(json('good-stage-play.json')); };
-  await buildGraph({ invoke, maxAttempts: 1 }).invoke({ inputs: inputsFromProject(project(DIRECTION)), approvedAssets: json('good-approved-assets.json') });
+  await buildGraph({ storyboard: false, invoke, maxAttempts: 1 }).invoke({ inputs: inputsFromProject(project(DIRECTION)), approvedAssets: json('good-approved-assets.json') });
   assert.ok(seen.length >= 1);
   const sd = seen[0];
   assert.equal(sd.targetTotalRuntimeSec, 60);

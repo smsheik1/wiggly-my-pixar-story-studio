@@ -77,7 +77,7 @@ export function parseReflectionRounds(v) {
 
 export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUID().slice(0, 8)}`, runsRoot = RUNS_ROOT, invoke, log = console.log,
   secretsPath = defaultSecretsPath(), secrets, usePlaceholderAssets = false, trackerPath = defaultTrackerPath(), tracing,
-  timeouts = {}, heartbeatMs = 5000, now = Date.now, photoRefsPath, audit = auditRun, auditDelayMs = 5000, reflectionRounds, buildGraphFn = buildGraph } = {}) {
+  timeouts = {}, heartbeatMs = 5000, now = Date.now, photoRefsPath, audit = auditRun, auditDelayMs = 5000, reflectionRounds, buildGraphFn = buildGraph, storyboard = false /* rehearsal: 4-agent path; the storyboard stage runs via run-sb-only.mjs */ } = {}) {
   if (!projectPath) throw new Error('--project <path to project/answers json> is required');
   const inputs = inputsFromProject(JSON.parse(await readFile(projectPath, 'utf8')));
   const refs = await loadPhotoReferences(photoRefsPath === undefined ? defaultPhotoRefsPath(projectPath) : photoRefsPath);
@@ -89,7 +89,7 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
   const liveness = createLiveness({ now, stallMs: t.stallMs });
   const rec = createRecorder({ runId, placeholderAssets: usePlaceholderAssets, tracingProject: tr?.projectName ?? null, onChange: (m) => { if (trackerPath) { try { upsertTracker(m, trackerPath); } catch { /* tracker is optional */ } } } });
   if (reflectionRounds !== undefined) log(`self-review rounds override: ${typeof reflectionRounds === 'number' ? `${reflectionRounds} for every agent` : Object.entries(reflectionRounds).map(([a, n]) => `${a}=${n}`).join(', ')}`);
-  const graph = buildGraphFn({ ...(invoke ? { invoke } : { deepAgent: { runId, runsRoot, createModel: (c, a) => openRouterModel(c, a, { apiKey: sec.OPENROUTER_API_KEY }), ...(reflectionRounds !== undefined ? { reflectionRounds } : {}) } }),
+  const graph = buildGraphFn({ storyboard, ...(invoke ? { invoke } : { deepAgent: { runId, runsRoot, createModel: (c, a) => openRouterModel(c, a, { apiKey: sec.OPENROUTER_API_KEY }), ...(reflectionRounds !== undefined ? { reflectionRounds } : {}) } }),
     onEvent: rec.onEvent, runTag: runId, liveness, timeouts: { firstTokenMs: t.firstTokenMs, idleMs: t.idleMs, ...(t.pollMs ? { pollMs: t.pollMs } : {}), now }, ...(usePlaceholderAssets ? { autoApprove: placeholderAssets } : {}) });
   if (usePlaceholderAssets) log('PLACEHOLDER ASSETS: asset approval auto-filled with fake keys (no images generated)');
   const config = { runName: 'wiggly-v2 rehearsal', tags: [`runId:${runId}`, 'wiggly-v2', ...(usePlaceholderAssets ? ['placeholder-assets'] : [])],

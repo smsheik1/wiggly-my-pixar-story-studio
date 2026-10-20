@@ -118,7 +118,7 @@ test('fatal: in the graph, CA hitting the key limit aborts the parallel Location
     }
     throw new Error(`unexpected ${req.agent}`);
   };
-  const s = await buildGraph({ invoke }).invoke({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60, settingSeed: 'suburban home' }, approvedAssets: json('good-approved-assets.json') });
+  const s = await buildGraph({ storyboard: false, invoke }).invoke({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60, settingSeed: 'suburban home' }, approvedAssets: json('good-approved-assets.json') });
   assert.equal(s.status, 'failed');
   assert.ok(lsAborted, 'the in-flight sibling call was aborted');
   assert.deepEqual(calls.sort(), ['character-architect', 'location-scout', 'story-director'], 'one call each, no retries, no compiler');
