@@ -75,3 +75,6 @@ export function crop169(p, k = 1, aspect = 16 / 9) {
   const ev = (v) => Math.max(2, Math.floor(v / 2) * 2);
   return { x: ev(x), y: ev(y), w: ev(w), h: ev(h) };
 }
+
+/** The detected rect scaled by k to source coordinates (even integers), for pad mode. */
+export function scaleRect(p, k = 1) { const ev = (v) => Math.max(2, Math.floor(v / 2) * 2); return { x: ev(p.x * k), y: ev(p.y * k), w: ev(p.w * k), h: ev(p.h * k) }; }

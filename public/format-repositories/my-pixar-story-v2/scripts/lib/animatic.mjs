@@ -33,8 +33,10 @@ export function panelRects(W, H, { rows = 2, cols = 4, margin = 0.02, gutter = 0
 }
 
 /** ffmpeg args to crop one panel out of a sheet into a 1920x1080 PNG. */
-export function sliceArgs(sheetPath, rect, outPath, { width = 1920, height = 1080 } = {}) {
-  return ['-y', '-loglevel', 'error', '-i', sheetPath, '-vf', `crop=${rect.w}:${rect.h}:${rect.x}:${rect.y},scale=${width}:${height}:flags=lanczos`, '-frames:v', '1', outPath];
+// fit 'crop': rect is already 16:9, scale to fill. fit 'pad': keep the whole panel, letterbox/pillarbox to 16:9 (pad colour).
+export function sliceArgs(sheetPath, rect, outPath, { width = 1920, height = 1080, fit = 'crop', padColor = 'black' } = {}) {
+  const scale = fit === 'pad' ? `scale=${width}:${height}:flags=lanczos:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=${padColor},setsar=1` : `scale=${width}:${height}:flags=lanczos`;
+  return ['-y', '-loglevel', 'error', '-i', sheetPath, '-vf', `crop=${rect.w}:${rect.h}:${rect.x}:${rect.y},${scale}`, '-frames:v', '1', outPath];
 }
 
 /**
