@@ -350,7 +350,11 @@ export const shipsAsIs = (critique, gateIssues = []) => parseVerdict(critique) =
  */
 export function storyRejection(log = []) {
   const last = [...log].reverse().find((e) => e && typeof e.critique === 'string');
-  if (!last || !isStructural(last.critique)) return null;
+  if (!last) return null;
+  // A failed fidelity/writing check blocks only when that critique judged the draft being returned (a final review, or a
+  // round whose rewrite did not change the draft); a round whose fixes were applied was judged again later.
+  const blocking = last.finalReview || last.changed === false ? blockingFails(last.critique) : [];
+  if (!isStructural(last.critique) && !blocking.length) return null;
   const scores = parseStoryScores(last.critique) ?? {};
   const verdict = parseVerdict(last.critique);
   const scoreText = Object.keys(scores).length ? Object.entries(scores).map(([k, v]) => `${k}=${v}`).join(', ') : 'none given';
@@ -358,9 +362,27 @@ export function storyRejection(log = []) {
   const reasonLines = lines.filter((l) => /structural|story itself|does not work|doesn't work/i.test(l) && !/^VERDICT/i.test(l.replace(/[*_`\s]/g, '')));
   const reason = (reasonLines.length ? reasonLines.join(' ') : lines.filter((l) => !/VERDICT/i.test(l)).slice(0, 3).join(' ')).slice(0, 800);
   return { severity: 'error', code: 'STORY_REJECTED', path: 'segments',
-    message: `The final review rejected the story (round ${last.round}, verdict ${verdict ?? 'none'}; story scores ${scoreText}). A story score of 2 or lower or a STRUCTURAL verdict means the beats do not work; rebuild the story, not the lines. Reviewer: ${reason}`,
-    round: last.round, verdict, scores };
+    message: blocking.length && !isStructural(last.critique)
+      ? `The final review failed ${blocking.join(', ')} after the repairs ran out (round ${last.round}; story scores ${scoreText}). Fix the lines it names (a spec or caption line, an invented fact or promise): ${failLines(last.critique, blocking).slice(0, 800)}`
+      : `The final review rejected the story (round ${last.round}, verdict ${verdict ?? 'none'}; story scores ${scoreText}). A story score of 2 or lower or a STRUCTURAL verdict means the beats do not work; rebuild the story, not the lines. Reviewer: ${reason}`,
+    round: last.round, verdict, scores, ...(blocking.length ? { blockingFails: blocking } : {}) };
 }
+/** Review checks whose FAIL blocks a draft: R1 Fidelity (a line that is not true to its answer, a spec or caption line) and R2 Invented details. */
+export const BLOCKING_CHECKS = ['R1', 'R2'];
+/** The blocking checks a critique marks FAIL, e.g. ['R1'] for a line "R1 Fidelity: FAIL" (markdown allowed). */
+export function blockingFails(critique) {
+  const out = [];
+  for (const m of String(critique ?? '').matchAll(/^[\s>*_#-]*(R\d+)\b[^:\n]*:[\s*_]*FAIL\b/gim)) if (BLOCKING_CHECKS.includes(m[1].toUpperCase()) && !out.includes(m[1].toUpperCase())) out.push(m[1].toUpperCase());
+  return out;
+}
+/** The critique's lines under each failed check (its evidence), joined for a message. */
+const failLines = (critique, checks) => {
+  const lines = String(critique ?? '').split('\n'); const got = [];
+  lines.forEach((l, i) => { const m = /^[\s>*_#-]*(R\d+)\b[^:\n]*:[\s*_]*FAIL/i.exec(l); if (m && checks.includes(m[1].toUpperCase())) { got.push(l.trim()); for (let j = i + 1; j < lines.length && /^\s*-/.test(lines[j]); j++) got.push(lines[j].trim()); } });
+  return got.join(' ');
+};
+/** Final-review repair rounds allowed when a blocking check fails: config.finalRepairs, default 1. */
+export const finalRepairCap = (config) => (Number.isInteger(config?.finalRepairs) && config.finalRepairs >= 0 ? config.finalRepairs : 1);
 /** Structural rebuilds (beats again, then shots) allowed per attempt: config.maxStructuralRebuilds, default 1. */
 export const structuralCap = (config) => (Number.isInteger(config?.maxStructuralRebuilds) && config.maxStructuralRebuilds >= 0 ? config.maxStructuralRebuilds : 1);
 /** Asked of the critic when an answer trace is available: its own traceability findings as data. */
@@ -479,6 +501,53 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     if (!gateIssues) {
       try { gateIssues = gate ? (gate(out)?.issues ?? []) : []; } catch { gateIssues = []; }
     }
+    // Line-fix rewrite of the current draft from a critique's FIXES (scoped to the shots they name); updates out/gateIssues.
+    const applyFixes = async (entry, critique, round, label = `reflection round ${round} rewrite`) => {
+      const isScoped = agent === 'story-director' && !input?.patch && !scope;
+      const fixShots = isScoped ? parseFixShots(critique) : null;
+      if (fixShots?.unscopedFixes?.length) entry.unscopedFixes = fixShots.unscopedFixes;
+      const totalFixCount = (fixShots?.size ?? 0) + (fixShots?.unscopedFixes?.length ?? 0);
+      if (isScoped && totalFixCount > 0 && fixShots.size === 0) { // fixes listed, none names a shot: nothing scoped to rewrite
+        entry.changed = false;
+        entry.skipped = 'no scoped fixes';
+        entry.runtimeAfter = runtimeOf(out);
+        return;
+      }
+      try {
+        const revised = await runOnce(revisionMessage({ agent, draft: out, critique, round, rounds, scope, allowedShots: fixShots?.size ? fixShots : undefined }), `${agent} ${label}`, [`reflection:${round}`]);
+        let nextDraft = pinThesis(revised);
+        if (isScoped && fixShots?.size) {
+          const enforced = enforceScope(out, revised, fixShots);
+          if (enforced.reverted?.length) {
+            entry.reverted = enforced.reverted;
+            for (const id of enforced.reverted) console.log(`rewrite touched unnamed shot ${id}: reverted`);
+          }
+          nextDraft = enforced;
+        }
+        let gateIssuesAfter = [];
+        try { gateIssuesAfter = gate ? (gate(nextDraft)?.issues ?? []) : []; } catch { gateIssuesAfter = []; }
+        const judgment = judgeRewrite({ input, before: out, after: nextDraft, gateBefore: gateIssues, gateAfter: gateIssuesAfter });
+        if (!judgment.accepted) {
+          console.log(judgment.message);
+          entry.changed = false;
+          entry.rejected = judgment.rejected;
+          entry.runtimeAfter = runtimeOf(out);
+        } else {
+          entry.changed = JSON.stringify(nextDraft) !== JSON.stringify(out);
+          prevDraft = out;
+          out = nextDraft;
+          gateIssues = gateIssuesAfter;
+          entry.runtimeAfter = runtimeOf(out);
+          await writeFile(join(dir, `draft-${round}.json`), JSON.stringify(out, null, 2));
+          entry.draftFile = rel(`draft-${round}.json`);
+        }
+      } catch (e) {
+        if (signal?.aborted) throw signal.reason ?? e;
+        if (isFatalProviderError(e)) throw e; // spent key / no credits: never swallowed as a failed rewrite
+        // A failed rewrite keeps the previous valid draft; the gate still checks it and the node's retries still apply.
+        entry.changed = false; entry.revisionError = String(e?.message ?? e).slice(0, 2000);
+      }
+    };
     const log = [];
     let stoppedEarly = false;
     let structuralUsed = 0;
@@ -536,51 +605,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
         }
         entry.structuralSkipped = storyOn ? 'cap reached' : 'story beats off'; // falls through to the normal line-fix rewrite
       }
-      const isScoped = agent === 'story-director' && !input?.patch && !scope;
-      const fixShots = isScoped ? parseFixShots(critique) : null;
-      if (fixShots?.unscopedFixes?.length) entry.unscopedFixes = fixShots.unscopedFixes;
-      const totalFixCount = (fixShots?.size ?? 0) + (fixShots?.unscopedFixes?.length ?? 0);
-      if (isScoped && totalFixCount > 0 && fixShots.size === 0) { // fixes listed, none names a shot: nothing scoped to rewrite
-        entry.changed = false;
-        entry.skipped = 'no scoped fixes';
-        entry.runtimeAfter = runtimeOf(out);
-        log.push(entry);
-        continue;
-      }
-      try {
-        const revised = await runOnce(revisionMessage({ agent, draft: out, critique, round, rounds, scope, allowedShots: fixShots?.size ? fixShots : undefined }), `${agent} reflection round ${round} rewrite`, [`reflection:${round}`]);
-        let nextDraft = pinThesis(revised);
-        if (isScoped && fixShots?.size) {
-          const enforced = enforceScope(out, revised, fixShots);
-          if (enforced.reverted?.length) {
-            entry.reverted = enforced.reverted;
-            for (const id of enforced.reverted) console.log(`rewrite touched unnamed shot ${id}: reverted`);
-          }
-          nextDraft = enforced;
-        }
-        let gateIssuesAfter = [];
-        try { gateIssuesAfter = gate ? (gate(nextDraft)?.issues ?? []) : []; } catch { gateIssuesAfter = []; }
-        const judgment = judgeRewrite({ input, before: out, after: nextDraft, gateBefore: gateIssues, gateAfter: gateIssuesAfter });
-        if (!judgment.accepted) {
-          console.log(judgment.message);
-          entry.changed = false;
-          entry.rejected = judgment.rejected;
-          entry.runtimeAfter = runtimeOf(out);
-        } else {
-          entry.changed = JSON.stringify(nextDraft) !== JSON.stringify(out);
-          prevDraft = out;
-          out = nextDraft;
-          gateIssues = gateIssuesAfter;
-          entry.runtimeAfter = runtimeOf(out);
-          await writeFile(join(dir, `draft-${round}.json`), JSON.stringify(out, null, 2));
-          entry.draftFile = rel(`draft-${round}.json`);
-        }
-      } catch (e) {
-        if (signal?.aborted) throw signal.reason ?? e;
-        if (isFatalProviderError(e)) throw e; // spent key / no credits: never swallowed as a failed rewrite
-        // A failed rewrite keeps the previous valid draft; the gate still checks it and the node's retries still apply.
-        entry.changed = false; entry.revisionError = String(e?.message ?? e).slice(0, 2000);
-      }
+      await applyFixes(entry, critique, round);
       log.push(entry);
     }
     // Final review: the draft returned must be the one the last review judged. If the last round changed the draft, review
@@ -588,17 +613,31 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     // last round already judged this exact draft, so no extra call.
     const lastEntry = log.at(-1);
     if (finalReview && agent === 'story-director' && lastEntry && !stoppedEarly && lastEntry.changed) {
-      if (signal?.aborted) throw signal.reason ?? new Error('aborted');
-      const round = rounds + 1;
-      const meta = { runName: `${agent} final review`, tags: [`agent:${agent}`, `attempt:${attempt}`, 'final-review'], metadata: { agent, attempt, reflectionRound: round, finalReview: true }, signal };
-      let tr = null;
-      try { tr = trace ? trace(out) : null; } catch { tr = null; }
-      const critique = replyText(await withCallRetry(() => model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round: rounds, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime, prevDraft, coldNotes: '', thesis }), meta), { onRetry: logRetry(agent), signal, ...callRetry })).trim();
-      await writeFile(join(dir, 'final-review.md'), critique + '\n');
-      const entry = { round, finalReview: true, critique, critiqueFile: rel('final-review.md'), verdict: parseVerdict(critique), changed: false, runtimeBefore: runtimeOf(out), runtimeAfter: runtimeOf(out) };
-      const scores = parseStoryScores(critique); if (scores) entry.storyScores = scores;
-      if (isStructural(critique)) entry.structural = true;
-      log.push(entry);
+      // A failed fidelity or writing check (R1, R2) blocks: repair the lines it names, then review again (capped by
+      // config.finalRepairs, default 1). Still failing when the repairs run out -> STORY_REJECTED (storyRejection).
+      let repairs = 0;
+      for (let n = 0; ; n++) {
+        if (signal?.aborted) throw signal.reason ?? new Error('aborted');
+        const round = rounds + 1 + n * 2;
+        const file = n ? `final-review-${n + 1}.md` : 'final-review.md';
+        const meta = { runName: `${agent} final review${n ? ` ${n + 1}` : ''}`, tags: [`agent:${agent}`, `attempt:${attempt}`, 'final-review'], metadata: { agent, attempt, reflectionRound: round, finalReview: true }, signal };
+        let tr = null;
+        try { tr = trace ? trace(out) : null; } catch { tr = null; }
+        const critique = replyText(await withCallRetry(() => model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round: rounds, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime, prevDraft, coldNotes: '', thesis }), meta), { onRetry: logRetry(agent), signal, ...callRetry })).trim();
+        await writeFile(join(dir, file), critique + '\n');
+        const entry = { round, finalReview: true, critique, critiqueFile: rel(file), verdict: parseVerdict(critique), changed: false, runtimeBefore: runtimeOf(out), runtimeAfter: runtimeOf(out) };
+        const scores = parseStoryScores(critique); if (scores) entry.storyScores = scores;
+        if (isStructural(critique)) entry.structural = true;
+        const blocking = blockingFails(critique);
+        if (blocking.length) entry.blockingFails = blocking;
+        log.push(entry);
+        if (!blocking.length || repairs >= finalRepairCap(config)) break;
+        repairs++;
+        const fix = { round: round + 1, finalRepair: true, critiqueFile: rel(file), blockingFails: blocking, runtimeBefore: runtimeOf(out) };
+        await applyFixes(fix, critique, round + 1, `final repair ${repairs}`);
+        log.push(fix);
+        if (!fix.changed) break; // nothing changed: the review above stands and storyRejection decides
+      }
     }
     await writeFile(join(dir, 'reflection.json'), JSON.stringify({ agent, attempt, rounds, roundsRun: log.length, stoppedEarly, rubric: Boolean(review), ...(bestOf ? { bestOf } : {}), log }, null, 2));
     const rejection = agent === 'story-director' ? storyRejection(log) : null;
