@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { segmentCastPresence } from '../seedance-compiler/input.mjs';
 import { checkSeedanceShotLocks } from './shot-locks.mjs';
-import { VIDEO_ENGINE, VIDEO_ENGINES, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX_TOTAL_SECONDS, BLOCK_HEADERS, headerPositions } from '../seedance-compiler/schema.mjs';
+import { VIDEO_ENGINE, VIDEO_ENGINES, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX_TOTAL_SECONDS, BLOCK_HEADERS, headerPositions, sendTimeTags } from '../seedance-compiler/schema.mjs';
 
 import { WORDS_PER_SECOND } from './speech.mjs';
 export { WORDS_PER_SECOND };
@@ -295,7 +295,8 @@ export function validateSeedancePrompts(data, input) {
       if (heardLines.length && b && !b.text.includes(SILENT_LINE)) err('SILENT_LINE_MISSING', `${p}: SHOT ${s.shotNumber} (scene ${s.sceneId}) carries narration added in post, so it says "${SILENT_LINE}"`, `${p}.tenBlocks.block5_shots`);
     }
     const maxChars = input?.promptMaxChars ?? VIDEO_ENGINES[engine]?.promptMaxChars;
-    if (maxChars && t.length > maxChars) err('PROMPT_TOO_LONG', `${p}: compiledPrompt is ${t.length} characters; ${engine} accepts at most ${maxChars}. Tighten [VISUAL STYLE], [CAMERA AND PERFORMANCE], [CONTINUITY] and [MAINTAIN CONSISTENCY] prose; never cut a lock line, story noun or spoken line.`, `${p}.compiledPrompt`);
+    const sentLen = maxChars ? sendTimeTags(t, seg.references ?? []).length : 0;
+    if (maxChars && sentLen > maxChars) err('PROMPT_TOO_LONG', `${p}: compiledPrompt is ${sentLen} characters as sent (${t.length} written + ${sentLen - t.length} for the [ImageN]/[AudioN] tags added at send time); ${engine} accepts at most ${maxChars}. Tighten [VISUAL STYLE], [CAMERA AND PERFORMANCE], [CONTINUITY] and [MAINTAIN CONSISTENCY] prose; never cut a lock line, story noun or spoken line.`, `${p}.compiledPrompt`);
     // Per-clip references: only the people and places actually in this clip's shots (an extra picture invites an extra person).
     const onCam = new Set((seg.shots ?? []).flatMap((s) => [...(s.cast ?? []), ...(s.dialogue && !heardOnly(s.dialogue) ? [s.dialogue.speaker] : [])]));
     const locs = new Set((seg.shots ?? []).map((s) => s.locationTag));

@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { assembleCompiledPrompt, engineDurationFor, parseSeedancePrompts, VIDEO_ENGINES } from '../crew/seedance-compiler/schema.mjs';
+import { assembleCompiledPrompt, engineDurationFor, parseSeedancePrompts, VIDEO_ENGINES, sendTimeTags } from '../crew/seedance-compiler/schema.mjs';
 import { selectSeedanceCompilerInput } from '../crew/seedance-compiler/input.mjs';
 import { validateSeedancePrompts, shotBlocks, SILENT_LINE, leakedNarration } from '../crew/linter/check-seedance-prompts.mjs';
 import { V2_MODELS } from '../config/models.mjs';
@@ -123,13 +123,29 @@ test('role.md: post narration, device anchoring, simple hug contact, plain objec
   for (const x of [SILENT_LINE, 'postNarration', 'laptop or keyboard', 'side hug', 'flat-screen TV', 'fan of separate trading cards']) assert.ok(role.includes(x), x);
 });
 
-test('seedance-2.0-mini: 15s clips, any whole second, 3850-char prompt cap (4000 minus send-time tags)', () => {
+test('seedance-2.0-mini: 15s clips, any whole second, 4000-char cap counted on the prompt as sent (with [ImageN]/[AudioN] tags)', () => {
   const i = selectSeedanceCompilerInput(state('seedance-2.0-mini'));
-  assert.deepEqual([i.segmentMaxSec, i.allowedDurationsSec, i.promptMaxChars, i.postNarration], [15, null, 3850, false]);
+  assert.deepEqual([i.segmentMaxSec, i.allowedDurationsSec, i.promptMaxChars, i.postNarration], [15, null, 4000, false]);
   assert.equal(engineDurationFor('seedance-2.0-mini', 12), 12);
   const d = clips({ 1: [[0, 1, 2], [3, 4, 5]], 2: [[0, 1, 2]] }, 'seedance-2.0-mini', { post: false });
-  assert.ok(codes(d, 'seedance-2.0-mini').includes('PROMPT_TOO_LONG') === d.segments.some((s) => s.compiledPrompt.length > 3850));
+  const sent = (s) => sendTimeTags(s.compiledPrompt, s.references).length;
+  assert.ok(codes(d, 'seedance-2.0-mini').includes('PROMPT_TOO_LONG') === d.segments.some((s) => sent(s) > 4000));
   assert.ok(role.includes('promptMaxChars'));
+});
+test('sendTimeTags: image tags in reference order, one audio tag per voiceover line; PROMPT_TOO_LONG counts the tag overhead', () => {
+  const refs = [{ tag: '@A' }, { tag: '@room' }];
+  const p = '@A = boy.\n@room = room.\n@A, voiceover: {one}\n@A, voiceover: {two}';
+  assert.equal(sendTimeTags(p, refs), '@A [Image1] = boy.\n@room [Image2] = room.\n@A, voiceover: {one} (narration audio [Audio1], part 1)\n@A, voiceover: {two} (narration audio [Audio1], part 2)');
+  assert.equal(sendTimeTags('@A, voiceover: {x}', []), '@A, voiceover: {x} (narration audio [Audio1])');
+  // a written prompt under the cap whose tagged form is over it fails the gate
+  const d = clips({ 1: [[0, 1, 2], [3, 4, 5]], 2: [[0, 1, 2]] }, 'seedance-2.0-mini', { post: false });
+  const s = d.segments[0], over = sendTimeTags(s.compiledPrompt, s.references).length - s.compiledPrompt.length;
+  assert.ok(over > 0);
+  const gate = (max) => { const i = inputFor('seedance-2.0-mini', false); i.promptMaxChars = max;
+    return validateSeedancePrompts(d, i).issues.filter((x) => x.code === 'PROMPT_TOO_LONG' && true).length; };
+  const big = Math.max(...d.segments.map((x) => sendTimeTags(x.compiledPrompt, x.references).length));
+  assert.equal(gate(big), 0);
+  assert.ok(gate(s.compiledPrompt.length + over - 1) >= 1); // written length fits, tagged length does not
 });
 
 test('role.md: a device faces its user; no screen content unless over-the-shoulder or insert', () => {

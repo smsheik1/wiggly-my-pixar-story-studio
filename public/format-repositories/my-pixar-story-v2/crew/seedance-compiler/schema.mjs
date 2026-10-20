@@ -10,11 +10,22 @@ export const MAX_SEGMENT_SECONDS = 30;
 export const VIDEO_ENGINES = Object.freeze({
   'seedance-2.5': Object.freeze({ provider: 'replicate', segmentMaxSec: 30, durations: null, continuation: 'extend' }),
   // Replicate bytedance/seedance-2.0-mini (checked 2026-10-20): duration 4-15s any whole second, prompt max 4000 chars, up to 9 reference images.
-  // Replicate caps the mini prompt at 4000 chars; 150 are reserved for the [ImageN] / [AudioN] tags added at send time.
-  'seedance-2.0-mini': Object.freeze({ provider: 'replicate', model: 'bytedance/seedance-2.0-mini', segmentMaxSec: 15, durations: null, promptMaxChars: 3850, continuation: 'cut' }),
+  // promptMaxChars is the cap on the prompt as SENT, i.e. after sendTimeTags() adds [ImageN] / [AudioN]; PROMPT_TOO_LONG counts those tags.
+  'seedance-2.0-mini': Object.freeze({ provider: 'replicate', model: 'bytedance/seedance-2.0-mini', segmentMaxSec: 15, durations: null, promptMaxChars: 4000, continuation: 'cut' }),
   'omni-1.1-flash': Object.freeze({ provider: 'google-flow', segmentMaxSec: 10, durations: Object.freeze([4, 6, 8, 10]), continuation: 'cut', postNarration: true /* narration is TTS laid in post; Omni voices any words it is given */ }),
 });
 export const ENGINE_IDS = Object.keys(VIDEO_ENGINES);
+const reEsc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** The prompt exactly as sent to a reference-input engine: "[ImageN]" after each reference's "@Tag =" line (N = 1-based order of
+ *  segment.references, which is the attachment order) and "(narration audio [Audio1][, part K])" after each voiceover line
+ *  (all narration of a clip is joined into one audio file). The length gate (PROMPT_TOO_LONG) measures this string. */
+export function sendTimeTags(prompt, references = []) {
+  let p = String(prompt ?? '');
+  references.forEach((r, i) => { p = p.replace(new RegExp(`^${reEsc(r.tag)} =`, 'm'), `${r.tag} [Image${i + 1}] =`); });
+  const vo = p.match(/^@[\w]+, voiceover: \{[^}]*\}/gm)?.length ?? 0; let k = 0;
+  p = p.replace(/^@[\w]+, voiceover: \{[^}]*\}/gm, (m) => `${m}${vo > 1 ? ` (narration audio [Audio1], part ${++k})` : ' (narration audio [Audio1])'}`);
+  return p;
+}
 /** generationPayload.durationSec for a clip: the smallest duration the engine offers that is >= the clip's true length. */
 export function engineDurationFor(engine, lenSec) {
   const e = VIDEO_ENGINES[engine];
