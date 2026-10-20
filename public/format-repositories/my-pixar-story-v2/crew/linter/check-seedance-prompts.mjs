@@ -294,6 +294,8 @@ export function validateSeedancePrompts(data, input) {
       const b = shotBlocks(shotsText)[s.shotNumber - 1];
       if (heardLines.length && b && !b.text.includes(SILENT_LINE)) err('SILENT_LINE_MISSING', `${p}: SHOT ${s.shotNumber} (scene ${s.sceneId}) carries narration added in post, so it says "${SILENT_LINE}"`, `${p}.tenBlocks.block5_shots`);
     }
+    const maxChars = input?.promptMaxChars ?? VIDEO_ENGINES[engine]?.promptMaxChars;
+    if (maxChars && t.length > maxChars) err('PROMPT_TOO_LONG', `${p}: compiledPrompt is ${t.length} characters; ${engine} accepts at most ${maxChars}. Tighten [VISUAL STYLE], [CAMERA AND PERFORMANCE], [CONTINUITY] and [MAINTAIN CONSISTENCY] prose; never cut a lock line, story noun or spoken line.`, `${p}.compiledPrompt`);
     // Per-clip references: only the people and places actually in this clip's shots (an extra picture invites an extra person).
     const onCam = new Set((seg.shots ?? []).flatMap((s) => [...(s.cast ?? []), ...(s.dialogue && !heardOnly(s.dialogue) ? [s.dialogue.speaker] : [])]));
     const locs = new Set((seg.shots ?? []).map((s) => s.locationTag));

@@ -43,7 +43,7 @@ test('engines: Omni 1.1 Flash caps clips at 10s with 4/6/8/10; Seedance stays de
   assert.equal(VIDEO_ENGINES['omni-1.1-flash'].segmentMaxSec, 10);
   assert.deepEqual([3, 4, 5, 7, 9, 10, 11].map((n) => engineDurationFor('omni-1.1-flash', n)), [4, 4, 6, 8, 10, 10, undefined]);
   assert.equal(engineDurationFor('seedance-2.5', 27), 27);
-  assert.deepEqual(V2_MODELS['seedance-compiler'].videoEngines, ['seedance-2.5', 'omni-1.1-flash']);
+  assert.deepEqual(V2_MODELS['seedance-compiler'].videoEngines, ['seedance-2.5', 'seedance-2.0-mini', 'omni-1.1-flash']);
   const def = selectSeedanceCompilerInput(state()), om = selectSeedanceCompilerInput(state('omni-1.1-flash'));
   assert.deepEqual([def.targetEngine, def.segmentMaxSec, def.allowedDurationsSec], ['seedance-2.5', 30, null]);
   assert.deepEqual([om.targetEngine, om.segmentMaxSec, om.allowedDurationsSec], ['omni-1.1-flash', 10, [4, 6, 8, 10]]);
@@ -121,4 +121,13 @@ test('post narration (Omni): no narration words in the prompt; silent-scene line
 });
 test('role.md: post narration, device anchoring, simple hug contact, plain object names', () => {
   for (const x of [SILENT_LINE, 'postNarration', 'laptop or keyboard', 'side hug', 'flat-screen TV', 'fan of separate trading cards']) assert.ok(role.includes(x), x);
+});
+
+test('seedance-2.0-mini: 15s clips, any whole second, 4000-char prompt cap', () => {
+  const i = selectSeedanceCompilerInput(state('seedance-2.0-mini'));
+  assert.deepEqual([i.segmentMaxSec, i.allowedDurationsSec, i.promptMaxChars, i.postNarration], [15, null, 4000, false]);
+  assert.equal(engineDurationFor('seedance-2.0-mini', 12), 12);
+  const d = clips({ 1: [[0, 1, 2], [3, 4, 5]], 2: [[0, 1, 2]] }, 'seedance-2.0-mini', { post: false });
+  assert.ok(codes(d, 'seedance-2.0-mini').includes('PROMPT_TOO_LONG') === d.segments.some((s) => s.compiledPrompt.length > 4000));
+  assert.ok(role.includes('promptMaxChars'));
 });
