@@ -52,7 +52,7 @@ A Wiggly film is a short memory film about real people. The job is not to list t
 1. **The one moment that matters.** Every memory is built around one moment, not a summary of a period (parts are only 30-second render chunks). Start as late into it as you can and leave as soon as it lands.
 2. **The specific true detail.** One concrete detail from the answers (an object, a habit, a phrase, a place) is worth more than any general statement. Show it on screen; never swap it for a generic one.
 3. **The turn.** Something changes across the film and inside the key moments: a feeling, a relationship, what someone understands. Know where it happens.
-4. **The reaction shot.** The reaction is usually worth more than the action. Cut to the face of the person it means the most to; often that is the recipient listening in the finale.
+4. **The reaction shot.** The reaction is usually worth more than the action. Cut to the face of the person it means the most to.
 5. **Doing, not saying.** A character's business (hands busy with a task, a look held) says more than a line explaining how they feel. Stopping that business dead is the strongest punctuation you have.
 6. **Let tender moments breathe.** Give the emotional beat a held shot with room tone and no new line, so it lands before the next one starts. A moving hold, never a freeze.
 7. **Plant and pay off.** If the finale calls back to something (an object, place, habit or line from the answers), show it early.
