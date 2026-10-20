@@ -25,7 +25,7 @@ export const DialogueLineSchema = z.object({
   isVoiceover: z.boolean().default(false).describe('True if spoken as voiceover from off-screen or memory'),
   isOffCamera: z.boolean().default(false).describe('True if speaker is in the scene but currently out of frame'),
 });
-// WIGGLY: optional narration in the maker's cloned storyteller voice, alongside or instead of dialogue.
+// WIGGLY: optional narration in the maker's expressive generated voice, alongside or instead of dialogue.
 export const NarrationLineSchema = z.object({
   speaker: z.string().describe("Narrator element tag, usually the maker, e.g. '@AdultTheo'"),
   line: z.string().regex(/^\{.+\}$/, 'Narration line must be enclosed in curly braces {}'),
