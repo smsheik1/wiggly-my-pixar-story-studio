@@ -58,7 +58,7 @@ test('A -> B -> C order: beats see answers, critique sees beats, shots task carr
       (msgs) => { seen.b = text(msgs); return say('1. Build: fine.\n## Rewritten beats\nThesis: she can always call.\nBeat 1 (rewritten): the first call.'); },
       (msgs) => { seen.c = text(msgs); return call('submit_story_director', play()); },
     ]);
-    const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'sf' })({ agent: 'story-director', config: { model: 'x', storyBeats: true, reflectionRounds: 0 }, input: INPUT, attempt: 1 });
+    const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'sf' })({ agent: 'story-director', config: { model: 'x', storyBeats: true, reflectionRounds: 0 }, input: INPUT, attempt: 1 });
     assert.equal(m.calls.length, 3);
     assert.match(seen.a, /Thesis first/); assert.match(seen.a, /always call me/);
     assert.match(seen.b, /Rewritten beats/); assert.match(seen.b, /Beat 1: first call/);
@@ -75,7 +75,7 @@ test('off: exactly the old single shots call', async () => {
   const runs = await mkdtemp(join(tmpdir(), 'wiggly-beats-'));
   try {
     const m = new ScriptedModel([() => call('submit_story_director', play())]);
-    await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'off' })({ agent: 'story-director', config: { model: 'x', reflectionRounds: 0 }, input: INPUT });
+    await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'off' })({ agent: 'story-director', config: { model: 'x', reflectionRounds: 0 }, input: INPUT });
     assert.equal(m.calls.length, 1);
   } finally { await rm(runs, { recursive: true, force: true }); }
 });
@@ -95,7 +95,7 @@ test('STRUCTURAL review sends the draft back to beats (A+B with the notes) and a
       (msgs) => { seen.c2 = text(msgs); return call('submit_story_director', titled('Rebuilt')); },
       () => say(STRUCT), // round 2: cap reached, falls through to the normal line-fix path (no shot-scoped fixes: no rewrite)
     ]);
-    const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'st' })({ agent: 'story-director', config: { model: 'x', storyBeats: true, reflectionRounds: 2 }, input: INPUT, attempt: 1, gate: () => ({ issues: [] }) });
+    const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'st' })({ agent: 'story-director', config: { model: 'x', storyBeats: true, reflectionRounds: 2 }, input: INPUT, attempt: 1, gate: () => ({ issues: [] }) });
     assert.match(seen.a2, /STRUCTURAL/); assert.match(seen.a2, /from scratch/);
     assert.match(seen.c2, /Beat 1: new approved/);
     const log = out[Symbol.for('wiggly.v2.reflection')].log;
@@ -124,7 +124,7 @@ test('approved thesis is pinned into finaleThesis, shown to the reviewer, and su
       (msgs) => { seen.r = text(msgs); return say('S1 Core: 4 - x\nS2 Specific: 4 - x\nS3 Turn: 4 - x\nS4 Feel: 4 - x\nR6 Finale: FAIL\n- 5.1 "x" -> y\nFIXES:\n1. 1.1: tighten.\nVERDICT: REVISE'); },
       () => call('submit_story_director', draft('Second', 'Only the first idea')),
     ]);
-    const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'th' })({ agent: 'story-director', config: { model: 'x', storyBeats: true, reflectionRounds: 1, coldRead: false }, input: INPUT, attempt: 1, gate: () => ({ issues: [] }) });
+    const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'th' })({ agent: 'story-director', config: { model: 'x', storyBeats: true, reflectionRounds: 1, coldRead: false }, input: INPUT, attempt: 1, gate: () => ({ issues: [] }) });
     const T = 'Show up quietly, and think about the good in people.';
     assert.match(seen.c, /finaleThesis is exactly/); assert.match(seen.r, /approved thesis/); assert.ok(seen.r.includes(T));
     assert.equal(out.finaleThesis, T);

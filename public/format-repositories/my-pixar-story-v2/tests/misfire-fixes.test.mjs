@@ -142,7 +142,7 @@ test('fatal: a key-limit error during a self-review rewrite is not swallowed as 
       () => new AIMessage('1. Tighten the finale.\nVERDICT: REVISE'),
       () => { throw err(KEY_MSG); },
     ]);
-    await assert.rejects(deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'fatal' })({ agent: 'story-director', config: { model: 'isolated-scripted-model', reflectionRounds: 2 }, input: { answers: {} }, attempt: 1 }),
+    await assert.rejects(deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'fatal' })({ agent: 'story-director', config: { model: 'isolated-scripted-model', reflectionRounds: 2 }, input: { answers: {} }, attempt: 1 }),
       (e) => isFatalProviderError(e));
     assert.equal(m.calls, 3, 'stopped at the failing rewrite: no round 2');
   } finally { await rm(runs, { recursive: true, force: true }); }

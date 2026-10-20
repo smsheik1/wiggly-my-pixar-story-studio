@@ -183,7 +183,7 @@ test('loop: quota line present with correct numbers when over target', { timeout
     () => call(SUBMIT, titled('Revision one', 90)),
   ]);
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'quota' })({
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'quota' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 1 },
     input: { targetTotalRuntimeSec: 90 },
@@ -205,7 +205,7 @@ test('loop: under-target wording injected when draft is at or under target', { t
     () => call(SUBMIT, titled('Revision one', 80)),
   ]);
 
-  await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'under' })({
+  await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'under' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 1 },
     input: { targetTotalRuntimeSec: 90 },
@@ -226,7 +226,7 @@ test('loop: growth rejected and previous draft kept, subsequent round continues 
     () => call(SUBMIT, titled('Revision two clean', 90)), // Round 2 accepted
   ]);
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'reject-grow' })({
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'reject-grow' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 2 },
     input: { targetTotalRuntimeSec: 90 },
@@ -254,7 +254,7 @@ test('loop: +2s tolerance allowed under target, but +1s rejected over target', {
     () => say('1. Fix dialogue.\nVERDICT: REVISE'),
     () => call(SUBMIT, titled('Revision one', 82)), // +2s under target (90) -> allowed
   ]);
-  const outUnder = await deepAgentInvoke({ createModel: async () => mUnder, runsRoot: runs, runId: 'tol-ok' })({
+  const outUnder = await deepAgentInvoke({ finalReview: false, createModel: async () => mUnder, runsRoot: runs, runId: 'tol-ok' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 1 },
     input: { targetTotalRuntimeSec: 90 },
@@ -270,7 +270,7 @@ test('loop: +2s tolerance allowed under target, but +1s rejected over target', {
     () => say('1. Fix dialogue.\nVERDICT: REVISE'),
     () => call(SUBMIT, titled('Revision one', 96)), // +1s over target (90) -> rejected
   ]);
-  const outOver = await deepAgentInvoke({ createModel: async () => mOver, runsRoot: runs, runId: 'tol-bad' })({
+  const outOver = await deepAgentInvoke({ finalReview: false, createModel: async () => mOver, runsRoot: runs, runId: 'tol-bad' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 1 },
     input: { targetTotalRuntimeSec: 90 },
@@ -295,7 +295,7 @@ test('loop: gate-error increase rejected and previous draft kept', { timeout: 10
       : [],
   });
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'gate-reject' })({
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'gate-reject' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 1 },
     input: { targetTotalRuntimeSec: 90 },
@@ -318,7 +318,7 @@ test('loop: rejected round counts as used round and loop stops at rounds', { tim
     () => call(SUBMIT, titled('Revision two grew', 110)), // Rejected round 2
   ]);
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'stop-at-rounds' })({
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'stop-at-rounds' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 2 },
     input: { targetTotalRuntimeSec: 90 },
@@ -342,7 +342,7 @@ test('loop: equal or shorter rewrite accepted', { timeout: 10000 }, () => tmp(as
     () => call(SUBMIT, titled('Revision one', 90)),
   ]);
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'shorter-ok' })({
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'shorter-ok' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 1 },
     input: { targetTotalRuntimeSec: 90 },
@@ -362,7 +362,7 @@ test('loop: early SHIP still works when clean draft is approved', { timeout: 100
     () => say('R1 Fidelity: PASS\nR8 Length: PASS\nVERDICT: SHIP'),
   ]);
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'early-ship' })({
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'early-ship' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 2 },
     input: { targetTotalRuntimeSec: 90 },

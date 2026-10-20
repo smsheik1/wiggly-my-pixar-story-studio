@@ -66,3 +66,74 @@ test('graph: a REVISE final review with a story score of 2 fails the gate', asyn
   assert.ok(s.gateIssues['story-director'].some((i) => i.code === 'STORY_REJECTED' && /S|Turn|=2/.test(i.message)));
   assert.ok(invoke.calls.every((a) => a === 'story-director'));
 });
+
+// Real review loop, scripted model: the draft returned is the one the last review judged.
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { AIMessage } from '@langchain/core/messages';
+import { deepAgentInvoke } from '../graph/deep-agent-node.mjs';
+
+class ScriptedModel extends BaseChatModel {
+  constructor(script) { super({}); this.modelName = 'isolated-scripted-model'; this.script = script; this.calls = []; }
+  getName() { return 'ChatOpenAI'; }
+  _llmType() { return 'isolated-scripted-test'; }
+  bindTools() { return this; }
+  async _generate(messages) {
+    this.calls.push(messages);
+    const step = this.script.shift();
+    assert.ok(step, 'model called after expected termination');
+    return { generations: [{ text: '', message: step(messages) }] };
+  }
+}
+const SUBMIT = 'submit_story_director';
+const submit = (args) => new AIMessage({ content: '', tool_calls: [{ name: SUBMIT, args, id: 's' + Math.random().toString(36).slice(2, 7), type: 'tool_call' }] });
+const titled = (t) => { const d = json(FIX['story-director']); d.masthead.title = t; return d; };
+const seen = (msgs) => msgs.map((m) => (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))).join('\n');
+async function runLoop(script) {
+  const dir = await mkdtemp(join(tmpdir(), 'wiggly-v2-final-review-'));
+  try {
+    const m = new ScriptedModel(script);
+    const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: dir, runId: 'fr' })({
+      agent: 'story-director', config: { model: 'isolated-scripted-model', reflectionRounds: 1 }, input: { subject: 'Test family', answers: { finale: 'I want her to know she can always call me.' } }, gate: () => ({ issues: [] }) });
+    return { out, m, refl: out[REFLECTION] };
+  } finally { await rm(dir, { recursive: true, force: true }); }
+}
+
+test('final rewrite gets reviewed: one extra critique judges the returned draft; STRUCTURAL there rejects the story', async () => {
+  let finalSaw = '';
+  const { out, m, refl } = await runLoop([
+    () => submit(titled('Draft zero')),
+    () => new AIMessage(REVISE_2.replace('S3 Turn: 2', 'S3 Turn: 3')),
+    () => submit(titled('Revision one')),
+    (msgs) => { finalSaw = seen(msgs); return new AIMessage(STRUCTURAL); },
+  ]);
+  assert.equal(out.masthead.title, 'Revision one');
+  assert.equal(m.calls.length, 4, 'draft + critique + rewrite + one final review');
+  assert.match(finalSaw, /Revision one/, 'the final review judged the returned draft');
+  assert.ok(refl.log.at(-1).finalReview);
+  assert.equal(refl.storyRejection?.code, 'STORY_REJECTED');
+});
+
+test('final review SHIP on the rewritten draft passes', async () => {
+  const { m, refl } = await runLoop([
+    () => submit(titled('Draft zero')),
+    () => new AIMessage(STRUCTURAL.replace('STRUCTURAL', 'REVISE').replace(/: 1/g, ': 3')),
+    () => submit(titled('Revision one')),
+    () => new AIMessage(SHIP),
+  ]);
+  assert.equal(m.calls.length, 4);
+  assert.equal(refl.storyRejection, undefined);
+});
+
+test('SHIP early stop on an unchanged draft makes no extra review call', async () => {
+  const { out, m, refl } = await runLoop([
+    () => submit(titled('Draft zero')),
+    () => new AIMessage(SHIP),
+  ]);
+  assert.equal(out.masthead.title, 'Draft zero');
+  assert.equal(m.calls.length, 2, 'draft + critique only');
+  assert.ok(refl.stoppedEarly); assert.ok(!refl.log.some((e) => e.finalReview));
+  assert.equal(refl.storyRejection, undefined);
+});

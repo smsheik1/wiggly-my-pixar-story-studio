@@ -51,21 +51,21 @@ test('withCallRetry: retries only the dropped call, at most CALL_RETRIES times; 
 
 test('deep agent run: a draft call that drops is retried in place; the attempt does not fail or restart', () => tmp(async (runs) => {
   const m = new ScriptedModel([drop, drop, () => call('submit_story_director', json('good-stage-play.json'))]);
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'drop', callRetry: fast })({ agent: 'story-director', config: { ...SD, reflectionRounds: 0 }, input: {}, attempt: 1 });
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'drop', callRetry: fast })({ agent: 'story-director', config: { ...SD, reflectionRounds: 0 }, input: {}, attempt: 1 });
   assert.equal(m.calls.length, 3, 'same run: 2 dropped calls + the one that submitted');
   assert.equal(out.masthead.title, json('good-stage-play.json').masthead.title);
 }));
 
 test('deep agent run: three drops in a row still fail that attempt (the node retry/escalation then applies)', () => tmp(async (runs) => {
   const m = new ScriptedModel([drop, drop, drop]);
-  await assert.rejects(deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'drop3', callRetry: fast })({ agent: 'story-director', config: { ...SD, reflectionRounds: 0 }, input: {}, attempt: 1 }), /Network connection lost/);
+  await assert.rejects(deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'drop3', callRetry: fast })({ agent: 'story-director', config: { ...SD, reflectionRounds: 0 }, input: {}, attempt: 1 }), /Network connection lost/);
   assert.equal(m.calls.length, 3);
 }));
 
 test('review round: a dropped critique call is retried; the round goes on', () => tmp(async (runs) => {
   const d = json('good-stage-play.json');
   const m = new ScriptedModel([() => call('submit_story_director', d), drop, () => new AIMessage('R1 Fidelity: PASS\nFIXES:\n\nVERDICT: SHIP')]);
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'cdrop', callRetry: fast })({ agent: 'story-director', config: { ...SD, reflectionRounds: 1 }, input: {}, attempt: 1, gate: () => ({ issues: [] }) });
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'cdrop', callRetry: fast })({ agent: 'story-director', config: { ...SD, reflectionRounds: 1 }, input: {}, attempt: 1, gate: () => ({ issues: [] }) });
   assert.equal(m.calls.length, 3); assert.equal(out[REFLECTION].log[0].verdict, 'SHIP');
 }));
 

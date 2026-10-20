@@ -139,7 +139,7 @@ test('two drafts run in parallel (both started before either resolves)', { timeo
     return say('SHIP\nVERDICT: SHIP');
   });
 
-  const runPromise = deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'par' })({
+  const runPromise = deepAgentInvoke({ finalReview: false, storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'par' })({
     agent: 'story-director',
     config: { ...V2_MODELS['story-director'], reflectionRounds: 1 },
     input: INPUT,
@@ -188,7 +188,7 @@ test('one fails gate -> other wins, no judge call', { timeout: 10000 }, () => tm
     return { issues: [] };
   };
 
-  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'gate-one' })({
+  const out = await deepAgentInvoke({ finalReview: false, storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'gate-one' })({
     agent: 'story-director',
     config: { ...V2_MODELS['story-director'], reflectionRounds: 1 },
     input: INPUT,
@@ -222,7 +222,7 @@ test('both pass -> judge called, messages contain both scripts and no answer str
     return say('SHIP\nVERDICT: SHIP');
   });
 
-  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'both-pass' })({
+  const out = await deepAgentInvoke({ finalReview: false, storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'both-pass' })({
     agent: 'story-director',
     config: { ...V2_MODELS['story-director'], reflectionRounds: 1 },
     input: { ...INPUT, answers: { deepSecret: SECRET_ANSWER }, targetTotalRuntimeSec: 90 },
@@ -270,7 +270,7 @@ test('warnings ignored: warning does not count as gate error', { timeout: 10000 
     ],
   });
 
-  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'warn-ok' })({
+  const out = await deepAgentInvoke({ finalReview: false, storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'warn-ok' })({
     agent: 'story-director',
     config: { ...V2_MODELS['story-director'], reflectionRounds: 1 },
     input: INPUT,
@@ -314,7 +314,7 @@ test('both fail -> draft A proceeds and existing retry still works', { timeout: 
     return { issues: [{ severity: 'error', message: 'plot error', path: 'segments.0' }] };
   };
 
-  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'both-fail' })({
+  const out = await deepAgentInvoke({ finalReview: false, storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'both-fail' })({
     agent: 'story-director',
     config: { ...V2_MODELS['story-director'], reflectionRounds: 1 },
     input: INPUT,
@@ -384,7 +384,7 @@ test('flag off: single draft run unchanged', { timeout: 10000 }, () => tmp(async
     return call(SUBMIT, titled('Single Draft'));
   });
 
-  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'flag-off' })({
+  const out = await deepAgentInvoke({ finalReview: false, storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'flag-off' })({
     agent: 'story-director',
     config: { ...V2_MODELS['story-director'], bestOfDrafts: 1, reflectionRounds: 0 },
     input: INPUT,

@@ -179,7 +179,7 @@ test('reflection logs the trace and the critic\'s untraceable list per round', a
       () => submit(good()),
     ]);
     const trace = (o) => AGENT_SPECS['story-director'].trace(o, GOOD_INPUT);
-    const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 't' })({ agent: 'story-director', config: { model: 'x', reflectionRounds: 1 }, input: GOOD_INPUT, attempt: 1, trace });
+    const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 't' })({ agent: 'story-director', config: { model: 'x', reflectionRounds: 1 }, input: GOOD_INPUT, attempt: 1, trace });
     assert.match(seen[0], /Answer trace \(deterministic\): 7 lines/);
     const e = out[REFLECTION].log[0];
     assert.equal(e.trace.lines, 7); assert.equal(e.trace.withProblems, 0);

@@ -395,7 +395,7 @@ export const revisionMessage = ({ agent, draft, critique, round, rounds, scope =
  * the returned object under REFLECTION. N = 0 is exactly the single-draft behaviour.
  * storyBeats (boolean, optional) overrides config.storyBeats (graph/story-beats.mjs: beats + critique calls before the shots call).
  */
-export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60, maxInvalidSubmits = 3, reflectionRounds, storyBeats, callRetry = {} } = {}) {
+export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS_ROOT, runId = randomUUID(), assetFiles = {}, recursionLimit = 60, maxInvalidSubmits = 3, reflectionRounds, storyBeats, callRetry = {}, finalReview = true } = {}) {
   // Patch mode (graph/patch.mjs) adds: task (the first user message), scope (shown to the critic and the rewrite),
   // rounds (reflection rounds for this run; overrides config and the reflectionRounds option) and submitSchema.
   return async ({ agent, config, input, attempt = 1, retryNotes = '', state = {}, signal, gate, trace, task, scope = '', rounds: reqRounds, submitSchema }) => {
@@ -567,6 +567,23 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
         // A failed rewrite keeps the previous valid draft; the gate still checks it and the node's retries still apply.
         entry.changed = false; entry.revisionError = String(e?.message ?? e).slice(0, 2000);
       }
+      log.push(entry);
+    }
+    // Final review: the draft returned must be the one the last review judged. If the last round changed the draft, review
+    // the returned draft once more (critique only, no rewrite: one extra call at most). A SHIP early stop or an unchanged
+    // last round already judged this exact draft, so no extra call.
+    const lastEntry = log.at(-1);
+    if (finalReview && agent === 'story-director' && lastEntry && !stoppedEarly && lastEntry.changed) {
+      if (signal?.aborted) throw signal.reason ?? new Error('aborted');
+      const round = rounds + 1;
+      const meta = { runName: `${agent} final review`, tags: [`agent:${agent}`, `attempt:${attempt}`, 'final-review'], metadata: { agent, attempt, reflectionRound: round, finalReview: true }, signal };
+      let tr = null;
+      try { tr = trace ? trace(out) : null; } catch { tr = null; }
+      const critique = replyText(await withCallRetry(() => model.invoke(critiqueMessages({ agent, skill, review, input, draft: out, round: rounds, rounds, gateIssues, trace: tr?.text ?? '', scope, firstRuntime, prevDraft, coldNotes: '', thesis }), meta), { onRetry: logRetry(agent), signal, ...callRetry })).trim();
+      await writeFile(join(dir, 'final-review.md'), critique + '\n');
+      const entry = { round, finalReview: true, critique, critiqueFile: rel('final-review.md'), verdict: parseVerdict(critique), changed: false, runtimeBefore: runtimeOf(out), runtimeAfter: runtimeOf(out) };
+      const scores = parseStoryScores(critique); if (scores) entry.storyScores = scores;
+      if (isStructural(critique)) entry.structural = true;
       log.push(entry);
     }
     await writeFile(join(dir, 'reflection.json'), JSON.stringify({ agent, attempt, rounds, roundsRun: log.length, stoppedEarly, rubric: Boolean(review), ...(bestOf ? { bestOf } : {}), log }, null, 2));

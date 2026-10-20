@@ -263,7 +263,7 @@ test('deep agent patch mode: the patch task opens the run; ONE review round scop
   ]);
   const { patchTask, patchScopeText } = await import('../graph/patch.mjs');
   const input = { subject: 'Test family', answers: json('good-answers.json').answers, patch: { target: t.id, note: 'He told everyone.', currentOutput: prior } };
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'pm' })({ agent: 'story-director', config: V2_MODELS['story-director'], input, attempt: 1,
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'pm' })({ agent: 'story-director', config: V2_MODELS['story-director'], input, attempt: 1,
     task: patchTask(t, 'He told everyone.'), scope: patchScopeText(t, 'He told everyone.'), rounds: 1, gate: () => ({ issues: [] }) });
   assert.equal(m.calls.length, 3, 'draft + 1 x (critique + rewrite), not the 2 full-run rounds');
   assert.match(seen.first, /PATCH MODE[\s\S]*line:1\.2\.dialogue/);

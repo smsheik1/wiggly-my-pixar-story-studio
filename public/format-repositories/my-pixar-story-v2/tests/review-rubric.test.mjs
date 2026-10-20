@@ -80,7 +80,7 @@ test('early stop: SHIP on a gate-clean draft skips the rewrite and every later r
     () => call(SUBMIT, titled('Draft zero')),
     (msgs) => { seen.c1 = text(msgs); return say(SHIP); },
   ]);
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'ship' })({ agent: 'story-director', config: { model: 'isolated-scripted-model', reflectionRounds: 2 }, input: INPUT, attempt: 1, gate: () => ({ issues: [] }) });
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'ship' })({ agent: 'story-director', config: { model: 'isolated-scripted-model', reflectionRounds: 2 }, input: INPUT, attempt: 1, gate: () => ({ issues: [] }) });
   assert.equal(m.calls.length, 2, 'draft + one critique, no rewrite, no round 2');
   assert.equal(out.masthead.title, 'Draft zero');
   assert.match(seen.c1, /S1 Core[\s\S]*R1 Fidelity[\s\S]*R8 Length/, 'the critique call gets the rubric');
@@ -103,7 +103,7 @@ test('no early stop when the gate fails or the critic says REVISE; the rewrite n
     (msgs) => { seen.r2 = text(msgs); return call(SUBMIT, titled('Revision two')); },
   ]);
   const gate = (o) => ({ issues: o.masthead.title === 'Draft zero' ? [{ severity: 'error', code: 'PRESENT_NEVER_SEEN', message: 'never seen', path: 'segments.0.scenes.0' }] : [] });
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'rev' })({ agent: 'story-director', config: { model: 'isolated-scripted-model', reflectionRounds: 2 }, input: INPUT, attempt: 1, gate });
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'rev' })({ agent: 'story-director', config: { model: 'isolated-scripted-model', reflectionRounds: 2 }, input: INPUT, attempt: 1, gate });
   assert.equal(m.calls.length, 5); assert.equal(out.masthead.title, 'Revision two');
   const r = out[REFLECTION];
   assert.equal(r.stoppedEarly, false); assert.deepEqual(r.log.map((e) => e.verdict), ['SHIP', 'REVISE']); assert.equal(r.log[1].fixes, 2);

@@ -54,7 +54,7 @@ test('2 rounds happen: critique sees rules + answers + draft, rewrite sees the c
   ]);
   const gateCalls = [];
   const gate = (o) => { gateCalls.push(o.masthead.title); return { issues: o.masthead.title === 'Draft zero' ? [{ severity: 'error', code: 'FINALE_TOO_THIN', message: 'thin finale', path: 'segments.1' }] : [] }; };
-  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'two' })({ agent: 'story-director', config: { model: 'isolated-scripted-model', reflectionRounds: 2 }, input: INPUT, attempt: 1, gate });
+  const out = await deepAgentInvoke({ finalReview: false, storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'two' })({ agent: 'story-director', config: { model: 'isolated-scripted-model', reflectionRounds: 2 }, input: INPUT, attempt: 1, gate });
   assert.equal(m.calls.length, 6, 'draft (2 turns) + 2 x (critique + rewrite)');
   assert.equal(out.masthead.title, 'Revision two');
   // Critique 1: its own rules, the family's answers, the draft, the finale thesis checks, and the gate findings.
@@ -86,7 +86,7 @@ test('rounds = 0 behaves exactly as before: one draft, no extra model calls, no 
       () => call(SUBMIT, json(FIX['story-director'])),
     ]);
     const id = `zero${config.reflectionRounds ?? 'u'}`;
-    const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: id })({ agent: 'story-director', config, input: INPUT, attempt: 1, gate: () => assert.fail('gate is not called without reflection') });
+    const out = await deepAgentInvoke({ finalReview: false, storyBeats: false, createModel: async () => m, runsRoot: runs, runId: id })({ agent: 'story-director', config, input: INPUT, attempt: 1, gate: () => assert.fail('gate is not called without reflection') });
     assert.equal(m.calls.length, 3);
     const { storyboardSheets: _sb, htmlScriptDocument: _html, ...want } = parseStagePlay(json(FIX['story-director'])); // the graph's parse adds these in code
     assert.deepEqual(out, want);
@@ -95,7 +95,7 @@ test('rounds = 0 behaves exactly as before: one draft, no extra model calls, no 
   }
   // The invoke-level override turns it off for an agent whose config has rounds.
   const m = new ScriptedModel([() => call(SUBMIT, json(FIX['story-director']))]);
-  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'ovr', reflectionRounds: { 'story-director': 0 } })({ agent: 'story-director', config: V2_MODELS['story-director'], input: INPUT, attempt: 1 });
+  const out = await deepAgentInvoke({ finalReview: false, storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'ovr', reflectionRounds: { 'story-director': 0 } })({ agent: 'story-director', config: V2_MODELS['story-director'], input: INPUT, attempt: 1 });
   assert.equal(m.calls.length, 1); assert.equal(out[REFLECTION], undefined);
 }));
 
@@ -107,7 +107,7 @@ test('a rewrite that never resubmits keeps the previous valid draft and records 
     (msgs) => { assert.match(text(msgs), /Draft zero/); return say('VERDICT: REVISE'); },
     () => call(SUBMIT, titled('Revision two')),
   ]);
-  const out = await deepAgentInvoke({ storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'keep' })({ agent: 'story-director', config: { model: 'x', reflectionRounds: 2 }, input: INPUT, attempt: 1 });
+  const out = await deepAgentInvoke({ finalReview: false, storyBeats: false, createModel: async () => m, runsRoot: runs, runId: 'keep' })({ agent: 'story-director', config: { model: 'x', reflectionRounds: 2 }, input: INPUT, attempt: 1 });
   assert.equal(out.masthead.title, 'Revision two');
   const [r1, r2] = out[REFLECTION].log;
   assert.equal(r1.changed, false); assert.match(r1.revisionError, /without calling submit/); assert.equal(r2.changed, true);
@@ -142,7 +142,7 @@ test('graph: a gate-failing first draft fixed by the revisions passes on attempt
   const createModel = async (_c, agent) => (agent !== 'story-director' ? otherAgents(agent) : (sd = new RoleModel({
     draft: thin('Thin draft'), revisions: [thin('Still thin'), titled('Fixed')],
     critiques: ['1. Finale has no narration. VERDICT: REVISE', '1. Still no narration. VERDICT: REVISE'], onCritique: (t) => critiqueTexts.push(t) })));
-  const s = await buildGraph({ deepAgent: { storyBeats: false, createModel, runsRoot: runs, runId: 'g1' }, onEvent: (e) => events.push(e) }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
+  const s = await buildGraph({ deepAgent: { finalReview: false, storyBeats: false, createModel, runsRoot: runs, runId: 'g1' }, onEvent: (e) => events.push(e) }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
   assert.deepEqual(sd.kinds.filter((k) => k !== 'after-submit'), ['draft', 'draft', 'cold-read', 'critique', 'rewrite', 'cold-read', 'critique', 'rewrite']);
   assert.match(critiqueTexts[0], /FINALE_TOO_THIN/); assert.match(critiqueTexts[0], /Thin draft/); assert.match(critiqueTexts[1], /Still thin/);
@@ -163,7 +163,7 @@ test('graph: if the final revision fails the gate, the existing retry runs (with
     sdModels++;
     return new RoleModel({ draft: thin('Draft'), revisions: [thin('Mid'), sdModels === 1 ? thin('Bad final') : titled('Good final')], critiques: ['critique a', 'critique b'], onDraft: (t) => drafts.push(t) });
   };
-  const s = await buildGraph({ deepAgent: { storyBeats: false, createModel, runsRoot: runs, runId: 'g2' } }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
+  const s = await buildGraph({ deepAgent: { finalReview: false, storyBeats: false, createModel, runsRoot: runs, runId: 'g2' } }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
   assert.equal(s.status, 'done'); assert.equal(s.attempts['story-director'], 2); assert.equal(s.storyDirector.masthead.title, 'Good final');
   assert.ok(s.validationErrors.find((v) => v.node === 'story-director').errors.some((i) => i.code === 'FINALE_TOO_THIN'));
   assert.ok(!/FINALE_TOO_THIN/.test(drafts[0])); assert.match(drafts[2], /FINALE_TOO_THIN/, 'attempt 2 gets the gate errors of the final revision as retry notes');

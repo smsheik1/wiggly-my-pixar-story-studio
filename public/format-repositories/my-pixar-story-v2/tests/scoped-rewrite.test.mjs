@@ -266,7 +266,7 @@ test('no scoped fixes -> rewrite skipped', { timeout: 10000 }, () => tmp(async (
     () => say('FIXES:\n1. retime to <=90s by cuts\n2. tighten pacing\n\nVERDICT: REVISE'),
   ]);
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'no-scoped' })({
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'no-scoped' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 1 },
     input: INPUT,
@@ -320,7 +320,7 @@ test('reproduce the evidence (rewrite drops 3 unnamed verbatim lines -> they com
     () => call(SUBMIT, rewriteBad),
   ]);
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'evidence-repro' })({
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'evidence-repro' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 1 },
     input: INPUT,
@@ -358,7 +358,7 @@ test('a 22-word restored line -> gate error -> rewrite rejected and previous pas
     () => call(SUBMIT, rewriteWithLongLine),
   ]);
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'word-cap-reject' })({
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'word-cap-reject' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 1 },
     input: INPUT,
@@ -394,7 +394,7 @@ test('patch mode unaffected: scope already set, scoped rewrite is skipped', { ti
     patch: { target: 'shot:1.2', note: 'fix line', currentOutput: prior },
   };
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'pm-unaffected' })({
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'pm-unaffected' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 1 },
     input: patchInput,
@@ -458,7 +458,7 @@ test('a round can never replace a gate-passing draft with a failing one; node ou
       : [],
   });
 
-  const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'gate-guard-best' })({
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'gate-guard-best' })({
     agent: 'story-director',
     config: { model: 'isolated-scripted-model', reflectionRounds: 2 },
     input: INPUT,
