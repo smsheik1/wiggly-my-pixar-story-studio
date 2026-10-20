@@ -261,6 +261,14 @@ export function validateSeedancePrompts(data, input) {
       if (heard.length && !(MOUTHS_CLOSED_SPEAK.test(b.text) && MOUTHS_CLOSED_LIPS.test(b.text)))
         err('VOICEOVER_MOUTHS_OPEN', `${p}: SHOT ${b.n} has a voiceover / off-camera line, so it also says "${MOUTHS_CLOSED_LINE}"`, `${p}.tenBlocks.block5_shots`);
     }
+    // Multi-location clip: every shot names its place ("Location: @kitchen."), or the engine blends the rooms.
+    const locRefs = (seg.references ?? []).filter((r) => r.kind === 'location').map((r) => r.tag);
+    if (locRefs.length > 1) shotBlocks(shotsText).forEach((b, j) => {
+      const line = b.text.split('\n').find((l) => /^\s*Location:/.test(l)) ?? '';
+      const named = locRefs.filter((t) => new RegExp(`${t}\\b`).test(line)), own = seg.shots?.[j]?.locationTag;
+      if (!named.length || (own && locRefs.includes(own) && !named.includes(own)))
+        err('SHOT_LOCATION_MISSING', `${p}: SHOT ${b.n}: this clip has ${locRefs.length} locations (${locRefs.join(', ')}), so every shot has a line "Location: ${own && locRefs.includes(own) ? own : locRefs[0]}." naming its own location.`, `${p}.tenBlocks.block5_shots`);
+    });
     // Wardrobe lock: the Look line restates the signature garment too (Omni dropped hoodies when only the accessory was named).
     const outfit = new Map((input?.characters ?? []).filter((c) => c.mainOutfit).map((c) => [c.elementTag, garmentOf(c.mainOutfit)]));
     (seg.shots ?? []).forEach((s, j) => {

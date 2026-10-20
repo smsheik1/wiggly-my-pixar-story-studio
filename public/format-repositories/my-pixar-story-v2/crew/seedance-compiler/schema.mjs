@@ -1,6 +1,7 @@
 // Seedance Compiler v2 output contract (Zod, plain JS). Mirrors the other v2 crew contracts.
 import { z } from 'zod';
 import { ASSET_KEY } from '../character-architect/schema.mjs';
+import { dedupeLookLines } from './look-dedupe.mjs';
 
 export const VIDEO_ENGINE = 'seedance-2.5';
 export const VIDEO_RESOLUTION = '480p';
@@ -156,7 +157,9 @@ export function assembleCompiledPrompt(tenBlocks = {}) {
 /** Return a copy of an output object with every segment's compiledPrompt assembled from its tenBlocks. */
 export function withAssembledPrompts(obj) {
   if (!obj || !Array.isArray(obj.segments)) return obj;
-  return { ...obj, segments: obj.segments.map((s) => (s && s.tenBlocks ? { ...s, compiledPrompt: assembleCompiledPrompt(s.tenBlocks) } : s)) };
+  return { ...obj, segments: obj.segments.map((s) => { if (!s || !s.tenBlocks) return s;
+    const tb = typeof s.tenBlocks.block5_shots === 'string' ? { ...s.tenBlocks, block5_shots: dedupeLookLines(s.tenBlocks.block5_shots) } : s.tenBlocks; // Look items deduped in code
+    return { ...s, tenBlocks: tb, compiledPrompt: assembleCompiledPrompt(tb) }; }) };
 }
 /** Submit-tool schema: same contract, but compiledPrompt is optional (code assembles it). */
 export const SeedanceSubmitSchema = z.object({

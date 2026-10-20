@@ -11,6 +11,7 @@
 //                    (locked wording = the cast card's signatureAccent + signatureAccessories + the visual tell, word for word;
 //                     signatureAccent is optional: an empty / 'none' one is no accessory and is not locked)
 import { accentOf } from '../story-director/schema.mjs';
+import { dedupeItems } from '../seedance-compiler/look-dedupe.mjs';
 import { EYES_HIDDEN } from './check-stage-play.mjs';
 import { keyWords } from './answer-sources.mjs';
 import { countWords, secondsNeeded, shotWords, budgetMessage, MAX_LINE_WORDS } from './speech.mjs';
@@ -36,11 +37,9 @@ const list = (xs) => (xs.length ? xs.join(', ') : 'no one');
 export function lockPhrases(card = {}, character = {}) {
   // signatureAccent is optional: an empty / 'none' accent (or accessory) is no accessory and is left out of the lock
   const acc = [card.signatureAccent, ...(card.signatureAccessories ?? [])].map(accentOf).filter((x) => x.length >= 3);
-  // one entry per item: drop exact repeats and any phrase already contained in a longer one ('blue hijab' inside 'blue hijab covering the hair')
-  const uniq = [...new Map(acc.map((x) => [lockNorm(x), x])).values()];
-  const out = uniq.filter((x) => !uniq.some((y) => y !== x && lockNorm(y).includes(lockNorm(x)))).map((x) => ({ kind: 'accessory', text: x }));
   const tell = String(character?.visualTell ?? '').trim();
-  if (tell && !out.some((x) => lockNorm(x.text) === lockNorm(tell))) out.push({ kind: 'tell', text: tell });
+  // one entry per item: drop an item equal to or contained in another (case-insensitive), keeping the longer one
+  const out = dedupeItems([...acc.map((x) => ({ kind: 'accessory', text: x })), ...(tell ? [{ kind: 'tell', text: tell }] : [])]);
   return out;
 }
 /** The one "Look" line a SHOT block carries for an on-screen character. */
