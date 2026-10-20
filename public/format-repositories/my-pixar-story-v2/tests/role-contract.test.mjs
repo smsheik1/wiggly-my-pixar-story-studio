@@ -9,10 +9,11 @@ const gemini = readFileSync(new URL('./fixtures/gemini-SKILL.md', import.meta.ur
 test('role.md documents every top-level output key', () => {
   for (const k of Object.keys(StoryDirectorOutputSchema.shape)) assert.ok(role.includes(`"${k}"`), `role.md missing ${k}`);
 });
-test('role.md keeps Gemini base text (kindergarten examples) and Wiggly additions', () => {
-  for (const s of ['Direct, Don\'t Transcribe', 'kindergarten classroom with carpet squares', 'Rung 3 (Loss of Control)',
-    'Miss Park: {Okay — so who\'s next?}', 'The 30-Second Hard Ceiling Law', 'Human Approval Gate'])
+test('role.md keeps Gemini base text, memory-film craft and Wiggly additions; toy examples gone', () => {
+  for (const s of ['Direct, Don\'t Transcribe', 'The one moment that matters', 'The specific true detail', 'The turn', 'The reaction shot',
+    'Let tender moments breathe', 'Comedy is a tool, not a default', 'The 30-Second Hard Ceiling Law', 'Human Approval Gate'])
     assert.ok(role.includes(s), s);
+  assert.doesNotMatch(role, /\b(Theo|Gran|Wren|Ben|Miss Park|kindergarten|hitman|Rung \d|Rule of Three)\b/);
   for (const s of ['Nano Banana 2.1', 'Google Flow', 'hijab', 'depicted as 18', 'Only the people in the answers exist', 'cloned storyteller voice',
     'assumptions', 'One shot = one cut', 'moving hold'])
     assert.ok(role.includes(s), s);
@@ -38,7 +39,10 @@ test('role.md diverges from Gemini only by additions + engine swap', () => {
   const g = gemini.replace(/^Deliver the finalized screenplay[\s\S]*?(?=^### The Shot Card Anatomy)/m, '')
     .replace(/^## 4\. The HTML Script Card Deck Format\n/m, '').replace(/^## 5\. [\s\S]*?(?=^## 6\.)/m, '')
     .replace(/^- \[ \] Storyboard prompt names skin tone in every panel line\.\n/m, '');
-  const missing = norm(g).split('\n').filter((l) => l.trim() && !l.startsWith('description:') && !roleNorm.includes(l));
+  // Approved rewrite (Shaz, 2026-10-20): section 1 became memory-film craft; the kindergarten / toy examples, the teacher
+  // vernacular and the comedy checklist boxes (ordinary world, rule of three, gag ladder) left the role.
+  const toy = /Miss Park|\bBen\b|\bWren\b|\bMia\b|Rule of Three|Ordinary world baseline|Running gag has|Authority \/ Teacher|Silent Reaction \/ Business Beat|Two-Line Exchange|Single Short Line/;
+  const missing = norm(g).replace(/^## 1\. [\s\S]*?(?=^## 2\.)/m, '').split('\n').filter((l) => !toy.test(l)).join('\n').split('\n').filter((l) => l.trim() && !l.startsWith('description:') && !roleNorm.includes(l));
   assert.deepEqual(missing, []);
 });
 test('storyboard default style is 3D Pixar render, not painted (now in code)', () => {
