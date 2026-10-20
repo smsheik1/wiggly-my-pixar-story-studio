@@ -29,6 +29,7 @@ import { loadSkill, loadReview, outputCap } from '../config/models.mjs';
 import { runColdRead } from './cold-read.mjs';
 import { bestOfEnabled, runBestOf } from './best-of.mjs';
 import { storyBeatsEnabled, runStoryBeats, shotsTask } from './story-beats.mjs';
+import { resolveTargetSeconds } from './length-guard.mjs';
 
 export const RUNS_ROOT = fileURLToPath(new URL('../runs/', import.meta.url));
 export const OUTPUT_SCHEMAS = {
@@ -308,19 +309,19 @@ export function critiqueMessages({ agent, skill, review = null, input, draft, ro
       ...(review && warns.length ? [`Gate warnings (not blocking; check each against the rubric and list a fix only if it is a real problem):\n${warns.map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`).join('\n')}`] : []),
       ...(rt ? [rt] : []),
       ...(coldNotes ? [`Cold viewer notes (a first-time viewer read the script without the answers; turn real issues into FIXES, ignore notes that are wrong):\n${coldNotes}`] : []),
-      ...(trace ? ['Line-by-line trace of the draft against the answers (from the deterministic checker; "match" is word overlap with the cited answer):', trace] : []),
+      ...(trace ? ['Line-by-line trace of the draft against the answers (from the deterministic checker; "match" is shown only for lines marked verbatim):', trace] : []),
       ...(review
-        ? ['Review the draft with your rubric: read it once as a viewer, then answer R1 to R9 in order, PASS or FAIL with exact evidence, then FIXES (at most 8, most important first, cuts before additions), in the rubric\'s reply format.']
+        ? ['Review the draft with your rubric: read it once as a viewer, score the story S1 to S4 (1-5), then answer R1 to R8 PASS or FAIL with exact evidence, then FIXES (at most 8, most important first; a fix may cut or swap, never lengthen), in the rubric\'s reply format.']
         : ['Check the draft for:', ...focus.map((f, i) => `${i + 1}. ${f}`),
           'Reply in plain text: a numbered list of concrete problems, most important first. For each one give where it is (part/shot or field), the exact quote, why it is a problem, and the exact fix. Only list real problems; say what already works in one line at the end.']),
       ...(trace ? [UNTRACEABLE_ASK] : []),
-      'Finish with one line: VERDICT: REVISE or VERDICT: SHIP.',
+      review ? 'Finish with one line: VERDICT: SHIP, VERDICT: REVISE or VERDICT: STRUCTURAL.' : 'Finish with one line: VERDICT: REVISE or VERDICT: SHIP.',
     ].join('\n') },
   ];
 }
-/** The critic's last VERDICT line: 'SHIP', 'REVISE', or null when it gave none. */
+/** The critic's last VERDICT line: 'SHIP', 'REVISE', 'STRUCTURAL', or null when it gave none. */
 export function parseVerdict(critique) {
-  const all = [...String(critique ?? '').matchAll(/VERDICT[*_`\s]*[:\-][*_`\s]*(SHIP|REVISE)\b/gi)];
+  const all = [...String(critique ?? '').matchAll(/VERDICT[*_`\s]*[:\-][*_`\s]*(SHIP|REVISE|STRUCTURAL)\b/gi)];
   return all.length ? all.at(-1)[1].toUpperCase() : null;
 }
 /** True when the critique scores any rubric item FAIL (e.g. "R4 Cast in the scene: FAIL"). */
@@ -330,8 +331,20 @@ export function countFixes(critique) {
   const m = /^\s*[*_#]*\s*FIXES\b[^\n]*\n([\s\S]*?)(?:^\s*(?:Works|VERDICT)\b|$(?![\s\S]))/im.exec(String(critique ?? ''));
   return m ? (m[1].match(/^\s*\d+[.)]\s+\S/gm) ?? []).length : 0;
 }
-/** Early stop: the critic says SHIP, no rubric item failed and the gate has no errors, so no rewrite runs. */
-export const shipsAsIs = (critique, gateIssues = []) => parseVerdict(critique) === 'SHIP' && !hasRubricFail(critique) && !gateIssues.some((i) => i.severity === 'error');
+/** Story scores from a rubric critique ("S1 Core: 4 - ..."): { core, specific, turn, feel } (only those given), or null if none. */
+export const STORY_SCORE_KEYS = ['core', 'specific', 'turn', 'feel'];
+export function parseStoryScores(critique) {
+  const out = {};
+  for (const m of String(critique ?? '').matchAll(/^\s*[*_]*S([1-4])\b[^\n:]*:[\s*_]*([1-5])\b/gim)) out[STORY_SCORE_KEYS[+m[1] - 1]] = +m[2];
+  return Object.keys(out).length ? out : null;
+}
+/** Structural: the critic said STRUCTURAL, or any story score is 2 or lower (the beats are wrong, not the lines). */
+export const isStructural = (critique) => parseVerdict(critique) === 'STRUCTURAL' || Object.values(parseStoryScores(critique) ?? {}).some((v) => v <= 2);
+/** Early stop: SHIP, no rubric FAIL, every given story score 4+, no gate errors, so no rewrite runs. */
+export const shipsAsIs = (critique, gateIssues = []) => parseVerdict(critique) === 'SHIP' && !hasRubricFail(critique)
+  && Object.values(parseStoryScores(critique) ?? {}).every((v) => v >= 4) && !gateIssues.some((i) => i.severity === 'error');
+/** Structural rebuilds (beats again, then shots) allowed per attempt: config.maxStructuralRebuilds, default 1. */
+export const structuralCap = (config) => (Number.isInteger(config?.maxStructuralRebuilds) && config.maxStructuralRebuilds >= 0 ? config.maxStructuralRebuilds : 1);
 /** Asked of the critic when an answer trace is available: its own traceability findings as data. */
 export const UNTRACEABLE_ASK = 'Then give your traceability findings as data in one fenced json block: ```json {"untraceable": [{"where": "<part.shot>", "line": "<exact line>", "why": "<invented | borrowed from another answer | wrong source | changed detail>", "fix": "<answer id to cite, or cut>"}]} ``` (an empty list if every line traces).';
 /** The critic's {"untraceable": [...]} block, or null if it gave none or it does not parse. */
@@ -400,7 +413,8 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     let bestOf = null;
     let initialGateIssues = null;
     // Story first: calls A (beats) and B (critique + rewrite) before call C (shots). Artifacts in <attempt>/<agent>/story/.
-    const story = storyBeatsEnabled(agent, storyBeats === undefined ? config : { ...config, storyBeats }, { scope, task, patch: Boolean(input?.patch) })
+    const storyOn = storyBeatsEnabled(agent, storyBeats === undefined ? config : { ...config, storyBeats }, { scope, task, patch: Boolean(input?.patch) });
+    const story = storyOn
       ? await runStoryBeats({ agent, input, model, dir: join(root, 'story'), signal, attempt, callRetry: { onRetry: logRetry(agent), ...callRetry } }) : null;
     const shotsMsg = story ? shotsTask(agent, story.approved) : undefined;
     if (bestOfEnabled(agent, config, { scope, task, rounds })) {
@@ -431,6 +445,7 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
     }
     const log = [];
     let stoppedEarly = false;
+    let structuralUsed = 0;
     for (let round = 1; round <= rounds; round++) {
       if (signal?.aborted) throw signal.reason ?? new Error('aborted');
       const cold = await runColdRead({ agent, config, draft: out, model, round, attempt, signal, dir, rel, scope });
@@ -447,6 +462,40 @@ export function deepAgentInvoke({ createModel = openRouterModel, runsRoot = RUNS
         // Nothing fails: ship the draft as it is and skip this rewrite and every later round (saves their cost).
         entry.changed = false; entry.stoppedEarly = true; stoppedEarly = true; log.push(entry);
         break;
+      }
+      const scores = parseStoryScores(critique);
+      if (scores) entry.storyScores = scores;
+      if (isStructural(critique)) {
+        entry.structural = true;
+        if (storyOn && structuralUsed < structuralCap(config)) {
+          // Structural: the beats are wrong, so line patches would not save them. Rebuild from the beats (calls A + B with the
+          // editor's notes), then a fresh shots call. Capped per attempt so cost cannot run away.
+          structuralUsed++;
+          try {
+            const rebuilt = await runStoryBeats({ agent, input, model, dir: join(root, `story-rebuild-${structuralUsed}`), signal, attempt, notes: critique, callRetry: { onRetry: logRetry(agent), ...callRetry } });
+            if (!rebuilt) throw new Error('beats rebuild returned nothing');
+            entry.rebuildFiles = rebuilt.files.map((f) => relative(runsRoot, join(root, `story-rebuild-${structuralUsed}`, f)));
+            const next = await runOnce(shotsTask(agent, rebuilt.approved), `${agent} structural rebuild ${structuralUsed}`, [`reflection:${round}`, 'structural']);
+            let gateAfter = [];
+            try { gateAfter = gate ? (gate(next)?.issues ?? []) : []; } catch { gateAfter = []; }
+            // Hard limit only: a rebuild may differ in length from the draft it replaces but never runs past the target (or that draft, if longer).
+            const rt = runtimeOf(next), cap = Math.max(resolveTargetSeconds(input), runtimeOf(out) ?? 0);
+            const tooLong = rt != null && rt > cap;
+            const moreErrors = gateAfter.filter((i) => i.severity === 'error').length > gateIssues.filter((i) => i.severity === 'error').length;
+            if (tooLong || moreErrors) { entry.changed = false; entry.rejected = { reason: tooLong ? 'too long' : 'gate', runtime: rt, cap }; entry.runtimeAfter = runtimeOf(out); }
+            else {
+              entry.changed = true; prevDraft = out; out = next; gateIssues = gateAfter; entry.runtimeAfter = runtimeOf(out);
+              await writeFile(join(dir, `draft-${round}.json`), JSON.stringify(out, null, 2)); entry.draftFile = rel(`draft-${round}.json`);
+            }
+          } catch (e) {
+            if (signal?.aborted) throw signal.reason ?? e;
+            if (isFatalProviderError(e)) throw e;
+            entry.changed = false; entry.revisionError = String(e?.message ?? e).slice(0, 2000);
+          }
+          log.push(entry);
+          continue;
+        }
+        entry.structuralSkipped = storyOn ? 'cap reached' : 'story beats off'; // falls through to the normal line-fix rewrite
       }
       const isScoped = agent === 'story-director' && !input?.patch && !scope;
       const fixShots = isScoped ? parseFixShots(critique) : null;

@@ -35,11 +35,12 @@ const REVISE = 'R1 Fidelity: FAIL\n- 1.2 "x" → original: "y"\n\nFIXES:\n1. 1.2
 const ANSWERS = json('good-answers.json');
 
 // ---- the rubric ----
-test('rubric: REVIEW.md lives with the Story Director, covers R1-R9, ends on VERDICT; other agents have none', () => {
+test('rubric: REVIEW.md lives with the Story Director, story scores S1-S4 first, then R1-R8 (no R9), ends on VERDICT; other agents have none', () => {
   const r = loadReview('story-director');
-  for (const k of ['R1 Fidelity', 'R2 Invented details', 'R3 Setup and payoff', 'R4 Cast in the scene', 'R5 Referents', 'R6 Finale', 'R7 Time framing', 'R8 Length', 'R9 Gate rules']) assert.match(r, new RegExp(k), k);
-  assert.match(r, /editor/); assert.match(r, /never rewrite|do not rewrite/i); assert.match(r, /PASS or FAIL/); assert.match(r, /at most 8 fixes/i); assert.match(r, /VERDICT: SHIP\|REVISE/);
-  assert.match(r, /FIXES:/); assert.match(r, /applies only\s+the fixes you list/); assert.match(r, /never adding/); assert.match(r, /targetTotalRuntimeSec/); assert.match(r, /big to small/); assert.match(r, /as a viewer/);
+  for (const k of ['R1 Fidelity', 'R2 Invented details', 'R3 Setup and payoff', 'R4 Cast in the scene', 'R5 Referents', 'R6 Finale', 'R7 Time framing', 'R8 Length', 'S1 Core', 'S2 Specific', 'S3 Turn', 'S4 Feel']) assert.match(r, new RegExp(k), k);
+  assert.doesNotMatch(r, /R9|not longer than the previous draft|never adding/); assert.ok(r.indexOf('S1 Core') < r.indexOf('R1 Fidelity') && r.indexOf('R1 Fidelity') < r.indexOf('R8 Length'));
+  assert.match(r, /editor/); assert.match(r, /never rewrite|do not rewrite/i); assert.match(r, /PASS or FAIL/); assert.match(r, /at most 8 fixes/i); assert.match(r, /VERDICT: SHIP\|REVISE\|STRUCTURAL/); assert.match(r, /swap/); assert.match(r, /Taste/);
+  assert.match(r, /FIXES:/); assert.match(r, /applies only\s+the fixes you list/); assert.match(r, /never make the film longer/); assert.match(r, /targetTotalRuntimeSec/); assert.match(r, /story first/i); assert.match(r, /as a viewer/);
   for (const a of ['character-architect', 'location-scout', 'seedance-compiler']) assert.equal(loadReview(a), null, a);
   assert.ok(!/R1 Fidelity/.test(loadSkill('story-director')), 'the rubric is not part of the writer\'s skill');
   assert.match(loadSkill('story-director'), /Draft to the review checklist/, 'the writer\'s rules aim the first draft at the same checks');
@@ -51,9 +52,9 @@ test('critique with the rubric: editor framing, rubric, rules for reference, gat
     gateIssues: [{ severity: 'warning', code: 'PROP_NOT_IN_ANSWERS', message: '"blanket" is not in the answers' }, { severity: 'error', code: 'PRESENT_NEVER_SEEN', message: 'Gran never seen', path: 'segments.0.scenes.1' }] });
   assert.match(sys.content, /reviewing your own draft/); assert.match(sys.content, /editor, not the writer/); assert.match(sys.content, /R4 Cast in the scene/); assert.match(sys.content, /WRITING RULES/);
   assert.match(user.content, /PRESENT_NEVER_SEEN \(segments\.0\.scenes\.1\)/); assert.match(user.content, /Gate warnings[\s\S]*blanket/);
-  assert.match(user.content, /Runtime: this draft 96s; target 90s; first draft 88s/); assert.match(user.content, /R1 to R9/); assert.match(user.content, /VERDICT: REVISE or VERDICT: SHIP\.$/);
+  assert.match(user.content, /Runtime: this draft 96s; target 90s; first draft 88s/); assert.match(user.content, /S1 to S4/); assert.match(user.content, /R1 to R8/); assert.match(user.content, /VERDICT: STRUCTURAL\.$/);
   const plain = critiqueMessages({ agent: 'location-scout', skill: 'r', input: {}, draft: {}, round: 1, rounds: 1 });
-  assert.ok(!/R1 to R9|editor, not the writer/.test(text(plain)), 'no rubric: the generic focus list as before'); assert.match(text(plain), /Faithfulness/);
+  assert.ok(!/R1 to R8|editor, not the writer/.test(text(plain)), 'no rubric: the generic focus list as before'); assert.match(text(plain), /Faithfulness/);
 });
 
 test('verdict parsing: last VERDICT wins, rubric FAIL lines and the fix count are read', () => {
@@ -82,7 +83,7 @@ test('early stop: SHIP on a gate-clean draft skips the rewrite and every later r
   const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'ship' })({ agent: 'story-director', config: { model: 'isolated-scripted-model', reflectionRounds: 2 }, input: INPUT, attempt: 1, gate: () => ({ issues: [] }) });
   assert.equal(m.calls.length, 2, 'draft + one critique, no rewrite, no round 2');
   assert.equal(out.masthead.title, 'Draft zero');
-  assert.match(seen.c1, /R1 Fidelity[\s\S]*R9 Gate rules/, 'the critique call gets the rubric');
+  assert.match(seen.c1, /S1 Core[\s\S]*R1 Fidelity[\s\S]*R8 Length/, 'the critique call gets the rubric');
   const r = out[REFLECTION];
   assert.equal(r.rounds, 2); assert.equal(r.roundsRun, 1); assert.equal(r.stoppedEarly, true);
   assert.equal(r.log[0].verdict, 'SHIP'); assert.equal(r.log[0].stoppedEarly, true); assert.equal(r.log[0].changed, false);
@@ -107,7 +108,7 @@ test('no early stop when the gate fails or the critic says REVISE; the rewrite n
   const r = out[REFLECTION];
   assert.equal(r.stoppedEarly, false); assert.deepEqual(r.log.map((e) => e.verdict), ['SHIP', 'REVISE']); assert.equal(r.log[1].fixes, 2);
   assert.ok(r.log.every((e) => e.runtimeBefore === 30 || Number.isFinite(e.runtimeBefore)));
-  for (const s of [seen.r1, seen.r2]) { assert.ok(!/R9 Gate rules|R4 Cast in the scene/.test(s), 'rubric only in the critique call'); assert.match(s, /Apply only the fixes/); }
+  for (const s of [seen.r1, seen.r2]) { assert.ok(!/S1 Core|R4 Cast in the scene/.test(s), 'rubric only in the critique call'); assert.match(s, /Apply only the fixes/); }
 }));
 
 // ---- craft checks ----
@@ -154,3 +155,16 @@ test('patch: a prior with gate errors only inside the target part is patchable; 
   await assert.rejects(runPatch({ from: 'prior', target: 'part:1', runsRoot: root, check: true, log: () => {} }), /PATCH_PRIOR_INVALID[\s\S]*PRESENT_NEVER_SEEN[\s\S]*outside part:1/);
 }));
 
+
+// ---- story scores, STRUCTURAL verdict and the capped rebuild ----
+import { parseStoryScores, isStructural, structuralCap } from '../graph/deep-agent-node.mjs';
+test('story scores: parsed; SHIP needs every score 4+; any score <= 2 or STRUCTURAL is structural', () => {
+  const c = (s, v) => `S1 Core: ${s[0]} - 2.1: lands\n**S2 Specific:** ${s[1]} - x\nS3 Turn: ${s[2]}/5 - x\nS4 Feel: ${s[3]} - x\nR1 Fidelity: PASS\nVERDICT: ${v}`;
+  assert.deepEqual(parseStoryScores(c([4, 5, 4, 3], 'REVISE')), { core: 4, specific: 5, turn: 4, feel: 3 });
+  assert.equal(shipsAsIs(c([4, 5, 4, 4], 'SHIP')), true);
+  assert.equal(shipsAsIs(c([4, 5, 4, 3], 'SHIP')), false, 'a 3 never ships');
+  assert.equal(isStructural(c([4, 2, 4, 4], 'REVISE')), true); assert.equal(isStructural(c([3, 3, 3, 3], 'STRUCTURAL')), true);
+  assert.equal(isStructural(c([3, 3, 3, 3], 'REVISE')), false); assert.equal(parseVerdict('VERDICT: STRUCTURAL'), 'STRUCTURAL');
+  assert.equal(parseStoryScores('R1 Fidelity: PASS'), null);
+  assert.equal(structuralCap({}), 1); assert.equal(structuralCap({ maxStructuralRebuilds: 0 }), 0);
+});

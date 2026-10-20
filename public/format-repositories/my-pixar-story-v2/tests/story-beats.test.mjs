@@ -79,3 +79,29 @@ test('off: exactly the old single shots call', async () => {
     assert.equal(m.calls.length, 1);
   } finally { await rm(runs, { recursive: true, force: true }); }
 });
+
+test('STRUCTURAL review sends the draft back to beats (A+B with the notes) and a fresh shots call; capped at 1 per attempt', async () => {
+  const runs = await mkdtemp(join(tmpdir(), 'wiggly-beats-'));
+  try {
+    const seen = {};
+    const titled = (t) => { const d = play(); d.masthead.title = t; return d; };
+    const STRUCT = 'S1 Core: 2 - no moment\nS2 Specific: 3 - x\nS3 Turn: 2 - x\nS4 Feel: 2 - x\nR1 Fidelity: PASS\nFIXES:\n1. story needs the first-call moment\nVERDICT: STRUCTURAL';
+    const m = new ScriptedModel([
+      () => say('Thesis: T.\nBeat 1: old.'), () => say('## Rewritten beats\nBeat 1: old approved.'),
+      () => call('submit_story_director', titled('First')),
+      () => say(STRUCT),
+      (msgs) => { seen.a2 = text(msgs); return say('Thesis: T.\nBeat 1: new.'); },
+      () => say('## Rewritten beats\nBeat 1: new approved.'),
+      (msgs) => { seen.c2 = text(msgs); return call('submit_story_director', titled('Rebuilt')); },
+      () => say(STRUCT), // round 2: cap reached, falls through to the normal line-fix path (no shot-scoped fixes: no rewrite)
+    ]);
+    const out = await deepAgentInvoke({ createModel: async () => m, runsRoot: runs, runId: 'st' })({ agent: 'story-director', config: { model: 'x', storyBeats: true, reflectionRounds: 2 }, input: INPUT, attempt: 1, gate: () => ({ issues: [] }) });
+    assert.match(seen.a2, /STRUCTURAL/); assert.match(seen.a2, /from scratch/);
+    assert.match(seen.c2, /Beat 1: new approved/);
+    const log = out[Symbol.for('wiggly.v2.reflection')].log;
+    assert.equal(log[0].structural, true); assert.equal(log[0].changed, true); assert.ok(log[0].rebuildFiles.length >= 2);
+    assert.deepEqual(log[0].storyScores, { core: 2, specific: 3, turn: 2, feel: 2 });
+    assert.equal(log[1].structuralSkipped, 'cap reached');
+    assert.equal(m.script.length, 0);
+  } finally { await rm(runs, { recursive: true, force: true }); }
+});

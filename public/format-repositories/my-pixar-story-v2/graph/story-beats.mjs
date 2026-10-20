@@ -19,7 +19,8 @@ export const storyBeatsEnabled = (agent, config, { scope = '', task = null, patc
   agent === 'story-director' && Boolean(config?.storyBeats) && !scope && !task && !patch;
 
 const inputText = (input) => ['The family input (answers are the only source of facts):', '```json', JSON.stringify(input ?? {}, null, 2), '```'].join('\n');
-export const beatsMessages = (input, prompt = loadBeatsPrompt()) => [{ role: 'system', content: prompt }, { role: 'user', content: inputText(input) }];
+export const beatsMessages = (input, prompt = loadBeatsPrompt(), notes = '') => [{ role: 'system', content: prompt }, { role: 'user', content: [inputText(input),
+  ...(notes ? ['', 'An editor judged the last script built from your beats STRUCTURAL: the story itself did not work. Write new beats from scratch from the answers, fixing what the notes say the story needs (ignore their line-level fixes):', notes] : [])].join('\n') }];
 export const critiqueMessages = (input, beats, prompt = loadCritiquePrompt()) => [{ role: 'system', content: prompt },
   { role: 'user', content: [inputText(input), '', 'The beats to judge:', beats].join('\n') }];
 
@@ -35,11 +36,11 @@ export const shotsTask = (agent, beats) => [`Produce the ${agent} output for thi
   'keep their thesis, moments, people on screen and lines; your SKILL.md rules decide format, timing and length.', '', beats].join('\n');
 
 /** Calls A and B. Returns { beats, critique, approved, files } or null if either call fails (non-fatal: C runs as before). */
-export async function runStoryBeats({ agent = 'story-director', input, model, dir, signal, attempt = 1, callRetry = {} }) {
+export async function runStoryBeats({ agent = 'story-director', input, model, dir, signal, attempt = 1, callRetry = {}, notes = '' }) {
   const meta = (step) => ({ runName: `${agent} story ${step}`, tags: [`agent:${agent}`, `attempt:${attempt}`, `story:${step}`], metadata: { agent, attempt, step }, signal });
   try {
     await mkdir(dir, { recursive: true });
-    const beats = replyText(await withCallRetry(() => model.invoke(beatsMessages(input), meta('beats')), { signal, ...callRetry })).trim();
+    const beats = replyText(await withCallRetry(() => model.invoke(beatsMessages(input, undefined, notes), meta('beats')), { signal, ...callRetry })).trim();
     if (!beats) return null;
     await writeFile(join(dir, 'beats.md'), beats + '\n');
     const critique = replyText(await withCallRetry(() => model.invoke(critiqueMessages(input, beats), meta('critique')), { signal, ...callRetry })).trim();
