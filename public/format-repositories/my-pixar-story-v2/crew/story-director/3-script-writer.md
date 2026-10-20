@@ -144,7 +144,6 @@ Before handing the screenplay to downstream nodes (**Character Architect** and *
 - [ ] Banned jargon is completely eliminated (no OTS, MOS, rack focus).
 - [ ] Cast card descriptions contain only concrete physical traits (age, build, skin tone, hair, signature accent).
 - [ ] `signatureAccent` is set only when the answers, `castDescriptions` or photo notes give an always-worn item, in their wording (no invented colours or details); otherwise it is left out.
-- [ ] Pauses at the Human Approval Gate for explicit director sign-off.
 - [ ] **Wiggly:** a hijab appears in a cast card only when the user's notes or photos say so, and every `castDescriptions` note is in its cast card; anyone 13-19 is cast on the young-adult card shown as 18, with an `ageNote`; nobody is cast whom the answers do not name (the maker's childhood self is the maker's child card); skin tone is named in every cast card (code carries it into the panels; photo characters use the photo's `skinTone` and `photoRef`); no invented facts.
 - [ ] **Wiggly:** every shot has `location` (from `locations`), `framing`, `cameraAngle` and `cameraMove`; shots name people by `@tag` only and never re-describe looks; signature accessories appear only in cast cards, never in shot text, and eyes are always visible; at most 3 cast cards per `realPerson` (child, young adult shown as 18, adult), and every narrated life stage shows that person.
 - [ ] **Wiggly:** every `@Speaker` (dialogue and narration) matches a cast `elementTag`; one shot = one cut; held beats are moving holds.

@@ -41,7 +41,9 @@ test('3-script-writer.md diverges from Gemini only by additions + engine swap', 
     .replace(/^- \[ \] Storyboard prompt names skin tone in every panel line\.\n/m, '')
     // Approved (Shaz, 2026-10-20): parts are 30s render chunks (one multi-shot prompt each), not an Original/Sequel Extend chain.
     .replace(/^\* If a scene runs longer than 30 seconds, split it into named modular segments.*\n/m, '')
-    .replaceAll('Part 1: Original', 'Part 1');
+    .replaceAll('Part 1: Original', 'Part 1')
+    // Approved (Shaz, 2026-10-20): the approval gate is run by code, so its checklist box left the role.
+    .replace(/^- \[ \] Pauses at the Human Approval Gate.*\n/m, '');
   // Approved rewrite (Shaz, 2026-10-20): section 1 became memory-film craft; the kindergarten / toy examples, the teacher
   // vernacular and the comedy checklist boxes (ordinary world, rule of three, gag ladder) left the role.
   const toy = /Miss Park|\bBen\b|\bWren\b|\bMia\b|Rule of Three|Ordinary world baseline|Running gag has|Authority \/ Teacher|Silent Reaction \/ Business Beat|Two-Line Exchange|Single Short Line/;
