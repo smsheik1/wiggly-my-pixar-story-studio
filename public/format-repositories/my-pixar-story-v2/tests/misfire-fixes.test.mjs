@@ -72,7 +72,7 @@ test('signatureAccent: an empty one is left out of the per-shot Look lock; a giv
 test('signatureAccent rules: never invent accessory details, use the given wording, empty = none (SD, CA, SC roles)', () => {
   const sd = read('story-director/role.md'), ca = read('character-architect/role.md'), sc = read('seedance-compiler/role.md');
   assert.match(sd, /Never invent accessory details/); assert.match(sd, /"wears a hijab" stays "wears a hijab"/); assert.match(sd, /`signatureAccent` is optional/);
-  assert.match(ca, /Never invent accessory details/); assert.match(ca, /no `signatureAccent`, there is no signature element/);
+  assert.match(ca, /Never invent identity facts/); assert.match(ca, /none on the card means no signature item/); assert.match(ca, /Outfit colours they leave open are yours to choose/);
   assert.match(sc, /empty accent means no accessory and is skipped/); assert.match(sc, /never adding a colour or detail the card does not give/);
   assert.ok(!/navy hijab fully covering/.test(readFileSync(new URL('../crew/story-director/schema.mjs', import.meta.url), 'utf8')), 'schema example no longer models an invented colour');
 });

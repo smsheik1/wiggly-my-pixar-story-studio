@@ -7,6 +7,9 @@ const role = readFileSync(new URL('../crew/character-architect/role.md', import.
 const gemini = readFileSync(new URL('./fixtures/gemini-ca-SKILL.md', import.meta.url), 'utf8');
 const SWAPS = [['GPT Image 2', 'Nano Banana 2.1'], ['Seedream 5.0 Pro', 'Nano Banana 2.1'], ['Higgsfield / OpenAI', 'Google Flow'],
   ['Heavy cloth with weight, few large folds, grime in creases, unbranded]', 'Cloth with weight, few large folds, clean, unbranded]'],
+  ['. ONE WORN/ATTACHED SIGNATURE ELEMENT carrying the ONLY saturated color in an otherwise muted palette.', " in this character's own main colour, one supporting colour and one small accent. Signature element only if the card gives one."],
+  ['Camera: 50mm straight', 'Camera: straight'], ['backdrop, 50mm lens.', 'backdrop, camera straight on at chest height.'],
+  ['- [ ] Signature element only', '- [ ] Signature element only'],
   ['feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon', 'stylized 3D animated feature film: storybook look, simplified chunky shapes with soft rounded edges, smooth clean materials, gently saturated colors']]; // deliberate: no wear/grime (anti-photoreal)
 
 test('CA role.md contains Gemini SKILL.md word for word (only engine swaps)', () => {
@@ -18,7 +21,7 @@ test('CA role.md contains Gemini SKILL.md word for word (only engine swaps)', ()
 test('CA role.md has Wiggly additions, worked examples and the JSON contract', () => {
   for (const s of ['Google Flow', 'no visible hair, hairline or dark band', 'Hair: none visible', 'Teens are depicted as 18', 'Only the cast you are given',
     'Never write "minor"', 'masterRenderRef', 'Match the attached approved master render', '@Image 1', 'isMain', 'assumptions',
-    'warm cinematic key', 'catchlights', 'crisp white, cream or bright main garment', 'firefighter dad', 'heavy khaki-tan turnout trousers', '8) TALKING — caught mid-word'])
+    'warm cinematic key', 'catchlights', 'own dominant outfit colour, never repeated', 'read apart in grayscale', 'vary garment shapes', 'firefighter dad', 'heavy khaki-tan turnout trousers', '8) TALKING — caught mid-word'])
     assert.ok(role.includes(s), s);
   for (const k of Object.keys(CharacterArchitectOutputSchema.shape)) assert.ok(role.includes(`"${k}"`), k);
 });
