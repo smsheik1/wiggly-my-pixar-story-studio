@@ -14,7 +14,7 @@ export const MODEL_LIMITS = Object.freeze({
   'anthropic/claude-haiku-5.5': { contextLength: 1000000, maxCompletionTokens: 128000 }, // checked 2026-10-20
 });
 // r5-sd10 side by side: Haiku 5.5 wrote the better script (natural, true lines). Muse stays available via WIGGLY_SD_MODEL.
-export const DEFAULT_SD_MODEL = 'anthropic/claude-haiku-5.5';
+export const DEFAULT_SD_MODEL = 'meta/muse-spark-1.3-contributor';
 /** Story Director model: WIGGLY_SD_MODEL (for side-by-side test runs) or the default; only models listed in MODEL_LIMITS. */
 export function storyDirectorModel(env = process.env) {
   const m = env.WIGGLY_SD_MODEL?.trim();
@@ -30,15 +30,15 @@ export function outputCap(config) {
 }
 
 export const V2_MODELS = Object.freeze({
-  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 128000, /* r4-dry7: xhigh reasoning used all 32k 3x and never submitted; r5-dry1: one call used 64.2k of 64k (~53k reasoning) -> 2x headroom, well under the model's limit (MODEL_LIMITS) */ kind: 'llm', provider: 'openrouter', model: storyDirectorModel(), effort: 'high' /* r5-dry4: xhigh draft calls ran > 6 min and were cut mid-stream ('Network connection lost') every time */ /* Haiku 5.5: reasoning_effort supported; high kept */,
+  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 128000, /* r4-dry7: xhigh reasoning used all 32k 3x and never submitted; r5-dry1: one call used 64.2k of 64k (~53k reasoning) -> 2x headroom, well under the model's limit (MODEL_LIMITS) */ kind: 'llm', provider: 'openrouter', model: storyDirectorModel(), effort: 'xhigh' /* r5-dry4: xhigh draft calls ran > 6 min and were cut mid-stream ('Network connection lost') every time */ /* Haiku 5.5: reasoning_effort supported; high kept */,
     // Self-critique + rewrite rounds after the first draft (graph/deep-agent-node.mjs); the gate checks the final revision.
     reflectionRounds: 2,
     // Patch mode (graph/patch.mjs): one self-review round scoped to the target; --reflection-rounds overrides it.
     patchReflectionRounds: 1,
-    coldRead: true,
+    coldRead: false,
     // Story first (graph/story-beats.mjs): beats + critique/rewrite plain-text calls before the shots call.
-    storyBeats: true,
-    bestOfDrafts: 2,
+    storyBeats: false,
+    bestOfDrafts: 1,
     imageSteps: { storyboard: NANO_BANANA } },
   'character-architect': { downstreamAgents: ['vera', 'seedance-compiler'], maxTokens: 64000, /* r4-dry9: CA used 23.5k of 24k */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'xhigh',
     reflectionRounds: 0, // off until proven on the Story Director
