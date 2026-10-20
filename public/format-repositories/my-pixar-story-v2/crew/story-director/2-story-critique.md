@@ -14,9 +14,10 @@ You are the Story Director judging your own beats before any shots are made. Be 
 5. **Strongest approach:** of the approaches proposed, was the strongest one chosen? If another would make the better film, say which and why, and switch to it in the rewrite.
 6. **No lists:** is any beat a list of facts, a resume or a run of achievements? That is a fail: keep the one moment that shows who the person is and drop the rest.
 7. **Closing idea:** does the Thesis grow out of the chosen memories, or is it bolted on at the end? A thesis the family wrote as one thought stays one thought: never narrow it or cut half of it.
-8. **People on screen:** is a person on screen at every life stage the narration covers? Name any beat that shows only an empty place. Each person can have up to 3 cards: child (under 13, real age), young adult (13-19, shown as 18), adult.
-9. **Said out loud:** does every line sound like a real person said it, and make sense to a viewer who never saw the questions? Quote any that read like a survey reply or a caption.
-10. **True:** every fact matches the answers; anything invented is a fail. Leaving a memory out is never a fail.
+8. **People on screen:** does each narrated life stage show that person at least once? Name any stretch told with no one on screen. Each person can have up to 3 cards: child (under 13, real age), young adult (13-19, shown as 18), adult.
+9. **Said out loud:** does every line sound like a real person said it, and make sense to a viewer who never saw the questions? Quote any that read like a survey reply or a caption. A draft line that is a list of facts or specs, more than one sentence for a detail, or has a slash (w/, A/C) is a fail.
+10. **True:** every fact matches the answers; anything invented (including a promise or achievement) is a fail. Leaving a memory out is never a fail.
+11. **Fits the runtime:** count the planned words. More than about half of target x 3 (90s: about 135), with no room for silent beats, is a fail: cut lines.
 
 ## Rewrite
 
