@@ -26,10 +26,11 @@ export const StoryDirectorInput = z.object({
   settingSeed: z.string().optional(),
   voiceNoteTranscript: z.string().optional(),
   toneDirectives: z.object({
-    genre: z.enum(['comedy-subversion', 'emotional-journey', 'character-vignette']).default('comedy-subversion'),
-    pacing: z.enum(['slow-burn', 'standard-pixar', 'rapid-fire']).default('standard-pixar'),
+    // No default tone: a missing tone stays missing (comedy only when asked for or a memory is genuinely funny).
+    genre: z.enum(['comedy-subversion', 'emotional-journey', 'character-vignette']).optional(),
+    pacing: z.enum(['slow-burn', 'standard-pixar', 'rapid-fire']).optional(),
     runningGagSeed: z.string().optional(),
-  }).strict().prefault({}),
+  }).strict().optional(),
 }).strict();
 
 /** The family's story direction: copied from the project input to the graph inputs and into the Story Director input.

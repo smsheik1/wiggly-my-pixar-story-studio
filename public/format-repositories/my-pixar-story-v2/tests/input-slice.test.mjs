@@ -11,7 +11,7 @@ const state = { project: {
 
 test('selector keeps only answers, cast text, format', () => {
   const s = selectStoryDirectorInput(state);
-  assert.deepEqual(Object.keys(s).sort(), ['answers', 'castDescriptions', 'format', 'photoCharacters', 'subject', 'targetTotalRuntimeSec', 'toneDirectives']);
+  assert.deepEqual(Object.keys(s).sort(), ['answers', 'castDescriptions', 'format', 'photoCharacters', 'subject', 'targetTotalRuntimeSec']);
   assert.deepEqual(s.castDescriptions, [{ id: 'mom', name: 'Mom', description: 'hijab' }]);
   const flat = JSON.stringify(s);
   for (const bad of ['"photos"', 'photoPath', 'videoUrl', 'secret', 'OPENROUTER', 'characterSheets', 'clips', 'stagePlay', '.jpg'])
@@ -25,7 +25,7 @@ test('input schema is strict and caps format', () => {
 test('optional intake fields: defaults, pass-through, bounds', () => {
   const s = selectStoryDirectorInput(state);
   assert.equal(s.targetTotalRuntimeSec, 90);
-  assert.deepEqual(s.toneDirectives, { genre: 'comedy-subversion', pacing: 'standard-pixar' });
+  assert.equal(s.toneDirectives, undefined, 'no default tone');
   assert.ok(!('settingSeed' in s) && !('voiceNoteTranscript' in s));
   const st = structuredClone(state); Object.assign(st.project.inputs, { targetTotalRuntimeSec: 45, settingSeed: 'kitchen',
     voiceNoteTranscript: 'hi', toneDirectives: { genre: 'emotional-journey', pacing: 'slow-burn', runningGagSeed: 'sunglasses' } });

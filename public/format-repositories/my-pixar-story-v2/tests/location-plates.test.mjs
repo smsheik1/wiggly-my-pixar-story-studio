@@ -29,7 +29,7 @@ test('selector: inherits locations, builds settings, excludes cast + dialogue', 
   const i = input(twoRooms(), { settingSeed: 'suburban home', photoNotes: 'x' });
   assert.deepEqual(i.settings.map((s) => [s.name, s.sceneIds]), [['Kitchen', ['1.1', '1.2', '1.3', '1.4', '1.5', '1.6']], ['Back Garden', ['2.1', '2.2', '2.3']]]);
   assert.equal(i.settingSeed, 'suburban home');
-  assert.equal(i.toneDirectives.genre, 'comedy-subversion');
+  assert.equal(i.toneDirectives, undefined, 'no default tone');
   const s = JSON.stringify(i);
   for (const k of ['cast', 'characters', 'dialogue', 'photoNotes', 'elementTag']) assert.ok(!s.includes(`"${k}"`), k);
 });
