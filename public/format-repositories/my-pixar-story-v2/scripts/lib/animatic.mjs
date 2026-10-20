@@ -1,7 +1,6 @@
 // Deterministic storyboard -> animatic tools (no model calls):
-//  slicer: crop each storyboard sheet (2 rows x 4 panels) into per-shot 16:9 stills named <shotId>.png
+//  panelRects: fixed-grid fallback geometry; the slicer detects the drawn borders instead (scripts/lib/panel-detect.mjs)
 //  animatic: hold each still for its shot's duration (SD timecodes), lay optional scratch audio under it (else silence)
-import { GRID } from '../../crew/storyboard-artist/compile.mjs';
 
 /** Shot timeline from the SD output: parts play back to back; each shot holds for endSec - startSec. */
 export function shotTimeline(sd) {
@@ -19,7 +18,7 @@ export function shotTimeline(sd) {
  * Panel rectangles for a sheet image W x H: rows x cols equal cells inside a page margin with gutters, then each cell is
  * centre-cropped to 16:9 and inset (to drop the drawn border and the corner label's edge). All values are even integers.
  */
-export function panelRects(W, H, { rows = GRID.rows, cols = GRID.cols, margin = 0.02, gutter = 0.012, inset = 0.03, aspect = GRID.panelAspect } = {}) {
+export function panelRects(W, H, { rows = 2, cols = 4, margin = 0.02, gutter = 0.012, inset = 0.03, aspect = 16 / 9 } = {}) {
   const ev = (x) => Math.max(2, Math.floor(x / 2) * 2);
   const mx = W * margin, my = H * margin, gx = W * gutter, gy = H * gutter;
   const cw = (W - 2 * mx - (cols - 1) * gx) / cols, ch = (H - 2 * my - (rows - 1) * gy) / rows;

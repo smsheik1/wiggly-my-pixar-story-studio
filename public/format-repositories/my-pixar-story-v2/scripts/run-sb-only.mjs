@@ -43,9 +43,9 @@ if (exp && res.storyboardArtist?.sheets) {
   await mkdir(exp, { recursive: true });
   const timing = Object.fromEntries(shotTimeline(sd).map((s) => [s.shotId, s]));
   for (const s of res.storyboardArtist.sheets) await writeFile(join(exp, `sheet-${s.sheetId}.txt`), s.fullPrompt + '\n');
-  await writeFile(join(exp, 'manifest.json'), JSON.stringify({ runId, engine: 'nano-banana-2.1', aspect: '16:9', grid: { rows: 2, cols: 4 },
+  await writeFile(join(exp, 'manifest.json'), JSON.stringify({ runId, engine: 'nano-banana-2.1', aspect: '16:9',
     note: 'Attach references in the listed order (position = "reference image N" in the prompt). Save each result as sheet-<sheetId>.png, then run scripts/slice-storyboard.mjs.',
-    sheets: res.storyboardArtist.sheets.map((s) => ({ sheetId: s.sheetId, segmentId: s.segmentId, promptFile: `sheet-${s.sheetId}.txt`, promptChars: s.fullPrompt.length, references: s.references,
+    sheets: res.storyboardArtist.sheets.map((s) => ({ sheetId: s.sheetId, segmentId: s.segmentId, panelCount: s.panels.length, layout: s.layout, promptFile: `sheet-${s.sheetId}.txt`, promptChars: s.fullPrompt.length, references: s.references,
       panels: s.panels.map((p) => ({ ...p, durationSec: timing[p.shotId]?.durationSec })) })) }, null, 2));
   log(`exported ${res.storyboardArtist.sheets.length} sheets -> ${exp}`);
 }

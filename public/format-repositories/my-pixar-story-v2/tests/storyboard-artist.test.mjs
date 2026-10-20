@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import { MemorySaver, Command } from '@langchain/langgraph';
 import { parseStoryboard, StoryboardParseError } from '../crew/storyboard-artist/schema.mjs';
 import { selectStoryboardArtistInput } from '../crew/storyboard-artist/input.mjs';
-import { compileSheets, SB_SHEET_OPENING, SB_SHEET_LAYOUT, sbPanelLabel } from '../crew/storyboard-artist/compile.mjs';
-import { validateStoryboard, accessoriesIn } from '../crew/linter/check-storyboard.mjs';
+import { compileSheets, SB_SHEET_OPENING, sbPanelLabel, sheetLayout } from '../crew/storyboard-artist/compile.mjs';
+import { validateStoryboard, accessoriesIn, signatureAccessories } from '../crew/linter/check-storyboard.mjs';
 import { makeAnimaticApprovalNode, animaticRoute } from '../graph/graph.mjs';
 import { OUTPUT_SCHEMAS } from '../graph/deep-agent-node.mjs';
 import { AGENT_SPECS } from '../graph/graph.mjs';
@@ -74,16 +74,26 @@ test('gate PROP_LEAK: a signature accessory stays on its owner', () => {
   assert.ok(!codes(o).includes('SB_PROP_LEAK'));
   assert.deepEqual([...accessoriesIn('without glasses, wearing a cap')], ['cap']);
 });
-test('compile: one sheet per part, 8-slot layout text, labels, references in attach order', () => {
+test('compile: layout follows the panel count with no empty slots; numbered list, exact count, wide bordered frames', () => {
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 8].map((n) => sheetLayout(n).rows), [[1], [2], [3], [2, 2], [3, 2], [3, 3], [4, 3], [4, 4]]);
   const sheets = compileSheets(parseStoryboard(good()), input());
   assert.deepEqual(sheets.map((s) => s.sheetId), ['1', '2']);
   const s = sheets[0];
   assert.deepEqual(s.references.map((r) => [r.position, r.tag]), [[1, '@Kid'], [2, '@Sib'], [3, '@Parent'], [4, '@Loc 1']]);
-  assert.ok(s.fullPrompt.includes(SB_SHEET_OPENING) && s.fullPrompt.includes(SB_SHEET_LAYOUT) && s.fullPrompt.includes('16:9'));
-  assert.ok(s.fullPrompt.includes(sbPanelLabel(1, '1.1')) && s.fullPrompt.includes('Panel 8 [empty]'));
-  assert.ok(s.fullPrompt.includes('Kid (reference image 1)') && s.fullPrompt.includes('(reference image 4)'));
+  assert.ok(s.fullPrompt.startsWith(SB_SHEET_OPENING) && s.fullPrompt.includes('exactly two (2) panels') && s.fullPrompt.includes('a single row of two panels'));
+  assert.ok(s.fullPrompt.includes('1) "1.1", 2) "1.2"') && s.fullPrompt.includes('That is all 2 panels'));
+  assert.ok(/WIDE 16:9/.test(s.fullPrompt) && s.fullPrompt.includes('thick solid dark border') && s.fullPrompt.includes('Above each panel'));
+  assert.ok(!/empty\]|Panel 8/.test(s.fullPrompt));
+  assert.ok(s.fullPrompt.includes(sbPanelLabel(1, '1.1')) && s.fullPrompt.includes('Kid (reference image 1)') && s.fullPrompt.includes('(reference image 4)'));
+  assert.ok(s.fullPrompt.includes('always visible on Kid: sunglasses pushed up on the forehead'));
   assert.ok(!/[\r\n]/.test(s.fullPrompt));
-  assert.deepEqual(s.panels.map((p) => [p.row, p.col]), [[0, 0], [0, 1]]);
+  assert.deepEqual(s.layout.rows, [2]);
+});
+test('gate ACCESSORY: an owned accessory must be named in every panel of that character', () => {
+  const i = input();
+  assert.deepEqual(signatureAccessories(i.characters[2], 1), ['a navy hijab'].map((x) => x.replace(/^a /, '')));
+  const o = good(); o.sheets[0].panels[0].characters[0].wardrobe = 'red t-shirt, blue shorts';
+  const c = codes(o); assert.ok(c.includes('SB_ACCESSORY_MISSING'));
 });
 test('animatic gate: approve freezes SD timings; rejections route to SD or the Storyboard Artist', async () => {
   const n = makeAnimaticApprovalNode();

@@ -3,6 +3,7 @@
 //  staging:  panel background = the plate that owns the shot; panel cast = the shot's on-screen cast; only known cast
 //  WARDROBE: each character wears their own Character Architect outfit for that part (copied word for word)
 //  TWINS:    no two characters in one panel share an outfit (siblings must never read as twins)
+//  ACCESSORY: every accessory in a character's approved outfit or identity is named in each panel they appear in
 //  PROP_LEAK: a character's signature accessory / prop appears only on that character, never on anyone else
 import { outfitFor } from '../storyboard-artist/input.mjs';
 import { PANELS_PER_SHEET } from '../storyboard-artist/schema.mjs';
@@ -16,6 +17,14 @@ const ACC_RE = new RegExp(`\\b(${ACCESSORIES.map((a) => (a === 'glasses' ? '(?:s
 // Strip negations ("no hijab", "without glasses", "uncovered") so a stated absence is not read as wearing it.
 const stripNeg = (s) => norm(s).replace(/\b(?:no|without|not|never|free of|instead of|removed)\s+(?:a |an |the |any )?(?:[a-z]+ ){0,2}?[a-z]+/g, ' ');
 export const accessoriesIn = (s) => { const t = stripNeg(s); const o = new Set(); for (const m of t.matchAll(ACC_RE)) o.add(m[1]); return o; };
+
+/** The character's signature accessory phrases (outfit pieces or identity tell naming an accessory), e.g. 'gold stud earrings'. */
+export function signatureAccessories(c, segmentId) {
+  const parts = [...String(outfitFor(c, segmentId) ?? '').split(/,|;|\bwith\b/), c.visualTell ?? ''].map((x) => x.trim()).filter(Boolean);
+  const out = [];
+  for (const x of parts) if (accessoriesIn(x).size && !out.some((o) => norm(o) === norm(x))) out.push(x.replace(/^(?:and|a|an|matching)\s+/i, ''));
+  return out.filter((x) => !out.some((o) => o !== x && norm(o).includes(norm(x))));
+}
 
 /** Accessories a character owns: those in their CA outfit for the part plus their visual tell. */
 export const ownedAccessories = (c, segmentId) => accessoriesIn(`${outfitFor(c, segmentId)} ${c.visualTell ?? ''}`);
@@ -57,6 +66,13 @@ export function validateStoryboard(out, input) {
         const k = norm(pc.wardrobe);
         if (seen.has(k)) err('SB_TWIN_OUTFITS', `shot ${p.shotId}: ${c.name} and ${seen.get(k)} wear the same outfit; every character keeps a distinct outfit so no two read as twins`, `${pp}.characters.${ci}.wardrobe`);
         seen.set(k, c.name);
+      });
+      // ACCESSORY continuity: every accessory a character owns is named in every panel they appear in.
+      p.characters.forEach((pc, ci) => {
+        const c = chars.get(pc.tag); if (!c) return;
+        const have = accessoriesIn([pc.wardrobe, ...pc.props, pc.pose, pc.expression].join(' '));
+        for (const a of ownedAccessories(c, shot.segmentId)) if (!have.has(a))
+          err('SB_ACCESSORY_MISSING', `shot ${p.shotId}: ${c.name}'s signature "${a}" must be named in every panel ${c.name} appears in`, `${pp}.characters.${ci}`);
       });
       // PROP_LEAK: an accessory owned by another cast member (and not by this character) must not appear on this character.
       p.characters.forEach((pc, ci) => {

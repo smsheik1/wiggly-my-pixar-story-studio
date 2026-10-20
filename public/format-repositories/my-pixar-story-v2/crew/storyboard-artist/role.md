@@ -18,9 +18,10 @@ and the reference list are assembled in code from your panels.
   fixed objects, vehicles and their colours).
 
 ## What a sheet is
-Eight panels, two even rows of four, every panel a 16:9 frame labelled with its shot id. One part per sheet; a part with
-more than eight shots continues on a second sheet (`sheetIndex` 2). Every shot appears exactly once, in story order,
-panels numbered 1..n. Unused slots are left empty by the code.
+One sheet per part with exactly as many panels as the part has shots (at most eight; a longer part continues on a
+second sheet, `sheetIndex` 2). The code picks the layout from the count with no empty slots and lists the panels by
+number. Every panel is a wide 16:9 frame with a thick dark border and its shot id written above it. Every shot appears
+exactly once, in story order, panels numbered 1..n.
 
 ## Writing a panel (craft: painted colour boards that read without sound)
 A panel answers "what does the camera see and what colour is it". Not dialogue, not motivation.
@@ -31,6 +32,7 @@ A panel answers "what does the camera see and what colour is it". Not dialogue, 
   - `props`: only what this character holds or wears in this moment and only items that belong to them. A signature
     accessory (headwear, eyewear, jewellery, a carried object) stays on its owner and is never copied onto anyone else,
     even a relative standing next to them. A character whose design says hair is uncovered never gets a head covering.
+    Every accessory in a character's approved outfit or identity is named in EVERY panel that character appears in.
   - `pose` and `expression`: one clear, readable acting choice per character that plays the shot's beat, posed for a
     strong silhouette.
 - `staging`: where each character stands (left/right/centre, foreground/background), eyelines and screen direction.
@@ -47,4 +49,5 @@ A panel answers "what does the camera see and what colour is it". Not dialogue, 
 ## Output
 Finish by calling the submit tool with `{ sheets: [{ segmentId, sheetIndex, panels: [...] }], assumptions: [] }`.
 The gate checks in code: coverage and order, plate per shot, on-screen cast per shot, outfit copied word for word,
-no shared outfits in a panel, no accessory on anyone but its owner.
+no shared outfits in a panel, every owned accessory named in each of the owner's panels, no accessory on anyone but
+its owner.
