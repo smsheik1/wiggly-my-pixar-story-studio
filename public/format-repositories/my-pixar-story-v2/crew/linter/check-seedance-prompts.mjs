@@ -20,6 +20,16 @@ export const DIALOGUE_EXCLUSION = 'The only spoken words in the entire segment a
 export const MOUTHS_CLOSED_LINE = 'No one on screen speaks; every on-screen mouth stays closed.';
 const MOUTHS_CLOSED_SPEAK = /no one on screen speaks/i;
 const MOUTHS_CLOSED_LIPS = /mouths?\b[^.\n]{0,30}\bstays? closed/i;
+export const SILENT_LINE = 'Silent scene apart from ambience: no dialogue, no voice, no humming; every mouth stays closed and still.';
+const words = (x) => String(x ?? '').replace(/[{}]/g, '').toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').split(/\s+/).filter(Boolean);
+/** First 6+ word run of a heard-only line that appears in the prompt (post-narration engines), or null. */
+export function leakedNarration(line, prompt, n = 6) {
+  const w = words(line), t = ` ${words(prompt).join(' ')} `;
+  if (!w.length) return null;
+  if (w.length < n) return t.includes(` ${w.join(' ')} `) ? w.join(' ') : null;
+  for (let i = 0; i + n <= w.length; i++) { const g = w.slice(i, i + n).join(' '); if (t.includes(` ${g} `)) return g; }
+  return null;
+}
 export const NO_MUMBLE_LINE = 'No humming, mumbling, breaths-as-words or partial words from anyone on screen.';
 const NO_MUMBLE = /no humming, mumbling/i;
 /** The signature garment of a Character Architect main outfit: its first item ('teal zip hoodie, jeans, ...' -> 'teal zip hoodie'). */
@@ -162,6 +172,7 @@ export function validateSeedancePrompts(data, input) {
   const engine = input?.targetEngine ?? VIDEO_ENGINE;
   const cap = input?.segmentMaxSec ?? VIDEO_ENGINES[engine]?.segmentMaxSec ?? MAX_SEGMENT_SECONDS;
   const voiceTags = new Set();
+  const post = input?.postNarration ?? !!VIDEO_ENGINES[engine]?.postNarration;
   let total = 0;
   // WIGGLY clips: a staged part longer than the engine cap is split into consecutive clips at shot boundaries.
   for (const [id, src] of srcSegs) {
@@ -213,10 +224,11 @@ export function validateSeedancePrompts(data, input) {
         const want = locBySetting.get(srcShot.location);
         if (!want) err('MISSING_LOCATION_REFERENCE', `${sp}: stage-play setting "${srcShot.location}" has no approved plate.`, `${sp}.locationTag`);
         else if (want !== s.locationTag) err('MISSING_LOCATION_REFERENCE', `${sp}: scene ${s.sceneId} is in ${srcShot.location} (${want}), not ${s.locationTag}.`, `${sp}.locationTag`);
-        for (const k of ['dialogue', 'narration']) if (srcShot[k] && !t.includes(srcShot[k].line))
+        for (const k of ['dialogue', 'narration']) if (srcShot[k] && !(post && (k === 'narration' || heardOnly(srcShot[k]))) && !t.includes(srcShot[k].line))
           err('DIALOGUE_NOT_VERBATIM', `${sp}: stage-play line ${srcShot[k].line} is missing verbatim from the prompt.`, `${sp}.dialogue`);
       }
-      if (s.dialogue) {
+      if (s.dialogue && post && heardOnly(s.dialogue)) err('NARRATION_IN_PROMPT', `${sp}: ${engine} gets narration in post; a voiceover / off-camera line has no "dialogue" here. Drop it and describe the silent beat.`, `${sp}.dialogue`);
+      else if (s.dialogue) {
         // Voiceover / off-camera speakers are heard, not seen: they need no image reference.
         if (!heardOnly(s.dialogue)) present.add(s.dialogue.speaker);
         if (!cast.has(s.dialogue.speaker)) err('SPEAKER_NOT_IN_CAST', `${sp}: speaker ${s.dialogue.speaker} is not in the stage-play cast.`, `${sp}.dialogue.speaker`);
@@ -272,6 +284,16 @@ export function validateSeedancePrompts(data, input) {
     }
     if (heardHere.size && !NO_MUMBLE.test(`${seg.tenBlocks?.block8_audio ?? ''}\n${seg.tenBlocks?.block9_exclusions ?? ''}`))
       err('MUMBLE_NOT_EXCLUDED', `${p}: this clip has narration, so [EXCLUSIONS] says "${NO_MUMBLE_LINE}"`, `${p}.tenBlocks.block9_exclusions`);
+    // Post narration (Omni): the engine voices any words it is given, so no heard-only line (or 6+ words of one) is in the
+    // prompt, and every shot that carries narration in the stage play states the silent-scene line instead.
+    if (post) for (const s of seg.shots ?? []) {
+      const srcShot = src?.shots.find((x) => x.sceneId === s.sceneId); if (!srcShot) continue;
+      const heardLines = [srcShot.narration, heardOnly(srcShot.dialogue) ? srcShot.dialogue : null].filter(Boolean);
+      for (const h of heardLines) { const g = leakedNarration(h.line, t);
+        if (g) err('NARRATION_IN_PROMPT', `${p}: scene ${s.sceneId}: the ${engine} prompt contains narration words ("${g}"). Narration is added in post; never put its words in the prompt, describe the silent beat instead.`, `${p}.compiledPrompt`); }
+      const b = shotBlocks(shotsText)[s.shotNumber - 1];
+      if (heardLines.length && b && !b.text.includes(SILENT_LINE)) err('SILENT_LINE_MISSING', `${p}: SHOT ${s.shotNumber} (scene ${s.sceneId}) carries narration added in post, so it says "${SILENT_LINE}"`, `${p}.tenBlocks.block5_shots`);
+    }
     // Per-clip references: only the people and places actually in this clip's shots (an extra picture invites an extra person).
     const onCam = new Set((seg.shots ?? []).flatMap((s) => [...(s.cast ?? []), ...(s.dialogue && !heardOnly(s.dialogue) ? [s.dialogue.speaker] : [])]));
     const locs = new Set((seg.shots ?? []).map((s) => s.locationTag));

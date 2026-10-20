@@ -89,7 +89,8 @@ export const SeedanceCompilerInput = z.object({
   targetEngine: z.enum(ENGINE_IDS).default(VIDEO_ENGINE),
   segmentMaxSec: z.number().int().positive().max(30).optional(),
   allowedDurationsSec: z.array(z.number().int().positive()).nullable().optional(),
-}).strict().transform((d) => ({ ...d, segmentMaxSec: d.segmentMaxSec ?? VIDEO_ENGINES[d.targetEngine].segmentMaxSec,
+  postNarration: z.boolean().optional().describe('true: narration / voiceover / off-camera lines are added in post; never put their words in the prompt'),
+}).strict().transform((d) => ({ ...d, postNarration: d.postNarration ?? !!VIDEO_ENGINES[d.targetEngine].postNarration, segmentMaxSec: d.segmentMaxSec ?? VIDEO_ENGINES[d.targetEngine].segmentMaxSec,
   allowedDurationsSec: d.allowedDurationsSec !== undefined ? d.allowedDurationsSec : (VIDEO_ENGINES[d.targetEngine].durations ? [...VIDEO_ENGINES[d.targetEngine].durations] : null) })).superRefine((d, ctx) => {
   d.segments.forEach((seg, i) => {
     let t = 0;

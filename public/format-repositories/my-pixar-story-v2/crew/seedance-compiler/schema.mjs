@@ -9,7 +9,7 @@ export const MAX_SEGMENT_SECONDS = 30;
 // (null = any whole second up to the cap). A staged part longer than the cap is split into clips at shot boundaries.
 export const VIDEO_ENGINES = Object.freeze({
   'seedance-2.5': Object.freeze({ provider: 'replicate', segmentMaxSec: 30, durations: null, continuation: 'extend' }),
-  'omni-1.1-flash': Object.freeze({ provider: 'google-flow', segmentMaxSec: 10, durations: Object.freeze([4, 6, 8, 10]), continuation: 'cut' }),
+  'omni-1.1-flash': Object.freeze({ provider: 'google-flow', segmentMaxSec: 10, durations: Object.freeze([4, 6, 8, 10]), continuation: 'cut', postNarration: true /* narration is TTS laid in post; Omni voices any words it is given */ }),
 });
 export const ENGINE_IDS = Object.keys(VIDEO_ENGINES);
 /** generationPayload.durationSec for a clip: the smallest duration the engine offers that is >= the clip's true length. */

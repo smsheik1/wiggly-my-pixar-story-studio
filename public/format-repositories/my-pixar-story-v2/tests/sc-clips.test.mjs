@@ -4,18 +4,22 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { assembleCompiledPrompt, engineDurationFor, parseSeedancePrompts, VIDEO_ENGINES } from '../crew/seedance-compiler/schema.mjs';
 import { selectSeedanceCompilerInput } from '../crew/seedance-compiler/input.mjs';
-import { validateSeedancePrompts, shotBlocks } from '../crew/linter/check-seedance-prompts.mjs';
+import { validateSeedancePrompts, shotBlocks, SILENT_LINE, leakedNarration } from '../crew/linter/check-seedance-prompts.mjs';
 import { V2_MODELS } from '../config/models.mjs';
 
 const json = (f) => JSON.parse(readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const state = (videoEngine) => ({ ...(videoEngine ? { videoEngine } : {}), storyDirector: json('good-stage-play.json'), characterArchitect: { output: json('good-master-renders.json') },
   locationScout: { output: json('good-location-plates.json') }, approvedAssets: json('good-approved-assets.json') });
 const role = readFileSync(new URL('../crew/seedance-compiler/role.md', import.meta.url), 'utf8');
-const errs = (d, eng = 'omni-1.1-flash') => validateSeedancePrompts(d, selectSeedanceCompilerInput(state(eng))).issues.filter((i) => i.severity === 'error');
-const codes = (d, eng) => errs(d, eng).map((i) => i.code);
+const inputFor = (eng, post) => { const i = selectSeedanceCompilerInput(state(eng)); if (post !== undefined) i.postNarration = post; return i; };
+const errs = (d, eng = 'omni-1.1-flash', post) => validateSeedancePrompts(d, inputFor(eng, post)).issues.filter((i) => i.severity === 'error');
+const codes = (d, eng, post) => errs(d, eng, post).map((i) => i.code);
+/** Post-narration form of a clip: heard-only lines out, the silent-scene line in. */
+const silent = (text) => text.split(/(?=SHOT\s+\d+\s*\|)/).map((b) => /,\s*(?:voice[- ]?over|off[- ]?camera)\s*:/i.test(b)
+  ? b.replace(/^\s*@[\w_]+\s*,\s*(?:voice[- ]?over|off[- ]?camera)\s*:.*\n/gim, '').replace('No one on screen speaks; every on-screen mouth stays closed.', SILENT_LINE) : b).join('');
 
 /** Split the good fixture into Omni clips the way the SC should: groups = per part, lists of staged shot indexes. */
-function clips(groups = { 1: [[0, 1], [2], [3, 4], [5]], 2: [[0, 1], [2]] }, engine = 'omni-1.1-flash') {
+function clips(groups = { 1: [[0, 1], [2], [3, 4], [5]], 2: [[0, 1], [2]] }, engine = 'omni-1.1-flash', { post = true } = {}) {
   const d = json('good-seedance-prompts.json'), out = [];
   for (const seg of d.segments) for (const [j, g] of groups[seg.segmentId].entries()) {
     const shots = g.map((k) => seg.shots[k]), off = shots[0].startSec, blocks = shotBlocks(seg.tenBlocks.block5_shots);
@@ -24,7 +28,8 @@ function clips(groups = { 1: [[0, 1], [2], [3, 4], [5]], 2: [[0, 1], [2]] }, eng
     const text = g.map((k, n) => blocks[k].text.replace(/SHOT\s+\d+\s*\|\s*\d+[–-]\d+s/, `SHOT ${n + 1} | ${cs[n].startSec}–${cs[n].endSec}s`)).join('').trimEnd();
     const keep = new Set([...cs.flatMap((s) => s.cast), ...cs.filter((s) => s.dialogue?.mode === 'on-camera').map((s) => s.dialogue.speaker), ...cs.map((s) => s.locationTag)]);
     const refs = seg.references.filter((r) => keep.has(r.tag));
-    const tb = { ...seg.tenBlocks, block5_shots: text,
+    if (post) cs.forEach((s) => { if (s.dialogue && s.dialogue.mode !== 'on-camera') delete s.dialogue; });
+    const tb = { ...seg.tenBlocks, block5_shots: post ? silent(text) : text,
       block1_referenceMaterials: seg.tenBlocks.block1_referenceMaterials.split('\n').filter((l) => { const m = l.match(/^(@[\w_]+)\s*=/); return !m || keep.has(m[1]); }).join('\n') };
     out.push({ ...seg, ...(groups[seg.segmentId].length > 1 ? { clipId: `${seg.segmentId}${'abcd'[j]}`, sourceShotNumbers: g.map((k) => seg.shots[k].shotNumber) } : {}), sourceStartSec: off,
       totalDurationSec: len, shotCount: cs.length, shots: cs, references: refs, attachedElements: refs.map((r) => r.tag), tenBlocks: tb, compiledPrompt: assembleCompiledPrompt(tb),
@@ -84,12 +89,12 @@ test('a staged shot longer than the cap is a reported blocker, never cut', () =>
   assert.ok(issues.some((i) => i.code === 'SHOT_LONGER_THAN_CLIP_CAP' && /BLOCKER/.test(i.message)), sh.length);
 });
 test('narration: voiceover shots say no one on screen speaks; [VOICES] says off-screen narrator; no mumbling excluded', () => {
-  const strip = (fn) => { const d = clips(); fn(d.segments[4].tenBlocks); d.segments[4].compiledPrompt = assembleCompiledPrompt(d.segments[4].tenBlocks); return codes(d); };
+  const strip = (fn) => { const d = clips(undefined, undefined, { post: false }); fn(d.segments[4].tenBlocks); d.segments[4].compiledPrompt = assembleCompiledPrompt(d.segments[4].tenBlocks); return codes(d, undefined, false); };
   assert.ok(strip((tb) => { tb.block5_shots = tb.block5_shots.replaceAll('No one on screen speaks; every on-screen mouth stays closed.\n', ''); }).includes('VOICEOVER_MOUTHS_OPEN'));
   assert.ok(strip((tb) => { tb.block2_voices = tb.block2_voices.replaceAll('An off-screen narrator voice; @Shaz on screen never speaks these lines. ', ''); }).includes('NARRATOR_NOT_OFF_SCREEN'));
-  { const d = clips(); const s = d.segments[4]; // 2a: @Shaz narrates while on screen, so "never seen" is wrong
+  { const d = clips(undefined, undefined, { post: false }); const s = d.segments[4]; // 2a: @Shaz narrates while on screen, so "never seen" is wrong
     s.tenBlocks.block2_voices = s.tenBlocks.block2_voices.replace('An off-screen narrator voice; @Shaz on screen never speaks these lines. ', 'An off-screen narrator, never seen. '); s.compiledPrompt = assembleCompiledPrompt(s.tenBlocks);
-    assert.ok(codes(d).includes('NARRATOR_NOT_OFF_SCREEN'), 'never seen rejected for an on-screen narrator'); }
+    assert.ok(codes(d, undefined, false).includes('NARRATOR_NOT_OFF_SCREEN'), 'never seen rejected for an on-screen narrator'); }
   assert.ok(strip((tb) => { tb.block9_exclusions = tb.block9_exclusions.replace(/ No humming[^.]*\./, ''); }).includes('MUMBLE_NOT_EXCLUDED'));
 });
 test('wardrobe: the Look line restates the signature garment', () => {
@@ -101,4 +106,19 @@ test('role.md: clip split, mouths closed, narrator silent action, no mumbling, g
     'No humming, mumbling, breaths-as-words or partial words from anyone on screen.', 'signature garment', 'anchor every prop', 'narrator\'s own character', 'never turned into voiceover', 'BLOCKER'])
     assert.ok(role.includes(s), s);
   assert.doesNotMatch(role, /subsurface glow/);
+});
+
+test('post narration (Omni): no narration words in the prompt; silent-scene line on every narrated shot', () => {
+  assert.equal(selectSeedanceCompilerInput(state('omni-1.1-flash')).postNarration, true);
+  assert.equal(selectSeedanceCompilerInput(state()).postNarration, false);
+  assert.ok(!codes(clips()).some((c) => /NARRATION|SILENT/.test(c)));
+  const vo = clips(undefined, undefined, { post: false }); // the old form, voiceover text kept
+  assert.ok(codes(vo).includes('NARRATION_IN_PROMPT'));
+  const d = clips(); const s = d.segments[4]; s.tenBlocks.block5_shots = s.tenBlocks.block5_shots.replaceAll(SILENT_LINE, ''); s.compiledPrompt = assembleCompiledPrompt(s.tenBlocks);
+  assert.ok(codes(d).includes('SILENT_LINE_MISSING'));
+  assert.equal(leakedNarration('{I installed a radio aux cable converter today}', 'He says he installed a radio aux cable converter, smiling.'), 'installed a radio aux cable converter');
+  assert.equal(leakedNarration('{I installed a radio aux cable converter today}', 'A thin aux cable plugged into the radio.'), null);
+});
+test('role.md: post narration, device anchoring, simple hug contact, plain object names', () => {
+  for (const x of [SILENT_LINE, 'postNarration', 'laptop or keyboard', 'side hug', 'flat-screen TV', 'fan of separate trading cards']) assert.ok(role.includes(x), x);
 });

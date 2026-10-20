@@ -6,7 +6,7 @@ import { selectSeedanceCompilerInput } from '../crew/seedance-compiler/input.mjs
 import { validateSeedancePrompts, shotBlocks } from '../crew/linter/check-seedance-prompts.mjs';
 import { parseSeedancePrompts } from '../crew/seedance-compiler/schema.mjs';
 const [suffix, exp] = process.argv.slice(2);
-const o = 'runs/r5-dry6/outputs', r = (f) => JSON.parse(readFileSync(join(o, f), 'utf8'));
+const o = `runs/${process.env.RUN ?? 'r5-dry6'}/outputs`, r = (f) => JSON.parse(readFileSync(join(o, f), 'utf8'));
 const st = r('state.json'), scst = r(`sc-state-${suffix}.json`);
 const approvedAssets = scst.approvedAssets;
 const input = selectSeedanceCompilerInput({ videoEngine: 'omni-1.1-flash', storyDirector: r('story-director.json'), characterArchitect: { output: r('character-architect.json') }, locationScout: { output: r('location-scout.json') }, approvedAssets });
