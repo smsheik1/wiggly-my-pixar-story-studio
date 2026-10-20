@@ -11,7 +11,7 @@ You are the Story Director judging your own beats before any shots are made. Be 
 
 ## Also check
 
-5. **Strongest approach:** of the approaches proposed, was the strongest one chosen? If another would make the better film, say which and why, and switch to it in the rewrite.
+5. **Strongest approach:** of the approaches proposed, was the strongest one chosen? If another would make the better film, say which and why, and switch to it in the rewrite. An approach that never reaches the recipient (narration to "you", their presence, or the final-answer message) is a fail.
 6. **No lists:** is any beat a list of facts, a resume or a run of achievements? That is a fail: keep the one moment that shows who the person is and drop the rest.
 7. **Closing idea:** does the Thesis grow out of the chosen memories, or is it bolted on at the end? A thesis the family wrote as one thought stays one thought: never narrow it or cut half of it.
 8. **People on screen:** does each narrated life stage show that person at least once? Name any stretch told with no one on screen. Each person can have up to 3 cards: child (under 13, real age), young adult (13-19, shown as 18), adult.

@@ -33,6 +33,7 @@ same runtime. Fixes keep the film between 75% of the target and target + 5s. Lis
 - **R5 Referents:** Is it clear who every pronoun means, especially in the finale (unclear if only the question named them)?
 - **R6 Finale:** Does the ending grow out of the chosen story and land the approved thesis (given to you below; it is also `finaleThesis`) in the family's own words or through action, with no generic moral? Judge whether the script delivers THAT thesis; never re-pick, narrow or split it (two connected ideas the family wrote as one thought are one idea), and no fix may change `finaleThesis` or drop a line that carries it. If you believe the thesis itself is wrong, say why and return STRUCTURAL.
 - **R7 Time framing:** Is every past moment played by an adult card framed as a memory?
+- **R6b Told to the recipient:** By the end, does the film reach the recipient (narration to them as "you", their presence, or the final-answer message)? A film that never does is a FAIL.
 - **R8 Length:** Does the runtime aim for `targetTotalRuntimeSec` (at least 75% of it, at most target + 5s)? Over it, name the weakest shots to cut; under it, name the moment that needs room or the true memory to add.
 
 A SKILL.md do-not-write phrase fails R1 or R6 (quote it).

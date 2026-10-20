@@ -13,6 +13,7 @@ Work in this order and write each step down.
    - Thread: the one emotional thread it follows.
    - Memories: the 2 to 4 memories that carry it.
    - Leaves out: what it drops.
+   - Recipient: how it reaches the recipient by the end (narration to them as "you", their presence, or the final-answer message). The film is told to them.
 3. **Pick one.** Name the strongest approach and why, in one line. Then list the omitted material and why each piece is left out.
 4. **The closing idea, only now.** It grows out of the chosen thread; it is not picked first. Write it as ONE plain sentence on its own line starting `Thesis:`, and quote the answer words it comes from. Two connected ideas the family wrote as one thought are one idea, one sentence; never drop their strongest line to shorten it.
 5. **5 to 7 beats.** A beat picks a moment, one detail and what it reveals; it is not a script. For each beat write:

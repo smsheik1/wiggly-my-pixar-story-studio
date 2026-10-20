@@ -35,7 +35,7 @@ test('config and gating: on for the Story Director only, off in patch mode', () 
 
 test('prompts are generic: no JSON gate codes, no toy example names', () => {
   for (const p of [loadBeatsPrompt(), loadCritiquePrompt()]) {
-    assert.ok(p && p.length < 3000);
+    assert.ok(p && p.length < 3600); // short plain-text prompts; raised from 3000 for the recipient, closing-idea and acted-time rules
     assert.doesNotMatch(p, /\b(Theo|Gran|Wren|Ben|Miss Park)\b/);
     assert.doesNotMatch(p, /\b[A-Z]+_[A-Z_]+\b/, 'no gate codes');
   }
