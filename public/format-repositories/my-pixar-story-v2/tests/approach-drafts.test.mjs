@@ -101,3 +101,26 @@ test('plan with no approaches -> one story, two drafts of the same beats (old be
   assert.match(seen.tasks.B, /story X/);
   assert.equal(seen.out[STORY].approach, undefined);
 });
+
+test('a draft that fails the gate is repaired with its gate errors, then the judge compares every passing draft', { timeout: 20000 }, () => tmp(async (runs) => {
+  const seen = { repair: '', judge: '' };
+  const m = new ScriptedModel(async (msgs) => {
+    const raw = textOf(msgs);
+    const id = draftContext.getStore()?.draftId;
+    if (id && /failed the gate/.test(raw)) { seen.repair = raw; return call('submit_story_director', titled(`Draft ${id} fixed`)); }
+    if (id) return call('submit_story_director', titled(id === 'A' ? 'BROKEN A' : `Draft ${id}`));
+    if (raw.includes('Target total runtime:')) { seen.judge = raw; return say('A fixed tells it better.\nWINNER: A'); }
+    if (raw.includes('The beats to judge:')) return say('## Rewritten beats\nThesis: t.\nBeat 1: b.');
+    if (raw.includes('# Beats (story first')) return say(PLAN3.replace(/- Approach C[^\n]*\n/, ''));
+    return say('SHIP\nVERDICT: SHIP');
+  });
+  const gate = (d) => ({ issues: d.masthead.title.startsWith('BROKEN') ? [{ severity: 'error', code: 'TEST_BROKEN', message: 'title is broken' }] : [] });
+  const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'repair' })({
+    agent: 'story-director', config: { ...V2_MODELS['story-director'], reflectionRounds: 1 }, input: INPUT, attempt: 1, gate,
+  });
+  assert.match(seen.repair, /TEST_BROKEN: title is broken/); assert.match(seen.repair, /BROKEN A/);
+  assert.match(seen.judge, /Draft A fixed/); assert.match(seen.judge, /Draft B/);
+  assert.equal(out.masthead.title, 'Draft A fixed');
+  assert.equal(out[REFLECTION].bestOf.reason, 'judge');
+  assert.deepEqual(out[REFLECTION].bestOf.repaired, [{ id: 'A', gateErrorsBefore: 1, gateErrorsAfter: 0 }]);
+}));

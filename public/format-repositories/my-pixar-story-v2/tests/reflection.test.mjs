@@ -131,6 +131,7 @@ class RoleModel extends ScriptedModel {
     if (/Cold Read/i.test(String(messages[0]?.content))) { this.kinds.push('cold-read'); msg = say('1. Setup & payoff: PASS\n2. Referents: PASS\n3. Time framing: PASS\n4. Finale clarity: PASS'); }
     else if (/reviewing your own draft/.test(String(messages[0]?.content))) { this.kinds.push('critique'); this.onCritique(all); msg = say(this.q.critiques.shift()); }
     else if ((last?.getType?.() ?? last?._getType?.()) === 'tool') { this.kinds.push('after-submit'); msg = say('Done.'); }
+    else if (/Your draft below failed the gate/.test(all)) { this.kinds.push('repair'); msg = call(SUBMIT, this.q.draft.length > 1 ? this.q.draft.shift() : this.q.draft[0]); }
     else if (/Revise your story-director draft/.test(all)) { this.kinds.push('rewrite'); msg = call(SUBMIT, this.q.revisions.shift()); }
     else { this.kinds.push('draft'); this.onDraft(all); msg = call(SUBMIT, this.q.draft.shift()); }
     assert.ok(msg.tool_calls?.length ? msg.tool_calls[0].args : msg.content, `fake ran out of ${this.kinds.at(-1)} replies`);
@@ -145,7 +146,7 @@ test('graph: a gate-failing first draft fixed by the revisions passes on attempt
     critiques: ['1. Finale has no narration. VERDICT: REVISE', '1. Still no narration. VERDICT: REVISE'], onCritique: (t) => critiqueTexts.push(t) })));
   const s = await buildGraph({ deepAgent: { finalReview: false, storyBeats: false, createModel, runsRoot: runs, runId: 'g1' }, onEvent: (e) => events.push(e) }).invoke({ inputs: { answers: {}, targetTotalRuntimeSec: 60 }, approvedAssets: assets() });
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
-  assert.deepEqual(sd.kinds.filter((k) => k !== 'after-submit'), ['draft', 'draft', 'cold-read', 'critique', 'rewrite', 'cold-read', 'critique', 'rewrite']);
+  assert.deepEqual(sd.kinds.filter((k) => k !== 'after-submit'), ['draft', 'draft', 'repair', 'repair', 'cold-read', 'critique', 'rewrite', 'cold-read', 'critique', 'rewrite']);
   assert.match(critiqueTexts[0], /WRITING_TELL_EM_DASH/); assert.match(critiqueTexts[0], /Thin draft/); assert.match(critiqueTexts[1], /Still thin/);
   assert.equal(s.attempts['story-director'], 1); assert.equal(s.storyDirector.masthead.title, 'Fixed');
   assert.ok(!s.gateIssues['story-director'].some((i) => i.code === 'WRITING_TELL_EM_DASH'));

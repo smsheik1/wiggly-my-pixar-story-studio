@@ -105,7 +105,11 @@ export async function pickBest({ candidates = [], gate, model, input = {}, agent
     bestOf: { drafts, judged, judgeReply: judgeFile, judgeReplyFile: judgeFile, winner: r.id, reason } });
   const passing = rows.filter((r) => r.gate.passes);
   if (passing.length === 1) return done(passing[0], false, 'gate');
-  if (passing.length === 0) return done(rows.find((r) => !r.error), false, 'both-failed');
+  if (passing.length === 0) {
+    const first = rows.find((r) => !r.error);
+    console.warn(`[best-of] ${agent}: no draft passed the gate after repair; draft ${first.id} goes ahead to the review loop and the node's retry`);
+    return done(first, false, 'both-failed');
+  }
 
   const targetRuntime = resolveTargetSeconds(input);
   const messages = judgeMessages({ drafts: passing.map((r) => ({ id: r.id, draft: r.draft, runtime: r.runtime })), targetRuntime, prompt: loadPick(agent) });
@@ -136,6 +140,17 @@ export async function pickDraft({ draftA, draftB, errorA = null, errorB = null, 
 }
 
 const DRAFT_IDS = ['A', 'B', 'C'];
+/** The repair message for a draft that failed the gate: the original task, the draft, and its gate errors to fix. */
+export const repairTask = (task, draft, issues = []) => [
+  task ?? '',
+  '',
+  'Your draft below failed the gate. Fix every error listed, change nothing else, keep the story and its approach, and submit the full corrected output.',
+  'Gate errors:',
+  ...issues.filter((i) => i.severity === 'error').map((i) => `- ${i.code}${i.path ? ` (${i.path})` : ''}: ${i.message}`),
+  '',
+  'Your draft:',
+  JSON.stringify(draft),
+].join('\n');
 /**
  * Writes the drafts in parallel, each in its own workspace, saves them and picks one (pickBest).
  * tasks: one first-user-message per draft (one per story approach), up to 3; default two drafts of the same task.
@@ -162,5 +177,29 @@ export async function runBestOf({
   await mkdir(dir, { recursive: true });
   const rel = (f) => relative(runsRoot, join(dir, f));
   for (const r of results) if (r.draft) await writeFile(join(dir, `draft-${r.id}.json`), JSON.stringify(r.draft, null, 2));
-  return pickBest({ candidates: results, gate, model, input, agent, dir, rel, signal });
+  // A draft that fails the gate gets one repair with its gate errors before the pick, so the judge compares stories,
+  // not which draft happened to trip fewer checks.
+  const repaired = [];
+  const candidates = await Promise.all(results.map(async (r, i) => {
+    if (!r.draft) return r;
+    const g = checkGate(gate, r.draft);
+    if (g.passes) return r;
+    const ws = await prepareWorkspace({ runsRoot: join(root, 'workspaces'), runId: `draft-${r.id}-repair`, agent, input, approvedAssets: state.approvedAssets ?? {}, assetFiles, photoFiles });
+    return draftContext.run({ draftId: r.id, repair: true }, async () => {
+      try {
+        const fixed = await runOnce(repairTask(list[i], r.draft, g.issues), `${agent} deep agent draft ${r.id} repair`, [`draft:${r.id}`, 'repair'], ws.root);
+        if (!fixed) return r;
+        await writeFile(join(dir, `draft-${r.id}-repair.json`), JSON.stringify(fixed, null, 2));
+        repaired.push({ id: r.id, gateErrorsBefore: g.errors, gateErrorsAfter: checkGate(gate, fixed).errors });
+        return { ...r, draft: fixed };
+      } catch (e) {
+        if (signal?.aborted) throw signal.reason ?? e;
+        if (isFatalProviderError(e)) throw e;
+        return r;
+      }
+    });
+  }));
+  const picked = await pickBest({ candidates, gate, model, input, agent, dir, rel, signal });
+  if (repaired.length) picked.bestOf.repaired = repaired;
+  return picked;
 }
