@@ -46,6 +46,7 @@ Quote each one and rewrite it as a direct positive line before scoring anything 
 
 ### B. Line-level and format tells (2 points each)
 - **Any em dash in a spoken or narrated line** (zero tolerance). Use a comma, a period, or two lines.
+- **Any slash in a spoken or narrated line** (A/C, w/, and/or, 24/7). The voice reads it badly; write the words.
 - **Zero contractions in dialogue or voiceover.** "I do not", "it is", "I will" in casual speech. Spoken lines use "don't", "it's", "I'll".
 - **Filler stage directions.** A shot whose only action is "breathing", "blinking", "smiles softly" or "nods slowly". Moving holds (breathing, blinking on a held beat) are required by both roles for the video model and are not a tell; flag only shots with no specific action besides them. Critic only, not a code check.
 - **Colon or "here's the thing" reveals inside dialogue.**
@@ -103,6 +104,7 @@ REWRITTEN LINES (only if score >= 16):
 
 ## Do-not-write list (loaded into the Story Director and Seedance Compiler)
 - No em dashes in spoken or narrated lines.
+- No slashes in spoken or narrated lines (A/C, w/, and/or, 24/7): write the words.
 - No "it's not X, it's Y" or any forced negation.
 - No generic morals or platitudes (about life, love, family, men and women or "the world") that the answers do not give. The family's own closing words, quoted, are allowed; otherwise show the closing idea through action.
 - No more than two wisdom or advice lines in a row in the finale; break a run with an on-screen action that shows the idea, never with an inserted memory or callback.
@@ -117,7 +119,7 @@ REWRITTEN LINES (only if score >= 16):
 
 ## What the code enforces
 The linter reads the JSON block below. Everything else in this file is for the writers and the critic.
-- **Hard fail (blocks the gate):** an em dash in a spoken or narrated line (`WRITING_TELL_EM_DASH`), forced negation (`WRITING_TELL_FORCED_NEGATION`), a phrase in `hard.phrases` (`WRITING_TELL_BANNED_PHRASE`).
+- **Hard fail (blocks the gate):** an em dash in a spoken or narrated line (`WRITING_TELL_EM_DASH`), a slash between letters or digits in one (`WRITING_TELL_SLASH`), forced negation (`WRITING_TELL_FORCED_NEGATION`), a phrase in `hard.phrases` (`WRITING_TELL_BANNED_PHRASE`).
 - **Warning (reported, never blocks):** a word in `warn.words` (`WRITING_TELL_FLAGGED_WORD`), more than `wisdomStackMax` wisdom lines in a row in the finale (`WRITING_TELL_WISDOM_STACK`), no or few contractions in speech (`WRITING_TELL_NO_CONTRACTIONS`, `WRITING_TELL_FEW_CONTRACTIONS`).
 - Not checked by code: em dashes in Seedance prompt prose (the Seedance role's own camera phrases use them and the viewer never hears them) and filler directions (moving holds are required).
 

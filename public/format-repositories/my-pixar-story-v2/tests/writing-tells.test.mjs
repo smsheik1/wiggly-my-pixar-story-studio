@@ -56,3 +56,10 @@ test('forced negation: catches isn\'t/wasn\'t and "didn\'t just X, I Y"; ignores
 test('rubric follows its own rule: no em dashes outside the JSON escape', () => {
   assert.ok(!readFileSync(TELLS_FILE, 'utf8').includes('\u2014'));
 });
+
+test('slashes in spoken lines fail (A/C, w/, and/or, 24/7); words pass', () => {
+  for (const s of ['{No A/C, but it was mine.}', '{I went w/ my dad.}', '{Call me and/or text.}', '{She worked 24/7.}'])
+    assert.ok(codes(checkWritingTells({ lines: [L(s)] })).includes('error:WRITING_TELL_SLASH'), s);
+  assert.ok(!codes(checkWritingTells({ lines: [L('{No air conditioning, but it was mine.}')] })).includes('error:WRITING_TELL_SLASH'));
+  assert.match(doNotWriteList(), /No slashes/);
+});

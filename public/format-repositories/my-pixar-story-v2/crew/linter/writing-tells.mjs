@@ -35,6 +35,7 @@ export function checkWritingTells({ lines = [] }, t = loadTells()) {
   for (const l of lines) {
     const s = clean(l.text), low = s.toLowerCase();
     if (s.includes(t.emDash)) err('WRITING_TELL_EM_DASH', `Line '${s}' has an em dash. Use a comma, a period, or two lines.`, l.path);
+    if (/[A-Za-z0-9]\s?\/\s?[A-Za-z0-9]/.test(s)) err('WRITING_TELL_SLASH', `Line '${s}' has a slash. The voice reads it badly; write the words ("air conditioning", "with", "and", "all day").`, l.path);
     const neg = t.forcedNegation.find((r) => r.test(s));
     if (neg) err('WRITING_TELL_FORCED_NEGATION', `Line '${s}' uses forced negation ("it's not X, it's Y"). Say it directly.`, l.path);
     const ph = t.phrases.find((p) => low.includes(p));
