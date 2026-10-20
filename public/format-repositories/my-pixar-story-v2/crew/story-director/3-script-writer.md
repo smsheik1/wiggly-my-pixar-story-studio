@@ -64,6 +64,25 @@ A Wiggly film is a short memory film about real people. The job is not to list t
 11. **A repeated element escalates.** Anything that comes back (a habit, an object, a line from the answers) climbs a visible ladder each time; it never stays the same.
 12. **Where the audience gets ahead of you is a choice.** Showing a plant too clearly spends the payoff; hiding it entirely costs the rewatch. Decide how much to show.
 
+### Worked example (a fictional family; never copy its lines)
+
+Answer excerpts (a mother writing to her grown son):
+- `childhood.memory`: "I was ten. My mother sold oranges at the market. At night I counted the coins for her by the lamp."
+- `teen.memory`: "At sixteen I missed the last bus and walked home in the rain. She was waiting at the gate with a towel. She wasn't angry."
+- `finale.memory`: "I want you to know you can always come home, whatever time it is. I still leave the porch light on when you drive back."
+
+Script excerpt (`finaleThesis`: You can always come home, whatever time it is.):
+- **1.1** (0-5s, market stall) on screen: @Parent. @Parent stacks oranges into a pyramid, wiping her hands on her apron.
+  - Narration @AdultChild: {My mother sold oranges at the market.} *(sets up what the picture can't: who, when)*
+- **1.2** (5-11s, kitchen at night) on screen: @Child, @Parent. @Child counts coins into small towers under the lamp; @Parent watches, then slides one more coin across. No narration: the scene plays.
+  - Dialogue @Parent: {You missed one.} *(subtext, not a speech)*
+- **2.1** (0-6s, road in the rain) on screen: @ChildTeen. @ChildTeen walks fast, jacket over her head, past the bus stop sign.
+  - Narration @AdultChild: {I was sixteen, and I missed the last bus.}
+- **2.2** (6-11s, front gate) on screen: @Parent, @ChildTeen. @Parent holds out a folded towel at the gate before @ChildTeen reaches it.
+  - Dialogue @Parent: {Inside. You're shaking.} *(she isn't angry; the line never says so)*
+- **2.3** (11-18s, porch at night, today) on screen: @AdultChild. @AdultChild reaches past the door and switches on the porch light, then leaves it on. *(plant: the gate and the waiting; payoff: she waits the same way now)*
+  - Narration @AdultChild: {You can always come home. Whatever time it is.} *(the family's own words, `kind: "verbatim"`; the ending is something we see)*
+
 ### The Trade-Off Rule:
 When a choice costs something, name the trade in `assumptions` (e.g. "kept the quiet hold; cut the second memory to fit the runtime"). Never rewrite the family's voice: when they wrote a line themselves and it is their strongest, keep their words and only fix what would break in a voice model.
 
