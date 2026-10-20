@@ -78,11 +78,12 @@ test('cutQuotaNote: computes excess and shot cut quota correctly when over targe
 test('cutQuotaNote: under-target and at-target wording', { timeout: 10000 }, () => {
   const underDraft = { shapeBar: { totalRuntimeSec: 80 }, segments: [{ shots: [{}] }] };
   const underNote = cutQuotaNote({ targetTotalRuntimeSec: 90 }, underDraft);
-  assert.match(underNote, /Runtime: this draft 80s; target 90s: under target\. The revision must not be longer\./);
+  assert.match(underNote, /Runtime: this draft 80s; target 90s: under target\. The revision must not run past the target\./);
 
   const atDraft = { shapeBar: { totalRuntimeSec: 90 }, segments: [{ shots: [{}] }] };
   const atNote = cutQuotaNote({ targetTotalRuntimeSec: 90 }, atDraft);
-  assert.match(atNote, /Runtime: this draft 90s; target 90s: at target\. The revision must not be longer\./);
+  assert.match(atNote, /Runtime: this draft 90s; target 90s: at target\. The revision must not run past the target\./);
+  assert.match(cutQuotaNote({ targetTotalRuntimeSec: 90 }, { shapeBar: { totalRuntimeSec: 45 } }), /45s; target 90s: too short \(under 68s fails the gate\)\. Add at least 23s/);
 
   // Missing runtime returns empty
   assert.equal(cutQuotaNote({ targetTotalRuntimeSec: 90 }, {}), '');
@@ -213,7 +214,7 @@ test('loop: under-target wording injected when draft is at or under target', { t
   });
 
   assert.match(critiquePrompt, /under target/);
-  assert.match(critiquePrompt, /revision must not be longer/);
+  assert.match(critiquePrompt, /revision must not run past the target/);
 }));
 
 test('loop: growth rejected and previous draft kept, subsequent round continues with kept draft', { timeout: 10000 }, () => tmp(async (runs) => {

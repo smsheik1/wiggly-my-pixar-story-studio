@@ -18,7 +18,7 @@ const fake = (bad = {}) => async (r) => { if (r.agent === 'seedance-compiler') r
 const TRACKER = '<!doctype html><html><head><style>.x{}</style></head><body><h1>Old work</h1><ul><li>keep me</li></ul>\n<div class="now"><b>Now:</b> x</div><script>/*reload*/</script></body></html>';
 function sandbox() {
   const root = mkdtempSync(join(tmpdir(), 'v2-obs-'));
-  const proj = join(root, 'p.json'); writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS } }));
+  const proj = join(root, 'p.json'); writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60 } }));
   const tracker = join(root, 'progress.html'); writeFileSync(tracker, TRACKER);
   return { root, proj, tracker, done: () => rmSync(root, { recursive: true, force: true }) };
 }

@@ -29,7 +29,7 @@ async function priorRun(root, id = 'prior') {
   for (const [a, f] of Object.entries(FIX)) await writeFile(join(out, `${a}.json`), JSON.stringify(json(f), null, 2));
   await writeFile(join(out, 'state.json'), JSON.stringify({ status: 'done', approvedAssets: json('good-approved-assets.json') }));
   const ans = json('good-answers.json');
-  await writeFile(join(root, id, 'project.json'), JSON.stringify({ inputs: { subject: ans.subject, answers: ans.answers } }));
+  await writeFile(join(root, id, 'project.json'), JSON.stringify({ inputs: { subject: ans.subject, targetTotalRuntimeSec: 60, answers: ans.answers } }));
   return id;
 }
 const hashDir = async (dir) => { const out = {}; const walk = async (d) => { for (const e of await readdir(d, { withFileTypes: true })) { const p = join(d, e.name); if (e.isDirectory()) await walk(p); else out[p.slice(dir.length)] = createHash('sha256').update(await readFile(p)).digest('hex'); } }; await walk(dir); return out; };
@@ -262,7 +262,7 @@ test('deep agent patch mode: the patch task opens the run; ONE review round scop
     (msgs) => { seen.rewrite = text(msgs); return call('submit_story_director', fixed); },
   ]);
   const { patchTask, patchScopeText } = await import('../graph/patch.mjs');
-  const input = { subject: 'Test family', answers: json('good-answers.json').answers, patch: { target: t.id, note: 'He told everyone.', currentOutput: prior } };
+  const input = { subject: "Test family", targetTotalRuntimeSec: 60, answers: json('good-answers.json').answers, patch: { target: t.id, note: 'He told everyone.', currentOutput: prior } };
   const out = await deepAgentInvoke({ finalReview: false, createModel: async () => m, runsRoot: runs, runId: 'pm' })({ agent: 'story-director', config: V2_MODELS['story-director'], input, attempt: 1,
     task: patchTask(t, 'He told everyone.'), scope: patchScopeText(t, 'He told everyone.'), rounds: 1, gate: () => ({ issues: [] }) });
   assert.equal(m.calls.length, 3, 'draft + 1 x (critique + rewrite), not the 2 full-run rounds');

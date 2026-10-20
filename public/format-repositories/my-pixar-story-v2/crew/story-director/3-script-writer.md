@@ -146,7 +146,7 @@ Seedance 2.5 generates in discrete temporal blocks of **at most 30 seconds**.
 * Consecutive and non-overlapping: `0–3s, 3–5s, 5–9s, 9–11s...`
 * A film longer than 30 seconds is split into parts of at most 30 seconds (**Part 1**, **Part 2**, **Part 3**), each rendered as one multi-shot Seedance 2.5 prompt.
 * Every segment's timecodes start at `0` and run consecutively to its end.
-* Whole film: the target runtime is the maximum (`targetTotalRuntimeSec` in the input, default 90 seconds). A film may run at most 5 seconds past it; to fit, drop a memory or a shot, never squeeze lines.
+* Whole film: aim for the target runtime (`targetTotalRuntimeSec` in the input, default 90 seconds); the maximum is target + 5 seconds, and under 75% of the target fails the gate. Spoken lines fill about 60-70% of it; silent and acted beats fill the rest. To fit, drop a memory or a shot, never squeeze lines; to fill, give the key moment room or tell one more true memory, never pad lines.
 
 > **Wiggly addition (Dan Kieft craft):**
 > * **One shot = one cut.** Every shot card becomes one prompt block downstream, and a new block is read as a cut. A continuous camera move is ONE shot however much happens inside it (`isContinuousMove: true`); never split a move across shots, and never describe two cuts inside one shot.

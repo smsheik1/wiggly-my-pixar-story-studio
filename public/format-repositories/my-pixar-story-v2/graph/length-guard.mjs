@@ -49,8 +49,10 @@ export function cutQuotaNote(input, draft, prevDraft = null, options = {}) {
     return `Runtime: this draft ${now}s; target ${target}s${prevPart}: cut at least ${excess}s${shotNote}. Any added shot must be paid for by a cut.`;
   }
 
+  const min = Math.ceil(target * 0.75);
+  if (now < min) return `Runtime: this draft ${now}s; target ${target}s${prevPart}: too short (under ${min}s fails the gate). Add at least ${min - now}s: give the key moment room (a silent acted beat, a reaction) or tell one more true memory; never pad lines.`;
   const status = now === target ? 'at target' : 'under target';
-  return `Runtime: this draft ${now}s; target ${target}s${prevPart}: ${status}. The revision must not be longer.`;
+  return `Runtime: this draft ${now}s; target ${target}s${prevPart}: ${status}. The revision must not run past the target.`;
 }
 
 /** Extract error-severity issue count from gate result, issue array, or number. */

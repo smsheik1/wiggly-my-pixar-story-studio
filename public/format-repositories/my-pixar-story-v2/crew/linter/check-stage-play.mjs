@@ -151,6 +151,8 @@ export function quotesAnswer(line, answers, re = FINALE_PLATITUDE) {
 export const recipientOf = (subject) => /story for ([A-Z][\w-]*)/i.exec(String(subject ?? ''))?.[1] ?? null;
 
 /** Seconds a film may run past its target (whole-second shots rarely land exactly). */
+/** A film shorter than this share of the target fails (RUNTIME_UNDER_TARGET). */
+export const RUNTIME_MIN_SHARE = 0.75;
 export const RUNTIME_TOLERANCE_SEC = 5;
 /** Target runtime: input.targetTotalRuntimeSec, else input.format.targetTotalSeconds, else 90. */
 export const runtimeTargetOf = (input) => (Number.isFinite(input?.targetTotalRuntimeSec) ? input.targetTotalRuntimeSec
@@ -248,6 +250,9 @@ export function validateStoryDirectorOutput(data, input = {}) {
   // The target runtime is the maximum (small tolerance for whole-second shots): target from the input, default 90s.
   const target = runtimeTargetOf(input);
   if (filmTotal > target + RUNTIME_TOLERANCE_SEC) err('RUNTIME_OVER_TARGET', `Film runs ${filmTotal}s; the target ${target}s is the maximum (at most ${target + RUNTIME_TOLERANCE_SEC}s). Cut ${filmTotal - target}s: drop a memory or a shot, never squeeze lines.`, 'segments');
+  // Aim for the target: a film far under it was planned too thin.
+  const minTotal = Math.ceil(target * RUNTIME_MIN_SHARE);
+  if (filmTotal < minTotal) err('RUNTIME_UNDER_TARGET', `Film runs ${filmTotal}s; aim for the target ${target}s (at least ${minTotal}s). Add ${minTotal - filmTotal}s or more: give the key moment a silent acted beat or a reaction, or tell one more true memory from the answers; never pad lines.`, 'segments');
 
   checkStoryboardSheets(data, err);
 

@@ -95,7 +95,7 @@ test('fatal classifier: 403 key limit and 402 credits are fatal; other 403s, 429
 test('fatal: a node that hits a key-limit 403 stops after ONE call: no transient retry, no attempts 2-3, clear message', async () => {
   let calls = 0;
   const node = makeAgentNode('story-director', async () => { calls++; throw err(KEY_MSG); }, { skill: () => 'skill' });
-  const s = await node({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS } });
+  const s = await node({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60 } });
   assert.equal(calls, 1);
   assert.equal(s.status, 'failed'); assert.equal(s.attempts['story-director'], 1);
   const issue = s.escalations[0].issues[0];
@@ -118,7 +118,7 @@ test('fatal: in the graph, CA hitting the key limit aborts the parallel Location
     }
     throw new Error(`unexpected ${req.agent}`);
   };
-  const s = await buildGraph({ invoke }).invoke({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, settingSeed: 'suburban home' }, approvedAssets: json('good-approved-assets.json') });
+  const s = await buildGraph({ invoke }).invoke({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60, settingSeed: 'suburban home' }, approvedAssets: json('good-approved-assets.json') });
   assert.equal(s.status, 'failed');
   assert.ok(lsAborted, 'the in-flight sibling call was aborted');
   assert.deepEqual(calls.sort(), ['character-architect', 'location-scout', 'story-director'], 'one call each, no retries, no compiler');

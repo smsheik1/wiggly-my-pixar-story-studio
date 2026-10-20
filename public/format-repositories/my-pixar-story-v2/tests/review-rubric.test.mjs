@@ -40,7 +40,7 @@ test('rubric: 4-script-review.md lives with the Story Director, story scores S1-
   for (const k of ['R1 Fidelity', 'R2 Invented details', 'R3 Setup and payoff', 'R4 Cast in the scene', 'R5 Referents', 'R6 Finale', 'R7 Time framing', 'R8 Length', 'S1 Core', 'S2 Specific', 'S3 Turn', 'S4 Feel']) assert.match(r, new RegExp(k), k);
   assert.doesNotMatch(r, /R9|not longer than the previous draft|never adding/); assert.ok(r.indexOf('S1 Core') < r.indexOf('R1 Fidelity') && r.indexOf('R1 Fidelity') < r.indexOf('R8 Length'));
   assert.match(r, /editor/); assert.match(r, /never rewrite|do not rewrite/i); assert.match(r, /PASS or FAIL/); assert.match(r, /at most 8 fixes/i); assert.match(r, /VERDICT: SHIP\|REVISE\|STRUCTURAL/); assert.match(r, /swap/); assert.match(r, /Taste/);
-  assert.match(r, /FIXES:/); assert.match(r, /applies only\s+the fixes you list/); assert.match(r, /never make the film longer/); assert.match(r, /targetTotalRuntimeSec/); assert.match(r, /story first/i); assert.match(r, /as a viewer/);
+  assert.match(r, /FIXES:/); assert.match(r, /applies only\s+the fixes you list/); assert.match(r, /between 75% of the target and target \+ 5s/); assert.match(r, /targetTotalRuntimeSec/); assert.match(r, /story first/i); assert.match(r, /as a viewer/);
   for (const a of ['character-architect', 'location-scout', 'seedance-compiler']) assert.equal(loadReview(a), null, a);
   assert.ok(!/R1 Fidelity/.test(loadSkill('story-director')), 'the rubric is not part of the writer\'s skill');
   assert.match(loadSkill('story-director'), /Draft to the review checklist/, 'the writer\'s rules aim the first draft at the same checks');
@@ -148,7 +148,7 @@ test('patch: a prior with gate errors only inside the target part is patchable; 
   sd.segments[1].scenes[0].present.push('@Mom'); // listed in part 2 scene 1, never seen there
   await writeFile(join(out, 'story-director.json'), JSON.stringify(sd));
   await writeFile(join(out, 'state.json'), JSON.stringify({ status: 'done', approvedAssets: json('good-approved-assets.json') }));
-  await writeFile(join(root, 'prior', 'project.json'), JSON.stringify({ inputs: { subject: ANSWERS.subject, answers: ANSWERS.answers } }));
+  await writeFile(join(root, 'prior', 'project.json'), JSON.stringify({ inputs: { subject: ANSWERS.subject, targetTotalRuntimeSec: 60, answers: ANSWERS.answers } }));
   const logs = [];
   const ok = await runPatch({ from: 'prior', target: 'part:2', runsRoot: root, check: true, log: (l) => logs.push(l) });
   assert.deepEqual(ok.priorErrors, ['PRESENT_NEVER_SEEN']); assert.ok(logs.some((l) => /must fix it/.test(l)));

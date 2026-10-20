@@ -20,3 +20,10 @@ test('over target + 5s fails; at target + 5s passes', () => {
   assert.ok(!codes(d, { targetTotalRuntimeSec: t - 5 }).includes('RUNTIME_OVER_TARGET'));
   assert.ok(!codes(d, {}).includes('RUNTIME_OVER_TARGET') || t > 95);
 });
+
+test('under 75% of the target fails (RUNTIME_UNDER_TARGET); at 75% passes', () => {
+  const d = good(), t = total(d);
+  assert.ok(codes(d, { targetTotalRuntimeSec: Math.floor(t / 0.75) + 2 }).includes('RUNTIME_UNDER_TARGET'));
+  assert.ok(!codes(d, { targetTotalRuntimeSec: Math.floor(t / 0.75) }).includes('RUNTIME_UNDER_TARGET'));
+  assert.ok(codes(d, {}).includes('RUNTIME_UNDER_TARGET'), 'the 46s fixture is under 75% of the 90s default');
+});

@@ -44,7 +44,7 @@ const baseFixture = () => normalizePrior({ storyDirector: json('good-stage-play.
 const ANS = json('good-answers.json');
 const INPUT = {
   subject: ANS.subject,
-  targetTotalRuntimeSec: 90,
+  targetTotalRuntimeSec: 60,
   answers: ANS.answers,
 };
 

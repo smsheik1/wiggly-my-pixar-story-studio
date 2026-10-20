@@ -96,7 +96,7 @@ test('3 invalid submits in one attempt -> attempt fails with the specific Zod is
     return new ScriptedModel([(m) => { notes.push([agent, JSON.stringify(m[0].content)]); return call(name, fx); }]);
   };
   // reflectionRounds: 0 keeps this test about submit retries only (reflection has its own tests in reflection.test.mjs).
-  const s = await buildGraph({ deepAgent: { finalReview: false, storyBeats: false, createModel, runsRoot: runs, runId: 'retry', reflectionRounds: 0 } }).invoke({ inputs: { answers: {} }, approvedAssets: assets() });
+  const s = await buildGraph({ deepAgent: { finalReview: false, storyBeats: false, createModel, runsRoot: runs, runId: 'retry', reflectionRounds: 0 } }).invoke({ inputs: { answers: {}, targetTotalRuntimeSec: 60 }, approvedAssets: assets() });
   assert.equal(s.status, 'done'); assert.equal(s.attempts['location-scout'], 2);
   const logged = s.validationErrors.find((v) => v.node === 'location-scout').errors;
   assert.ok(logged.every((i) => i.code === 'SCHEMA_REJECTED')); assert.ok(logged.some((i) => i.path === 'locations.0.elementTag'));
@@ -138,7 +138,7 @@ test('graph happy path through the deep-agent node (scripted model, zero network
     ]);
   };
   const g = buildGraph({ deepAgent: { finalReview: false, storyBeats: false, createModel, runsRoot: runs, runId: 'happy' } });
-  const s = await g.invoke({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS }, approvedAssets: assets() });
+  const s = await g.invoke({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60 }, approvedAssets: assets() });
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
   assert.deepEqual(seen.map((x) => x[0]).sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director']);
   assert.ok(seen.every((x) => x[1] === 'meta/muse-spark-1.3-contributor' && x[2] === (x[0] === 'story-director' ? 'high' : 'xhigh')));
@@ -153,7 +153,7 @@ test('graph happy path through the deep-agent node (scripted model, zero network
 
 test('deep agent that never submits counts as a failed attempt and escalates after 3', () => tmp(async (runs) => {
   const createModel = async () => new ScriptedModel([done, done]);
-  const s = await buildGraph({ deepAgent: { finalReview: false, storyBeats: false, createModel, runsRoot: runs, runId: 'nosubmit' } }).invoke({ inputs: { answers: {} } });
+  const s = await buildGraph({ deepAgent: { finalReview: false, storyBeats: false, createModel, runsRoot: runs, runId: 'nosubmit' } }).invoke({ inputs: { answers: {}, targetTotalRuntimeSec: 60 } });
   assert.equal(s.status, 'failed'); assert.equal(s.escalations[0].agent, 'story-director');
   assert.ok(s.escalations[0].issues.some((i) => i.code === 'AGENT_RUN_FAILED' && /without calling submit/.test(i.message)));
 }));

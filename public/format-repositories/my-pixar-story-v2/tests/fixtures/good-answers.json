@@ -1,6 +1,8 @@
 {
   "_note": "Test input data simulating one family's questionnaire answers; pairs with good-stage-play.json.",
   "subject": "Shaz (parent)",
+  "_targetNote": "good-stage-play.json is a 46s film, so its target is 60s (RUNTIME_UNDER_TARGET below 75%).",
+  "targetTotalRuntimeSec": 60,
   "answers": {
     "scene1Childhood": {
       "memory": "When I was eight I wore my sunglasses everywhere and told everyone I am a scientist. My sister rolled her eyes and said you are eight. I said a scientist, not even kidding. Mom just said then go do science, habibi."

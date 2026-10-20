@@ -2,7 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseStagePlay, StagePlayParseError } from '../crew/story-director/schema.mjs';
-import { validateStoryDirectorOutput as validate, lineBudget } from '../crew/linter/check-stage-play.mjs';
+import { validateStoryDirectorOutput, lineBudget } from '../crew/linter/check-stage-play.mjs';
+// The good fixture is a 46s film: its target is 60s (RUNTIME_UNDER_TARGET fires below 75% of the target).
+const validate = (d, input = { targetTotalRuntimeSec: 60 }) => validateStoryDirectorOutput(d, input);
 
 const good = () => JSON.parse(readFileSync(new URL('./fixtures/good-stage-play.json', import.meta.url), 'utf8'));
 const run = (fn) => { const d = good(); fn(d); return validate(d); };

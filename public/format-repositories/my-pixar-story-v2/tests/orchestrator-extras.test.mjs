@@ -10,7 +10,7 @@ import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
 
 const json = (f) => JSON.parse(readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const FIX = { 'story-director': 'good-stage-play.json', 'character-architect': 'good-master-renders.json', 'location-scout': 'good-location-plates.json', 'seedance-compiler': 'good-seedance-prompts.json' };
-const initial = (extra = {}) => ({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS }, ...extra });
+const initial = (extra = {}) => ({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60 }, ...extra });
 const fake = (override = {}) => { const calls = []; const fn = async (r) => { calls.push(r); const o = override[r.agent]; if (o) return o(r); return JSON.stringify(json(FIX[r.agent])); }; fn.calls = calls; return fn; };
 
 test('5: agent fails once then passes -> retryCounts exactly 1, validationErrors logged once', async () => {
@@ -78,7 +78,7 @@ test('7: rehearsal runner with injected fake stops at approval and saves outputs
   try {
     const proj = join(root, 'project.json');
     // (no recipientName: a recipient now requires an on-screen recipient card in the finale; covered in sd-finale.test.mjs)
-    writeFileSync(proj, JSON.stringify({ inputs: { subject: { preferredName: 'Shaz', relationshipToRecipient: 'parent' }, answers: GOOD_ANSWERS } }));
+    writeFileSync(proj, JSON.stringify({ inputs: { subject: { preferredName: 'Shaz', relationshipToRecipient: 'parent' }, answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60 } }));
     const lines = []; const { state, dir } = await runRehearsal({ projectPath: proj, runId: 'r1', runsRoot: root, invoke: fake(), secrets: {}, tracing: null, trackerPath: null, log: (l) => lines.push(l) });
     assert.equal(state.status, 'awaiting-approval');
     for (const a of ['story-director', 'character-architect', 'location-scout']) assert.ok(existsSync(join(dir, `${a}.json`)), a);
@@ -89,7 +89,7 @@ test('7: rehearsal runner with injected fake stops at approval and saves outputs
 test('7: rehearsal prints escalating agent and gate errors; no fallback story', async () => {
   const root = mkdtempSync(join(tmpdir(), 'v2-reh-'));
   try {
-    const proj = join(root, 'p.json'); writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS } }));
+    const proj = join(root, 'p.json'); writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60 } }));
     const lines = []; await runRehearsal({ projectPath: proj, runId: 'r2', runsRoot: root, invoke: fake({ 'story-director': () => '{bad' }), secrets: {}, tracing: null, trackerPath: null, log: (l) => lines.push(l) });
     assert.ok(lines.some((l) => l.startsWith('ESCALATED story-director'))); assert.ok(lines.some((l) => /\[SCHEMA_REJECTED\]/.test(l)));
     assert.throws(() => inputsFromProject({ inputs: { subject: 'Shaz' } }), /no questionnaire answers/);

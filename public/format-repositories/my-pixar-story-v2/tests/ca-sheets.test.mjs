@@ -33,7 +33,7 @@ function sandboxFromDry10() {
   writeFileSync(join(root, from, 'outputs', 'story-director.json'), JSON.stringify(sd));
   writeFileSync(join(root, from, 'outputs', 'character-architect.json'), JSON.stringify(ca));
   const proj = join(root, 'p.json');
-  writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS } }));
+  writeFileSync(proj, JSON.stringify({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60 } }));
   return { root, from, proj, done: () => rmSync(root, { recursive: true, force: true }) };
 }
 

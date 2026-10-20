@@ -26,4 +26,4 @@ Work in this order and write each step down.
 
 **Comedy:** when the input asks for comedy (e.g. a comedy tone or genre) or a memory is genuinely funny, the light memories must carry at least one earned laugh, built from true material (contrast, a pattern that breaks, a reaction). Mark it `Laugh:` in that beat. Never put a joke in a tender beat.
 
-**Runtime:** keep the whole film at or under the target runtime in the input. Lines run at 3 words per second; keep all planned lines to about half of target x 3 words (90s: about 135), leaving room for silent beats. Write `Words: <n> of <budget>`. A beat that needs more time gets it by dropping a memory, not by squeezing lines.
+**Runtime:** aim for the target runtime in the input (maximum target + 5s). Lines run at 3 words per second: plan lines for 60-70% of target x 3 words (90s: 160-190), the rest silent or acted beats. Write `Words: <n> of <budget>`. Never squeeze lines.

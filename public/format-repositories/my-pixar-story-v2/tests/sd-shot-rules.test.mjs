@@ -14,7 +14,7 @@ import { prepareRunWorkspace, photoFilesFor, systemPromptFor } from '../graph/de
 import { loadPhotoReferences, defaultPhotoRefsPath } from '../scripts/run-rehearsal.mjs';
 
 const good = () => JSON.parse(readFileSync(new URL('./fixtures/good-stage-play.json', import.meta.url)));
-const codes = (d, input) => validateStoryDirectorOutput(d, input).issues.filter((i) => i.severity === 'error').map((i) => i.code);
+const codes = (d, input = { targetTotalRuntimeSec: 60 }) => validateStoryDirectorOutput(d, input).issues.filter((i) => i.severity === 'error').map((i) => i.code);
 const shot0 = (d) => d.segments[0].shots[0];
 const REFS = [{ id: 'shaz-child', name: 'Shaz', realPerson: 'Shaz', age: 8, skinTone: 'light olive', description: 'Slim boy, short straight black hair.', path: '/Users/shaz/secret/p.jpg' }];
 

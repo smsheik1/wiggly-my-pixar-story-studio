@@ -10,7 +10,7 @@ Score S1-S4 from 1 to 5 with the beat or shot id and a short reason. Answer R1-R
 (`part.shot`, or the field) and the exact quote; R1 also names the answer. No evidence, no FAIL.
 Fix: `3.4: the age is 9 in the answers, not 10`, not `tighten the middle`. Every FIXES item must name the shot ids it touches
 (e.g. `3.4`, `2.1-2.2`). A fix may cut, or swap: replace a beat or shot with a stronger true moment from the answers at the
-same runtime. Fixes never make the film longer. List at most 8 fixes, most important first.
+same runtime. Fixes keep the film between 75% of the target and target + 5s. List at most 8 fixes, most important first.
 
 ## Story (score 1-5)
 
@@ -33,7 +33,7 @@ same runtime. Fixes never make the film longer. List at most 8 fixes, most impor
 - **R5 Referents:** Is it clear who every pronoun means, especially in the finale (unclear if only the question named them)?
 - **R6 Finale:** Does the ending grow out of the chosen story and land the approved thesis (given to you below; it is also `finaleThesis`) in the family's own words or through action, with no generic moral? Judge whether the script delivers THAT thesis; never re-pick, narrow or split it (two connected ideas the family wrote as one thought are one idea), and no fix may change `finaleThesis` or drop a line that carries it. If you believe the thesis itself is wrong, say why and return STRUCTURAL.
 - **R7 Time framing:** Is every past moment played by an adult card framed as a memory?
-- **R8 Length:** Is runtime at or under `targetTotalRuntimeSec`? Over it, name the weakest shots to cut.
+- **R8 Length:** Does the runtime aim for `targetTotalRuntimeSec` (at least 75% of it, at most target + 5s)? Over it, name the weakest shots to cut; under it, name the moment that needs room or the true memory to add.
 
 A SKILL.md do-not-write phrase fails R1 or R6 (quote it).
 

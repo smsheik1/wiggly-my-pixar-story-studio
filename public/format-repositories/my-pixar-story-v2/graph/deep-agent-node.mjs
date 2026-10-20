@@ -380,7 +380,7 @@ export const revisionMessage = ({ agent, draft, critique, round, rounds, scope =
     ? [formatScopedRevisionInstructions(allowedShots)]
     : []),
   'Apply only the fixes your critique lists (its FIXES list, or its numbered problems), most important first. Change nothing else: every line, shot and field the critique does not name stays exactly as it is. Do not add anything the input does not support.',
-  'Do not make the output longer (more parts or shots, a higher shapeBar.totalRuntimeSec) unless a listed fix requires it; when a fix can be a cut, cut. The result must still follow every rule in your SKILL.md and pass the gate.',
+  'Do not make the output longer (more parts or shots, a higher shapeBar.totalRuntimeSec) unless a listed fix requires it or the film is under 75% of the target; never run past the target. When a fix can be a cut, cut. The result must still follow every rule in your SKILL.md and pass the gate.',
   `Finish by calling submit_${agent.replaceAll('-', '_')} with the complete revised JSON (the whole output, not a diff).`,
   'Your critique:', critique,
   'Your current draft:', '```json', JSON.stringify(draft), '```',

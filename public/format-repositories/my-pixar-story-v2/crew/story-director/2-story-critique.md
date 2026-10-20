@@ -17,7 +17,7 @@ You are the Story Director judging your own beats before any shots are made. Be 
 8. **People on screen:** does each narrated life stage show that person at least once? Name any stretch told with no one on screen. Each person can have up to 3 cards: child (under 13, real age), young adult (13-19, shown as 18), adult.
 9. **Said out loud:** does every line sound like a real person said it, and make sense to a viewer who never saw the questions? Quote any that read like a survey reply or a caption. A draft line that is a list of facts or specs, more than one sentence for a detail, or has a slash (w/, A/C) is a fail.
 10. **True:** every fact matches the answers; anything invented (including a promise or achievement) is a fail. Leaving a memory out is never a fail.
-11. **Fits the runtime:** count the planned words. More than about half of target x 3 (90s: about 135), with no room for silent beats, is a fail: cut lines.
+11. **Fits the runtime:** count the planned words. Aim for the target (maximum target + 5s): lines are 60-70% of target x 3 words (90s: 160-190), the rest silent or acted beats. Far over or under is a fail.
 
 ## Rewrite
 

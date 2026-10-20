@@ -9,7 +9,7 @@ import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
 
 const json = (f) => JSON.parse(readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const FIX = { 'story-director': 'good-stage-play.json', 'character-architect': 'good-master-renders.json', 'location-scout': 'good-location-plates.json', 'seedance-compiler': 'good-seedance-prompts.json' };
-const initial = () => ({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, settingSeed: 'suburban home' }, approvedAssets: json('good-approved-assets.json') });
+const initial = () => ({ inputs: { subject: 'Shaz', answers: GOOD_ANSWERS, targetTotalRuntimeSec: 60, settingSeed: 'suburban home' }, approvedAssets: json('good-approved-assets.json') });
 
 const STRUCTURAL = 'S1 Core: 1\nS2 Specific: 1\nS3 Turn: 1\nS4 Feel: 1\nThe story itself does not work: no moment the film exists for.\nVERDICT: STRUCTURAL';
 const SHIP = 'S1 Core: 4\nS2 Specific: 5\nS3 Turn: 4\nS4 Feel: 4\nVERDICT: SHIP';
