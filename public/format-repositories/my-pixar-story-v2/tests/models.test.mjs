@@ -87,3 +87,14 @@ test('seedance compiler: muse xhigh, Seedance 2.5 480p disabled, upstream CA + L
   for (const f of Object.values(c.contract)) assert.ok(existsSync(new URL('../' + f, import.meta.url)), f);
   assert.match(loadSkill('seedance-compiler'), /Seedance Compiler/);
 });
+
+test('Story Director model: default unchanged, WIGGLY_SD_MODEL overrides with a known model, unknown throws', async () => {
+  const { storyDirectorModel, DEFAULT_SD_MODEL, MODEL_LIMITS, V2_MODELS } = await import('../config/models.mjs');
+  assert.equal(DEFAULT_SD_MODEL, 'meta/muse-spark-1.3-contributor');
+  assert.equal(storyDirectorModel({}), DEFAULT_SD_MODEL);
+  assert.equal(storyDirectorModel({ WIGGLY_SD_MODEL: ' ' }), DEFAULT_SD_MODEL);
+  assert.equal(storyDirectorModel({ WIGGLY_SD_MODEL: 'anthropic/claude-haiku-5.5' }), 'anthropic/claude-haiku-5.5');
+  assert.throws(() => storyDirectorModel({ WIGGLY_SD_MODEL: 'nope/model' }), /not in MODEL_LIMITS/);
+  assert.ok(V2_MODELS['story-director'].maxTokens <= MODEL_LIMITS['anthropic/claude-haiku-5.5'].maxCompletionTokens);
+  if (!process.env.WIGGLY_SD_MODEL) assert.equal(V2_MODELS['story-director'].model, DEFAULT_SD_MODEL);
+});

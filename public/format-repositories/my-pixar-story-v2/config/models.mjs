@@ -11,7 +11,16 @@ export const NANO_BANANA = Object.freeze({ provider: 'google-flow', model: 'nano
 // maxCompletionTokens; openRouterModel refuses a config that does not (tests/models.test.mjs checks it too).
 export const MODEL_LIMITS = Object.freeze({
   'meta/muse-spark-1.3-contributor': { contextLength: 1048576, maxCompletionTokens: 943718 },
+  'anthropic/claude-haiku-5.5': { contextLength: 1000000, maxCompletionTokens: 128000 }, // checked 2026-10-20
 });
+export const DEFAULT_SD_MODEL = 'meta/muse-spark-1.3-contributor';
+/** Story Director model: WIGGLY_SD_MODEL (for side-by-side test runs) or the default; only models listed in MODEL_LIMITS. */
+export function storyDirectorModel(env = process.env) {
+  const m = env.WIGGLY_SD_MODEL?.trim();
+  if (!m) return DEFAULT_SD_MODEL;
+  if (!MODEL_LIMITS[m]) throw new Error(`WIGGLY_SD_MODEL "${m}" is not in MODEL_LIMITS (config/models.mjs); add its OpenRouter limits first`);
+  return m;
+}
 /** maxTokens for an agent config, checked against MODEL_LIMITS (throws if it exceeds the model's output limit). */
 export function outputCap(config) {
   const lim = MODEL_LIMITS[config?.model];
@@ -20,7 +29,7 @@ export function outputCap(config) {
 }
 
 export const V2_MODELS = Object.freeze({
-  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 128000, /* r4-dry7: xhigh reasoning used all 32k 3x and never submitted; r5-dry1: one call used 64.2k of 64k (~53k reasoning) -> 2x headroom, well under the model's limit (MODEL_LIMITS) */ kind: 'llm', provider: 'openrouter', model: 'meta/muse-spark-1.3-contributor', effort: 'high' /* r5-dry4: xhigh draft calls ran > 6 min and were cut mid-stream ('Network connection lost') every time */,
+  'story-director': { downstreamAgents: ['character-architect', 'location-scout'], maxTokens: 128000, /* r4-dry7: xhigh reasoning used all 32k 3x and never submitted; r5-dry1: one call used 64.2k of 64k (~53k reasoning) -> 2x headroom, well under the model's limit (MODEL_LIMITS) */ kind: 'llm', provider: 'openrouter', model: storyDirectorModel(), effort: 'high' /* r5-dry4: xhigh draft calls ran > 6 min and were cut mid-stream ('Network connection lost') every time */,
     // Self-critique + rewrite rounds after the first draft (graph/deep-agent-node.mjs); the gate checks the final revision.
     reflectionRounds: 2,
     // Patch mode (graph/patch.mjs): one self-review round scoped to the target; --reflection-rounds overrides it.
