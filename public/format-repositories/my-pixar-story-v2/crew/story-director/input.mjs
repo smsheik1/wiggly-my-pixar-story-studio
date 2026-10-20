@@ -17,9 +17,8 @@ export const StoryDirectorInput = z.object({
   }).strict()).default([]),
   format: z.object({
     maxPartSeconds: z.number().int().max(30).default(30),
-    // Reconciled with targetTotalRuntimeSec and the schema cap: target 90s, hard cap 180s.
+    // The target is the maximum runtime (gate: RUNTIME_OVER_TARGET at target + 5s); targetTotalRuntimeSec wins when set.
     targetTotalSeconds: z.number().int().max(180).default(90),
-    maxTotalSeconds: z.number().int().max(180).default(180),
     narrationAllowed: z.boolean().default(true),
     dialogueAllowed: z.boolean().default(true),
   }).prefault({}),

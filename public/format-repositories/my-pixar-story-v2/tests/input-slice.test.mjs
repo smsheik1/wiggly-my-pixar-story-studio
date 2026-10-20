@@ -16,7 +16,7 @@ test('selector keeps only answers, cast text, format', () => {
   const flat = JSON.stringify(s);
   for (const bad of ['"photos"', 'photoPath', 'videoUrl', 'secret', 'OPENROUTER', 'characterSheets', 'clips', 'stagePlay', '.jpg'])
     assert.ok(!flat.includes(bad), `leaked ${bad}`);
-  assert.equal(s.format.maxTotalSeconds, 180); assert.equal(s.format.targetTotalSeconds, 90);
+  assert.ok(!('maxTotalSeconds' in s.format)); assert.equal(s.format.targetTotalSeconds, 90);
 });
 test('input schema is strict and caps format', () => {
   assert.throws(() => StoryDirectorInput.parse({ answers: {}, photos: [] }));

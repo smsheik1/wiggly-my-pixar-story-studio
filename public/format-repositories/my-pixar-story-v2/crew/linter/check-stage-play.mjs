@@ -152,6 +152,11 @@ export function quotesAnswer(line, answers, re = FINALE_PLATITUDE) {
 }
 export const recipientOf = (subject) => /story for ([A-Z][\w-]*)/i.exec(String(subject ?? ''))?.[1] ?? null;
 
+/** Seconds a film may run past its target (whole-second shots rarely land exactly). */
+export const RUNTIME_TOLERANCE_SEC = 5;
+/** Target runtime: input.targetTotalRuntimeSec, else input.format.targetTotalSeconds, else 90. */
+export const runtimeTargetOf = (input) => (Number.isFinite(input?.targetTotalRuntimeSec) ? input.targetTotalRuntimeSec
+  : Number.isFinite(input?.format?.targetTotalSeconds) ? input.format.targetTotalSeconds : 90);
 export function validateStoryDirectorOutput(data, input = {}) {
   const issues = [];
   const err = (code, message, path) => issues.push({ severity: 'error', code, message, ...(path ? { path } : {}) });
@@ -254,6 +259,9 @@ export function validateStoryDirectorOutput(data, input = {}) {
       err('FINALE_PLATITUDE', `Final part, shot ${h.shotNumber ?? hi + 1}: '${h[k].line}' is a sweeping generalisation that is not the family's own sentence. Cut it; keep only wisdom tied to this family's life in the answers.`, `segments.${segments.length - 1}.shots.${hi}.${k}`);
   });
   if (filmTotal > MAX_TOTAL_SECONDS) err('RUNTIME_EXCEEDS_CAP', `Film runs ${filmTotal}s; the total cap is ${MAX_TOTAL_SECONDS}s.`, 'segments');
+  // The target runtime is the maximum (small tolerance for whole-second shots): target from the input, default 90s.
+  const target = runtimeTargetOf(input);
+  if (filmTotal > target + RUNTIME_TOLERANCE_SEC) err('RUNTIME_OVER_TARGET', `Film runs ${filmTotal}s; the target ${target}s is the maximum (at most ${target + RUNTIME_TOLERANCE_SEC}s). Cut ${filmTotal - target}s: drop a memory or a shot, never squeeze lines.`, 'segments');
 
   checkStoryboardSheets(data, err);
 
