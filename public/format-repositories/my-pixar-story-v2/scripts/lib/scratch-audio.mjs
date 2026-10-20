@@ -16,10 +16,12 @@ export function scratchLines(sd) {
   }
   return out;
 }
-/** Text sent to the TTS: terminal punctuation (Cartesia treats a line without it as unfinished and can cut or distort the end)
- * plus a short trailing break so the last word, short exclamations above all, rings out instead of being clipped. */
-export const TAIL_BREAK = '<break time="500ms"/>';
-export const ttsTranscript = (text) => `${/[.!?,;:]["'\u201d\u2019]?$/.test(text.trim()) ? text.trim() : `${text.trim()}.`}${TAIL_BREAK}`;
+/** Text sent to the TTS. Letter-by-letter abbreviations, written "A-C" in the script, are sent as "A. C.": Sonic read
+ * "AC", "A-C" and "A C" as one word ("ack"); "A. C." is heard as two letters. The line keeps terminal punctuation
+ * (Cartesia can cut or distort an unfinished line). No SSML: the break tag was read aloud; tail silence is added in mixArgs. */
+export const spokenLetters = (text) => text.replace(/\b[A-Z](?:-[A-Z])+\b/g, (m) => `${m.split('-').join('. ')}.`).replace(/\.([.!?])/g, '$1');
+export const ttsTranscript = (text) => { const t = spokenLetters(text.trim()); return /[.!?,;:]["'\u201d\u2019]?$/.test(t) ? t : `${t}.`; };
+export const TAIL_PAD_SEC = 0.5;
 export const estimateUsd = (lines) => lines.reduce((n, l) => n + Array.from(l.text).length, 0) * CARTESIA_USD_PER_CHAR;
 
 /** Text a TTS engine may read oddly: symbols, all-caps abbreviations, digits. */
@@ -38,7 +40,7 @@ export const overruns = (placed) => placed.filter((l) => l.durSec > l.shotSec + 
 export function mixArgs(placed, totalSec, out, { rate = 44100 } = {}) {
   const args = ['-y', '-loglevel', 'error'];
   for (const l of placed) args.push('-i', l.path);
-  const parts = placed.map((l, i) => `[${i}:a]aresample=${rate},aformat=channel_layouts=mono,adelay=${Math.round(l.atSec * 1000)}:all=1[a${i}]`);
+  const parts = placed.map((l, i) => `[${i}:a]aresample=${rate},aformat=channel_layouts=mono,adelay=${Math.round(l.atSec * 1000)}:all=1,apad=pad_dur=${TAIL_PAD_SEC}[a${i}]`);
   const fc = `${parts.join(';')};${placed.map((_, i) => `[a${i}]`).join('')}amix=inputs=${placed.length}:normalize=0:dropout_transition=0,apad,atrim=0:${totalSec}[m]`;
   args.push('-filter_complex', fc, '-map', '[m]', '-ac', '1', '-ar', String(rate), '-c:a', 'pcm_s16le', out);
   return args;

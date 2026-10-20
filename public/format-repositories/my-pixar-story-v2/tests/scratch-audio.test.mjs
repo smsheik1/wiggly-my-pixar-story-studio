@@ -17,9 +17,14 @@ test('mixArgs: delays in ms, no normalisation, exact total', () => {
   assert.ok(fc.includes('adelay=4500:all=1') && fc.includes('amix=inputs=2:normalize=0') && fc.includes('atrim=0:9'));
 });
 
-test('TTS transcript ends with terminal punctuation and a tail break so short lines are not clipped', async () => {
-  const { ttsTranscript, TAIL_BREAK } = await import('../scripts/lib/scratch-audio.mjs');
-  assert.equal(ttsTranscript('I go first!'), `I go first!${TAIL_BREAK}`);
-  assert.equal(ttsTranscript('Because at that time in my life,'), `Because at that time in my life,${TAIL_BREAK}`);
-  assert.equal(ttsTranscript('But it was mine'), `But it was mine.${TAIL_BREAK}`);
+test('TTS transcript: terminal punctuation, hyphenated letters spoken as letters, no SSML; mixer pads each clip', async () => {
+  const { ttsTranscript, mixArgs, TAIL_PAD_SEC } = await import('../scripts/lib/scratch-audio.mjs');
+  assert.equal(ttsTranscript('I go first!'), 'I go first!');
+  assert.equal(ttsTranscript('But it was mine'), 'But it was mine.');
+  assert.equal(ttsTranscript('Because at that time in my life,'), 'Because at that time in my life,');
+  assert.equal(ttsTranscript('The faded paint and no A-C.'), 'The faded paint and no A. C.');
+  assert.equal(ttsTranscript('We watched T-V and Yugioh GX'), 'We watched T. V. and Yugioh GX.');
+  assert.ok(!/</.test(ttsTranscript('Hi.')));
+  const fc = mixArgs([{ path: 'a.wav', atSec: 1 }], 5, 'o.wav').join(' ');
+  assert.match(fc, new RegExp(`apad=pad_dur=${TAIL_PAD_SEC}`));
 });
