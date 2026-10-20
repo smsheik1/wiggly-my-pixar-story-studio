@@ -14,7 +14,7 @@ test('3-script-writer.md keeps Gemini base text, memory-film craft and Wiggly ad
     'Let tender moments breathe', 'Comedy where it is earned, never in tender beats', 'The 30-Second Hard Ceiling Law', 'Human Approval Gate'])
     assert.ok(role.includes(s), s);
   assert.doesNotMatch(role, /\b(Theo|Gran|Wren|Ben|Miss Park|kindergarten|hitman|Rung \d|Rule of Three)\b/);
-  for (const s of ['Nano Banana 2.1', 'Google Flow', 'hijab', 'depicted as 18', 'Only the people in the answers exist', 'cloned storyteller voice',
+  for (const s of ['Nano Banana 2.1', 'Google Flow', 'hijab', 'depicted as 18', 'Only the people in the answers exist', 'expressive generated voice',
     'assumptions', 'One shot = one cut', 'moving hold'])
     assert.ok(role.includes(s), s);
   assert.ok(!/GPT Image 2/.test(role));
