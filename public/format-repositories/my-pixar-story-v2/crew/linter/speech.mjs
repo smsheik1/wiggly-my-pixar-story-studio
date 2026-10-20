@@ -1,4 +1,4 @@
-// One speech-rate budget shared by the Story Director and Seedance Compiler gates (and both role.md files).
+// One speech-rate budget shared by the Story Director and Seedance Compiler gates (and both skill files: story-director 3-script-writer.md, seedance-compiler role.md).
 export const WORDS_PER_SECOND = 3;
 export const MAX_LINE_WORDS = 18;
 /** Lead-in + tail-out around the spoken words in a shot (0.5s each), so a line never starts on the cut or gets clipped. */

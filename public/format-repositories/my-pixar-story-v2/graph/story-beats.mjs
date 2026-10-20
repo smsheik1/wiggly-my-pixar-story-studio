@@ -1,6 +1,6 @@
 // Story first (fix #1): before the shots call, the Story Director makes two plain-text calls with the same model:
-//   A. beats (crew/story-director/BEATS.md): thesis first, then 5-7 beats built toward it
-//   B. critique + rewrite (crew/story-director/CRITIQUE.md): 5 story questions, then the rewritten beats
+//   A. beats (crew/story-director/1-story-plan.md): thesis first, then 5-7 beats built toward it
+//   B. critique + rewrite (crew/story-director/2-story-critique.md): 5 story questions, then the rewritten beats
 // The rewritten beats go into call C (the existing Deep Agent shots run, gate and reflection). Saved as run artifacts.
 import { readFileSync, existsSync } from 'node:fs';
 import { writeFile, mkdir } from 'node:fs/promises';
@@ -11,8 +11,8 @@ import { withCallRetry, isFatalProviderError } from './provider-errors.mjs';
 const replyText = (m) => (typeof m?.content === 'string' ? m.content
   : Array.isArray(m?.content) ? m.content.filter((b) => typeof b === 'string' || b?.type === 'text').map((b) => (typeof b === 'string' ? b : b.text ?? '')).join('') : String(m?.content ?? ''));
 const load = (f) => { const p = fileURLToPath(new URL(`../crew/story-director/${f}`, import.meta.url)); return existsSync(p) ? readFileSync(p, 'utf8') : null; };
-export const loadBeatsPrompt = () => load('BEATS.md');
-export const loadCritiquePrompt = () => load('CRITIQUE.md');
+export const loadBeatsPrompt = () => load('1-story-plan.md');
+export const loadCritiquePrompt = () => load('2-story-critique.md');
 
 /** On for the Story Director when config.storyBeats is true, never in patch mode (scope or task set). */
 export const storyBeatsEnabled = (agent, config, { scope = '', task = null, patch = false } = {}) =>

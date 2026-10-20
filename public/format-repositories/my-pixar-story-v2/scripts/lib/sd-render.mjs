@@ -1,6 +1,6 @@
 // Deterministic Story Director artifacts: the HTML script card deck and the storyboard sheet prompts are built in
 // code from the SD's JSON (they used to be written by the model on every draft, which drifted and cost tokens).
-// Storyboard rules (role.md §5, now enforced here): one sheet per part (extra sheets when a part has more than 8
+// Storyboard rules (3-script-writer.md §5, now enforced here): one sheet per part (extra sheets when a part has more than 8
 // shots), always eight panels in two even rows of four, every shot exactly once in story order, real panels labelled
 // "P.S", unused slots written as empty panels, skin tone and worn accessories named for every person in frame,
 // single-line prompt for Nano Banana 2.1 in Google Flow.
@@ -65,7 +65,7 @@ export function buildStoryboardSheets(sd) {
   return sheets;
 }
 
-// ---- HTML script card deck (role.md §4 typography, palette and structure) ----
+// ---- HTML script card deck (3-script-writer.md §4 typography, palette and structure) ----
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const dur = (seg) => (seg.shots ?? []).reduce((n, h) => n + (h.endSec - h.startSec), 0);
 const CSS = `body{margin:0;background:#E4E6D9;color:#22272A;font-family:Karla,sans-serif;line-height:1.5}main{max-width:860px;margin:0 auto;padding:32px 20px}

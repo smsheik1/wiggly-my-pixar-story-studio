@@ -8,9 +8,9 @@ through the typed submit tool). The gate runs on the final revision; gate failur
 
 ## Review rubric: the critique is an editor's pass (built)
 
-The Story Director's critique call loads `crew/story-director/REVIEW.md` (`loadReview` in config/models.mjs) on top of its
+The Story Director's critique call loads `crew/story-director/4-script-review.md` (`loadReview` in config/models.mjs) on top of its
 SKILL.md. Same agent, same node, same model: no new crew member, node or config entry. The rubric is only in the critique
-call; the writer's prompt and the rewrite never carry it. Agents without a REVIEW.md keep the generic focus list.
+call; the writer's prompt and the rewrite never carry it. Agents without a review rubric keep the generic focus list.
 
 - **Framing.** The critic is an editor: it never rewrites, it scores and gives fix instructions. Read the whole draft once
   as a viewer, then check big to small (structure, then people and scenes, then lines); never polish a line in a beat that
@@ -29,7 +29,7 @@ call; the writer's prompt and the rewrite never carry it. Agents without a REVIE
 - **Early stop (backlog row 59).** `shipsAsIs`: VERDICT SHIP, no rubric item FAIL, and no gate error → no rewrite, and the
   remaining rounds are skipped. A gate error always gets a rewrite. The log records `verdict`, `fixes`, `runtimeBefore/After`,
   `stoppedEarly`; reflection.json adds `roundsRun`, `stoppedEarly`, `rubric`.
-- **Drafting rules.** role.md carries the same checklist ("Draft to the review checklist"), so the first draft aims at it.
+- **Drafting rules.** 3-script-writer.md carries the same checklist ("Draft to the review checklist"), so the first draft aims at it.
 
 ## Cheap gate checks that back the rubric (crew/linter)
 

@@ -21,7 +21,7 @@ const RULE_AND_CODE = [
 
 test('the scan covers every role file, the shared rubric and the linter', () => {
   const rel = RULE_AND_CODE.map((f) => relative(ROOT, f));
-  for (const f of ['crew/story-director/role.md', 'crew/character-architect/role.md', 'crew/location-scout/role.md', 'crew/seedance-compiler/role.md',
+  for (const f of ['crew/story-director/3-script-writer.md', 'crew/character-architect/role.md', 'crew/location-scout/role.md', 'crew/seedance-compiler/role.md',
     'shared/writing-tells.md', 'crew/linter/check-stage-play.mjs', 'crew/linter/check-seedance-prompts.mjs', 'crew/linter/writing-tells.mjs'])
     assert.ok(rel.includes(f), f);
 });

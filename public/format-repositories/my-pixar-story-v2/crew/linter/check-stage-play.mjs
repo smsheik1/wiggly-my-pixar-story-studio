@@ -14,6 +14,7 @@ export { answerSentences, NEAR_VERBATIM };
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { countWords, secondsNeeded, budgetMessage, MAX_LINE_WORDS } from './speech.mjs';
 import { fileURLToPath } from 'node:url';
+import { skillFileName } from '../files.mjs';
 import { MAX_TOTAL_SECONDS, IMAGE_ENGINE, MAX_PANELS_PER_SHEET, storyboardSheetsOf } from '../story-director/schema.mjs';
 
 export const SKIN_WORDS = ['skin', 'complexion', 'tan', 'pale', 'brown', 'dark', 'warm', 'fair', 'olive', 'ebony'];
@@ -135,7 +136,7 @@ export function roleExampleLines(dir = new URL('../', import.meta.url)) {
   const out = [];
   for (const d of readdirSync(dir, { withFileTypes: true })) {
     if (!d.isDirectory()) continue;
-    const f = new URL(`${d.name}/role.md`, dir);
+    const f = new URL(`${d.name}/${skillFileName(d.name)}`, dir);
     if (!existsSync(f)) continue;
     for (const m of readFileSync(f, 'utf8').matchAll(/\{([^{}"\n:]{3,200})\}/g)) if ((m[1].match(/\S+/g) ?? []).length >= 3) out.push(m[1]);
   }

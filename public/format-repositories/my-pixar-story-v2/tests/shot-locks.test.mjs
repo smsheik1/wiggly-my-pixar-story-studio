@@ -123,7 +123,7 @@ test('CA gate: LOOKALIKE_NO_TELL, LOOKALIKE_TELLS_TOO_SIMILAR, TELL_NOT_IN_RENDE
 
 // ---- role files say it
 test('roles teach the four locks', () => {
-  const sdRole = read('story-director/role.md'), scRole = read('seedance-compiler/role.md'), caRole = read('character-architect/role.md');
+  const sdRole = read('story-director/3-script-writer.md'), scRole = read('seedance-compiler/role.md'), caRole = read('character-architect/role.md');
   for (const w of ['onScreen', 'scenes', 'enters', 'exits', 'ceil(words / 3 + 1)', 'The speaker is on screen and leads']) assert.ok(sdRole.includes(w), `SD role: ${w}`);
   for (const w of ['On screen:', 'Look @', 'Props:', 'word for word', 'ACCESSORY_REWORDED', 'SPEAKER_NOT_LEADING', 'SHOT_TIMING_NOT_AS_STAGED']) assert.ok(scRole.includes(w), `SC role: ${w}`);
   for (const w of ['visualTell', 'LOOKALIKE_NO_TELL', 'LOOKALIKE_TELLS_TOO_SIMILAR', 'TELL_NOT_IN_RENDER', 'headsTall` within 0.5']) assert.ok(caRole.includes(w), `CA role: ${w}`);

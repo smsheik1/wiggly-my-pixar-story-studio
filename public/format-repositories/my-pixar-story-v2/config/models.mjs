@@ -4,6 +4,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { VIDEO_ENGINES } from '../crew/seedance-compiler/schema.mjs';
 export { VIDEO_ENGINES };
 import { fileURLToPath } from 'node:url';
+import { skillFileName, reviewFileName } from '../crew/files.mjs';
 export const NANO_BANANA = Object.freeze({ provider: 'google-flow', model: 'nano-banana-2.1', promptLines: 'single' });
 
 // Provider limits per model (OpenRouter /api/v1/models top_provider, checked 2026-10-18). Every agent's maxTokens must fit
@@ -51,15 +52,15 @@ export const V2_MODELS = Object.freeze({
 });
 
 const CREW = new URL('../crew/', import.meta.url);
-/** Read an agent's role.md; throws a clear error if the agent or its skill file is missing. */
+/** Read an agent's skill file (crew/files.mjs: role.md unless overridden); throws a clear error if the agent or its skill file is missing. */
 const TELLS_AGENTS = new Set(['story-director', 'seedance-compiler']);
 /**
- * The agent's review rubric (crew/<agent>/REVIEW.md), used only for the self-review critique call, or null when the
+ * The agent's review rubric (crew/<agent>/REVIEW.md, or its crew/files.mjs override), used only for the self-review critique call, or null when the
  * agent has none (the critique then uses the generic focus list). Same agent, same node, same model: no config entry.
  */
 export function loadReview(agent) {
   if (!V2_MODELS[agent]) throw new Error(`loadReview: unknown v2 agent "${agent}"`);
-  const path = fileURLToPath(new URL(`${agent}/REVIEW.md`, CREW));
+  const path = fileURLToPath(new URL(`${agent}/${reviewFileName(agent)}`, CREW));
   return existsSync(path) ? readFileSync(path, 'utf8') : null;
 }
 /**
@@ -82,7 +83,7 @@ export function loadPick(agent) {
 }
 export function loadSkill(agent) {
   if (!V2_MODELS[agent]) throw new Error(`loadSkill: unknown v2 agent "${agent}"`);
-  const path = fileURLToPath(new URL(`${agent}/role.md`, CREW));
+  const path = fileURLToPath(new URL(`${agent}/${skillFileName(agent)}`, CREW));
   if (!existsSync(path)) throw new Error(`loadSkill: missing skill file for "${agent}" at ${path}`);
   const role = readFileSync(path, 'utf8');
   // Story Director writes the lines; the Seedance Compiler may rewrite them: both load the rubric's do-not-write list.

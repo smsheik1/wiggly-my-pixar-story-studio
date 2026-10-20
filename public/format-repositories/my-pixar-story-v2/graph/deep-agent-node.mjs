@@ -3,7 +3,7 @@
 //   runs/<runId>/<agent>/drafts       writable scratch (the only writable mount)
 //   runs/<runId>/<agent>/references   read-only: input.json (selector slice) + approved-assets.json + assets/
 //   runs/<runId>/<agent>/versions     read-only: prior approved versions (empty by default)
-//   runs/<runId>/<agent>/skills/<agent>/SKILL.md   the agent's role.md
+//   runs/<runId>/<agent>/skills/<agent>/SKILL.md   the agent's skill file (crew/files.mjs)
 // The agent finishes by calling submit_<agent>, whose Zod schema is the agent's schema.mjs output; returnDirect ends the run.
 import { isFatalProviderError, isStreamDrop, withCallRetry, CALL_RETRIES } from './provider-errors.mjs';
 import { createMiddleware } from 'langchain';
@@ -286,7 +286,7 @@ export const runtimeNote = cutQuotaNote;
 
 /**
  * Messages for one critique call: the agent reviews its own draft against its rules, the input and (if any) the gate.
- * With a review rubric (crew/<agent>/REVIEW.md, loadReview) the call is an editor's pass: score each rubric item
+ * With a review rubric (loadReview: crew/<agent>/REVIEW.md or its crew/files.mjs override) the call is an editor's pass: score each rubric item
  * PASS/FAIL with evidence, list at most 8 fixes, end on VERDICT. Without one it uses the generic focus list.
  */
 export function critiqueMessages({ agent, skill, review = null, input, draft, round, rounds, gateIssues = [], trace = '', scope = '', firstRuntime = null, prevDraft = null, coldNotes = '', thesis = null }) {

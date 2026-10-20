@@ -9,13 +9,13 @@ const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const NOTE = 'My sister does NOT wear a hijab. Show her hair uncovered.';
 
 test('SD and CA roles have no blanket hijab rule; hijab only from user notes/photos', () => {
-  for (const p of ['../crew/story-director/role.md', '../crew/character-architect/role.md', '../crew/seedance-compiler/role.md']) {
+  for (const p of ['../crew/story-director/3-script-writer.md', '../crew/character-architect/role.md', '../crew/seedance-compiler/role.md']) {
     const r = read(p);
     assert.ok(!/every female family (character|member)[^.]*hijab/i.test(r), `${p} still has a blanket hijab rule`);
     assert.match(r, /hijab only when/i);
     assert.match(r, /never assume one/i);
   }
-  assert.match(read('../crew/story-director/role.md'), /castDescriptions[^\n]*physicalDescription/);
+  assert.match(read('../crew/story-director/3-script-writer.md'), /castDescriptions[^\n]*physicalDescription/);
 });
 
 test('user cast note flows project -> SD input', () => {

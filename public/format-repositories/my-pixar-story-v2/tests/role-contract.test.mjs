@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
 
-const role = readFileSync(new URL('../crew/story-director/role.md', import.meta.url), 'utf8');
+const role = readFileSync(new URL('../crew/story-director/3-script-writer.md', import.meta.url), 'utf8');
 const render = readFileSync(new URL('../scripts/lib/sd-render.mjs', import.meta.url), 'utf8');
 const gemini = readFileSync(new URL('./fixtures/gemini-SKILL.md', import.meta.url), 'utf8');
-test('role.md documents every top-level output key', () => {
-  for (const k of Object.keys(StoryDirectorOutputSchema.shape)) assert.ok(role.includes(`"${k}"`), `role.md missing ${k}`);
+test('3-script-writer.md documents every top-level output key', () => {
+  for (const k of Object.keys(StoryDirectorOutputSchema.shape)) assert.ok(role.includes(`"${k}"`), `3-script-writer.md missing ${k}`);
 });
-test('role.md keeps Gemini base text, memory-film craft and Wiggly additions; toy examples gone', () => {
+test('3-script-writer.md keeps Gemini base text, memory-film craft and Wiggly additions; toy examples gone', () => {
   for (const s of ['Direct, Don\'t Transcribe', 'The one moment that matters', 'The specific true detail', 'The turn', 'The reaction shot',
     'Let tender moments breathe', 'Comedy where it is earned, never in tender beats', 'The 30-Second Hard Ceiling Law', 'Human Approval Gate'])
     assert.ok(role.includes(s), s);
@@ -19,7 +19,7 @@ test('role.md keeps Gemini base text, memory-film craft and Wiggly additions; to
     assert.ok(role.includes(s), s);
   assert.ok(!/GPT Image 2/.test(role));
 });
-test('role.md diverges from Gemini only by additions + engine swap', () => {
+test('3-script-writer.md diverges from Gemini only by additions + engine swap', () => {
   // Approved swaps: engine, and storyboard style painted -> 3D Pixar render (Shaz, 2026-10-16),
   // and one storyboard sheet per part, always 8 panels with unused slots empty (Shaz, 2026-10-16): the Panel 1-8 [shot n]
   // slots become 'Panel K, labelled "P.S"' / 'Panel K [empty]' lines, and the label is the exact part.shot.

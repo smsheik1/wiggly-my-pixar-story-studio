@@ -1,4 +1,4 @@
-// Story Director review step as an editor with a rubric (crew/story-director/REVIEW.md, critique call only), verdict
+// Story Director review step as an editor with a rubric (crew/story-director/4-script-review.md, critique call only), verdict
 // parsing + early stop on SHIP, fix-only rewrites, and the cheap craft checks (verbatim share, cast never seen, props
 // not in the answers). Scripted models and fixtures only: zero network.
 import { test } from 'node:test';
@@ -35,7 +35,7 @@ const REVISE = 'R1 Fidelity: FAIL\n- 1.2 "x" → original: "y"\n\nFIXES:\n1. 1.2
 const ANSWERS = json('good-answers.json');
 
 // ---- the rubric ----
-test('rubric: REVIEW.md lives with the Story Director, story scores S1-S4 first, then R1-R8 (no R9), ends on VERDICT; other agents have none', () => {
+test('rubric: 4-script-review.md lives with the Story Director, story scores S1-S4 first, then R1-R8 (no R9), ends on VERDICT; other agents have none', () => {
   const r = loadReview('story-director');
   for (const k of ['R1 Fidelity', 'R2 Invented details', 'R3 Setup and payoff', 'R4 Cast in the scene', 'R5 Referents', 'R6 Finale', 'R7 Time framing', 'R8 Length', 'S1 Core', 'S2 Specific', 'S3 Turn', 'S4 Feel']) assert.match(r, new RegExp(k), k);
   assert.doesNotMatch(r, /R9|not longer than the previous draft|never adding/); assert.ok(r.indexOf('S1 Core') < r.indexOf('R1 Fidelity') && r.indexOf('R1 Fidelity') < r.indexOf('R8 Length'));

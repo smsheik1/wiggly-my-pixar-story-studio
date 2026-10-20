@@ -82,7 +82,7 @@ test('FINALE_TOO_THIN needs 10s of finale narration (was 15)', { timeout: 10000 
   const six = keep(fx(), 6); assert.ok(narrSec(six) < 10); assert.ok(codes(six, {}).includes('FINALE_TOO_THIN'));
 });
 test('the finale rules are generic: no maker-specific details in role rules or checker keywords', { timeout: 10000 }, () => {
-  const role = readFileSync(new URL('../crew/story-director/role.md', import.meta.url), 'utf8');
+  const role = readFileSync(new URL('../crew/story-director/3-script-writer.md', import.meta.url), 'utf8');
   const rules = role.split('\n').filter((l) => /finale|last line|finaleThesis/i.test(l) && l.startsWith('* **'));
   assert.ok(rules.length >= 2);
   const finaleRules = rules.filter((l) => /ONE idea|last line says/.test(l));
@@ -105,7 +105,7 @@ test('speech-rate fixes lengthen or split the shot', { timeout: 10000 }, () => {
   const m = budgetMessage('Segment 2, shot 1 (0s-3s)', 12, 3);
   assert.match(m, /lengthen this shot to 5s/); assert.match(m, /1s lead-in and tail/); assert.match(m, /split the line across two shots/); assert.doesNotMatch(m, /Never shorten or paraphrase/);
   assert.ok(!/cut the line/.test(m));
-  const role = readFileSync(new URL('../crew/story-director/role.md', import.meta.url), 'utf8');
+  const role = readFileSync(new URL('../crew/story-director/3-script-writer.md', import.meta.url), 'utf8');
   assert.doesNotMatch(role, /Never shorten, paraphrase or compress the family.s words/);
 });
 test('output budgets at xhigh: Story Director 128k (r5-dry1 hit 64.2k of 64k), CA and SC 64k', { timeout: 10000 }, async () => {
