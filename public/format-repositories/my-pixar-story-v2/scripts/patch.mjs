@@ -49,7 +49,7 @@ export async function loadPriorRun({ from, runsRoot = RUNS_ROOT, projectPath, ta
   const t = target === undefined ? null : parseTarget(target, prior.storyDirector);
   const g = validateStoryDirectorOutput(prior.storyDirector, selectStoryDirectorInput({ inputs }));
   const errors = g.issues.filter((i) => i.severity === 'error');
-  const inTarget = (i) => t && typeof i.path === 'string' && (i.path === `segments.${t.si}` || i.path.startsWith(`segments.${t.si}.`));
+  const inTarget = (i) => t && typeof i.path === 'string' && (i.path === `segments.${t.si}` || i.path.startsWith(`segments.${t.si}.`) || (t.kind === 'part' && /^locations\.\d+\.description$/.test(i.path))); // a part patch may correct location descriptions
   const blocking = errors.filter((i) => !inTarget(i));
   if (blocking.length) throw Object.assign(new Error(`PATCH_PRIOR_INVALID: run ${from}'s stage play fails the current gate (${[...new Set(blocking.map((i) => i.code))].join(', ')})${t ? ` outside ${t.id}` : ''}, so it cannot be patched (do a full run${t ? ', or patch the part that holds the error' : ''}).`), { code: 'PATCH_PRIOR_INVALID', issues: g.issues });
   const priorErrors = errors.filter(inTarget);
