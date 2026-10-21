@@ -12,6 +12,7 @@
 //                     signatureAccent is optional: an empty / 'none' one is no accessory and is not locked)
 import { accentOf } from '../story-director/schema.mjs';
 import { dedupeItems } from '../seedance-compiler/look-dedupe.mjs';
+import { splitPropState } from '../seedance-compiler/finalize.mjs';
 import { EYES_HIDDEN } from './check-stage-play.mjs';
 import { keyWords } from './answer-sources.mjs';
 import { countWords, secondsNeeded, shotWords, budgetMessage, MAX_LINE_WORDS } from './speech.mjs';
@@ -127,6 +128,13 @@ export function checkStageShotLocks(data) {
 }
 
 // ---------------------------------------------------------------- Seedance Compiler
+/** A held prop's lock is kept when the Props line says it is in someone's hands and keeps the rest of its state
+ *  ('trading cards in @A's hands; more scattered face-up across the rug'), as crew/seedance-compiler/finalize.mjs writes it. */
+export function heldPropStated(text, state) {
+  const { name, rest } = splitPropState(state);
+  const line = /^\s*Props:(.*)$/im.exec(String(text ?? ''))?.[1] ?? '';
+  return !!rest && hasExact(line, `${name} in @`) && (/s$/i.test(name) ? hasExact(line, `more ${rest}`) : true);
+}
 const LOCK_LINE = /^\s*(?:Camera|On screen|Look|Props)\b[^:\n]*:/i;
 /** Lines of a SHOT block that describe action (not the header, camera, lock, dialogue or cut lines). */
 export const actionLines = (blockText) => String(blockText ?? '').split('\n').map((l) => l.trim())
@@ -177,7 +185,7 @@ export function checkSeedanceShotLocks(seg, src, blocks, input, p) {
       const code = ph.kind === 'tell' ? 'VISUAL_TELL_MISSING' : reworded(b.text, ph.text) ? 'ACCESSORY_REWORDED' : 'ACCESSORY_MISSING';
       err(code, `${label}: ${t} is on screen, so the shot repeats their ${what} word for word: "${ph.text}"${code === 'ACCESSORY_REWORDED' ? ' (it is reworded here)' : ''}. Write ${JSON.stringify(lookLine(t, lockPhrases(cards.get(t), chars.get(t))))}`, sp);
     }
-    for (const pr of sceneOf(src, srcShot.shotNumber)?.props ?? []) if (!hasExact(b.text, pr))
+    for (const pr of sceneOf(src, srcShot.shotNumber)?.props ?? []) if (!hasExact(b.text, pr) && !heldPropStated(b.text, pr))
       err(reworded(b.text, pr) ? 'PROP_STATE_REWORDED' : 'PROP_STATE_MISSING', `${label}: the scene locks the prop state "${pr}"; repeat it word for word in every shot of the scene (a "Props:" line).`, sp);
     const textNoLines = b.text.replace(/\{[^}]*\}/g, '');
     if (EYES_HIDDEN.test(textNoLines)) err('EYES_HIDDEN', `${label}: eyes must stay visible; eyewear that would hide them is pushed up on the forehead.`, sp);

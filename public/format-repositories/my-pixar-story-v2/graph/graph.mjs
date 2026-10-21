@@ -22,7 +22,8 @@ import { selectLocationScoutInput } from '../crew/location-scout/input.mjs';
 import { parseLocationPlates } from '../crew/location-scout/schema.mjs';
 import { validateLocationPlates } from '../crew/linter/check-location-plates.mjs';
 import { selectSeedanceCompilerInput } from '../crew/seedance-compiler/input.mjs';
-import { parseSeedancePrompts } from '../crew/seedance-compiler/schema.mjs';
+import { parseSeedancePrompts, assembleCompiledPrompt } from '../crew/seedance-compiler/schema.mjs';
+import { finalizeOutput } from '../crew/seedance-compiler/finalize.mjs';
 import { validateCharacterArchitectOutput } from '../crew/linter/check-character-sheets.mjs';
 import { validateSeedancePrompts } from '../crew/linter/check-seedance-prompts.mjs';
 import { selectStoryboardArtistInput } from '../crew/storyboard-artist/input.mjs';
@@ -87,9 +88,10 @@ export const AGENT_SPECS = {
     write: (out, input) => ({ storyboardArtist: { output: out, sheets: compileSheets(out, input) } }),
   },
   'seedance-compiler': {
-    select: selectSeedanceCompilerInput, parse: parseSeedancePrompts, gate: (out, input) => validateSeedancePrompts(out, input),
+    select: selectSeedanceCompilerInput, parse: parseSeedancePrompts, gate: (out, input) => validateSeedancePrompts(finalizeOutput(out, input, assembleCompiledPrompt, input?.patch?.compileParts?.map((x) => x.segmentId)), input),
     // each clip carries the approved storyboard panel keys of its shots (deterministic, from the input; not model-written)
-    write: (out, input) => ({ seedanceCompiler: { output: withPanels(out, input) } }),
+    // finalizeOutput: full approved looks, full prop names, plain prop names in actions, one scale statement (code, no model)
+    write: (out, input) => ({ seedanceCompiler: { output: withPanels(finalizeOutput(out, input, assembleCompiledPrompt, input?.patch?.compileParts?.map((x) => x.segmentId)), input) } }),
   },
 };
 

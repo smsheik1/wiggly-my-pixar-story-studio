@@ -200,7 +200,10 @@ test('patch run: a new run with only the target changed; only the affected part 
   // report
   const p = JSON.parse(await readFile(join(r.dir, 'patch.json'), 'utf8'));
   assert.deepEqual([p.from, p.target, p.status, p.reran, p.outputsChanged], [from, 'line:1.2.dialogue', 'done', ['story-director', 'seedance-compiler'], ['story-director', 'seedance-compiler']]);
-  assert.deepEqual(p.rerender.parts.map((x) => [x.segmentId, x.changedPromptShots]), [[1, [2]]]);
+  // the recompiled part is finalized in code (full outfits on Look lines), so every shot of it whose Look line gains
+  // garments counts as changed; the prior fixture was compiled before that step. Only part 1 is re-rendered.
+  assert.deepEqual(p.rerender.parts.map((x) => x.segmentId), [1]);
+  assert.ok(p.rerender.parts[0].changedPromptShots.includes(2));
   assert.deepEqual(p.rerender.continuityFollowUps.map((x) => x.segmentId), [2]);
   // a second patch never overwrites the first
   const again = await runPatch({ from, target: 'line:1.2', note: 'again', runsRoot: root, invoke: fakeInvoke().invoke, log: () => {} });

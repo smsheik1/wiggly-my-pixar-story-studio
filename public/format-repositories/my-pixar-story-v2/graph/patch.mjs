@@ -19,7 +19,8 @@ import { selectCharacterArchitectInput } from '../crew/character-architect/input
 import { selectLocationScoutInput } from '../crew/location-scout/input.mjs';
 import { validateLocationPlates } from '../crew/linter/check-location-plates.mjs';
 import { selectSeedanceCompilerInput, seedanceSegmentsOf } from '../crew/seedance-compiler/input.mjs';
-import { makeSeedancePatchSchema, withAssembledPrompts, SeedancePromptParseError, BLOCK_KEYS, parseSeedancePrompts } from '../crew/seedance-compiler/schema.mjs';
+import { makeSeedancePatchSchema, withAssembledPrompts, SeedancePromptParseError, BLOCK_KEYS, parseSeedancePrompts, assembleCompiledPrompt } from '../crew/seedance-compiler/schema.mjs';
+import { finalizeOutput } from '../crew/seedance-compiler/finalize.mjs';
 import { validateSeedancePrompts, shotBlocks } from '../crew/linter/check-seedance-prompts.mjs';
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -148,13 +149,13 @@ export function seedanceCompilerPatchSpec({ priorSc, note }) {
           changedShots: state.patch.impact.changedShots, note, priorSegments: priorSc.segments.filter((s) => ids.includes(s.segmentId)) } };
     },
     parse: (raw) => { const r = parseSchema.safeParse(withAssembledPrompts(typeof raw === 'string' ? JSON.parse(raw) : raw)); if (!r.success) throw new SeedancePromptParseError(r.error.issues); return r.data; },
-    merge: (_kept, out, state) => mergeSc(out, state.patch.impact.scParts),
+    merge: (_kept, out, state) => mergeSc(finalizeOutput(out, selectSeedanceCompilerInput(state), assembleCompiledPrompt, state.patch.impact.scParts), state.patch.impact.scParts),
     gate: (out, _in, state) => {
       const ids = state.patch.impact.scParts;
       const merged = out[COMPILED] ? out : mergeSc(out, ids);
       const missing = ids.filter((id) => !merged[COMPILED].includes(id));
       return gateResult([...missing.map((id) => ({ severity: 'error', code: 'PATCH_SEGMENT_MISSING', message: `part ${id} is affected by the patch but was not compiled.`, path: 'segments' })),
-        ...validateSeedancePrompts(merged, selectSeedanceCompilerInput(state)).issues]);
+        ...validateSeedancePrompts(finalizeOutput(merged, selectSeedanceCompilerInput(state), assembleCompiledPrompt, ids), selectSeedanceCompilerInput(state)).issues]);
     },
     request: (input) => ({ rounds: 0, submitSchema: makeSeedancePatchSchema(positions, input.patch.compileParts.map((p) => p.segmentId)),
       task: [`PATCH MODE: the stage play changed in part(s) ${input.patch.compileParts.map((p) => p.segmentId).join(', ')} (changed shots: ${input.patch.changedShots.join(', ') || 'none'}). Compile ONLY those parts, which are the only segments in /references/input.json.`,
