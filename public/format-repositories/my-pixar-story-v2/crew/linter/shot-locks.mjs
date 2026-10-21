@@ -120,7 +120,7 @@ export function checkStageShotLocks(data) {
       const w = shotWords(shot), dur = (shot.endSec ?? 0) - (shot.startSec ?? 0);
       const longest = Math.max(countWords(shot.dialogue?.line), countWords(shot.narration?.line));
       if (longest > MAX_LINE_WORDS) err('DIALOGUE_TIMING_BUDGET', `${where}: a ${longest}-word line is too long for one shot (max ${MAX_LINE_WORDS} words); split it across two shots at a natural pause.`, p);
-      else if (w && dur < secondsNeeded(w)) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`${where} (${shot.startSec}s-${shot.endSec}s)`, w, dur), p);
+      else if (w && !shot.timingApproved && dur < secondsNeeded(w)) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`${where} (${shot.startSec}s-${shot.endSec}s)`, w, dur), p);
     });
   });
   return issues;
@@ -163,7 +163,7 @@ export function checkSeedanceShotLocks(seg, src, blocks, input, p) {
     if (s.startSec + off !== srcShot.startSec || s.endSec + off !== srcShot.endSec)
       err('SHOT_TIMING_NOT_AS_STAGED', `${label} runs ${s.startSec}-${s.endSec}s but the stage play has ${srcShot.startSec - off}-${srcShot.endSec - off}s${off ? ` in this clip (staged ${srcShot.startSec}-${srcShot.endSec}s, clip starts at ${off}s)` : ''}. Copy the stage play's timecodes; never shorten a shot.`, at);
     const w = Math.max(shotWords(srcShot), countWords(s.dialogue?.line)), dur = s.endSec - s.startSec;
-    if (w && dur < secondsNeeded(w)) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`${label} (${s.startSec}s-${s.endSec}s)`, w, dur), `${at}.dialogue`);
+    if (w && !srcShot.timingApproved && dur < secondsNeeded(w)) err('DIALOGUE_TIMING_BUDGET', budgetMessage(`${label} (${s.startSec}s-${s.endSec}s)`, w, dur), `${at}.dialogue`);
     const want = onScreenOf(srcShot, castTags).filter((t) => castTags.has(t));
     if (!sameSet(s.cast ?? [], want)) err('CAST_NOT_AS_STAGED', `${label}: cast is [${list(s.cast ?? [])}] but the stage play puts [${list(want)}] on screen. Use exactly the staged onScreen list.`, `${at}.cast`);
     const b = blocks.find((x) => x.n === s.shotNumber);

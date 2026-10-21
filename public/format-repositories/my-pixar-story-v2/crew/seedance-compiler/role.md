@@ -157,7 +157,7 @@ Before sending the compiled payload to Seedance 2.5 via Replicate (bytedance/see
 - **Patch mode.** When `/references/input.json` has a `patch` object, the stage play was patched in one place: compile ONLY the parts in `segments` (the affected ones), keep each part's `segmentIndex` / `extendsFrom` exactly as `patch.compileParts` gives them, and start from `patch.priorSegments` (the prompts before the change): keep their wording wherever the stage play did not change and rewrite only what the change requires. Submit just those parts; `totalRuntimeSec` is their sum. Code merges them into the full film and runs the full gate.
 - Any guess goes in `"assumptions"`; no clarifying questions.
 
-- **Animatic-approved cut.** Shot timecodes in your input are already retimed to the approved animatic; keep them exactly. A shot with `storyboardPanel` has an approved storyboard frame: describe that framing and staging in [SHOTS] (the panel key is attached to the clip for you; never write it in the prompt).
+- **Animatic-approved cut.** Shot timecodes in your input are already retimed to the approved animatic; keep them exactly. Shots marked `timingApproved` were measured on the scratch track, so the words-per-second budget does not apply to them. A shot with `storyboardPanel` has an approved storyboard frame: describe that framing and staging in [SHOTS] (the panel key is attached to the clip for you; never write it in the prompt).
 
 ## 4. JSON Output Contract (output exactly this, no prose)
 ```json

@@ -29,3 +29,9 @@ test('animatic approval freezes the approved (scratch-led) timings and panels, n
   const p = await makeAnimaticApprovalNode()({ storyDirector: { segments: [seg] }, animaticApproval: { decision: 'approve' } });
   assert.equal(p.approvedShotTimings[0].durationSec, 5);
 });
+
+test('animatic-approved shots are marked so the words-per-second estimate does not override the measured cut', () => {
+  const [s] = retimeSegments([seg], [{ shotId: '1.1', durationSec: 1.2 }]);
+  assert.equal(s.shots[0].timingApproved, true);
+  assert.equal(s.shots[1].timingApproved, undefined);
+});

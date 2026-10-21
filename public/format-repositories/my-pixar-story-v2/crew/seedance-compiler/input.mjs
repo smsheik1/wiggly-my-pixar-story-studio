@@ -50,6 +50,7 @@ export const InputShotSchema = z.object({
   exits: z.array(z.string().regex(/^@[\w_]+$/)).optional(),
   dialogue: DialogueLineSchema.optional(), // the Story Director's source field is dropped here (not needed downstream)
   narration: NarrationLineSchema.optional(),
+  timingApproved: z.boolean().optional().describe('length measured on the approved animatic (speech + beat); replaces the words-per-second estimate'),
   storyboardPanel: KEY.optional().describe('approved storyboard panel for this shot: its framing and staging are the composition to match'),
 }).strict().refine((s) => s.endSec > s.startSec, { message: 'endSec must be > startSec', path: ['endSec'] });
 
@@ -153,7 +154,7 @@ export function retimeSegments(segments, timings = []) {
     let cum = 0, prev = 0;
     const shots = seg.shots.map((sh) => {
       cum += dur.get(sh.sceneId) ?? (sh.endSec - sh.startSec);
-      const end = Math.max(prev + 1, Math.round(cum)); const o = { ...sh, startSec: prev, endSec: end }; prev = end; return o;
+      const end = Math.max(prev + 1, Math.round(cum)); const o = { ...sh, startSec: prev, endSec: end, ...(dur.has(sh.sceneId) ? { timingApproved: true } : {}) }; prev = end; return o;
     });
     return { ...seg, targetDurationSec: prev, shots };
   });
