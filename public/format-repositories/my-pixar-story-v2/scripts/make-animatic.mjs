@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Animatic Editor (deterministic). Usage:
-//   node scripts/make-animatic.mjs --sd <story-director.json> --frames <dir of <shotId>.png> [--audio scratch.wav] [--out animatic_preview.mp4] [--allow-missing]
+//   node scripts/make-animatic.mjs --sd <story-director.json> --frames <dir of <shotId>.png> [--audio scratch.wav --timing scratch-report.json] [--out animatic_preview.mp4] [--allow-missing]
 import { readFile, readdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
@@ -8,7 +8,10 @@ import { shotTimeline, animaticArgs } from './lib/animatic.mjs';
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const raw = JSON.parse(await readFile(arg('--sd'), 'utf8')); const sd = raw.segments ? raw : raw.output ?? raw;
 const dir = arg('--frames'); const files = await readdir(dir);
-const tl = shotTimeline(sd); const missing = [];
+// --timing: the scratch track's paced timeline (scratch-report.json). Without it, shots hold for the SD's planned lengths.
+const timing = arg('--timing') ? JSON.parse(await readFile(arg('--timing'), 'utf8')).timeline : null;
+if (arg('--audio') && !timing) console.error('warning: --audio without --timing; shots use planned lengths and will not follow the scratch track');
+const tl = timing ? shotTimeline(sd).map((s) => { const t = timing.find((x) => x.shotId === s.shotId); if (!t) throw new Error(`--timing has no shot ${s.shotId}`); return { ...s, durationSec: t.durationSec, timelineStartSec: t.timelineStartSec }; }) : shotTimeline(sd); const missing = [];
 const frames = tl.map((s) => { const f = files.find((x) => new RegExp(`^${s.shotId.replace('.', '\\.')}\\.(png|jpe?g|webp)$`, 'i').test(x)); if (!f) missing.push(s.shotId); return { ...s, path: f ? join(dir, f) : null }; });
 if (missing.length && !process.argv.includes('--allow-missing')) { console.error(`missing frames: ${missing.join(', ')}`); process.exit(1); }
 const { args, totalSec } = animaticArgs(frames, { audio: arg('--audio') ?? null, out: arg('--out', 'animatic_preview.mp4') });

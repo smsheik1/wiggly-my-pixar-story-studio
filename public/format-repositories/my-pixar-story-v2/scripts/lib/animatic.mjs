@@ -15,6 +15,22 @@ export function shotTimeline(sd) {
 }
 
 /**
+ * Scratch-led timing (how animatics are cut): a shot with spoken lines lasts its speech plus a short beat; a silent shot
+ * keeps its planned length capped at silentCapSec unless the SD marks it a hold (shot.hold === true).
+ * speechSec: { shotId: seconds of actual speech in that shot (all its lines, back to back, gaps included) }.
+ */
+export const BEAT_SEC = 0.4, SILENT_CAP_SEC = 3;
+export function pacedTimeline(sd, speechSec = {}, { beat = BEAT_SEC, silentCap = SILENT_CAP_SEC } = {}) {
+  const holds = new Set(); for (const seg of sd?.segments ?? []) for (const sh of seg.shots ?? []) if (sh.hold === true) holds.add(`${seg.segmentId}.${sh.shotNumber}`);
+  let t = 0;
+  return shotTimeline(sd).map((s) => {
+    const sp = speechSec[s.shotId] ?? 0;
+    const dur = +(sp > 0 ? sp + beat : holds.has(s.shotId) ? s.durationSec : Math.min(s.durationSec, silentCap)).toFixed(3);
+    const o = { ...s, plannedSec: s.durationSec, durationSec: dur, timelineStartSec: +t.toFixed(3) }; t += dur; return o;
+  });
+}
+
+/**
  * Panel rectangles for a sheet image W x H: rows x cols equal cells inside a page margin with gutters, then each cell is
  * centre-cropped to 16:9 and inset (to drop the drawn border and the corner label's edge). All values are even integers.
  */
