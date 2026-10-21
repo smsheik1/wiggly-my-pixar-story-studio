@@ -10,6 +10,7 @@
 //   [--segment-max N]  shorter clip cap than the engine's (never longer)
 //   [--timings <scratch-report.json>]  animatic-approved shot lengths (timeline[]) -> approvedShotTimings
 //   [--panels-dir <dir>]  approved storyboard frames <shotId>.png -> approvedPanels (asset key storyboard:<shotId>)
+//   [--looks <json>]  { element tag: outfit as the approved sheet shows it } -> approvedLooks (beats the CA wardrobe text)
 //   [--out-run <id>]  write outputs to runs/<id>/outputs instead of the source run
 //   [--audit-id <id>] audit folder runs/<id>/ (default <runId>-sc)
 import { readFile, writeFile, readdir, mkdir } from 'node:fs/promises';
@@ -48,7 +49,9 @@ const approvedShotTimings = tPath ? JSON.parse(await readFile(tPath, 'utf8')).ti
 const approvedPanels = pDir ? Object.fromEntries((await readdir(pDir)).filter((f) => /^\d+\.\d+\.png$/.test(f)).map((f) => { const id = f.slice(0, -4); return [id, `storyboard:${id}`]; })) : undefined;
 if (approvedShotTimings) log(`approved timings: ${approvedShotTimings.length} shots, ${approvedShotTimings.reduce((a, t) => a + t.durationSec, 0).toFixed(1)}s`);
 if (approvedPanels) log(`approved panels: ${Object.keys(approvedPanels).length}`);
-const state = { ...(approvedShotTimings ? { approvedShotTimings } : {}), ...(approvedPanels ? { approvedPanels } : {}), inputs, ...(engine ? { videoEngine: engine } : {}), ...(segMax ? { segmentMaxSec: segMax } : {}), storyDirector: sd, characterArchitect: { output: ca }, locationScout: { output: ls }, approvedAssets };
+const approvedLooks = arg('--looks') ? JSON.parse(await readFile(arg('--looks'), 'utf8')) : undefined;
+if (approvedLooks) log(`approved looks: ${Object.keys(approvedLooks).join(', ')}`);
+const state = { ...(approvedLooks ? { approvedLooks } : {}), ...(approvedShotTimings ? { approvedShotTimings } : {}), ...(approvedPanels ? { approvedPanels } : {}), inputs, ...(engine ? { videoEngine: engine } : {}), ...(segMax ? { segmentMaxSec: segMax } : {}), storyDirector: sd, characterArchitect: { output: ca }, locationScout: { output: ls }, approvedAssets };
 
 const b0 = await keyUsage(); log(`key remaining at start: $${b0.remaining?.toFixed(4)}; abort above $${maxUsd} spent`);
 const guard = setInterval(async () => { try { const b = await keyUsage(); const spent = b.usage - b0.usage; log(`[budget] spent $${spent.toFixed(4)}, remaining $${b.remaining?.toFixed(4)}`);

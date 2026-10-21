@@ -176,7 +176,9 @@ export function selectSeedanceCompilerInput(state = {}) {
     if (!assetKey) throw new Error(`selectSeedanceCompilerInput: no approved reference asset for ${c.elementTag} (${c.imageTag})`);
     const o = { elementTag: c.elementTag, imageTag: c.imageTag, assetKey };
     const main = (c.outfits ?? []).find((x) => x.isMain);
-    if (main) o.mainOutfit = main.description;
+    // an approved sheet's outfit (approvedLooks) beats the Character Architect's prompt text: the image was made and approved by hand
+    const look = (state.approvedLooks ?? p.approvedLooks ?? {})[c.elementTag];
+    if (look || main) o.mainOutfit = look ?? main.description;
     if (c.visualTell) o.visualTell = c.visualTell;
     return o;
   });

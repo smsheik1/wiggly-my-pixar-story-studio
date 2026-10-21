@@ -35,3 +35,14 @@ test('animatic-approved shots are marked so the words-per-second estimate does n
   assert.equal(s.shots[0].timingApproved, true);
   assert.equal(s.shots[1].timingApproved, undefined);
 });
+
+import { selectSeedanceCompilerInput } from '../crew/seedance-compiler/input.mjs';
+import { readFileSync } from 'node:fs';
+test('an approved sheet look (approvedLooks) replaces the Character Architect wardrobe text in the SC input', () => {
+  const j = (f) => JSON.parse(readFileSync(new URL(`./fixtures/${f}`, import.meta.url)));
+  const state = { storyDirector: j('good-stage-play.json'), characterArchitect: { output: j('good-master-renders.json') }, locationScout: { output: j('good-location-plates.json') }, approvedAssets: j('good-approved-assets.json') };
+  const tag = state.characterArchitect.output.characters[0].elementTag;
+  const before = selectSeedanceCompilerInput(state).characters[0].mainOutfit;
+  const after = selectSeedanceCompilerInput({ ...state, approvedLooks: { [tag]: 'teal tee, navy shorts, white sneakers' } }).characters[0].mainOutfit;
+  assert.notEqual(before, after); assert.equal(after, 'teal tee, navy shorts, white sneakers');
+});

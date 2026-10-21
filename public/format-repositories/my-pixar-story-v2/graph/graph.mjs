@@ -222,7 +222,8 @@ export function makeApprovalNode({ useInterrupt = false, autoApprove } = {}) {
       const resume = interrupt({ kind: 'asset-approval', missing });
       approved = { ...approved, ...(resume?.approvedAssets ?? {}) };
       missing = need.filter((t) => !approved[t]);
-      if (!missing.length) return { approvedAssets: approved, pendingApproval: [] };
+      // the approved image is the truth: its outfit text (approvedLooks, element tag -> what the sheet shows) rides along
+      if (!missing.length) return { approvedAssets: approved, ...(resume?.approvedLooks ? { approvedLooks: { ...(state.approvedLooks ?? {}), ...resume.approvedLooks } } : {}), pendingApproval: [] };
     }
     if (missing.length) return { status: 'awaiting-approval', pendingApproval: missing };
     return { pendingApproval: [] };

@@ -35,7 +35,8 @@ export const PipelineStateSchema = z.object({
   // parent decision on the animatic: { decision: 'approve' } | { decision: 'reject', target: 'story-director'|'storyboard-artist', notes }
   animaticApproval: z.object({ decision: z.enum(['approve', 'reject']), target: z.enum(['story-director', 'storyboard-artist']).optional(), notes: z.string().optional(), shotTimings: z.array(z.object({ shotId: z.string(), startSec: z.number(), endSec: z.number(), durationSec: z.number() }).passthrough()).optional(), panels: z.record(z.string(), z.string().regex(ASSET_KEY)).optional() }).nullable().optional(),
   approvedShotTimings: z.array(z.object({ shotId: z.string(), startSec: z.number(), endSec: z.number(), durationSec: z.number() }).passthrough()).optional(),
-  approvedPanels: z.record(z.string(), z.string().regex(ASSET_KEY)).optional(), // shotId -> approved storyboard panel key
+  approvedPanels: z.record(z.string(), z.string().regex(ASSET_KEY)).optional(),
+  approvedLooks: z.record(z.string(), z.string().min(10)).optional(), // element tag -> outfit as the approved sheet shows it // shotId -> approved storyboard panel key
   revisionNotes: z.record(z.string(), z.string()).default({}),
   attempts: z.record(z.string(), z.number().int()).default({}),
   gateIssues: z.record(z.string(), z.array(Issue)).default({}),
@@ -70,6 +71,7 @@ export const PipelineAnnotation = Annotation.Root({
   animaticApproval: Annotation({ reducer: replace, default: () => undefined }),
   approvedShotTimings: Annotation({ reducer: replace, default: () => undefined }),
   approvedPanels: Annotation({ reducer: replace, default: () => undefined }),
+  approvedLooks: Annotation({ reducer: replace, default: () => undefined }),
   revisionNotes: Annotation({ reducer: mergeObj, default: () => ({}) }),
   attempts: Annotation({ reducer: mergeObj, default: () => ({}) }),
   gateIssues: Annotation({ reducer: mergeObj, default: () => ({}) }),
