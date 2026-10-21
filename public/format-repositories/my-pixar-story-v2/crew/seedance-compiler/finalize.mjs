@@ -107,7 +107,7 @@ function fullNamesInLine(line, names) {
     });
     // the full name once per line; later mentions in the same line read 'the <head>' ('… of the coupe')
     let n = 0;
-    t = t.replace(new RegExp(`(\\b(?:the|a)\\s+)?${esc(name)}`, 'gi'), (m0) => (n++ ? `the ${head}` : m0));
+    t = t.replace(new RegExp(`(\\b(?:the|a)\\s+)?${esc(name)}`, 'gi'), (m0, det, off, all) => (!n++ ? m0 : det || !/\b(?:the|a|an|his|her|its|their)\s+(?:[\w-]+\s+)?$/i.test(all.slice(Math.max(0, off - 30), off)) ? `the ${head}` : head));
   }
   return t;
 }

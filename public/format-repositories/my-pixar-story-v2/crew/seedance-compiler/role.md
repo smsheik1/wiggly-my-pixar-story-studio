@@ -40,6 +40,7 @@ A 2–3 sentence executive summary of the segment:
 * Plot arc and the **hard narrative stop**:
   > *"It ends the instant X finishes. Do not continue past that moment, do not resolve anything and do not add an ending."*
   * Two sentences, always: the first says where it ends, the second starts with "Do not". Never join them into one sentence ("It ends the instant X ... and do not continue" is broken and fails `BROKEN_HARD_STOP`).
+  * **Wiggly:** X is a plain clause with a finite verb: `It ends the instant @A rests his hands on the wheel.` (never `the instant @A resting hands … finishes`). The first [GOAL] sentence is plain English with the clip's beats in order; never a run-on chain of gerunds.
 * Tone declaration:
   > *"The comedy is played completely straight. Nobody in frame knows anything is funny."*
 
@@ -50,6 +51,7 @@ Establishes the physical baseline and locks spatial geometry:
   > *"The camera stays on the same side of the action as in @location1 for the whole segment and never crosses to the other side. @Sofia and @Wren are on the right-hand arc with @Wren further right, and this never flips."*
 * **Ensemble Counts:** Exactly how many background characters are in the room, asserting deliberate diversity with zero face repeats.
 * **Costume Lock:** *"Costume is fixed for the whole segment and never changes."*
+* **Wiggly:** [CONTINUITY] names only the staged on-screen cast. Never place an unstaged person off-frame (a narrator's sibling, a voice); someone mentioned only in a line is not in the scene.
 
 ### Block 5: `[SHOTS]`
 The multi-shot script sequence governing all cuts, camera movements, and dialogue.

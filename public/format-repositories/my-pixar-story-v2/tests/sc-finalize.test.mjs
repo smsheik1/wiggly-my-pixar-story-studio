@@ -32,6 +32,7 @@ test('full prop name replaces bare head-noun mentions, once per line, never insi
   const n = ['black sedan with dented bumper'];
   assert.equal(fullPropNames('He waits by the old sedan, then pats the sedan.', n), 'He waits by the black sedan with dented bumper, then pats the sedan.');
   assert.equal(fullPropNames('beside the black sedan with dented bumper, then inside the black sedan with dented bumper.', n), 'beside the black sedan with dented bumper, then inside the sedan.');
+  assert.equal(fullPropNames('beside the black sedan with dented bumper, then in the parked black sedan with dented bumper.', n), 'beside the black sedan with dented bumper, then in the parked sedan.');
   assert.equal(fullPropNames('tactile rug and faded sedan paint', ['red sedan with faded paint']), 'tactile rug and red sedan with faded paint');
   assert.equal(fullPropNames('@Dad: {My old sedan.}', n), '@Dad: {My old sedan.}');
   assert.equal(fullPropNames('inside @old_sedan_interior, the sedan interior plate', n), 'inside @old_sedan_interior, the sedan interior plate');
