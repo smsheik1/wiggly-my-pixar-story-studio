@@ -9,7 +9,7 @@ import { PipelineAnnotation } from './state.mjs';
 import { makeAgentNode, makeApprovalNode, AGENT_SPECS, MAX_ATTEMPTS, gateCharacters, keepValidCharacters, mergeCharacters } from './graph.mjs';
 import { deepAgentInvoke } from './deep-agent-node.mjs';
 import { V2_MODELS } from '../config/models.mjs';
-import { parseTarget, checkPatchScope, describeScope, changedShots, diffPaths, pathText } from '../crew/linter/patch-scope.mjs';
+import { scopePatchIssues, parseTarget, checkPatchScope, describeScope, changedShots, diffPaths, pathText } from '../crew/linter/patch-scope.mjs';
 import { selectStoryDirectorInput } from '../crew/story-director/input.mjs';
 import { parseStagePlay } from '../crew/story-director/schema.mjs';
 import { parseCharacterSheets } from '../crew/character-architect/schema.mjs';
@@ -44,12 +44,13 @@ export function patchTask(target, note) {
 export const patchScopeText = (target, note) => `PATCH MODE: this review is scoped to the target ${target.id} only. The user's note: "${note}". Check that the target fixes the note and follows your rules; do not ask for changes anywhere else. ${describeScope(target)} Any change outside that is itself a problem: list it with the field path so it is copied back.`;
 
 /** The Story Director's patch spec: normal parse, full gate + scope proof, scoped request. */
-export function storyDirectorPatchSpec({ prior, target, note, rounds }) {
+export function storyDirectorPatchSpec({ prior, target, note, rounds, animaticApproved = false }) {
   const base = AGENT_SPECS['story-director'];
   return {
     ...base,
     select: (state) => ({ ...selectStoryDirectorInput(state), patch: { target: target.id, note, editable: describeScope(target), currentOutput: prior } }),
-    gate: (out, input) => gateResult([...checkPatchScope(prior, out, target), ...validateStoryDirectorOutput(out, input).issues]),
+    // the patch answers for its target: pre-existing errors elsewhere (and animatic-waived checks) are warnings
+    gate: (out, input) => gateResult([...checkPatchScope(prior, out, target), ...scopePatchIssues(validateStoryDirectorOutput(out, input).issues, { target, priorIssues: validateStoryDirectorOutput(prior, input).issues, animaticApproved })]),
     request: () => ({ task: patchTask(target, note), scope: patchScopeText(target, note), rounds }),
   };
 }
@@ -198,14 +199,14 @@ export function normalizePrior(prior = {}) {
   return out;
 }
 
-export function buildPatchGraph({ prior: rawPrior, target, note, invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, reflectionRounds, autoApprove, onEvent, runTag, liveness, timeouts } = {}) {
+export function buildPatchGraph({ prior: rawPrior, target, note, animaticApproved = false, invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, reflectionRounds, autoApprove, onEvent, runTag, liveness, timeouts } = {}) {
   if (!rawPrior?.storyDirector) throw new Error('buildPatchGraph: the prior run has no Story Director output');
   const prior = normalizePrior(rawPrior);
   if (!note || !String(note).trim()) throw new Error('buildPatchGraph: a note saying what is wrong is required');
   const t = typeof target === 'string' ? parseTarget(target, prior.storyDirector) : target;
   if (invoke === undefined) invoke = deepAgentInvoke(deepAgent);
   const specs = {
-    'story-director': storyDirectorPatchSpec({ prior: prior.storyDirector, target: t, note, rounds: patchReflectionRounds(reflectionRounds) }),
+    'story-director': storyDirectorPatchSpec({ prior: prior.storyDirector, target: t, note, animaticApproved, rounds: patchReflectionRounds(reflectionRounds) }),
     'character-architect': characterArchitectPatchSpec({ priorCa: prior.characterArchitect }),
     'location-scout': locationScoutPatchSpec(),
     'seedance-compiler': seedanceCompilerPatchSpec({ priorSc: prior.seedanceCompiler, note }),

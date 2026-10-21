@@ -50,3 +50,13 @@ test('a part patch may correct an existing location description, never its name'
   b.locations[1].name = 'Cab';
   assert.ok(checkPatchScope(a, b, 'part:1').length > 0);
 });
+
+import { scopePatchIssues } from '../crew/linter/patch-scope.mjs';
+test('patch gate answers for its target: pre-existing errors elsewhere and animatic-waived checks are warnings', () => {
+  const t = { kind: 'part', id: 'part:2', segmentId: 2, si: 1 };
+  const prior = [{ severity: 'error', code: 'PRESENT_NEVER_SEEN', path: 'segments.0.scenes.1.present' }, { severity: 'error', code: 'X', path: 'segments.3.shots.0' }];
+  const now = [...prior, { severity: 'error', code: 'RUNTIME_OVER_TARGET', path: 'segments' }, { severity: 'error', code: 'Y', path: 'segments.1.shots.2' }, { severity: 'error', code: 'NEW', path: 'segments.4' }];
+  const sev = (o) => Object.fromEntries(scopePatchIssues(now, { target: t, priorIssues: prior, ...o }).map((i) => [i.code, i.severity]));
+  assert.deepEqual(sev({ animaticApproved: true }), { PRESENT_NEVER_SEEN: 'warning', X: 'warning', RUNTIME_OVER_TARGET: 'warning', Y: 'error', NEW: 'error' });
+  assert.equal(sev({}).RUNTIME_OVER_TARGET, 'error', 'a new script-wide error still fails before the animatic is approved');
+});

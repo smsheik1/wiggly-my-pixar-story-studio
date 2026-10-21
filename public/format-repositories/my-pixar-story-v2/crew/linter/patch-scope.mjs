@@ -140,3 +140,27 @@ export function changedShots(prior, next) {
   }
   return out;
 }
+
+// ---- patch gating: a patch answers only for its target ----
+/** Checks waived once the animatic is approved (the approved cut sets runtime; listed-but-unseen cast is the reviewer's call). */
+export const ANIMATIC_WAIVED = new Set(['RUNTIME_OVER_TARGET', 'PRESENT_NEVER_SEEN']);
+/** True when a gate issue sits inside the patch target (a part target also owns location descriptions). */
+export function issueInTarget(i, t) {
+  if (!t || typeof i?.path !== 'string') return false;
+  const own = t.kind === 'part' ? `segments.${t.si}` : t.kind === 'shot' || t.kind === 'line' ? `segments.${t.si}.shots.${t.hi}` : null;
+  if (t.kind === 'part' && /^locations\.\d+\.description$/.test(i.path)) return true;
+  return i.path === `segments.${t.si}` || i.path.startsWith(`segments.${t.si}.`) || (own && i.path.startsWith(own));
+}
+/**
+ * Patch gate severity: errors outside the target that the prior already had (same code + path) become warnings, and so do
+ * ANIMATIC_WAIVED codes once the animatic is approved. Errors inside the target, and new errors anywhere, stay errors.
+ */
+export function scopePatchIssues(issues, { target, priorIssues = [], animaticApproved = false } = {}) {
+  const had = new Set(priorIssues.filter((i) => i.severity === 'error').map((i) => `${i.code}|${i.path ?? ''}`));
+  return issues.map((i) => {
+    if (i.severity !== 'error') return i;
+    const waived = animaticApproved && ANIMATIC_WAIVED.has(i.code);
+    const old = !issueInTarget(i, target) && had.has(`${i.code}|${i.path ?? ''}`);
+    return waived || old ? { ...i, severity: 'warning', message: `(${waived ? 'waived: animatic approved' : 'pre-existing, outside the patch'}) ${i.message}` } : i;
+  });
+}

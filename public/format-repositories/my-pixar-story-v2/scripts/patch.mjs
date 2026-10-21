@@ -5,6 +5,7 @@
 // Only the LangGraph patch graph (graph/patch.mjs) calls models; nothing is rendered. See docs/specs/patch-mode.md.
 // Usage: node scripts/patch.mjs --from <runId> --target <part:N | shot:N.M | line:N.M[.dialogue|.narration]> --note "<what is wrong>"
 //   [--run-id <new id>] (default <from>-patch-1, -2, ...)  [--project <project.json>] (default runs/<from>/project.json)
+//   [--animatic-approved] the animatic is approved: RUNTIME_OVER_TARGET / PRESENT_NEVER_SEEN are warnings
 //   [--placeholder-assets] approve new character/location references with fake keys (no images)
 //   [--reflection-rounds N] (default: config patchReflectionRounds, 1)  [--check] validate target + prior run only, no model calls
 //   [--secrets <secrets.env>] [--no-tracing]
@@ -16,7 +17,7 @@ import { buildPatchGraph, patchReflectionRounds, normalizePrior } from '../graph
 import { placeholderAssets } from '../graph/graph.mjs';
 import { RUNS_ROOT, openRouterModel } from '../graph/deep-agent-node.mjs';
 import { createLiveness, LivenessHandler, DEFAULT_TIMEOUTS } from '../graph/liveness.mjs';
-import { parseTarget, describeScope } from '../crew/linter/patch-scope.mjs';
+import { parseTarget, describeScope, scopePatchIssues, issueInTarget } from '../crew/linter/patch-scope.mjs';
 import { selectStoryDirectorInput } from '../crew/story-director/input.mjs';
 import { validateStoryDirectorOutput } from '../crew/linter/check-stage-play.mjs';
 import { inputsFromProject, loadPhotoReferences, defaultPhotoRefsPath } from './run-rehearsal.mjs';
@@ -28,7 +29,7 @@ const readJson = async (f) => JSON.parse(await readFile(f, 'utf8'));
 const SAFE_ID = /^[A-Za-z0-9._-]+$/;
 
 /** Load a prior run's outputs and inputs; throws with a plain reason if it cannot be patched. */
-export async function loadPriorRun({ from, runsRoot = RUNS_ROOT, projectPath, target }) {
+export async function loadPriorRun({ from, runsRoot = RUNS_ROOT, projectPath, target, animatic = false }) {
   if (!from || !SAFE_ID.test(from)) throw new Error('--from <prior run id> is required (letters, digits, . _ -)');
   const dir = join(runsRoot, from), out = join(dir, 'outputs');
   if (!existsSync(join(out, 'story-director.json'))) throw new Error(`run ${from} has no outputs/story-director.json`);
@@ -48,22 +49,27 @@ export async function loadPriorRun({ from, runsRoot = RUNS_ROOT, projectPath, ta
   Object.assign(prior, normalizePrior(prior));
   const t = target === undefined ? null : parseTarget(target, prior.storyDirector);
   const g = validateStoryDirectorOutput(prior.storyDirector, selectStoryDirectorInput({ inputs }));
-  const errors = g.issues.filter((i) => i.severity === 'error');
-  const inTarget = (i) => t && typeof i.path === 'string' && (i.path === `segments.${t.si}` || i.path.startsWith(`segments.${t.si}.`) || (t.kind === 'part' && /^locations\.\d+\.description$/.test(i.path))); // a part patch may correct location descriptions
-  const blocking = errors.filter((i) => !inTarget(i));
+  const animaticApproved = !!(animatic || state.approvedShotTimings);
+  // only the target must pass: errors elsewhere are already there and stay warnings (see scopePatchIssues); a whole-film
+  // check with no target, or a script-wide error before the animatic is approved, still refuses.
+  const scoped = t ? scopePatchIssues(g.issues, { target: t, priorIssues: g.issues, animaticApproved }) : g.issues;
+  const errors = scoped.filter((i) => i.severity === 'error');
+  const blocking = errors.filter((i) => !issueInTarget(i, t));
   if (blocking.length) throw Object.assign(new Error(`PATCH_PRIOR_INVALID: run ${from}'s stage play fails the current gate (${[...new Set(blocking.map((i) => i.code))].join(', ')})${t ? ` outside ${t.id}` : ''}, so it cannot be patched (do a full run${t ? ', or patch the part that holds the error' : ''}).`), { code: 'PATCH_PRIOR_INVALID', issues: g.issues });
-  const priorErrors = errors.filter(inTarget);
-  return { dir, outDir: out, prior, state, inputs, project, target: t, priorErrors };
+  const priorErrors = errors.filter((i) => issueInTarget(i, t));
+  const priorWarnings = scoped.filter((i) => i.severity === 'warning' && /^\((waived|pre-existing)/.test(i.message));
+  return { dir, outDir: out, prior, state, inputs, project, target: t, priorErrors, priorWarnings, animaticApproved };
 }
 
 const nextRunId = (runsRoot, from) => { for (let n = 1; ; n++) { const id = `${from}-patch-${n}`; if (!existsSync(join(runsRoot, id))) return id; } };
 
 export async function runPatch({ from, target, note, runId, runsRoot = RUNS_ROOT, projectPath, invoke, secrets, secretsPath = defaultSecretsPath(),
-  usePlaceholderAssets = false, reflectionRounds, check = false, tracing, log = console.log, timeouts = {} } = {}) {
-  const run = await loadPriorRun({ from, runsRoot, projectPath, target });
+  usePlaceholderAssets = false, animaticApproved = false, reflectionRounds, check = false, tracing, log = console.log, timeouts = {} } = {}) {
+  const run = await loadPriorRun({ from, runsRoot, projectPath, target, animatic: animaticApproved });
   const t = run.target;
   log(`patch ${from} at ${t.id}: ${describeScope(t)}`);
   if (run.priorErrors.length) log(`the prior fails the current gate inside ${t.id} (${[...new Set(run.priorErrors.map((i) => i.code))].join(', ')}); the patch must fix it`);
+  if (run.priorWarnings.length) log(`outside ${t.id} (warnings, not refusals): ${[...new Set(run.priorWarnings.map((i) => i.code))].join(', ')}`);
   if (check) return { check: true, target: t, priorErrors: run.priorErrors.map((i) => i.code) };
   if (!note || !String(note).trim()) throw new Error('--note "<what is wrong>" is required');
   const id = runId ?? nextRunId(runsRoot, from);
@@ -81,7 +87,7 @@ export async function runPatch({ from, target, note, runId, runsRoot = RUNS_ROOT
   const tm = { ...DEFAULT_TIMEOUTS, firstTokenMs: 900_000, idleMs: 900_000, stallMs: 600_000, ...timeouts };
   const liveness = invoke ? undefined : createLiveness({ stallMs: tm.stallMs });
   const events = [];
-  const graph = buildPatchGraph({ prior: run.prior, target: t, note, reflectionRounds, runTag: id,
+  const graph = buildPatchGraph({ prior: run.prior, target: t, note, animaticApproved: run.animaticApproved, reflectionRounds, runTag: id,
     ...(invoke ? { invoke } : { deepAgent: { runId: id, runsRoot, createModel: (c, a) => openRouterModel(c, a, { apiKey: sec.OPENROUTER_API_KEY }) }, liveness, timeouts: { firstTokenMs: tm.firstTokenMs, idleMs: tm.idleMs } }),
     onEvent: (e) => { if (['attempt-result', 'passed', 'failed'].includes(e.type)) { events.push({ agent: e.agent, type: e.type, attempt: e.attempt, codes: [...new Set((e.issues ?? []).filter((i) => i.severity === 'error').map((i) => i.code))] }); log(`[${e.agent}] ${e.type}${e.attempt ? ` attempt ${e.attempt}` : ''}`); } },
     ...(usePlaceholderAssets ? { autoApprove: placeholderAssets } : {}) });
@@ -114,7 +120,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
   const has = (k) => process.argv.includes(k);
   runPatch({ from: arg('--from'), target: arg('--target'), note: arg('--note'), runId: arg('--run-id'), projectPath: arg('--project'),
-    usePlaceholderAssets: has('--placeholder-assets'), check: has('--check'), ...(arg('--secrets') ? { secretsPath: arg('--secrets') } : {}),
+    usePlaceholderAssets: has('--placeholder-assets'), animaticApproved: has('--animatic-approved'), check: has('--check'), ...(arg('--secrets') ? { secretsPath: arg('--secrets') } : {}),
     ...(arg('--reflection-rounds') !== undefined ? { reflectionRounds: +arg('--reflection-rounds') } : {}), ...(has('--no-tracing') ? { tracing: null } : {}) })
     .then((r) => { process.exitCode = r.check ? 0 : r.state.status === 'failed' ? 2 : 0; })
     .catch((e) => { console.error(`patch failed: ${e.message}`); process.exitCode = 1; });

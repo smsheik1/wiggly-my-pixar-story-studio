@@ -139,7 +139,7 @@ test('props not in the answers: invented objects warn once per object; answer ob
 });
 
 // ---- patch mode can repair a gate error inside its target ----
-test('patch: a prior with gate errors only inside the target part is patchable; elsewhere it is refused', () => tmp(async (root) => {
+test('patch: a prior with gate errors only inside the target part is patchable; errors elsewhere are warnings, not refusals', () => tmp(async (root) => {
   const out = join(root, 'prior', 'outputs'); await mkdir(out, { recursive: true });
   const FIX = { 'story-director': 'good-stage-play.json', 'character-architect': 'good-master-renders.json', 'location-scout': 'good-location-plates.json', 'seedance-compiler': 'good-seedance-prompts.json' };
   for (const [a, f] of Object.entries(FIX)) await writeFile(join(out, `${a}.json`), JSON.stringify(json(f)));
@@ -152,7 +152,8 @@ test('patch: a prior with gate errors only inside the target part is patchable; 
   const logs = [];
   const ok = await runPatch({ from: 'prior', target: 'part:2', runsRoot: root, check: true, log: (l) => logs.push(l) });
   assert.deepEqual(ok.priorErrors, ['PRESENT_NEVER_SEEN']); assert.ok(logs.some((l) => /must fix it/.test(l)));
-  await assert.rejects(runPatch({ from: 'prior', target: 'part:1', runsRoot: root, check: true, log: () => {} }), /PATCH_PRIOR_INVALID[\s\S]*PRESENT_NEVER_SEEN[\s\S]*outside part:1/);
+  const l1 = []; const other = await runPatch({ from: 'prior', target: 'part:1', runsRoot: root, check: true, log: (l) => l1.push(l) });
+  assert.deepEqual(other.priorErrors, []); assert.ok(l1.some((l) => /warnings, not refusals\): PRESENT_NEVER_SEEN/.test(l)));
 }));
 
 
