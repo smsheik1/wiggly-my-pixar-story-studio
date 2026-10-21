@@ -88,9 +88,18 @@ export const AGENT_SPECS = {
   },
   'seedance-compiler': {
     select: selectSeedanceCompilerInput, parse: parseSeedancePrompts, gate: (out, input) => validateSeedancePrompts(out, input),
-    write: (out) => ({ seedanceCompiler: { output: out } }),
+    // each clip carries the approved storyboard panel keys of its shots (deterministic, from the input; not model-written)
+    write: (out, input) => ({ seedanceCompiler: { output: withPanels(out, input) } }),
   },
 };
+
+/** Add storyboardPanels (sceneId -> panel key) to every compiled clip from the input shots it covers. */
+export function withPanels(out, input) {
+  const key = new Map((input?.segments ?? []).flatMap((sg) => sg.shots.filter((sh) => sh.storyboardPanel).map((sh) => [sh.sceneId, sh.storyboardPanel])));
+  if (!key.size) return out;
+  const segs = (out.segments ?? []).map((c) => ({ ...c, storyboardPanels: Object.fromEntries([...new Set((c.shots ?? []).map((sh) => sh.sceneId))].filter((id) => key.has(id)).map((id) => [id, key.get(id)])) }));
+  return { ...out, segments: segs };
+}
 
 /** Retry prompt section listing the previous attempt's issues. */
 export function retryNotes(issues = []) {
@@ -231,7 +240,7 @@ export function makeAnimaticApprovalNode({ useInterrupt = false, autoApprove } =
     if (!d && autoApprove) d = { decision: 'approve' };
     if (!d && useInterrupt) d = interrupt({ kind: 'animatic-approval', sheets: (state.storyboardArtist?.sheets ?? []).map((s) => s.sheetId) });
     if (!d) return { status: 'awaiting-approval', pendingApproval: ['animatic'] };
-    if (d.decision === 'approve') return { approvedShotTimings: shotTimeline(state.storyDirector), animaticApproval: null, pendingApproval: [] };
+    if (d.decision === 'approve') return { approvedShotTimings: d.shotTimings ?? shotTimeline(state.storyDirector), ...(d.panels ? { approvedPanels: d.panels } : {}), animaticApproval: null, pendingApproval: [] };
     const target = d.target === 'story-director' ? 'story-director' : 'storyboard-artist';
     return { animaticApproval: { ...d, target, routed: true }, revisionNotes: { [target]: d.notes ?? 'Revise.' }, pendingApproval: [] };
   };

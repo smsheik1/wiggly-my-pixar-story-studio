@@ -1,7 +1,8 @@
 // Seedance Compiler v2 input slice: the ONLY state this agent may see.
 // Included: approved stage play (cast cards, segments, shots, dialogue), approved character refs (@Image N -> asset key,
 // main outfit text), approved location plates (@Loc N -> asset key, scene ids, lighting).
-// Excluded: photos, photo notes, raw image prompts, storyboard, HTML deck, secrets, URLs, file paths.
+// Included after the animatic gate: approved shot timings (retimed in whole seconds) and each shot's approved storyboard panel key.
+// Excluded: photos, photo notes, raw image prompts, storyboard prompts, HTML deck, secrets, URLs, file paths.
 import { z } from 'zod';
 import { CastCardSchema, DialogueLineSchema, NarrationLineSchema } from '../story-director/schema.mjs';
 import { ASSET_KEY } from '../character-architect/schema.mjs';
@@ -49,6 +50,7 @@ export const InputShotSchema = z.object({
   exits: z.array(z.string().regex(/^@[\w_]+$/)).optional(),
   dialogue: DialogueLineSchema.optional(), // the Story Director's source field is dropped here (not needed downstream)
   narration: NarrationLineSchema.optional(),
+  storyboardPanel: KEY.optional().describe('approved storyboard panel for this shot: its framing and staging are the composition to match'),
 }).strict().refine((s) => s.endSec > s.startSec, { message: 'endSec must be > startSec', path: ['endSec'] });
 
 export const SeedanceCompilerInput = z.object({
@@ -140,6 +142,26 @@ export function seedanceSegmentsOf(sd = {}) {
   }));
 }
 
+/**
+ * Retime stage-play segments to the animatic-approved shot lengths (scratch-led, fractional seconds) in whole seconds:
+ * each part's cumulative boundaries are rounded (every shot >= 1s), so clip lengths track the approved cut without drift.
+ */
+export function retimeSegments(segments, timings = []) {
+  const dur = new Map(timings.map((t) => [t.shotId, t.durationSec]));
+  if (!dur.size) return segments;
+  return segments.map((seg) => {
+    let cum = 0, prev = 0;
+    const shots = seg.shots.map((sh) => {
+      cum += dur.get(sh.sceneId) ?? (sh.endSec - sh.startSec);
+      const end = Math.max(prev + 1, Math.round(cum)); const o = { ...sh, startSec: prev, endSec: end }; prev = end; return o;
+    });
+    return { ...seg, targetDurationSec: prev, shots };
+  });
+}
+
+/** Attach each shot's approved storyboard panel (panels: { shotId: assetKey }). */
+export const attachPanels = (segments, panels = {}) => segments.map((seg) => ({ ...seg, shots: seg.shots.map((sh) => (panels[sh.sceneId] ? { ...sh, storyboardPanel: panels[sh.sceneId] } : sh)) }));
+
 /** Filter shared pipeline state to the Seedance Compiler slice. Throws if an approved reference is missing. */
 export function selectSeedanceCompilerInput(state = {}) {
   const p = state.project ?? state;
@@ -147,7 +169,7 @@ export function selectSeedanceCompilerInput(state = {}) {
   const ca = p.characterArchitect?.output ?? {}; // outputs only (hints/options live beside them)
   const ls = p.locationScout?.output ?? {};
   const assets = p.approvedAssets ?? {};
-  const segments = seedanceSegmentsOf(sd);
+  const segments = attachPanels(retimeSegments(seedanceSegmentsOf(sd), state.approvedShotTimings ?? p.approvedShotTimings), state.approvedPanels ?? p.approvedPanels ?? {});
   const characters = (ca.characters ?? []).map((c) => {
     const assetKey = assets[c.imageTag] ?? assets[c.elementTag] ?? c.modelSheetPrompt?.masterRenderRef;
     if (!assetKey) throw new Error(`selectSeedanceCompilerInput: no approved reference asset for ${c.elementTag} (${c.imageTag})`);

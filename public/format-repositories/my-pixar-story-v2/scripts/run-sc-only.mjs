@@ -8,8 +8,11 @@
 //   [--suffix v2]   write seedance-compiler-v2.json / sc-state-v2.json instead of overwriting the first SC output
 //   [--engine seedance-2.5|omni-1.1-flash]  target video engine (default seedance-2.5); sets the SC clip cap
 //   [--segment-max N]  shorter clip cap than the engine's (never longer)
+//   [--timings <scratch-report.json>]  animatic-approved shot lengths (timeline[]) -> approvedShotTimings
+//   [--panels-dir <dir>]  approved storyboard frames <shotId>.png -> approvedPanels (asset key storyboard:<shotId>)
+//   [--out-run <id>]  write outputs to runs/<id>/outputs instead of the source run
 //   [--audit-id <id>] audit folder runs/<id>/ (default <runId>-sc)
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, readdir, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { makeAgentNode, placeholderAssets } from '../graph/graph.mjs';
@@ -29,8 +32,9 @@ const sec = loadSecrets(arg('--secrets') ?? defaultSecretsPath());
 if (!sec.OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY missing');
 const keyUsage = async () => { const r = await fetch('https://openrouter.ai/api/v1/key', { headers: { Authorization: `Bearer ${sec.OPENROUTER_API_KEY}` } }); const d = (await r.json()).data ?? {}; return { usage: d.usage, remaining: d.limit_remaining }; };
 
-const out = join(RUNS_ROOT, runId, 'outputs');
-const rd = async (f) => JSON.parse(await readFile(join(out, f), 'utf8'));
+const src = join(RUNS_ROOT, runId, 'outputs'), out = join(RUNS_ROOT, arg('--out-run') ?? runId, 'outputs');
+await mkdir(out, { recursive: true });
+const rd = async (f) => JSON.parse(await readFile(join(src, f), 'utf8'));
 const [sd, ca, ls, prev] = await Promise.all(['story-director.json', 'character-architect.json', 'location-scout.json', 'state.json'].map(rd));
 if (!['awaiting-approval', 'done'].includes(prev.status)) throw new Error(`run ${runId} is ${prev.status}, not awaiting-approval or done`);
 const inputs = inputsFromProject(JSON.parse(await readFile(projectPath, 'utf8')));
@@ -39,7 +43,12 @@ const approvedAssets = { ...(prev.approvedAssets ?? {}), ...placeholderAssets(pr
 log(`approving ${Object.keys(approvedAssets).length} tags with placeholder keys (no image generation)`);
 const engine = arg('--engine'); if (engine) log(`target engine ${engine}`);
 const segMax = arg('--segment-max') ? +arg('--segment-max') : undefined; if (segMax) log(`clip cap ${segMax}s`);
-const state = { inputs, ...(engine ? { videoEngine: engine } : {}), ...(segMax ? { segmentMaxSec: segMax } : {}), storyDirector: sd, characterArchitect: { output: ca }, locationScout: { output: ls }, approvedAssets };
+const tPath = arg('--timings'), pDir = arg('--panels-dir');
+const approvedShotTimings = tPath ? JSON.parse(await readFile(tPath, 'utf8')).timeline.map((t) => ({ shotId: t.shotId, startSec: t.timelineStartSec, endSec: +(t.timelineStartSec + t.durationSec).toFixed(3), durationSec: t.durationSec })) : undefined;
+const approvedPanels = pDir ? Object.fromEntries((await readdir(pDir)).filter((f) => /^\d+\.\d+\.png$/.test(f)).map((f) => { const id = f.slice(0, -4); return [id, `storyboard:${id}`]; })) : undefined;
+if (approvedShotTimings) log(`approved timings: ${approvedShotTimings.length} shots, ${approvedShotTimings.reduce((a, t) => a + t.durationSec, 0).toFixed(1)}s`);
+if (approvedPanels) log(`approved panels: ${Object.keys(approvedPanels).length}`);
+const state = { ...(approvedShotTimings ? { approvedShotTimings } : {}), ...(approvedPanels ? { approvedPanels } : {}), inputs, ...(engine ? { videoEngine: engine } : {}), ...(segMax ? { segmentMaxSec: segMax } : {}), storyDirector: sd, characterArchitect: { output: ca }, locationScout: { output: ls }, approvedAssets };
 
 const b0 = await keyUsage(); log(`key remaining at start: $${b0.remaining?.toFixed(4)}; abort above $${maxUsd} spent`);
 const guard = setInterval(async () => { try { const b = await keyUsage(); const spent = b.usage - b0.usage; log(`[budget] spent $${spent.toFixed(4)}, remaining $${b.remaining?.toFixed(4)}`);
@@ -51,7 +60,7 @@ const liveness = createLiveness({ stallMs: t.stallMs });
 const events = [];
 const onEvent = (e) => { const s = { type: e.type, attempt: e.attempt, at: new Date().toISOString(), ...(e.issues ? { issues: e.issues.map((i) => ({ severity: i.severity, code: i.code, path: i.path, message: i.message })) } : {}), ...(e.message ? { message: e.message } : {}) };
   events.push(s); log(`[sc] ${e.type}${e.attempt ? ` attempt ${e.attempt}` : ''}${e.issues ? ` codes ${[...new Set(e.issues.filter((i) => i.severity === 'error').map((i) => i.code))].join(',') || '(none)'}` : ''}${e.message ? ` ${e.message}` : ''}`); };
-const invoke = deepAgentInvoke({ runId, runsRoot: RUNS_ROOT, createModel: (c, a) => openRouterModel(c, a, { apiKey: sec.OPENROUTER_API_KEY }) });
+const invoke = deepAgentInvoke({ runId: arg("--out-run") ?? runId, runsRoot: RUNS_ROOT, createModel: (c, a) => openRouterModel(c, a, { apiKey: sec.OPENROUTER_API_KEY }) });
 const node = makeAgentNode('seedance-compiler', invoke, { onEvent, runTag: runId, liveness, timeouts: { firstTokenMs: t.firstTokenMs, idleMs: t.idleMs } });
 const hb = setInterval(() => { for (const e of liveness.active()) log(`[heartbeat] ${liveness.line(e)}`); }, 30000);
 const t0 = Date.now();
