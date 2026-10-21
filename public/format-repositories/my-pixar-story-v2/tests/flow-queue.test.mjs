@@ -25,9 +25,10 @@ test('emitFlowJob: bundles prompt and references into queue directory', async ()
     });
 
     assert.ok(res.jobDir);
-    assert.equal(res.job.jobId, 'sheet-1');
+    assert.equal(res.job.id, 'sheet-1');
+    assert.equal(res.job.runId, 'run-101');
     assert.equal(res.job.references.length, 1);
-    assert.equal(res.job.references[0].name, 'dummy-ref.png');
+    assert.equal(res.job.references[0], 'refs/01-dummy-ref.png');
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }
@@ -50,7 +51,7 @@ test('waitForFlowJob: times out when output never lands', async () => {
     });
 
     await assert.rejects(
-      () => waitForFlowJob('sheet-timeout', { queueDir: tmp, timeoutMs: 200, pollIntervalMs: 50 }),
+      () => waitForFlowJob('sheet-timeout', { runId: 'run-102', queueDir: tmp, timeoutMs: 200, pollIntervalMs: 50 }),
       /timed out after 0s waiting/
     );
   } finally {

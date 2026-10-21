@@ -15,49 +15,61 @@ import { readGray } from './lib/panel-detect.mjs';
 
 const G_DRIVE_DEFAULT = resolve(
   process.env.HOME || '',
-  'Library/CloudStorage/GoogleDrive-shahzebsheikh54@gmail.com/My Drive/wiggly-flow'
+  'Library/CloudStorage/GoogleDrive-shahzebsheikh54@gmail.com/My Drive/Wiggly Flow Queue'
 );
 
 export function resolveQueueDir(customDir) {
   if (customDir) return resolve(customDir.replace(/^~(?=$|\/)/, process.env.HOME || ''));
   if (process.env.WIGGLY_FLOW_QUEUE) return resolve(process.env.WIGGLY_FLOW_QUEUE.replace(/^~(?=$|\/)/, process.env.HOME || ''));
-  if (existsSync(join(process.env.HOME || '', 'Library/CloudStorage/GoogleDrive-shahzebsheikh54@gmail.com/My Drive'))) {
+  if (existsSync(join(process.env.HOME || '', 'Library/CloudStorage/GoogleDrive-shahzebsheikh54@gmail.com/My Drive/Wiggly Flow Queue'))) {
     return G_DRIVE_DEFAULT;
   }
   return resolve('runs/flow-queue');
 }
 
 /** Emit a job to the queue directory, copying any local reference images into the job folder. */
-export async function emitFlowJob({ jobId, runId, prompt, references = [], queueDir, metadata = {} }) {
+export async function emitFlowJob({ jobId, runId = 'r1', kind = 'storyboard-panel', prompt, references = [], aspect = '16:9', queueDir, webhook = null }) {
   const dir = resolveQueueDir(queueDir);
-  const jobDir = join(dir, 'jobs', jobId);
+  const jobDir = join(dir, 'runs', runId, jobId);
   const refsDir = join(jobDir, 'refs');
   await mkdir(refsDir, { recursive: true });
 
   const bundledRefs = [];
-  for (const refPath of references) {
+  for (let i = 0; i < references.length; i++) {
+    const refPath = references[i];
     const abs = resolve(refPath.replace(/^~(?=$|\/)/, process.env.HOME || ''));
     if (!existsSync(abs)) throw new Error(`emitFlowJob: reference file not found at ${abs}`);
-    const name = basename(abs);
+    const num = String(i + 1).padStart(2, '0');
+    const name = `${num}-${basename(abs)}`;
     const dest = join(refsDir, name);
     await copyFile(abs, dest);
-    bundledRefs.push({ name, relPath: `refs/${name}` });
+    bundledRefs.push(`refs/${name}`);
   }
 
   const job = {
-    jobId,
+    id: jobId,
     runId,
+    kind,
     prompt: String(prompt ?? '').trim(),
     references: bundledRefs,
-    expectedOutput: 'output.png',
-    doneSignal: 'output.done',
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    ...metadata,
+    aspect,
   };
 
-  await writeFile(join(jobDir, 'job.json'), JSON.stringify(job, null, 2));
+  // job.json is written LAST after all refs are safely in place
   await writeFile(join(jobDir, 'prompt.txt'), job.prompt + '\n');
+  await writeFile(join(jobDir, 'job.json'), JSON.stringify(job, null, 2));
+
+  // If webhook is provided or configured, notify Grok Bot immediately
+  if (webhook?.url) {
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (webhook.auth) headers['Authorization'] = webhook.auth;
+      await fetch(webhook.url, { method: 'POST', headers, body: JSON.stringify({ runId, job: jobId }) });
+    } catch (e) {
+      console.warn(`[flow-queue] Warning: webhook notify failed (${e.message}), Grok Bot will pick up via Drive sync.`);
+    }
+  }
+
   return { jobDir, job };
 }
 
@@ -87,21 +99,28 @@ export function checkLandedImage(filePath, { isPanel = false } = {}) {
 
 /**
  * Wait for a job to complete in the queue directory.
- * Looks for output.png + output.done, or output.png directly once writes finish.
+ * Watches runs/<runId>/<jobId>/ for output.png.done (or output.png.failed).
  */
-export async function waitForFlowJob(jobId, { queueDir, timeoutMs = 300_000, pollIntervalMs = 3000, isPanel = false } = {}) {
+export async function waitForFlowJob(jobId, { runId = 'r1', queueDir, timeoutMs = 300_000, pollIntervalMs = 3000, isPanel = false } = {}) {
   const dir = resolveQueueDir(queueDir);
-  const jobDir = join(dir, 'jobs', jobId);
+  const jobDir = join(dir, 'runs', runId, jobId);
   const outputFile = join(jobDir, 'output.png');
-  const doneFile = join(jobDir, 'output.done');
+  const doneFile = join(jobDir, 'output.png.done');
+  const failedFile = join(jobDir, 'output.png.failed');
   const t0 = Date.now();
 
   while (Date.now() - t0 < timeoutMs) {
-    const hasDone = existsSync(doneFile);
-    const hasOut = existsSync(outputFile);
+    if (existsSync(failedFile)) {
+      let reason = 'Flow job failed';
+      try {
+        const failedData = JSON.parse(await readFile(failedFile, 'utf8'));
+        reason = failedData.reason || reason;
+      } catch {}
+      throw new Error(`Flow job ${jobId} failed: ${reason}`);
+    }
 
-    if (hasDone || hasOut) {
-      // Small settle check to ensure no in-flight write
+    const hasDone = existsSync(doneFile);
+    if (hasDone && existsSync(outputFile)) {
       const s1 = await stat(outputFile).then((s) => s.size, () => 0);
       if (s1 > 1000) {
         await new Promise((r) => setTimeout(r, 1000));
@@ -110,7 +129,7 @@ export async function waitForFlowJob(jobId, { queueDir, timeoutMs = 300_000, pol
           const check = checkLandedImage(outputFile, { isPanel });
           if (!check.ok) {
             const reason = check.issues.map((i) => `${i.code}: ${i.message}`).join(', ');
-            await writeFile(join(jobDir, 'rejected.json'), JSON.stringify({ rejectedAt: new Date().toISOString(), reason, issues: check.issues }, null, 2));
+            await writeFile(join(jobDir, 'output.png.failed'), JSON.stringify({ id: jobId, reason, issues: check.issues }, null, 2));
             throw new Error(`Flow job ${jobId} landed output failed validation: ${reason}`);
           }
           return { ok: true, outputPath: outputFile, width: check.width, height: check.height };
@@ -121,6 +140,6 @@ export async function waitForFlowJob(jobId, { queueDir, timeoutMs = 300_000, pol
     await new Promise((r) => setTimeout(r, pollIntervalMs));
   }
 
-  await writeFile(join(jobDir, 'timeout.json'), JSON.stringify({ timedOutAt: new Date().toISOString(), timeoutMs }, null, 2));
+  await writeFile(join(jobDir, 'output.png.failed'), JSON.stringify({ id: jobId, reason: `Timed out after ${Math.round(timeoutMs / 1000)}s` }, null, 2));
   throw new Error(`Flow job ${jobId} timed out after ${Math.round(timeoutMs / 1000)}s waiting in ${jobDir}`);
 }
