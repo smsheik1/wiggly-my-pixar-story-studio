@@ -68,6 +68,18 @@ export function finalizeShotBlock(text, { outfits = {}, props = [] } = {}) {
     }
     return a;
   });
+  for (const l of out) {
+    if (/^\s*(?:SHOT \d|Camera:|Composition|On screen:|Location:|Props:|Look |Hard cut)/.test(l) || /\{.*\}|"/.test(l)) continue;
+    for (const st of props) {
+      const { name, rest } = splitPropState(st);
+      if (!rest || held.some((h) => h.st === st)) continue;
+      const m = new RegExp(`\\b(?:the|his|her|their)\\s+${esc(name)}\\b`, 'i').exec(l);
+      if (!m) continue;
+      const clause = l.slice(0, m.index).split(/[.;]|\bwhile\b/).at(-1);
+      const who = (l.slice(0, m.index).match(/@[\w_]+/g) ?? []).at(-1);
+      if (HOLD.test(clause) && who) held.push({ st, name, rest, who });
+    }
+  }
   return out.map((l) => {
     const pm = /^(\s*Props:\s*)(.*?)\.?\s*$/.exec(l);
     if (pm) for (const st of props) { const { name, rest } = splitPropState(st); if (rest && /s$/i.test(name) && pm[2].includes(`${name} in @`) && pm[2].includes(st)) { l = `${pm[1]}${pm[2].replace(st, `more ${rest}`)}.`; return l; } }
@@ -106,6 +118,7 @@ function fullNamesInLine(line, names) {
       return `${keep ? keep + ' ' : ''}${repl}${postKeep}`;
     });
     // the full name once per line; later mentions in the same line read 'the <head>' ('… of the coupe')
+    t = t.replace(new RegExp(`\\b([Aa])n\\s+(${esc(name)})`, 'g'), '$1 $2');
     let n = 0;
     t = t.replace(new RegExp(`(\\b(?:the|a)\\s+)?${esc(name)}`, 'gi'), (m0, det, off, all) => (!n++ ? m0 : det || !/\b(?:the|a|an|his|her|its|their)\s+(?:[\w-]+\s+)?$/i.test(all.slice(Math.max(0, off - 30), off)) ? `the ${head}` : head));
   }
@@ -117,6 +130,25 @@ export function dedupeScale(text) {
   const sents = String(text ?? '').split(/(?<=\.)\s+/);
   const specific = sents.filter((s) => /heads tall/i.test(s) && !/^toddler\b/i.test(s.trim()));
   return sents.filter((s) => !(/^toddler\b/i.test(s.trim()) && specific.length)).join(' ');
+}
+
+/** [REFERENCE MATERIALS]: each '@tag [ImageN]? = …' line carries the input's own description of that reference. */
+export function referenceLines(text, refs = []) {
+  const d = new Map(refs.map((r) => [r.tag, r.plainEnglishDescription]));
+  return String(text ?? '').replace(/^(@[\w_]+)((?:\s*\[Image\d+\])?\s*=\s*)(.*)$/gm, (m0, tag, mid) => (d.get(tag) ? `${tag}${mid}${d.get(tag).replace(/\.?$/, '.')}` : m0));
+}
+const span = (ns) => (ns.length === 1 ? `shot ${ns[0]}` : `shots ${ns[0]} to ${ns.at(-1)}`);
+/** [CONTINUITY]: the location and camera-side sentences say which shots are where (multi-location clips). */
+export function continuityLocations(text, shots = [], locations = []) {
+  const order = [...new Set(shots.map((s) => s.locationTag))];
+  if (order.length < 2) return text;
+  const name = new Map(locations.map((l) => [l.elementName, l.settingName]));
+  const by = order.map((tag) => ({ tag, ns: shots.filter((s) => s.locationTag === tag).map((s) => s.shotNumber) }));
+  const loc = `Location: ${by.map((b) => `the ${String(name.get(b.tag) ?? b.tag.slice(1).replaceAll('_', ' ')).toLowerCase()} in ${b.tag} for ${span(b.ns)}`).join(' and ')}. Never leave them.`;
+  const cam = `The camera stays on the same side of the action ${by.map((b) => `as in ${b.tag} for ${span(b.ns)}`).join(' and ')} and never crosses to the other side.`;
+  return String(text ?? '')
+    .replace(/Location:[^\n]*?(?:throughout\.\s*Never leave (?:them|it|these places)\.|Never leave (?:them|it|these places)\.|throughout\.)/, loc)
+    .replace(/The camera stays on the same side of the action[^.]*\./, cam);
 }
 
 /** Finalize one compiled clip (tenBlocks + shots) against the SC input. Returns a new clip (compiledPrompt not rebuilt). */
@@ -137,6 +169,8 @@ export function finalizeClip(seg, input) {
     else tb[k] = fullPropNames(tb[k], names);
   }
   tb.block10_maintainConsistency = dedupeScale(tb.block10_maintainConsistency);
+  tb.block1_referenceMaterials = referenceLines(tb.block1_referenceMaterials, input?.references ?? []);
+  tb.block4_continuity = continuityLocations(tb.block4_continuity, seg.shots ?? [], input?.locations ?? []);
   const shots = (seg.shots ?? []).map((s) => {
     let action = s.action;
     for (const st of byScene.get(s.sceneId) ?? []) { const { name, rest } = splitPropState(st); if (rest) action = action.replace(new RegExp(`(\\b(?:the|his|her|their|its|a)\\s+)?${esc(st)}`, 'gi'), (m, d) => `${d ?? 'the '}${name}`); }

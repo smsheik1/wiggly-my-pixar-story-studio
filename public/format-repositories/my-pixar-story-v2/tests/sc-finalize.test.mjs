@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fullLookLine, splitPropState, finalizeShotBlock, fullPropNames, dedupeScale, finalizeClip } from '../crew/seedance-compiler/finalize.mjs';
+import { referenceLines, continuityLocations, fullLookLine, splitPropState, finalizeShotBlock, fullPropNames, dedupeScale, finalizeClip } from '../crew/seedance-compiler/finalize.mjs';
 import { heldPropStated } from '../crew/linter/shot-locks.mjs';
 
 test('Look line carries the full approved outfit, near-duplicate hijab items merged', () => {
@@ -57,4 +57,18 @@ test('finalizeClip uses input outfits and scene props', () => {
   assert.match(f.tenBlocks.block5_shots, /Look @Kid: blue t-shirt; grey shorts; white sneakers\./);
   assert.match(f.tenBlocks.block5_shots, /Props: marbles in @Kid's hands; more scattered across the floor\./);
   assert.equal(f.shots[0].action, '@Kid grips the marbles.');
+});
+
+test('a prop held by plain name is stated in hand on the Props line', () => {
+  const out = finalizeShotBlock("SHOT 1 | 0–3s\nProps: marbles scattered across the floor.\n@Kid clutches the marbles while @Mom watches.\nHard cut.", { props: ['marbles scattered across the floor'] });
+  assert.match(out, /Props: marbles in @Kid's hands; more scattered across the floor\./);
+  const rest = finalizeShotBlock("SHOT 1 | 0–3s\nProps: marbles scattered across the floor.\n@Kid looks at the marbles.\nHard cut.", { props: ['marbles scattered across the floor'] });
+  assert.match(rest, /Props: marbles scattered across the floor\./);
+});
+test('article before the full name; reference lines from input; continuity per location', () => {
+  assert.equal(fullPropNames('love for an black sedan with dented bumper', ['black sedan with dented bumper']), 'love for a black sedan with dented bumper');
+  assert.equal(referenceLines('@Mom [Image2] = short.\n@x = y.', [{ tag: '@Mom', plainEnglishDescription: 'Adult woman, full text' }]), '@Mom [Image2] = Adult woman, full text.\n@x = y.');
+  const shots = [1, 2, 3].map((n) => ({ shotNumber: n, locationTag: n < 3 ? '@yard' : '@car_inside' }));
+  const t = continuityLocations('Location: the yard in @yard and the car in @car_inside throughout. Never leave them. The camera stays on the same side of the action for the whole segment and never crosses to the other side. Costume fixed.', shots, [{ elementName: '@yard', settingName: 'Back yard' }, { elementName: '@car_inside', settingName: 'Car interior' }]);
+  assert.equal(t, 'Location: the back yard in @yard for shots 1 to 2 and the car interior in @car_inside for shot 3. Never leave them. The camera stays on the same side of the action as in @yard for shots 1 to 2 and as in @car_inside for shot 3 and never crosses to the other side. Costume fixed.');
 });
