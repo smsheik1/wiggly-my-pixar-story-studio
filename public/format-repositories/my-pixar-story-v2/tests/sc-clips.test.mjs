@@ -43,7 +43,7 @@ test('engines: Omni 1.1 Flash caps clips at 10s with 4/6/8/10; Seedance stays de
   assert.equal(VIDEO_ENGINES['omni-1.1-flash'].segmentMaxSec, 10);
   assert.deepEqual([3, 4, 5, 7, 9, 10, 11].map((n) => engineDurationFor('omni-1.1-flash', n)), [4, 4, 6, 8, 10, 10, undefined]);
   assert.equal(engineDurationFor('seedance-2.5', 27), 27);
-  assert.deepEqual(V2_MODELS['seedance-compiler'].videoEngines, ['seedance-2.5', 'seedance-2.0-mini', 'omni-1.1-flash']);
+  assert.deepEqual(V2_MODELS['seedance-compiler'].videoEngines, ['seedance-2.5', 'seedance-2.0-mini', 'wan-3.0', 'omni-1.1-flash']);
   const def = selectSeedanceCompilerInput(state()), om = selectSeedanceCompilerInput(state('omni-1.1-flash'));
   assert.deepEqual([def.targetEngine, def.segmentMaxSec, def.allowedDurationsSec], ['seedance-2.5', 30, null]);
   assert.deepEqual([om.targetEngine, om.segmentMaxSec, om.allowedDurationsSec], ['omni-1.1-flash', 10, [4, 6, 8, 10]]);

@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { ASSET_KEY } from '../character-architect/schema.mjs';
 import { dedupeLookLines } from './look-dedupe.mjs';
+import { SPOKEN_SPELLINGS } from '../../config/spoken-spellings.mjs';
 
 export const VIDEO_ENGINE = 'seedance-2.5';
 export const VIDEO_RESOLUTION = '480p';
@@ -16,9 +17,20 @@ export const VIDEO_ENGINES = Object.freeze({
   // Replicate bytedance/seedance-2.0-mini (checked 2026-10-20): duration 4-15s any whole second, prompt max 4000 chars, up to 9 reference images.
   // promptMaxChars is the cap on the prompt as SENT, i.e. after sendTimeTags() adds [ImageN] / [AudioN]; PROMPT_TOO_LONG counts those tags.
   'seedance-2.0-mini': Object.freeze({ provider: 'replicate', model: 'bytedance/seedance-2.0-mini', segmentMaxSec: 15, durations: null, promptMaxChars: 4000, continuation: 'cut', maxRefImages: 9, narrationAudioRef: true }),
+  // Replicate alibaba/wan-3 (checked 2026-10-21): duration 2-30s, prompt + optional first-frame image only on the hosted endpoint
+  // (no reference_images input, no audio switch). The adapter still writes refs as 'Image N' and caps them at 10 for a
+  // reference-to-video endpoint (1 character + 2 backgrounds + 7 panels).
+  'wan-3.0': Object.freeze({ provider: 'replicate', model: 'alibaba/wan-3', segmentMaxSec: 30, durations: null, continuation: 'cut', maxRefImages: 10, quotes: 'double', narrationAudioRef: false, refLabel: 'spaced' }),
   'omni-1.1-flash': Object.freeze({ provider: 'google-flow', segmentMaxSec: 10, durations: Object.freeze([4, 6, 8, 10]), continuation: 'cut', postNarration: true /* narration is TTS laid in post; Omni voices any words it is given */ }),
 });
 export const ENGINE_IDS = Object.keys(VIDEO_ENGINES);
+/** Lessons from renders, applied to every sent prompt: brand names in their spoken spelling (config/spoken-spellings.mjs),
+ *  and a bare 'coupe' outside spoken lines and tags becomes 'two-door coupe' (engines drew four doors). */
+export function spokenAndPlain(text) {
+  let p = String(text ?? '');
+  for (const [w, sp] of Object.entries(SPOKEN_SPELLINGS)) p = p.replace(new RegExp(`\\b${reEsc(w)}\\b`, 'gi'), sp);
+  return p.split(/("[^"\n]*"|\{[^}\n]*\})/).map((part, i) => (i % 2 ? part : part.replace(/(?<![\w@-])(?<!two-door )coupe\b(?!_)/gi, 'two-door coupe'))).join('');
+}
 const reEsc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** The prompt exactly as sent to a reference-input engine: "[ImageN]" after each reference's "@Tag =" line (N = 1-based order of
  *  segment.references, which is the attachment order) and, for engines that take a narration audio file (narrationAudioRef),
@@ -33,9 +45,21 @@ export function sendTimeTags(prompt, references = [], engine) {
 }
 
 /** Storyboard panels of a clip in shot order: [{ sceneId, shotNumber, assetKey, imageN }] after the clip's element references. */
-export function panelRefs(seg) {
+export function panelRefs(seg, engine) {
   const panels = seg?.storyboardPanels ?? {}, base = (seg?.references ?? []).length, out = [];
   for (const sh of seg?.shots ?? []) if (panels[sh.sceneId] && !out.some((o) => o.sceneId === sh.sceneId)) out.push({ sceneId: sh.sceneId, shotNumber: sh.shotNumber, assetKey: panels[sh.sceneId], imageN: base + out.length + 1 });
+  // engine image cap: drop the panel of the shortest shot (ties: the later one) until it fits; that shot reuses the panel
+  // of the shot before it (shotPanels maps every shot to the panel it is composed from)
+  const cap = VIDEO_ENGINES[engine]?.maxRefImages;
+  const len = (n) => { const sh = (seg?.shots ?? []).find((x) => x.shotNumber === n); return sh ? sh.endSec - sh.startSec : 0; };
+  const dropped = [];
+  while (cap && out.length > 1 && base + out.length > cap) {
+    let k = 1; for (let i = 1; i < out.length; i++) if (len(out[i].shotNumber) <= len(out[k].shotNumber)) k = i; // never the first panel
+    dropped.push(out.splice(k, 1)[0]);
+  }
+  out.forEach((o, i) => { o.imageN = base + i + 1; });
+  out.shotPanels = Object.fromEntries((seg?.shots ?? []).map((sh) => [sh.shotNumber, [...out].reverse().find((o) => o.shotNumber <= sh.shotNumber) ?? out[0]]));
+  out.dropped = dropped.map((d) => d.sceneId);
   return out;
 }
 
@@ -47,13 +71,15 @@ export function panelRefs(seg) {
 export function sendPrompt(seg, engine = seg?.generationPayload?.engine ?? VIDEO_ENGINE) {
   const e = VIDEO_ENGINES[engine] ?? {};
   let p = sendTimeTags(seg?.compiledPrompt, seg?.references ?? [], engine);
-  const panels = panelRefs(seg);
+  const panels = panelRefs(seg, engine);
   if (panels.length) {
     const first = panels[0].imageN, last = panels.at(-1).imageN;
-    p = p.replace(/^(Each reference is one person[^\n]*)$/m, `$1\nStoryboard frames ${first === last ? `[Image${first}]` : `[Image${first}] to [Image${last}]`}: one per shot, composition and staging guides only; never copy their drawing style, borders or labels.`);
-    for (const pr of panels) p = p.replace(new RegExp(`(^SHOT ${pr.shotNumber} \\|[^\n]*\n(?:Camera:[^\n]*\n)?)`, 'm'), `$1Composition from [Image${pr.imageN}].\n`);
+    p = p.replace(/^(Each reference is one person[^\n]*)$/m, `$1\nStoryboard frames ${first === last ? `[Image${first}]` : `[Image${first}] to [Image${last}]`}: ${panels.dropped.length ? 'in shot order, each named on its shot' : 'one per shot'}, composition and staging guides only; never copy their drawing style, borders or labels.`);
+    for (const [n, pr] of Object.entries(panels.shotPanels)) if (pr) p = p.replace(new RegExp(`(^SHOT ${n} \\|[^\n]*\n(?:Camera:[^\n]*\n)?)`, 'm'), `$1Composition from [Image${pr.imageN}].\n`);
   }
   if (e.quotes === 'double') p = p.replace(/\{([^{}]+)\}/g, '"$1"').replace(/lines in braces/g, 'lines in double quotes');
+  p = spokenAndPlain(p);
+  if (e.refLabel === 'spaced') p = p.replace(/\[Image(\d+)\]/g, 'Image $1');
   return { prompt: p, images: [...(seg?.references ?? []).map((r) => r.assetKey), ...panels.map((x) => x.assetKey)] };
 }
 /** generationPayload.durationSec for a clip: the smallest duration the engine offers that is >= the clip's true length. */
