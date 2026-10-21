@@ -25,7 +25,7 @@ test('SC role.md contains Gemini SKILL.md word for word (only the engine swap)',
 test('SC role.md has Wiggly additions and the JSON contract', () => {
   for (const k of [...Object.keys(SeedanceCompilerOutputSchema.shape), ...Object.keys(SeedanceSegmentSchema.shape)]) assert.ok(role.includes(`"${k}"`), k);
   for (const k of ['tag', 'kind', 'sourceTag', 'assetKey', 'locationTag', 'cast', 'action', 'dialogue', 'sfx', 'cut', 'mode']) assert.ok(role.includes(`"${k}"`), k);
-  for (const s of ['480p', 'Extend', 'Element-name tags only', '@kitchen', 'never appear in the prompt', 'Never write a URL', 'approved local asset key',
+  for (const s of ['480p', 'self-contained', 'Element-name tags only', '@kitchen', 'never appear in the prompt', 'Never write a URL', 'approved local asset key',
     'Dialogue verbatim from the stage play', '3 spoken words per second', 'No `35mm`', 'no visible hair, hairline or dark band', 'Teens are depicted as 18',
     "Only the stage play's cast exists", '180 seconds', 'configured but disabled', 'dan-kieft-pixar-prompter.md', 'assumptions'])
     assert.ok(role.includes(s), s);

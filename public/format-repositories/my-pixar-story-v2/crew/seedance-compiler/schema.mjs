@@ -9,23 +9,52 @@ export const MAX_SEGMENT_SECONDS = 30;
 // WIGGLY: target video engines. segmentMaxSec = longest clip the engine renders; durations = the clip lengths it offers
 // (null = any whole second up to the cap). A staged part longer than the cap is split into clips at shot boundaries.
 export const VIDEO_ENGINES = Object.freeze({
-  'seedance-2.5': Object.freeze({ provider: 'replicate', segmentMaxSec: 30, durations: null, continuation: 'extend' }),
+  // Replicate bytedance/seedance-2.5 (latest version checked 2026-10-21): duration 4-30s, no prompt maxLength, up to 30 reference_images
+  // ([ImageN]); reference_audios exist but drive lip-sync, so narration is voiced in-render from the quoted line instead (no [AudioN]).
+  // generate_audio voices "double-quoted" dialogue. Each clip is self-contained (continuation 'cut'): a clip can be re-rendered alone.
+  'seedance-2.5': Object.freeze({ provider: 'replicate', model: 'bytedance/seedance-2.5', segmentMaxSec: 30, durations: null, continuation: 'cut', maxRefImages: 30, quotes: 'double', narrationAudioRef: false }),
   // Replicate bytedance/seedance-2.0-mini (checked 2026-10-20): duration 4-15s any whole second, prompt max 4000 chars, up to 9 reference images.
   // promptMaxChars is the cap on the prompt as SENT, i.e. after sendTimeTags() adds [ImageN] / [AudioN]; PROMPT_TOO_LONG counts those tags.
-  'seedance-2.0-mini': Object.freeze({ provider: 'replicate', model: 'bytedance/seedance-2.0-mini', segmentMaxSec: 15, durations: null, promptMaxChars: 4000, continuation: 'cut' }),
+  'seedance-2.0-mini': Object.freeze({ provider: 'replicate', model: 'bytedance/seedance-2.0-mini', segmentMaxSec: 15, durations: null, promptMaxChars: 4000, continuation: 'cut', maxRefImages: 9, narrationAudioRef: true }),
   'omni-1.1-flash': Object.freeze({ provider: 'google-flow', segmentMaxSec: 10, durations: Object.freeze([4, 6, 8, 10]), continuation: 'cut', postNarration: true /* narration is TTS laid in post; Omni voices any words it is given */ }),
 });
 export const ENGINE_IDS = Object.keys(VIDEO_ENGINES);
 const reEsc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** The prompt exactly as sent to a reference-input engine: "[ImageN]" after each reference's "@Tag =" line (N = 1-based order of
- *  segment.references, which is the attachment order) and "(narration audio [Audio1][, part K])" after each voiceover line
- *  (all narration of a clip is joined into one audio file). The length gate (PROMPT_TOO_LONG) measures this string. */
-export function sendTimeTags(prompt, references = []) {
+ *  segment.references, which is the attachment order) and, for engines that take a narration audio file (narrationAudioRef),
+ *  "(narration audio [Audio1][, part K])" after each voiceover line. The length gate (PROMPT_TOO_LONG) measures sendPrompt(). */
+export function sendTimeTags(prompt, references = [], engine) {
   let p = String(prompt ?? '');
   references.forEach((r, i) => { p = p.replace(new RegExp(`^${reEsc(r.tag)} =`, 'm'), `${r.tag} [Image${i + 1}] =`); });
+  if (engine && VIDEO_ENGINES[engine] && !VIDEO_ENGINES[engine].narrationAudioRef) return p;
   const vo = p.match(/^@[\w]+, voiceover: \{[^}]*\}/gm)?.length ?? 0; let k = 0;
   p = p.replace(/^@[\w]+, voiceover: \{[^}]*\}/gm, (m) => `${m}${vo > 1 ? ` (narration audio [Audio1], part ${++k})` : ' (narration audio [Audio1])'}`);
   return p;
+}
+
+/** Storyboard panels of a clip in shot order: [{ sceneId, shotNumber, assetKey, imageN }] after the clip's element references. */
+export function panelRefs(seg) {
+  const panels = seg?.storyboardPanels ?? {}, base = (seg?.references ?? []).length, out = [];
+  for (const sh of seg?.shots ?? []) if (panels[sh.sceneId] && !out.some((o) => o.sceneId === sh.sceneId)) out.push({ sceneId: sh.sceneId, shotNumber: sh.shotNumber, assetKey: panels[sh.sceneId], imageN: base + out.length + 1 });
+  return out;
+}
+
+/**
+ * The final prompt for one clip, exactly as sent (deterministic, after the gate): reference tags, then each shot's storyboard
+ * panel labeled "Composition from [ImageN]" under its Camera line, and on engines that voice "double-quoted" dialogue
+ * the {braces} of every spoken line become "double quotes". Returns { prompt, images: [assetKey in attachment order] }.
+ */
+export function sendPrompt(seg, engine = seg?.generationPayload?.engine ?? VIDEO_ENGINE) {
+  const e = VIDEO_ENGINES[engine] ?? {};
+  let p = sendTimeTags(seg?.compiledPrompt, seg?.references ?? [], engine);
+  const panels = panelRefs(seg);
+  if (panels.length) {
+    const first = panels[0].imageN, last = panels.at(-1).imageN;
+    p = p.replace(/^(Each reference is one person[^\n]*)$/m, `$1\nStoryboard frames ${first === last ? `[Image${first}]` : `[Image${first}] to [Image${last}]`}: one per shot, composition and staging guides only; never copy their drawing style, borders or labels.`);
+    for (const pr of panels) p = p.replace(new RegExp(`(^SHOT ${pr.shotNumber} \\|[^\n]*\n(?:Camera:[^\n]*\n)?)`, 'm'), `$1Composition from [Image${pr.imageN}].\n`);
+  }
+  if (e.quotes === 'double') p = p.replace(/\{([^{}]+)\}/g, '"$1"').replace(/lines in braces/g, 'lines in double quotes');
+  return { prompt: p, images: [...(seg?.references ?? []).map((r) => r.assetKey), ...panels.map((x) => x.assetKey)] };
 }
 /** generationPayload.durationSec for a clip: the smallest duration the engine offers that is >= the clip's true length. */
 export function engineDurationFor(engine, lenSec) {

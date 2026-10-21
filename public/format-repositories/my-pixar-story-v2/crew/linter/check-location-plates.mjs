@@ -38,6 +38,8 @@ const FOCAL = ['35mm', '50mm', 'wide shot', 'master shot', 'establishing shot'];
 const LIVE_ACTION = [['photorealistic', /photorealistic/i], ['film stock', /film stock/i], ['film grain', /film grain/i], ['kodak', /\bkodak\b/i],
   ['35mm grain', /35\s?mm grain/i], ['lens flare', /lens flare/i],
   ['hyperrealistic', /hyperrealistic/i], ['live-action', /live[- ]action/i], ['8k', /\b8k\b/i], ['4k', /\b4k\b/i], ['octane', /\boctane\b/i], ['unreal engine', /unreal engine/i]]; // WIGGLY extras
+const TIME_CLASS = { dawn: 'dawn', sunrise: 'dawn', morning: 'day', midday: 'day', noon: 'day', daytime: 'day', afternoon: 'day', 'late afternoon': 'day', 'golden hour': 'dusk', sunset: 'dusk', dusk: 'dusk', evening: 'dusk', night: 'night', nighttime: 'night' };
+const TIME_CLASS_OF = (t) => { const m = /\b(dawn|sunrise|late afternoon|morning|midday|noon|daytime|afternoon|golden hour|sunset|dusk|evening|nighttime|night)\b/i.exec(t ?? ''); return m ? TIME_CLASS[m[1].toLowerCase()] : null; };
 const TIME_WORDS = /\b(dawn|morning|midday|noon|afternoon|golden hour|sunset|dusk|evening|night)\b/i;
 // Local negation fix: a hit is exempt only when "no " / "not " DIRECTLY precedes it.
 const unNegatedHit = (text, re) => {
@@ -121,6 +123,9 @@ export function validateLocationPlates(data, input) {
     const want = settings.find((s) => s.name === l.settingName)?.sceneIds ?? [];
     const miss = want.filter((id) => !(l.sceneIds ?? []).includes(id));
     if (miss.length) err('TAG_PARITY', `${l.settingName}: missing scene ids ${miss.join(', ')}.`, `${p}.sceneIds`);
+    // the Story Director's description sets the time of day (one moment, one light); the plate keeps it
+    const tw = TIME_CLASS_OF(settings.find((s) => s.name === l.settingName)?.description), tp = TIME_CLASS_OF(String(l.timeOfDay ?? '').replace(/-/g, ' '));
+    if (tw && tp && tw !== tp) err('TIME_OF_DAY_NOT_AS_STAGED', `${l.settingName}: timeOfDay is "${l.timeOfDay}" but the stage play describes it at ${tw}. Use the stage play's time of day in timeOfDay, the lighting anchor and the prompt.`, `${p}.timeOfDay`);
     issues.push(...validateLocationScoutOutput(l, { pathPrefix: p }).issues);
   });
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);

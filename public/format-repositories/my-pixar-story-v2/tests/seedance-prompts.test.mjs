@@ -109,8 +109,8 @@ test('RUNTIME_CAP', () => {
   for (let k = 0; k < 6; k++) d.segments.push({ ...structuredClone(seg), segmentIndex: d.segments.length + 1, extendsFrom: d.segments.length });
   hasCode(gate(d), 'RUNTIME_CAP');
 });
-test('MISSING_EXTEND, MISSING_SEGMENT, SHOT_HEADER_MISMATCH', () => {
-  const d = out(); d.segments[1].extendsFrom = null; hasCode(gate(d), 'MISSING_EXTEND');
+test('CLIP_NOT_SELF_CONTAINED, MISSING_SEGMENT, SHOT_HEADER_MISMATCH', () => {
+  const d = T(out(), (t) => t.replace('It ends the instant', 'This clip continues directly from the previous clip. It ends the instant'), 1, 'block3_goal'); hasCode(gate(d), 'CLIP_NOT_SELF_CONTAINED');
   const e = out(); e.segments.pop(); hasCode(gate(e), 'MISSING_SEGMENT');
   const f = out(); f.segments[0].shots[0].endSec = 4; f.segments[0].shots[1].startSec = 4; hasCode(gate(f), 'SHOT_HEADER_MISMATCH');
 });

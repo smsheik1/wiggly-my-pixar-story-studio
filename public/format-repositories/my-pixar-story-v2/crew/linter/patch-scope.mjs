@@ -55,7 +55,7 @@ export function describeScope(t) {
   const common = 'masthead.draftNumber and assumptions may be updated to match (the HTML deck and storyboard sheets are rebuilt in code).';
   if (t.kind === 'line') return `Only the ${t.line} line of shot ${t.segmentId}.${t.shotNumber} (segments[${t.si}].shots[${t.hi}].${t.line}: speaker, line, flags, source) may change, plus ${ripple}, and segments[${t.si}].answerSources. ${common} Everything else is locked.`;
   if (t.kind === 'shot') return `Only shot ${t.segmentId}.${t.shotNumber} (segments[${t.si}].shots[${t.hi}], every field except shotNumber and startSec) may change, plus ${ripple}; the present and props of the scene lock that contains it; segments[${t.si}].answerSources; that shot's storyboard panel and the fullPrompt of its sheet; and new cast cards or locations appended at the end of cast / locations (existing ones are locked). ${common} The number of shots in the part is locked (target the part to add or remove shots).`;
-  return `Only part ${t.segmentId} (segments[${t.si}], every field except segmentId) may change, plus its shapeBar.parts entry and shapeBar.totalRuntimeSec, its storyboard sheets, and new cast cards or locations appended at the end of cast / locations (existing ones are locked).${t.isFinal ? ' This is the final part, so finaleThesis may change too.' : ''} ${common} Every other part is locked.`;
+  return `Only part ${t.segmentId} (segments[${t.si}], every field except segmentId) may change, plus its shapeBar.parts entry and shapeBar.totalRuntimeSec, its storyboard sheets, the description (not the name) of any existing location, and new cast cards or locations appended at the end of cast / locations (existing ones are locked).${t.isFinal ? ' This is the final part, so finaleThesis may change too.' : ''} ${common} Every other part is locked.`;
 }
 
 /**
@@ -84,6 +84,8 @@ export function checkPatchScope(prior, next, target) {
     // always allowed: derived or bookkeeping fields (the deck and storyboard sheets are rebuilt in code from the JSON)
     if (k0 === 'htmlScriptDocument' || k0 === 'storyboardSheets' || k0 === 'assumptions' || (k0 === 'masthead' && k1 === 'draftNumber')) continue;
     if (k0 === 'finaleThesis' && t.kind === 'part' && isFinal) continue;
+    // a part target may correct an existing location's description (time of day, a named object's colour / make); names stay locked
+    if (t.kind === 'part' && k0 === 'locations' && typeof k1 === 'number' && k2 === 'description' && p.length === 3) continue;
     // append-only cast and locations (shot and part targets)
     if ((k0 === 'cast' || k0 === 'locations') && p.length === 1) {
       const a = ch.before ?? [], b = ch.after ?? [];

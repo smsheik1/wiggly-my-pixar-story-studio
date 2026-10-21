@@ -157,6 +157,59 @@ export const RUNTIME_TOLERANCE_SEC = 5;
 /** Target runtime: input.targetTotalRuntimeSec, else input.format.targetTotalSeconds, else 90. */
 export const runtimeTargetOf = (input) => (Number.isFinite(input?.targetTotalRuntimeSec) ? input.targetTotalRuntimeSec
   : Number.isFinite(input?.format?.targetTotalSeconds) ? input.format.targetTotalSeconds : 90);
+// WIGGLY scene facts. One moment, one light: a place that continues the previous place's moment (its name names something in
+// that place, e.g. the inside of a vehicle parked there) keeps the same time of day. A thing a line names by colour (and make /
+// model) is written that way in every background description and scene prop that shows it (the locks the shots inherit).
+export const TIME_OF_DAY = /\b(dawn|sunrise|morning|midday|noon|daytime|afternoon|golden hour|sunset|dusk|evening|night|nighttime)\b/i;
+const TOD_CLASS = { dawn: 'dawn', sunrise: 'dawn', morning: 'day', midday: 'day', noon: 'day', daytime: 'day', afternoon: 'day', 'golden hour': 'dusk', sunset: 'dusk', dusk: 'dusk', evening: 'dusk', night: 'night', nighttime: 'night' };
+const NAME_STOP = new Set(['small', 'old', 'big', 'cozy', 'family', 'home', 'room', 'house', 'the', 'and', 'with', 'present', 'day', 'new', 'little', 'apartment', 'living', 'suburban', 'urban', 'modern', 'worn', 'warm', 'bright', 'dark', 'quiet', 'busy', 'early', 'late']);
+const COLORS = /\b(black|white|red|blue|green|yellow|orange|purple|pink|brown|gray|grey|silver|gold|beige|maroon|navy|teal|tan)\b/gi;
+const timeClass = (d) => { const m = TIME_OF_DAY.exec(d ?? ''); return m ? TOD_CLASS[m[1].toLowerCase()] : null; };
+const linked = (nameB, descA) => String(nameB).toLowerCase().split(/\W+/).filter((w) => w.length > 2 && !NAME_STOP.has(w) && !TIME_OF_DAY.test(w)).some((w) => new RegExp(`\\b${w}`, 'i').test(descA ?? ''));
+export function checkSceneFacts(data) {
+  const issues = [], err = (code, message, path) => issues.push({ severity: 'error', code, message, path });
+  const locs = new Map((data?.locations ?? []).map((l, i) => [l.name, { ...l, i }]));
+  // time of day across consecutive places in film order
+  let prev; let cur;
+  for (const seg of data?.segments ?? []) for (const sh of seg.shots ?? []) {
+    if (sh.location) cur = sh.location;
+    if (prev && cur !== prev) {
+      const a = locs.get(prev), b = locs.get(cur);
+      const ta = timeClass(a?.description), tb = timeClass(b?.description);
+      if (a && b && ta && tb && ta !== tb && (linked(b.name, a.description) || linked(a.name, b.description)) && !/\blater\b|\bnext (day|morning|night)\b/i.test(b.description))
+        err('LOCATION_TIME_JUMP', `"${b.name}" (${tb}) follows "${a.name}" (${ta}) as the same moment in the same place, so it keeps the same time of day. Give both descriptions one time of day (or write "later" in "${b.name}" if time really passes).`, `locations.${b.i}.description`);
+    }
+    prev = cur;
+  }
+  // colour (+ make / model) named in a line -> every location description, prop and shot that shows that thing says it too
+  const visual = [];
+  (data?.locations ?? []).forEach((l, i) => visual.push({ text: l.description ?? '', path: `locations.${i}.description` }));
+  (data?.segments ?? []).forEach((seg, si) => {
+    (seg.scenes ?? []).forEach((sc, c) => (sc.props ?? []).forEach((pr, k) => visual.push({ text: pr, path: `segments.${si}.scenes.${c}.props.${k}` }))); });
+  const seen = new Set();
+  for (const seg of data?.segments ?? []) for (const sh of seg.shots ?? []) for (const ln of [sh.dialogue, sh.narration]) {
+    const line = String(ln?.line ?? '').replace(/[{}]/g, '');
+    for (const m of line.matchAll(COLORS)) {
+      const after = line.slice(m.index + m[0].length).split(/[,.;!?]/)[0].trim().split(/\s+/).slice(0, 5);
+      const color = m[1].toLowerCase();
+      for (let k = after.length - 1; k >= 0; k--) {
+        const noun = after[k].toLowerCase().replace(/[^a-z-]/g, '');
+        if (noun.length < 3 || NAME_STOP.has(noun)) continue;
+        const shows = visual.filter((v) => new RegExp(`\\b${noun}s?\\b`, 'i').test(v.text));
+        if (!shows.length) continue;
+        const named = after.slice(0, k).filter((w) => /^[A-Z]/.test(w));
+        for (const v of shows) {
+          const miss = [color, ...named].filter((w) => !new RegExp(`\\b${w}\\b`, 'i').test(v.text));
+          const key = `${v.path}|${noun}`;
+          if (miss.length && !seen.has(key)) { seen.add(key); err('SPOKEN_DETAIL_NOT_SHOWN', `A line says "${m[0]} ${after.slice(0, k + 1).join(' ')}", but ${v.path} shows the ${noun} without "${miss.join(' ')}". Describe it the way the line names it wherever it is seen.`, v.path); }
+        }
+        break;
+      }
+    }
+  }
+  return issues;
+}
+
 export function validateStoryDirectorOutput(data, input = {}) {
   const issues = [];
   const err = (code, message, path) => issues.push({ severity: 'error', code, message, ...(path ? { path } : {}) });
@@ -293,6 +346,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
   // WIGGLY answer tracing: every line cites the answer it comes from; only people the family names are cast.
   issues.push(...checkAnswerSources(data, input), ...checkExtraCast(data, input), ...checkPropsTraceable(data, input));
   issues.push(...validateWritingTells('story-director', data));
+  issues.push(...checkSceneFacts(data));
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
   const warnings = issues.filter((i) => i.severity === 'warning').map((i) => i.message);
   return { isValid: errors.length === 0, errors, warnings, issues };

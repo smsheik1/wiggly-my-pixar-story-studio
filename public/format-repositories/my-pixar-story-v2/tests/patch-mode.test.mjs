@@ -119,7 +119,7 @@ test('scope: shot and part targets; cast/locations append-only; finaleThesis onl
 test('impact: only parts whose compiler input changed; line sources alone do not count; new cast and places are found', () => {
   const d = sd();
   const line = structuredClone(d); line.segments[0].shots[1].dialogue.line = NEW;
-  assert.deepEqual(computeImpact(d, line), { sdChangedPaths: ['segments[0].shots[1].dialogue.line'], changedShots: ['1.2'], newCast: [], newLocations: [], scParts: [1] });
+  assert.deepEqual(computeImpact(d, line), { sdChangedPaths: ['segments[0].shots[1].dialogue.line'], changedShots: ['1.2'], newCast: [], newLocations: [], changedLocations: [], scParts: [1] });
   const src = structuredClone(d); src.segments[0].shots[1].dialogue.source = { answer: 'scene1Childhood.memory', kind: 'paraphrase' };
   assert.deepEqual(computeImpact(d, src).scParts, [], 'the compiler never sees line sources');
   const rip = structuredClone(d); const s = rip.segments[1].shots; s[1].endSec += 1; s[2].startSec += 1; s[2].endSec += 1;

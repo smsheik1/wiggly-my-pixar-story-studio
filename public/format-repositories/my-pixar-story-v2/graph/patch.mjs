@@ -75,6 +75,8 @@ export function computeImpact(priorSd, nextSd) {
     changedShots: changedShots(priorSd, nextSd),
     newCast: (nextSd.cast ?? []).map((c) => c.elementTag).filter((t) => !priorTags.has(t)),
     newLocations: (nextSd.locations ?? []).map((l) => l.name).filter((n) => !priorLocs.has(n)),
+    // existing locations whose description was corrected: their plates are re-authored (same @Loc slot)
+    changedLocations: (nextSd.locations ?? []).filter((l) => { const b = (priorSd.locations ?? []).find((x) => x.name === l.name); return b && b.description !== l.description; }).map((l) => l.name),
     scParts: affectedSeedanceParts(priorSd, nextSd),
   };
 }
@@ -100,18 +102,20 @@ export function locationScoutPatchSpec() {
   const mergeLs = (out, state) => {
     const prior = state.locationScout?.output ?? { locations: [], assumptions: [] }; // already re-synced by the impact node
     const have = new Set(prior.locations.map((l) => l.settingName));
+    const redo = new Map((out.locations ?? []).filter((l) => have.has(l.settingName)).map((l) => [l.settingName, l]));
     const fresh = (out.locations ?? []).filter((l) => !have.has(l.settingName));
-    return { ...prior, locations: [...prior.locations, ...fresh.map((l, i) => ({ ...l, elementTag: `@Loc ${prior.locations.length + i + 1}` }))], assumptions: [...(prior.assumptions ?? []), ...(out.assumptions ?? [])] };
+    const kept = prior.locations.map((l) => (redo.has(l.settingName) ? { ...redo.get(l.settingName), elementTag: l.elementTag } : l));
+    return { ...prior, locations: [...kept, ...fresh.map((l, i) => ({ ...l, elementTag: `@Loc ${prior.locations.length + i + 1}` }))], assumptions: [...(prior.assumptions ?? []), ...(out.assumptions ?? [])] };
   };
   return {
     ...base,
     select: (state) => {
-      const full = selectLocationScoutInput(state), only = new Set(state.patch.impact.newLocations);
+      const full = selectLocationScoutInput(state), only = new Set([...state.patch.impact.newLocations, ...(state.patch.impact.changedLocations ?? [])]);
       return { ...full, settings: full.settings.filter((s) => only.has(s.name)), scenes: full.scenes.filter((s) => only.has(s.location)) };
     },
     merge: (_kept, out, state) => mergeLs(out, state),
     gate: (out, _in, state) => validateLocationPlates(out, selectLocationScoutInput(state)),
-    request: (input) => ({ rounds: 0, task: `PATCH MODE: the stage play gained new locations (${input.settings.map((s) => s.name).join(', ')}). Produce plates ONLY for the settings in /references/input.json; existing plates are already approved and kept as they are.` }),
+    request: (input) => ({ rounds: 0, task: `PATCH MODE: the stage play gained or corrected locations (${input.settings.map((s) => s.name).join(', ')}). Produce plates ONLY for the settings in /references/input.json, following their descriptions exactly; every other plate is already approved and kept as it is.` }),
   };
 }
 const COMPILED = Symbol.for('wiggly.v2.patch.compiled');
@@ -215,7 +219,7 @@ export function buildPatchGraph({ prior: rawPrior, target, note, invoke, deepAge
     const skipped = !prior.seedanceCompiler && im.scParts.length ? 'the prior run has no Seedance Compiler output, so no part is compiled' : null;
     const upd = { patch: { target: t.id, note, impact: { ...im, locationScenesResynced: resynced, ...(skipped ? { seedanceSkipped: skipped } : {}) } } };
     if (resynced) upd.locationScout = { output: ls };
-    if (resynced && !im.newLocations.length) { // no model call: the re-synced plates must still pass the plate gate
+    if (resynced && !im.newLocations.length && !(im.changedLocations ?? []).length) { // no model call: the re-synced plates must still pass the plate gate
       const r = validateLocationPlates(ls, selectLocationScoutInput(s));
       if (!r.isValid) return { ...upd, status: 'failed', gateIssues: { 'location-scout': r.issues },
         escalations: [{ agent: 'location-scout', reason: 'the existing location plates no longer match the patched stage play', attempts: 0, issues: r.issues }] };
@@ -226,7 +230,7 @@ export function buildPatchGraph({ prior: rawPrior, target, note, invoke, deepAge
     if (halted(s)) return 'finish';
     const im = s.patch.impact, next = [];
     if (im.newCast.length) next.push('character-architect');
-    if (im.newLocations.length) next.push('location-scout');
+    if (im.newLocations.length || (im.changedLocations ?? []).length) next.push('location-scout');
     return next.length ? next : 'join';
   };
   const afterApproval = (s) => (halted(s) || !prior.seedanceCompiler || !s.patch.impact.scParts.length ? 'finish' : 'seedance-compiler');

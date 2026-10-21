@@ -16,6 +16,7 @@ import { VIDEO_ENGINE, VIDEO_ENGINES, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX
 import { WORDS_PER_SECOND } from './speech.mjs';
 export { WORDS_PER_SECOND };
 const heardOnly = (d) => !!(d?.isVoiceover || d?.isOffCamera || /^(voiceover|off[- _]?camera)$/i.test(d?.mode ?? ''));
+export const SELF_CONTAINED_TELL = /\b(?:previous|prior|last|earlier) (?:segment|clip|part)\b|\b(?:last|final|end) frame\b|\bcontinu\w* (?:directly )?from\b/i;
 export const DIALOGUE_EXCLUSION = 'The only spoken words in the entire segment are the lines in braces';
 export const MOUTHS_CLOSED_LINE = 'No one on screen speaks; every on-screen mouth stays closed.';
 const MOUTHS_CLOSED_SPEAK = /no one on screen speaks/i;
@@ -203,7 +204,7 @@ export function validateSeedancePrompts(data, input) {
     issues.push(...validateSeedanceSegment(seg, { pathPrefix: p, engine }).issues);
     const t = seg.compiledPrompt ?? '';
     total += seg.totalDurationSec ?? 0;
-    if (i > 0 && seg.extendsFrom !== i) err('MISSING_EXTEND', `${p}: segment ${i + 1} must extend from segment ${i}.`, `${p}.extendsFrom`);
+    if (i > 0 && VIDEO_ENGINES[engine]?.continuation === 'extend' && seg.extendsFrom !== i) err('MISSING_EXTEND', `${p}: segment ${i + 1} must extend from segment ${i}.`, `${p}.extendsFrom`);
     const refTags = new Map((seg.references ?? []).map((r) => [r.tag, r]));
     for (const [tag, r] of refTags) {
       const a = approved.get(tag);
@@ -303,8 +304,16 @@ export function validateSeedancePrompts(data, input) {
       if (heardLines.length && b && !b.text.includes(SILENT_LINE)) err('SILENT_LINE_MISSING', `${p}: SHOT ${s.shotNumber} (scene ${s.sceneId}) carries narration added in post, so it says "${SILENT_LINE}"`, `${p}.tenBlocks.block5_shots`);
     }
     const maxChars = input?.promptMaxChars ?? VIDEO_ENGINES[engine]?.promptMaxChars;
-    const sentLen = maxChars ? sendTimeTags(t, seg.references ?? []).length : 0;
+    const sentLen = maxChars ? sendTimeTags(t, seg.references ?? [], engine).length : 0;
     if (maxChars && sentLen > maxChars) err('PROMPT_TOO_LONG', `${p}: compiledPrompt is ${sentLen} characters as sent (${t.length} written + ${sentLen - t.length} for the [ImageN]/[AudioN] tags added at send time); ${engine} accepts at most ${maxChars}. Tighten [VISUAL STYLE], [CAMERA AND PERFORMANCE], [CONTINUITY] and [MAINTAIN CONSISTENCY] prose; never cut a lock line, story noun or spoken line.`, `${p}.compiledPrompt`);
+    // Reference images as sent: element refs plus one storyboard panel per shot that has one; the engine caps the count.
+    const maxRefs = VIDEO_ENGINES[engine]?.maxRefImages;
+    if (maxRefs) { const panels = new Set((seg.shots ?? []).map((s) => src?.shots.find((x) => x.sceneId === s.sceneId)?.storyboardPanel).filter(Boolean));
+      const n = (seg.references ?? []).length + panels.size;
+      if (n > maxRefs) err('TOO_MANY_REFERENCES', `${p}: ${n} reference images (${(seg.references ?? []).length} element refs + ${panels.size} storyboard panels); ${engine} takes at most ${maxRefs}. Split the clip at a shot boundary.`, `${p}.references`); }
+    // Self-contained clips (continuation 'cut'): each clip renders alone from its references, so it never leans on another clip.
+    if (VIDEO_ENGINES[engine]?.continuation === 'cut') { const m = SELF_CONTAINED_TELL.exec(t);
+      if (m) err('CLIP_NOT_SELF_CONTAINED', `${p}: "${m[0]}". ${engine} renders every clip on its own (it may be re-rendered alone), so the prompt never refers to another clip or its last frame; set the scene up fully from the references.`, `${p}.compiledPrompt`); }
     // Per-clip references: only the people and places actually in this clip's shots (an extra picture invites an extra person).
     const onCam = new Set((seg.shots ?? []).flatMap((s) => [...(s.cast ?? []), ...(s.dialogue && !heardOnly(s.dialogue) ? [s.dialogue.speaker] : [])]));
     const locs = new Set((seg.shots ?? []).map((s) => s.locationTag));
