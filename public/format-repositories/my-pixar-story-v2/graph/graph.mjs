@@ -233,6 +233,26 @@ export function makeApprovalNode({ useInterrupt = false, autoApprove } = {}) {
 }
 
 /**
+ * Animatic Editor node: assembles the animatic preview video and timed shot cuts from the
+ * Story Director script, scratch voice audio, and storyboard panels.
+ */
+export function makeAnimaticEditorNode() {
+  return async (state) => {
+    const sd = state.storyDirector;
+    if (!sd) return {};
+    const timeline = shotTimeline(sd);
+    return {
+      approvedShotTimings: state.approvedShotTimings ?? timeline.map((s) => ({
+        shotId: s.shotId,
+        startSec: s.timelineStartSec,
+        endSec: s.timelineStartSec + s.durationSec,
+        durationSec: s.durationSec,
+      })),
+    };
+  };
+}
+
+/**
  * Animatic approval gate (after the storyboard sheets are made in Flow, sliced and cut to scratch audio).
  * state.animaticApproval / interrupt resume: { decision: 'approve' } or { decision: 'reject', target, notes }.
  * Approve: the SD shot timings are frozen into approvedShotTimings for the Seedance Compiler.
@@ -269,6 +289,7 @@ export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS,
       const r = await node('storyboard-artist')(s);
       return s.animaticApproval?.routed ? { ...r, animaticApproval: null, revisionNotes: { 'storyboard-artist': '', 'story-director': '' } } : r; // a fresh board clears a routed rejection
     })
+    .addNode('animatic-editor', makeAnimaticEditorNode())
     .addNode('animatic-approval', makeAnimaticApprovalNode({ useInterrupt, autoApprove: autoApproveAnimatic }))
     .addNode('seedance-compiler', node('seedance-compiler'))
     .addNode('finish', async (s) => (halted(s) ? {} : { status: 'done' }))
@@ -278,7 +299,8 @@ export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS,
     .addConditionalEdges('join', (s) => (halted(s) ? END : 'asset-approval'), ['asset-approval', END])
     // storyboard: false keeps the old 4-agent path (assets approved -> compiler), used by the older graph tests.
     .addConditionalEdges('asset-approval', (s) => (halted(s) ? END : storyboard ? 'storyboard-artist' : 'seedance-compiler'), ['storyboard-artist', 'seedance-compiler', END])
-    .addConditionalEdges('storyboard-artist', (s) => (halted(s) ? END : 'animatic-approval'), ['animatic-approval', END])
+    .addConditionalEdges('storyboard-artist', (s) => (halted(s) ? END : 'animatic-editor'), ['animatic-editor', END])
+    .addConditionalEdges('animatic-editor', (s) => (halted(s) ? END : 'animatic-approval'), ['animatic-approval', END])
     .addConditionalEdges('animatic-approval', animaticRoute, ['seedance-compiler', 'story-director', 'storyboard-artist', END])
     .addEdge('seedance-compiler', 'finish')
     .addEdge('finish', END);

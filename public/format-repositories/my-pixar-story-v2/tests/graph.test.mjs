@@ -32,16 +32,16 @@ function fakeInvoke(bad = {}) {
   return fn;
 }
 
-test('happy path: all four agents run, Muse Spark 1.3 max, status done, outputs in their slots', async () => {
+test('happy path: all five agents run, Muse Spark 1.3 max, status done, outputs in their slots', async () => {
   const invoke = fakeInvoke();
   const s = await buildGraph({ invoke }).invoke(initial({ approvedAssets: assets() }));
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
   assert.deepEqual(invoke.calls.map((c) => c.agent).sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director', 'storyboard-artist']);
-  assert.ok(invoke.calls.every((c) => c.model === (c.agent === 'story-director' ? 'anthropic/claude-haiku-5.5' : 'meta/muse-spark-1.3-contributor') && c.effort === (c.agent === 'story-director' ? 'high' : 'xhigh') && c.skill > 500));
+  assert.ok(invoke.calls.every((c) => c.model === 'meta/muse-spark-1.3-contributor' && c.effort === 'xhigh' && c.skill > 500));
   assert.ok(s.storyDirector.segments.length === 2 && s.characterArchitect.output.characters.length === 3);
   assert.equal(s.locationScout.output.locations[0].elementTag, '@Loc 1');
   assert.equal(s.seedanceCompiler.output.segments[0].generationPayload.resolution, '480p');
-  assert.deepEqual(s.attempts, { 'story-director': 1, 'character-architect': 1, 'location-scout': 1, 'seedance-compiler': 1 });
+  assert.deepEqual(s.attempts, { 'story-director': 1, 'character-architect': 1, 'location-scout': 1, 'storyboard-artist': 1, 'seedance-compiler': 1 });
 });
 test('both parallel branches run after the Story Director and before the compiler; inputs are their own slices', async () => {
   const invoke = fakeInvoke();

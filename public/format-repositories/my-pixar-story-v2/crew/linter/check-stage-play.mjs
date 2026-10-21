@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { endsMidSentence, namedCast, repeatedMicroActions, hasPersonalityOrDemeanor } from './line-checks.mjs';
+import { endsMidSentence, namedCast, repeatedMicroActions, hasPersonalityOrDemeanor, isPassiveAction } from './line-checks.mjs';
 import { accentOf } from '../story-director/schema.mjs';
 import { validateWritingTells } from './writing-tells.mjs';
 import { checkStageShotLocks, onScreenOf } from './shot-locks.mjs';
@@ -272,6 +272,8 @@ export function validateStoryDirectorOutput(data, input = {}) {
         err('EYES_HIDDEN', `Shot ${n} in segment ${seg.segmentId}: eyewear hides a character's eyes. Eyes stay visible; eyewear that would hide them sits pushed up on the forehead, and shot text uses the @tag only.`, p);
       for (const [label, re, plain] of BANNED_JARGON) if (re.test(text))
         err('BANNED_JARGON', `Forbidden jargon '${label}' found in shot ${n}. Use plain language instead (e.g. '${plain}')`, p);
+      if (isPassiveAction(shot.whatWeSee))
+        warn('PASSIVE_CHARACTER_ACTION', `Shot ${n} in segment ${seg.segmentId} has passive character action ('${shot.whatWeSee}'). Dan Kieft craft: characters must have active physical business with hands or body (e.g. fidgeting with keys, propping chin, holding knees, turning mug) or a moving hold (breathing, posture settle) rather than merely listening, watching, or nodding.`, `${p}.whatWeSee`);
     });
     if (segTotal > 30) err('EXCEEDS_30S_CEILING', `Segment ${seg.segmentId} runs ${segTotal}s. HARD CEILING IS 30 SECONDS per segment.`, `segments.${si}`);
     filmTotal += segTotal;

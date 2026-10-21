@@ -51,3 +51,20 @@ export function hasPersonalityOrDemeanor(desc) {
   return PERSONALITY_TRAIT_RE.test(String(desc ?? ''));
 }
 
+/** Words indicating physical business, hand actions, or moving holds (Dan Kieft craft). */
+export const PHYSICAL_BUSINESS_WORDS = /\b(?:hand|hands|finger|fingers|palm|palms|fist|knuckle|chin|knee|knees|lap|shoulder|chest|head|hold|holds|held|holding|turning|turns|turned|spin|spins|spinning|fidget|fidgets|fidgeting|prop|props|propping|propped|tap|taps|tapping|drum|drums|drumming|grip|grips|gripping|pull|pulls|pulling|rest|rests|resting|lean|leans|leaning|shift|shifts|shifting|reach|reaches|reaching|peel|peels|peeling|fold|folds|folding|adjust|adjusts|adjusting|unfasten|unfastens|pour|pours|pouring|sip|sips|sipping|cup|mug|glass|bottle|phone|strap|key|keys|keychain|ring|pencil|pen|crayon|paper|napkin|breath|breathe|breathes|breathing|settle|settles|settling|drift|drifts|drifting|sway|sways|swaying|slap|slaps|slapping|push|pushes|pushing|rub|rubs|rubbing|stroke|strokes|stroking)\b/i;
+
+/** Verbs representing purely passive listening, watching, sitting, or nodding. */
+export const PASSIVE_ACTION_VERBS = /\b(?:listens?(?:\s+(?:intently|quietly|silently|closely|patiently))?|watches?(?:\s+(?:intently|quietly|silently|closely))?|looks?(?:\s+(?:on|at\s+@[\w_]+|over))?|smiles?(?:\s+and\s+nods?)?|nods?(?:\s+(?:along|in\s+agreement|quietly|slowly))?|sits?(?:\s+(?:quietly|silently|still))?)\b/i;
+
+/**
+ * Returns true if an action string describes passive character behavior without physical business or moving holds (Dan Kieft craft).
+ * E.g. "@Theo listens quietly", "@Sister watches @Shaz", "@Theo smiles and nods along".
+ */
+export function isPassiveAction(text) {
+  const s = String(text ?? '').trim();
+  if (!s) return false;
+  return PASSIVE_ACTION_VERBS.test(s) && !PHYSICAL_BUSINESS_WORDS.test(s);
+}
+
+

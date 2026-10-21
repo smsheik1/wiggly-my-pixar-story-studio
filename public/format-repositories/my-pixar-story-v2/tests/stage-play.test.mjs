@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseStagePlay, StagePlayParseError } from '../crew/story-director/schema.mjs';
 import { validateStoryDirectorOutput, lineBudget } from '../crew/linter/check-stage-play.mjs';
-import { hasPersonalityOrDemeanor } from '../crew/linter/line-checks.mjs';
+import { hasPersonalityOrDemeanor, isPassiveAction } from '../crew/linter/line-checks.mjs';
 // The good fixture is a 46s film: its target is 60s (RUNTIME_UNDER_TARGET fires below 75% of the target).
 const validate = (d, input = { targetTotalRuntimeSec: 60 }) => validateStoryDirectorOutput(d, input);
 
@@ -167,4 +167,29 @@ test('hasPersonalityOrDemeanor: distinguishes Danzar personality descriptions fr
   assert.equal(hasPersonalityOrDemeanor('quiet dreamer with total conviction'), true);
   assert.equal(hasPersonalityOrDemeanor('dry, unimpressed, a relaxed skeptic with an amused side-eye'), true);
 });
+
+test('PASSIVE_CHARACTER_ACTION: shot with purely passive listening/watching without physical business triggers warning', () => {
+  const r = run((d) => {
+    d.segments[0].shots[0].whatWeSee = '@Shaz listens quietly across the kitchen table.';
+  });
+  hasCode(r, 'PASSIVE_CHARACTER_ACTION', 'passive character action');
+});
+
+test('isPassiveAction: distinguishes passive character watching/listening from physical business and moving holds', () => {
+  // Purely passive actions (no physical business)
+  assert.equal(isPassiveAction('@Theo listens intently.'), true);
+  assert.equal(isPassiveAction('@Sister watches @Shaz.'), true);
+  assert.equal(isPassiveAction('@Theo sits quietly at the table.'), true);
+  assert.equal(isPassiveAction('@Theo smiles and nods along.'), true);
+  assert.equal(isPassiveAction('@Theo looks at @Gran.'), true);
+
+  // Active physical business (hands have a job, moving holds)
+  assert.equal(isPassiveAction('@Theo listens, turning his coffee mug slowly between both palms.'), false);
+  assert.equal(isPassiveAction('@Theo watches @Gran, chin propped on his fist as his thumb taps his jaw.'), false);
+  assert.equal(isPassiveAction('@Mom nods seriously, holding back a smile, breathing.'), false);
+  assert.equal(isPassiveAction('@Shaz slaps a card down across the kitchen table from @Sister.'), false);
+  assert.equal(isPassiveAction('@Shaz pushes his sunglasses higher up his forehead very slowly.'), false);
+  assert.equal(isPassiveAction('@Theo sits with knees pulled to his chest, chin resting on his arms.'), false);
+});
+
 
