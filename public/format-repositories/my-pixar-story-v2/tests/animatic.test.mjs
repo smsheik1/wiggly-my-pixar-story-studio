@@ -23,8 +23,9 @@ test('sliceArgs: crop then scale to 1920x1080, one frame', () => {
   const a = sliceArgs('s.png', { w: 640, h: 360, x: 10, y: 20 }, '1.1.png');
   assert.equal(a[a.indexOf('-vf') + 1], 'crop=640:360:10:20,scale=1920:1080:flags=lanczos');
   assert.equal(a.at(-1), '1.1.png');
-  const pad = sliceArgs('s.png', { w: 400, h: 400, x: 0, y: 0 }, 'o.png', { fit: 'pad' });
-  assert.ok(pad[pad.indexOf('-vf') + 1].startsWith('crop=400:400:0:0,scale=1920:1080') && pad[pad.indexOf('-vf') + 1].includes('force_original_aspect_ratio=decrease,pad=1920:1080'));
+  // house style: padding and blurred bars are banned outright
+  assert.throws(() => sliceArgs('s.png', { w: 400, h: 400, x: 0, y: 0 }, 'o.png', { fit: 'pad' }), /banned/);
+  assert.throws(() => sliceArgs('s.png', { w: 400, h: 400, x: 0, y: 0 }, 'o.png', { fit: 'blur' }), /banned/);
 });
 test('animaticArgs: each still looped for its duration; silence when no audio; exact total', () => {
   const frames = shotTimeline(sd).map((s) => ({ ...s, path: `${s.shotId}.png` }));

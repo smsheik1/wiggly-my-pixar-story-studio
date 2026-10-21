@@ -11,6 +11,9 @@ import { RUNS_ROOT, openRouterModel, deepAgentInvoke } from '../graph/deep-agent
 import { createLiveness, LivenessHandler, DEFAULT_TIMEOUTS } from '../graph/liveness.mjs';
 import { loadSecrets, defaultSecretsPath } from './lib/secrets.mjs';
 import { shotTimeline } from './lib/animatic.mjs';
+import { compilePanels } from '../crew/storyboard-artist/compile.mjs';
+import { selectStoryboardArtistInput } from '../crew/storyboard-artist/input.mjs';
+import { PANEL_IMAGE, STYLE_FILE } from '../crew/storyboard-artist/style.mjs';
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 const runId = arg('--run-id'), maxUsd = +(arg('--max-usd') ?? 0.3);
@@ -47,7 +50,14 @@ if (exp && res.storyboardArtist?.sheets) {
     note: 'Attach references in the listed order (position = "reference image N" in the prompt). Save each result as sheet-<sheetId>.png, then run scripts/slice-storyboard.mjs.',
     sheets: res.storyboardArtist.sheets.map((s) => ({ sheetId: s.sheetId, segmentId: s.segmentId, panelCount: s.panels.length, layout: s.layout, promptFile: `sheet-${s.sheetId}.txt`, promptChars: s.fullPrompt.length, references: s.references,
       panels: s.panels.map((p) => ({ ...p, durationSec: timing[p.shotId]?.durationSec })) })) }, null, 2));
-  log(`exported ${res.storyboardArtist.sheets.length} sheets -> ${exp}`);
+  // production panels: one native 16:9 2K prompt per shot (house style); sheets above are a review contact sheet only
+  const pdir = join(exp, 'panels'); await mkdir(pdir, { recursive: true });
+  const panels = compilePanels(res.storyboardArtist, selectStoryboardArtistInput(state));
+  for (const p of panels) await writeFile(join(pdir, `${p.shotId}.txt`), p.fullPrompt + '\n');
+  await writeFile(join(pdir, 'panels.json'), JSON.stringify({ runId, style: STYLE_FILE, ...PANEL_IMAGE,
+    note: 'One image per shot. Attach references in the listed order, render 16:9 at 2K, save as <shotId>.png, then run scripts/check-panels.mjs --dir <dir> --manifest panels.json.',
+    panels: panels.map(({ fullPrompt, ...p }) => ({ ...p, promptFile: `${p.shotId}.txt`, durationSec: timing[p.shotId]?.durationSec })) }, null, 2));
+  log(`exported ${res.storyboardArtist.sheets.length} sheets + ${panels.length} panel prompts -> ${exp}`);
 }
 log(`SB ${res.status ?? 'passed'}: attempts ${res.attempts?.['storyboard-artist']}, wall ${wallSec}s, spend $${(b1.usage - b0.usage).toFixed(4)}`);
 log('DONE'); process.exit(res.status === 'failed' ? 2 : 0);

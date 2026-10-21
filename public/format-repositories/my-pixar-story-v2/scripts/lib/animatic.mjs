@@ -52,6 +52,7 @@ export function panelRects(W, H, { rows = 2, cols = 4, margin = 0.02, gutter = 0
 // fit 'crop': rect is already 16:9, scale to fill. fit 'blur': pad over a blurred copy. fit 'pad': keep the whole panel, letterbox/pillarbox to 16:9 (pad colour).
 export function sliceArgs(sheetPath, rect, outPath, { width = 1920, height = 1080, fit = 'crop', padColor = 'black' } = {}) {
   const crop = `crop=${rect.w}:${rect.h}:${rect.x}:${rect.y}`;
+  if (fit === 'blur' || fit === 'pad') throw new Error(`sliceArgs: fit '${fit}' is banned by the house storyboard style (no padding or blurred bars); re-render the panel at 16:9`);
   if (fit === 'blur') // whole panel centred over a blurred, scaled-to-fill copy of itself (no black bars)
     return ['-y', '-loglevel', 'error', '-i', sheetPath, '-filter_complex', `[0:v]${crop},split[a][b];[a]scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},boxblur=40:2,eq=brightness=-0.06[bg];[b]scale=${width}:${height}:flags=lanczos:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[o]`, '-map', '[o]', '-frames:v', '1', outPath];
   const scale = fit === 'pad' ? `scale=${width}:${height}:flags=lanczos:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=${padColor},setsar=1` : `scale=${width}:${height}:flags=lanczos`;

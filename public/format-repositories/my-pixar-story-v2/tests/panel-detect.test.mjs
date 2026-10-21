@@ -41,7 +41,8 @@ test('slice-storyboard: 3-over-2 sheet + blank box + labels -> 5 stills in order
   const shots = ['1.1', '1.2', '1.3', '1.4', '1.5'];
   writeFileSync(join(d, 'm.json'), JSON.stringify({ sheets: [{ sheetId: '1', panels: shots.map((shotId, i) => ({ panelNumber: i + 1, shotId })) }] }));
   const script = new URL('../scripts/slice-storyboard.mjs', import.meta.url).pathname;
-  execFileSync('node', [script, '--manifest', join(d, 'm.json'), '--sheets', join(d, 'sheets'), '--out', join(d, 'out')]);
+  execFileSync('node', [script, '--manifest', join(d, 'm.json'), '--sheets', join(d, 'sheets'), '--out', join(d, 'out'), '--review-only']); // tiny synthetic sheet
+  assert.throws(() => execFileSync('node', [script, '--manifest', join(d, 'm.json'), '--sheets', join(d, 'sheets'), '--out', join(d, 'outlr')], { stdio: 'pipe' }), /PANEL_LOW_RES|not sliced/);
   for (const s of shots) {
     assert.ok(existsSync(join(d, 'out', `${s}.png`)), s);
     assert.equal(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', join(d, 'out', `${s}.png`)]).toString().trim(), '1920,1080');
@@ -49,12 +50,13 @@ test('slice-storyboard: 3-over-2 sheet + blank box + labels -> 5 stills in order
   writeFileSync(join(d, 'm6.json'), JSON.stringify({ sheets: [{ sheetId: '1', panels: [...shots, '1.6'].map((shotId, i) => ({ panelNumber: i + 1, shotId })) }] }));
   assert.throws(() => execFileSync('node', [script, '--manifest', join(d, 'm6.json'), '--sheets', join(d, 'sheets'), '--out', join(d, 'out6')], { stdio: 'pipe' }));
 });
-test('fitPlan: 1.5-2.1 crops to 16:9 keeping the top; outside pads; rect stays inside', () => {
-  const t = fitPlan({ x: 11, y: 21, w: 300, h: 190 }); // 1.58: taller than 16:9
+test('fitPlan: 1.70-1.86 crops to 16:9 keeping the top; anything else is rejected, never padded; rect stays inside', () => {
+  const t = fitPlan({ x: 11, y: 21, w: 300, h: 172 }); // 1.74: a little taller than 16:9
   assert.equal(t.mode, 'crop'); assert.equal(t.rect.y, 22); assert.ok(t.rect.y + t.rect.h <= 211 && Math.abs(t.rect.w / t.rect.h - 16 / 9) < 0.03);
-  const wd = fitPlan({ x: 0, y: 0, w: 400, h: 200 }); assert.equal(wd.mode, 'crop'); assert.equal(wd.rect.y, 0); assert.ok(wd.rect.x > 0);
-  assert.equal(fitPlan({ x: 0, y: 0, w: 300, h: 300 }).mode, 'pad'); assert.equal(fitPlan({ x: 0, y: 0, w: 500, h: 200 }).mode, 'pad');
-  const r = fitPlan({ x: 3, y: 3, w: 101, h: 101 }).rect; assert.ok(r.x >= 3 && r.y >= 3 && r.x + r.w <= 104 && r.y + r.h <= 104);
+  const wd = fitPlan({ x: 0, y: 0, w: 370, h: 200 }); assert.equal(wd.mode, 'crop'); assert.equal(wd.rect.y, 0); assert.ok(wd.rect.x > 0);
+  assert.equal(fitPlan({ x: 0, y: 0, w: 300, h: 300 }).mode, 'reject'); assert.equal(fitPlan({ x: 0, y: 0, w: 500, h: 200 }).mode, 'reject');
+  assert.equal(fitPlan({ x: 0, y: 0, w: 284, h: 200 }).mode, 'reject'); // 1.42: the r5 Part 1 sheet panels that were blur-padded
+  const r = fitPlan({ x: 3, y: 3, w: 179, h: 101 }).rect; assert.ok(r.x >= 3 && r.y >= 3 && r.x + r.w <= 182 && r.y + r.h <= 104);
 });
 test('refineRect: steps past a wobbly border band; edges then hold no ink or paper', () => {
   const w = 300, h = 200, g = new Uint8Array(w * h).fill(240);

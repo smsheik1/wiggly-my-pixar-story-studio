@@ -2,6 +2,7 @@
 // reference list (approved character images + location plates, in attach order). Layout matches the slicer's grid.
 import { sheetIdOf } from './schema.mjs';
 import { signatureAccessories } from '../linter/check-storyboard.mjs';
+import { PANEL_IMAGE } from './style.mjs';
 
 export const GRID = Object.freeze({ panelAspect: 16 / 9 }); // layout follows the panel count (sheetLayout)
 const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
@@ -62,4 +63,30 @@ export function compileSheets(out, input) {
       panels: s.panels.map((p) => ({ panelNumber: p.panelNumber, shotId: p.shotId })),
       fullPrompt: sheetPrompt(s, input, references) };
   });
+}
+
+// ---- Panels: one native 16:9 2K image per shot (the house style, style.md). Sheets above are review/legacy only. ----
+export const PANEL_HEAD = 'A single still frame from a polished 3D feature-animation film, native 16:9 widescreen, full bleed edge to edge: appealing stylized characters with large expressive eyes, soft global illumination, gentle subsurface skin, clean readable shapes, rich natural colour, crisp focus on the characters. Not photoreal, not flat vector, not sketch.';
+export const PANEL_TAIL = 'Characters are large in frame for this shot size and match their reference images exactly (face, hair, skin, outfit, accessories). The background reference is the set only: keep its architecture, furniture, colours and props but recompose the camera for this shot size and angle. Light follows the staged time of day: daytime is bright soft daylight with open shadows; evening is warm and readable, never murky. No borders, no letterboxing, no padding, no blurred edges, no panel frame, no text, captions, labels, watermark or logos.';
+
+/** References for one panel: its on-screen characters (cast order) then its location plate, positions 1..n. */
+export function panelReferences(p, input) {
+  const tags = new Set(p.characters.map((c) => c.tag)); const refs = [];
+  for (const c of input.characters) if (tags.has(c.tag)) refs.push({ kind: 'character', tag: c.tag, imageTag: c.imageTag, name: c.name });
+  const l = input.locations.find((x) => x.tag === p.locationTag); if (l) refs.push({ kind: 'location', tag: l.tag, settingName: l.settingName });
+  return refs.map((r, i) => ({ ...r, position: i + 1 }));
+}
+
+/** Single-line prompt for one panel image. */
+export function panelPrompt(p, input, refs = panelReferences(p, input)) {
+  const body = panelLine(p, input, refs).replace(sbPanelLabel(p.panelNumber, p.shotId), '').trim();
+  return one([PANEL_HEAD, `Shot: ${body}`, PANEL_TAIL].join(' '));
+}
+
+/** Compiled panels: [{ shotId, segmentId, file: '<shotId>.png', references, ...PANEL_IMAGE, fullPrompt }]. */
+export function compilePanels(out, input) {
+  return out.sheets.flatMap((s) => s.panels.map((p0) => {
+    const p = { ...p0, segmentId: s.segmentId }; const references = panelReferences(p, input);
+    return { shotId: p.shotId, segmentId: s.segmentId, file: `${p.shotId}.png`, references, ...PANEL_IMAGE, shotSizeAndAngle: p.shotSizeAndAngle, fullPrompt: panelPrompt(p, input, references) };
+  }));
 }

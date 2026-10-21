@@ -133,14 +133,15 @@ export function refineRect(gray, w, h, p, { dark = 55, extra = 3, paper, maxStep
 }
 
 /**
- * How to fit a panel into 16:9. ratio 1.5-2.1: crop (wider: centre the width; taller: cut only from the bottom, the top
- * is kept). Otherwise pad over a blurred copy.
+ * How to fit a panel into 16:9. ratio 1.70-1.86 (a few % off 16:9): crop (wider: centre the width; taller: cut only
+ * from the bottom, the top is kept). Otherwise 'reject': the panel is not 16:9 and is re-rendered, never padded or
+ * blur-filled (house style, crew/storyboard-artist/storyboard-style.md).
  */
-export function fitPlan(r, { lo = 1.5, hi = 2.1, aspect = 16 / 9 } = {}) {
+export function fitPlan(r, { lo = 1.70, hi = 1.86, aspect = 16 / 9 } = {}) {
   const ratio = r.w / r.h;
   // even-integer rect that stays INSIDE the given one (never rounds outward onto the border)
   const inside = (x, y, w, h) => { const X = Math.ceil(x / 2) * 2, Y = Math.ceil(y / 2) * 2; return { x: X, y: Y, w: Math.floor((x + w - X) / 2) * 2, h: Math.floor((y + h - Y) / 2) * 2 }; };
-  if (ratio < lo || ratio > hi) return { mode: 'pad', ratio, rect: inside(r.x, r.y, r.w, r.h) };
+  if (ratio < lo || ratio > hi) return { mode: 'reject', ratio, rect: inside(r.x, r.y, r.w, r.h) };
   if (ratio >= aspect) { const nw = r.h * aspect; return { mode: 'crop', ratio, rect: inside(r.x + (r.w - nw) / 2, r.y, nw, r.h) }; }
   // taller than 16:9: all the excess comes off the bottom, so the top (heads) is never cut
   return { mode: 'crop', ratio, rect: inside(r.x, r.y, r.w, r.w / aspect) };

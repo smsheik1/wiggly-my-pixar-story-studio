@@ -7,6 +7,7 @@
 //  PROP_LEAK: a character's signature accessory / prop appears only on that character, never on anyone else
 import { outfitFor } from '../storyboard-artist/input.mjs';
 import { PANELS_PER_SHEET } from '../storyboard-artist/schema.mjs';
+import { checkShotMix } from '../storyboard-artist/style.mjs';
 
 const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 // Worn / carried accessory nouns. Matched as whole words, singular or plural.
@@ -103,6 +104,10 @@ export function validateStoryboard(out, input) {
   const inOrder = order.filter((id) => drawn.includes(id));
   const firstDrawn = drawn.filter((x, i) => drawn.indexOf(x) === i && byId.has(x));
   if (!dup.length && firstDrawn.join() !== inOrder.join()) err('SB_SHOT_ORDER', 'panels must follow story order across sheets');
+  // HOUSE STYLE: shot-size mix per part (style.md); characters large, one wide per three, a close-up per part
+  const byPart = new Map();
+  for (const sh of out?.sheets ?? []) for (const p of sh.panels) byPart.set(sh.segmentId, [...(byPart.get(sh.segmentId) ?? []), p]);
+  for (const [seg, ps] of byPart) issues.push(...checkShotMix(ps, { path: `part.${seg}` }));
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
   return { isValid: errors.length === 0, errors, warnings: issues.filter((i) => i.severity !== 'error').map((i) => i.message), issues };
 }
