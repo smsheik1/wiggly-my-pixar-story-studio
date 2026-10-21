@@ -44,9 +44,14 @@ export function sendTimeTags(prompt, references = [], engine) {
   return p;
 }
 
+/** Storyboard panels are NOT sent to the video engine by default (r5 clip 1: Seedance 2.5 copied the panels' blurred side
+ *  bars and 2D look into the render; "composition guides only, never copy their style" does not stop a diffusion model).
+ *  The video engine gets character sheets and location plates only; boards stay pre-production. Opt in per call with
+ *  { storyboards: true } (or an engine flag storyboardRefs: true) for experiments only. */
+export const SEND_STORYBOARDS = false;
 /** Storyboard panels of a clip in shot order: [{ sceneId, shotNumber, assetKey, imageN }] after the clip's element references. */
-export function panelRefs(seg, engine) {
-  const panels = seg?.storyboardPanels ?? {}, base = (seg?.references ?? []).length, out = [];
+export function panelRefs(seg, engine, { storyboards = VIDEO_ENGINES[engine]?.storyboardRefs ?? SEND_STORYBOARDS } = {}) {
+  const panels = storyboards ? (seg?.storyboardPanels ?? {}) : {}, base = (seg?.references ?? []).length, out = [];
   for (const sh of seg?.shots ?? []) if (panels[sh.sceneId] && !out.some((o) => o.sceneId === sh.sceneId)) out.push({ sceneId: sh.sceneId, shotNumber: sh.shotNumber, assetKey: panels[sh.sceneId], imageN: base + out.length + 1 });
   // engine image cap: drop the panel of the shortest shot (ties: the later one) until it fits; that shot reuses the panel
   // of the shot before it (shotPanels maps every shot to the panel it is composed from)
@@ -64,14 +69,14 @@ export function panelRefs(seg, engine) {
 }
 
 /**
- * The final prompt for one clip, exactly as sent (deterministic, after the gate): reference tags, then each shot's storyboard
- * panel labeled "Composition from [ImageN]" under its Camera line, and on engines that voice "double-quoted" dialogue
+ * The final prompt for one clip, exactly as sent (deterministic, after the gate): reference tags, then (only when storyboards
+ * are opted in, see SEND_STORYBOARDS) each shot's storyboard panel labeled "Composition from [ImageN]" under its Camera line, and on engines that voice "double-quoted" dialogue
  * the {braces} of every spoken line become "double quotes". Returns { prompt, images: [assetKey in attachment order] }.
  */
-export function sendPrompt(seg, engine = seg?.generationPayload?.engine ?? VIDEO_ENGINE) {
+export function sendPrompt(seg, engine = seg?.generationPayload?.engine ?? VIDEO_ENGINE, opts = {}) {
   const e = VIDEO_ENGINES[engine] ?? {};
   let p = sendTimeTags(seg?.compiledPrompt, seg?.references ?? [], engine);
-  const panels = panelRefs(seg, engine);
+  const panels = panelRefs(seg, engine, opts);
   if (panels.length) {
     const first = panels[0].imageN, last = panels.at(-1).imageN;
     p = p.replace(/^(Each reference is one person[^\n]*)$/m, `$1\nStoryboard frames ${first === last ? `[Image${first}]` : `[Image${first}] to [Image${last}]`}: ${panels.dropped.length ? 'in shot order, each named on its shot' : 'one per shot'}, composition and staging guides only; never copy their drawing style, borders or labels.`);

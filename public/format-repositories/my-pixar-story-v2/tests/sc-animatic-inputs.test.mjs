@@ -6,10 +6,10 @@ import { withPanels, makeAnimaticApprovalNode } from '../graph/graph.mjs';
 const seg = { segmentId: 1, targetDurationSec: 15, shots: [
   { sceneId: '1.1', shotNumber: 1, startSec: 0, endSec: 5 }, { sceneId: '1.2', shotNumber: 2, startSec: 5, endSec: 9 }, { sceneId: '1.3', shotNumber: 3, startSec: 9, endSec: 15 }] };
 
-test('SC input is retimed to the approved animatic cut (whole seconds, contiguous, no drift)', () => {
+test('SC input is retimed to the approved animatic cut (whole seconds >=2s, contiguous, no drift)', () => {
   const [s] = retimeSegments([seg], [{ shotId: '1.1', durationSec: 3.76 }, { shotId: '1.2', durationSec: 2.735 }, { shotId: '1.3', durationSec: 0.3 }]);
-  assert.deepEqual(s.shots.map((x) => [x.startSec, x.endSec]), [[0, 4], [4, 6], [6, 7]]);
-  assert.equal(s.targetDurationSec, 7);
+  assert.deepEqual(s.shots.map((x) => [x.startSec, x.endSec]), [[0, 4], [4, 6], [6, 8]]);
+  assert.equal(s.targetDurationSec, 8);
   assert.deepEqual(retimeSegments([seg], []), [seg]);
 });
 

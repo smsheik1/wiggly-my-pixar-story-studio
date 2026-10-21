@@ -147,14 +147,18 @@ export function seedanceSegmentsOf(sd = {}) {
  * Retime stage-play segments to the animatic-approved shot lengths (scratch-led, fractional seconds) in whole seconds:
  * each part's cumulative boundaries are rounded (every shot >= 1s), so clip lengths track the approved cut without drift.
  */
-export function retimeSegments(segments, timings = []) {
+export function retimeSegments(segments, timings = [], { minShotSec = 2 } = {}) {
   const dur = new Map(timings.map((t) => [t.shotId, t.durationSec]));
   if (!dur.size) return segments;
   return segments.map((seg) => {
     let cum = 0, prev = 0;
     const shots = seg.shots.map((sh) => {
-      cum += dur.get(sh.sceneId) ?? (sh.endSec - sh.startSec);
-      const end = Math.max(prev + 1, Math.round(cum)); const o = { ...sh, startSec: prev, endSec: end, ...(dur.has(sh.sceneId) ? { timingApproved: true } : {}) }; prev = end; return o;
+      const d = Math.max(minShotSec, dur.get(sh.sceneId) ?? (sh.endSec - sh.startSec));
+      cum += d;
+      const end = Math.max(prev + minShotSec, Math.round(cum));
+      const o = { ...sh, startSec: prev, endSec: end, ...(dur.has(sh.sceneId) ? { timingApproved: true } : {}) };
+      prev = end;
+      return o;
     });
     return { ...seg, targetDurationSec: prev, shots };
   });

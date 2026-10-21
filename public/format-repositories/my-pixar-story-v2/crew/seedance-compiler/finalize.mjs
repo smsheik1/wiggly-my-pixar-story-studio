@@ -164,9 +164,8 @@ export function finalizeClip(seg, input) {
     const sh = (seg.shots ?? []).find((s) => s.shotNumber === n);
     return finalizeShotBlock(blk, { outfits, props: sh ? byScene.get(sh.sceneId) ?? [] : [] });
   }).join('');
-  for (const k of ['block3_goal', 'block4_continuity', 'block5_shots', 'block6_visualStyle', 'block8_audio', 'block10_maintainConsistency']) {
-    if (k === 'block5_shots') tb[k] = tb[k].split('\n').map((l) => (/^\s*(?:Props:|Look )/.test(l) ? l : fullPropNames(l, names))).join('\n');
-    else tb[k] = fullPropNames(tb[k], names);
+  for (const k of ['block3_goal', 'block4_continuity', 'block6_visualStyle', 'block8_audio', 'block10_maintainConsistency']) {
+    tb[k] = fullPropNames(tb[k], names);
   }
   tb.block10_maintainConsistency = dedupeScale(tb.block10_maintainConsistency);
   tb.block1_referenceMaterials = referenceLines(tb.block1_referenceMaterials, input?.references ?? []);
@@ -174,7 +173,7 @@ export function finalizeClip(seg, input) {
   const shots = (seg.shots ?? []).map((s) => {
     let action = s.action;
     for (const st of byScene.get(s.sceneId) ?? []) { const { name, rest } = splitPropState(st); if (rest) action = action.replace(new RegExp(`(\\b(?:the|his|her|their|its|a)\\s+)?${esc(st)}`, 'gi'), (m, d) => `${d ?? 'the '}${name}`); }
-    return { ...s, action: fullPropNames(action, names) };
+    return { ...s, action };
   });
   return { ...seg, tenBlocks: tb, shots };
 }

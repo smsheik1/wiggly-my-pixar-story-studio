@@ -11,10 +11,10 @@ const seg = {
 };
 
 test('wan-3.0: refs written "Image N", 10 images max (shortest shot panel dropped, reuses the previous one), quotes kept', () => {
-  const pr = panelRefs(seg, 'wan-3.0');
+  const pr = panelRefs(seg, 'wan-3.0', { storyboards: true });
   assert.equal(seg.references.length + pr.length, 10);
   assert.deepEqual(pr.dropped, ['2.4']);
-  const { prompt } = sendPrompt(seg, 'wan-3.0');
+  const { prompt } = sendPrompt(seg, 'wan-3.0', { storyboards: true });
   assert.match(prompt, /^@Man Image 1 = man\./m);
   assert.doesNotMatch(prompt, /\[Image\d+\]/);
   assert.match(prompt, /SHOT 3 \|[^\n]*\nCamera: medium\.\nComposition from Image 6\./);
@@ -25,8 +25,15 @@ test('wan-3.0: refs written "Image N", 10 images max (shortest shot panel droppe
 });
 
 test('seedance-2.5 keeps all panels and [ImageN]', () => {
-  assert.equal(panelRefs(seg, 'seedance-2.5').length, 8);
-  assert.match(sendPrompt(seg, 'seedance-2.5').prompt, /^@Man \[Image1\] = man\./m);
+  assert.equal(panelRefs(seg, 'seedance-2.5', { storyboards: true }).length, 8);
+  assert.match(sendPrompt(seg, 'seedance-2.5', { storyboards: true }).prompt, /^@Man \[Image1\] = man\./m);
+});
+
+test('by default (SEND_STORYBOARDS=false), storyboard panels are omitted from video prompts', () => {
+  const { prompt, images } = sendPrompt(seg, 'seedance-2.5');
+  assert.equal(images.length, seg.references.length);
+  assert.doesNotMatch(prompt, /Storyboard frames/);
+  assert.doesNotMatch(prompt, /Composition from/);
 });
 
 test('spoken spelling for brand names; "two-door coupe" outside spoken lines and tags', () => {

@@ -101,3 +101,47 @@ test('speech rate is one rule across SD and SC: any shot length the SD gate acce
   for (let w = 1; w <= 18; w++) assert.ok(w <= maxWordsFor(lineBudget(w)) && w > maxWordsFor(lineBudget(w) - 1), `${w} words`);
   assert.equal(WORDS_PER_SECOND, 3);
 });
+
+test('CUT_MID_SENTENCE: line ending in comma across hard cut fails', () => {
+  const r = run((d) => {
+    d.segments[0].shots[0].narration = { speaker: '@AdultShaz', line: '{When I was 8 years old,}' };
+    d.segments[0].shots[1].narration = { speaker: '@AdultShaz', line: '{I wanted to be a scientist.}' };
+  });
+  hasCode(r, 'CUT_MID_SENTENCE');
+});
+
+test('NAMED_PERSON_NOT_SHOWN: narration naming family member absent from shot fails', () => {
+  const r = run((d) => {
+    d.segments[0].shots[0].narration = { speaker: '@Shaz', line: '{My sister was always playing cards.}' };
+    d.segments[0].shots[0].onScreen = ['@Shaz'];
+    d.segments[0].shots[0].whatWeSee = '@Shaz sits on the rug.';
+  });
+  hasCode(r, 'NAMED_PERSON_NOT_SHOWN');
+});
+
+test('REPEATED_MICRO_ACTION: repeating a micro action across > 2 shots fails', () => {
+  const r = run((d) => {
+    d.segments[0].shots[0].whatWeSee = 'he blinks';
+    d.segments[0].shots[1].whatWeSee = 'she blinks';
+    d.segments[0].shots[2].whatWeSee = 'he blinks again';
+  });
+  hasCode(r, 'REPEATED_MICRO_ACTION');
+});
+
+test('EXCESSIVE_CAMERA_PROFILE: locking > 2 shots in profile fails', () => {
+  const r = run((d) => {
+    d.segments[0].shots[0].whatWeSee = 'he stands in profile';
+    d.segments[0].shots[1].whatWeSee = 'he walks in profile';
+    d.segments[0].shots[2].whatWeSee = 'he nods in profile';
+  });
+  hasCode(r, 'EXCESSIVE_CAMERA_PROFILE');
+});
+
+test('INVALID_SHOT_DURATION: shot under 2 seconds fails', () => {
+  const r = run((d) => {
+    d.segments[0].shots[0].startSec = 0;
+    d.segments[0].shots[0].endSec = 1;
+    d.segments[0].shots[1].startSec = 1;
+  });
+  hasCode(r, 'INVALID_SHOT_DURATION', 'at least 2 whole seconds');
+});

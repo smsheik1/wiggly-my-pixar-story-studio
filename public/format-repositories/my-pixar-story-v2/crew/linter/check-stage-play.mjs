@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { endsMidSentence, namedCast, repeatedMicroActions } from './line-checks.mjs';
 import { accentOf } from '../story-director/schema.mjs';
 import { validateWritingTells } from './writing-tells.mjs';
 import { checkStageShotLocks, onScreenOf } from './shot-locks.mjs';
@@ -231,7 +232,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
       if (shot.startSec !== expectedCurrentTime)
         err('TIMECODE_DISCONTINUITY', `Shot ${n} in segment ${seg.segmentId} starts at ${shot.startSec}s but the previous shot ended at ${expectedCurrentTime}s. Timecodes must be strictly consecutive.`, p);
       const dur = shot.endSec - shot.startSec;
-      if (!(dur > 0)) err('INVALID_SHOT_DURATION', `Shot ${n} in segment ${seg.segmentId} has a non-positive duration (${dur}s).`, p);
+      if (!(dur >= 2)) err('INVALID_SHOT_DURATION', `Shot ${n} in segment ${seg.segmentId} has an invalid duration (${dur}s). Every shot must be at least 2 whole seconds.`, p);
       segTotal += dur; expectedCurrentTime = shot.endSec;
 
       for (const k of ['dialogue', 'narration']) {
@@ -347,6 +348,7 @@ export function validateStoryDirectorOutput(data, input = {}) {
   issues.push(...checkAnswerSources(data, input), ...checkExtraCast(data, input), ...checkPropsTraceable(data, input));
   issues.push(...validateWritingTells('story-director', data));
   issues.push(...checkSceneFacts(data));
+  issues.push(...checkLineCuts(data));
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
   const warnings = issues.filter((i) => i.severity === 'warning').map((i) => i.message);
   return { isValid: errors.length === 0, errors, warnings, issues };
@@ -363,4 +365,38 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const shots = doc.segments.reduce((n, s) => n + s.shots.length, 0);
   const secs = doc.segments.reduce((n, s) => n + s.shots.reduce((m, h) => m + h.endSec - h.startSec, 0), 0);
   console.log(`PASS: ${doc.segments.length} segments, ${shots} shots, ${secs}s total, ${r.warnings.length} warnings`);
+}
+
+/** A cut lands on a complete thought, named people are on screen, micro-actions stay varied, and profile angles do not repeat. */
+export function checkLineCuts(data) {
+  const issues = [];
+  const err = (code, message, path) => issues.push({ severity: 'error', code, message, path });
+  const cast = data?.cast ?? [];
+  (data?.segments ?? []).forEach((seg, si) => {
+    const shots = seg.shots ?? [];
+    shots.forEach((sh, hi) => {
+      const p = `segments.${si}.shots.${hi}`;
+      for (const k of ['narration', 'dialogue']) {
+        const d = sh[k]; if (!d?.line) continue;
+        const next = shots[hi + 1];
+        const cont = next && ['narration', 'dialogue'].some((j) => next[j]?.speaker === d.speaker);
+        if (cont && endsMidSentence(d.line))
+          err('CUT_MID_SENTENCE', `Shot ${sh.shotNumber} in segment ${seg.segmentId}: ${d.speaker}'s line ${d.line} stops mid-sentence and the next shot carries on the same speaker. A cut lands on a complete thought: end the line on a full stop here, or move the cut so the whole sentence plays over one shot.`, `${p}.${k}`);
+        const on = new Set(sh.onScreen ?? []);
+        for (const tag of namedCast(d.line, cast, d.speaker)) if (!on.has(tag))
+          err('NAMED_PERSON_NOT_SHOWN', `Shot ${sh.shotNumber} in segment ${seg.segmentId}: the line ${d.line} names ${tag}, but ${tag} is not on screen. Put ${tag} in the shot (onScreen and whatWeSee) or move the line to a shot where they are seen.`, `${p}.onScreen`);
+      }
+    });
+
+    const texts = shots.map((sh) => ({ n: sh.shotNumber, text: sh.whatWeSee ?? '' }));
+    for (const [action, shotNumbers] of Object.entries(repeatedMicroActions(texts))) {
+      err('REPEATED_MICRO_ACTION', `Segment ${seg.segmentId} repeats the scripted action '${action}' across shots ${shotNumbers.join(', ')}. Keep micro-actions varied; facial life belongs to moving holds, not scripted shot actions.`, `segments.${si}`);
+    }
+
+    const profileShots = shots.filter((sh) => /\bprofile\b/i.test(sh.whatWeSee ?? '') || /\bprofile\b/i.test(sh.camera?.cameraAngle ?? sh.cameraAngle ?? '')).map((sh) => sh.shotNumber);
+    if (profileShots.length > 2) {
+      err('EXCESSIVE_CAMERA_PROFILE', `Segment ${seg.segmentId} has ${profileShots.length} shots locked in profile (${profileShots.join(', ')}). Varied camera coverage (front 3/4, over-the-shoulder, eye-level reaction) is required.`, `segments.${si}`);
+    }
+  });
+  return issues;
 }

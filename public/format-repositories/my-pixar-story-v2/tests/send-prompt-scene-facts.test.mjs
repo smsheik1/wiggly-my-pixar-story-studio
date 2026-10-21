@@ -13,7 +13,7 @@ const seg = {
 };
 
 test('Seedance 2.5 send format: panels labeled per shot after the element refs, double quotes, no audio ref', () => {
-  const { prompt, images } = sendPrompt(seg);
+  const { prompt, images } = sendPrompt(seg, undefined, { storyboards: true });
   assert.deepEqual(images, ['k', 'y', 'storyboard:1.1', 'storyboard:1.2']);
   assert.match(prompt, /@Kid \[Image1\] =/);
   assert.match(prompt, /Storyboard frames \[Image3\] to \[Image4\]/);

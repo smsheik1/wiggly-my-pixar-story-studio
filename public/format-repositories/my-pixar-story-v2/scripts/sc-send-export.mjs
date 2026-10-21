@@ -11,14 +11,16 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.a
 const dir = join(RUNS_ROOT, arg('--run'));
 const sc = JSON.parse(await readFile(join(dir, 'outputs', 'seedance-compiler.json'), 'utf8'));
 const engine = arg('--engine');
+const opts = { ...(process.argv.includes('--with-storyboards') ? { storyboards: true } : {}) }; // panels are off by default (SEND_STORYBOARDS)
+const suffix = arg('--suffix') ?? ''; // e.g. --suffix .v2 writes clip-1.v2.send.txt beside the sent files
 const refs = arg('--refs') ? JSON.parse(await readFile(arg('--refs'), 'utf8')) : {};
 const summary = [];
 for (const seg of sc.segments) {
-  const id = seg.clipId ?? seg.segmentId, { prompt } = sendPrompt(seg, engine ?? seg?.generationPayload?.engine);
+  const id = seg.clipId ?? seg.segmentId, { prompt } = sendPrompt(seg, engine ?? seg?.generationPayload?.engine, opts);
   const list = [...seg.references.map((r) => ({ label: r.tag, kind: r.kind, assetKey: r.assetKey, file: refs[r.tag] ?? null })),
-    ...panelRefs(seg, engine ?? seg?.generationPayload?.engine).map((p) => ({ label: `storyboard ${p.sceneId}`, kind: 'storyboard', assetKey: p.assetKey, file: refs[p.sceneId] ?? null }))]
+    ...panelRefs(seg, engine ?? seg?.generationPayload?.engine, opts).map((p) => ({ label: `storyboard ${p.sceneId}`, kind: 'storyboard', assetKey: p.assetKey, file: refs[p.sceneId] ?? null }))]
     .map((r, i) => ({ image: engine === 'wan-3.0' ? `Image ${i + 1}` : `[Image${i + 1}]`, ...r, exists: !!r.file && existsSync(r.file) }));
-  const sfx = engine ? `.${engine}` : '';
+  const sfx = `${engine ? `.${engine}` : ''}${suffix}`;
   await writeFile(join(dir, `clip-${id}${sfx}.send.txt`), prompt);
   await writeFile(join(dir, `clip-${id}${sfx}.refs.json`), JSON.stringify(list, null, 2));
   summary.push({ clip: id, durationSec: seg.generationPayload.durationSec, chars: prompt.length, images: list.length, missing: list.filter((r) => !r.exists).map((r) => r.label) });
