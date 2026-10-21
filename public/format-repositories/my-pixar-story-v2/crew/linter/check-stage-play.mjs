@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { endsMidSentence, namedCast, repeatedMicroActions } from './line-checks.mjs';
+import { endsMidSentence, namedCast, repeatedMicroActions, hasPersonalityOrDemeanor } from './line-checks.mjs';
 import { accentOf } from '../story-director/schema.mjs';
 import { validateWritingTells } from './writing-tells.mjs';
 import { checkStageShotLocks, onScreenOf } from './shot-locks.mjs';
@@ -313,6 +313,8 @@ export function validateStoryDirectorOutput(data, input = {}) {
   if (!cast.length) err('NO_CAST', 'Output contains no cast.', 'cast');
   cast.forEach((c, i) => {
     const p = `cast.${i}`;
+    if (!hasPersonalityOrDemeanor(c.physicalDescription))
+      warn('WEAK_CHARACTER_PERSONALITY', `Cast ${c.elementTag ?? c.name}: physicalDescription lacks personality, demeanor, or whimsy (Dan Kieft craft: e.g. "cheerful and easy in himself", "dead serious about being a scientist", "quiet dreamer with total conviction"). Avoid sterile anatomy-only lists.`, p);
     // signatureAccent is optional (empty = no accessory); only a given-but-vague one is flagged.
     if (accentOf(c.signatureAccent) && accentOf(c.signatureAccent).length < 5)
       warn('WEAK_SIGNATURE_ACCENT', `Cast ${c.elementTag ?? c.name}: signature accent is too vague; use the answers' own wording or leave it empty.`, p);

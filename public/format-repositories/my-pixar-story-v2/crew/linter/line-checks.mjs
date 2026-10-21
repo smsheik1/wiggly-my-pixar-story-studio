@@ -42,3 +42,12 @@ export function repeatedMicroActions(texts) {
   for (const [k, re] of Object.entries(MICRO_ACTIONS)) { const ns = texts.filter((t) => re.test(t.text)).map((t) => t.n); if (ns.length > MICRO_ACTION_MAX) out[k] = ns; }
   return out;
 }
+
+/** Words or patterns indicating personality, demeanor, posture, or whimsy in character descriptions (Dan Kieft craft). */
+export const PERSONALITY_TRAIT_RE = /\b(?:cheerful|easy in|conviction|dreamer|skeptic|curious|unflappable|earnest|stubborn|mischiev(?:ous|y)|lively|warm|tender|deadpan|calm|quiet|proud|gentle|fiery|fierce|witty|playful|eager|serious|steady|confessional|posture|demeanor|attitude|energy|poised|perched|slouch(?:ing)?|sprightly|bouncy|restless|laid-back|humor(?:ous)?|amused|dignity|teasing|spirited|solemn|whims(?:y|ical)|kindness|reassur(?:ing|ed)|charming|zest|spark|mischief)\b/i;
+
+/** True when a character description includes demeanor, posture, personality or whimsy rather than sterile anatomy only. */
+export function hasPersonalityOrDemeanor(desc) {
+  return PERSONALITY_TRAIT_RE.test(String(desc ?? ''));
+}
+

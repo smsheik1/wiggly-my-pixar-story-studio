@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseStagePlay, StagePlayParseError } from '../crew/story-director/schema.mjs';
 import { validateStoryDirectorOutput, lineBudget } from '../crew/linter/check-stage-play.mjs';
+import { hasPersonalityOrDemeanor } from '../crew/linter/line-checks.mjs';
 // The good fixture is a 46s film: its target is 60s (RUNTIME_UNDER_TARGET fires below 75% of the target).
 const validate = (d, input = { targetTotalRuntimeSec: 60 }) => validateStoryDirectorOutput(d, input);
 
@@ -145,3 +146,25 @@ test('INVALID_SHOT_DURATION: shot under 2 seconds fails', () => {
   });
   hasCode(r, 'INVALID_SHOT_DURATION', 'at least 2 whole seconds');
 });
+
+test('WEAK_CHARACTER_PERSONALITY: cast cards lacking personality or demeanor trigger warning', () => {
+  const r = run((d) => {
+    d.cast[0].physicalDescription = 'Small boy with round face, short black hair, red t-shirt.';
+  });
+  hasCode(r, 'WEAK_CHARACTER_PERSONALITY', 'lacks personality, demeanor, or whimsy');
+});
+
+test('hasPersonalityOrDemeanor: distinguishes Danzar personality descriptions from sterile anatomy', () => {
+  // Sterile anatomy fill-in-the-blank fluff
+  assert.equal(hasPersonalityOrDemeanor('Slim eight-year-old boy with narrow oval face, short straight black hair with soft side-swept fringe, dark brown eyes, thick dark eyebrows.'), false);
+  assert.equal(hasPersonalityOrDemeanor('Adult woman with round face, dark brown eyes, smile lines at eyes, wearing hijab covering hair.'), false);
+  assert.equal(hasPersonalityOrDemeanor('Young woman of 18 with oval face, dark brown eyes, slim build, long straight black hair worn uncovered with visible hairline.'), false);
+
+  // Danzar personality with whimsy
+  assert.equal(hasPersonalityOrDemeanor('a man in his late thirties, tall and genuinely strong, warm brown skin, cheerful and easy in himself.'), true);
+  assert.equal(hasPersonalityOrDemeanor('an eight-year-old boy, small and sturdy, warm medium brown skin, dead serious about being a scientist.'), true);
+  assert.equal(hasPersonalityOrDemeanor('bright and fiercely curious, dead serious about being a scientist, perched ready to spring.'), true);
+  assert.equal(hasPersonalityOrDemeanor('quiet dreamer with total conviction'), true);
+  assert.equal(hasPersonalityOrDemeanor('dry, unimpressed, a relaxed skeptic with an amused side-eye'), true);
+});
+
