@@ -60,3 +60,11 @@ test('patch gate answers for its target: pre-existing errors elsewhere and anima
   assert.deepEqual(sev({ animaticApproved: true }), { PRESENT_NEVER_SEEN: 'warning', X: 'warning', RUNTIME_OVER_TARGET: 'warning', Y: 'error', NEW: 'error' });
   assert.equal(sev({}).RUNTIME_OVER_TARGET, 'error', 'a new script-wide error still fails before the animatic is approved');
 });
+
+import { scopePlateIssues } from '../graph/patch.mjs';
+test('LS patch gate: only re-authored plates must pass; errors on untouched plates are warnings', () => {
+  const out = { locations: [{ settingName: 'A' }, { settingName: 'B' }] };
+  const r = { issues: [{ severity: 'error', code: 'E', path: 'locations.0.promptText' }, { severity: 'error', code: 'E', path: 'locations.1.promptText' }] };
+  const g = scopePlateIssues(r, out, { patch: { impact: { newLocations: [], changedLocations: ['B'] } } });
+  assert.deepEqual(g.issues.map((i) => i.severity), ['warning', 'error']); assert.equal(g.isValid, false);
+});

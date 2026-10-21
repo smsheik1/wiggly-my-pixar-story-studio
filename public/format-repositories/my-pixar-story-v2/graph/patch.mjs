@@ -98,6 +98,13 @@ export function characterArchitectPatchSpec({ priorCa }) {
     request: (input) => ({ rounds: 0, task: `PATCH MODE: the stage play gained new cast members (${input.cast.map((c) => c.elementTag).join(', ')}). Produce characters ONLY for the cast cards in /references/input.json; every existing character is already approved and kept as it is.` }),
   };
 }
+/** LS patch gate: only the plates this patch (re)authored must pass; errors on untouched, already approved plates are warnings. */
+export function scopePlateIssues(r, out, state) {
+  const only = new Set([...(state.patch?.impact?.newLocations ?? []), ...(state.patch?.impact?.changedLocations ?? [])]);
+  const issues = r.issues.map((i) => { const m = /^locations\.(\d+)/.exec(i.path ?? ''); const l = m && out.locations?.[+m[1]];
+    return i.severity === 'error' && l && !only.has(l.settingName) ? { ...i, severity: 'warning', message: `(untouched plate, outside the patch) ${i.message}` } : i; });
+  return gateResult(issues);
+}
 export function locationScoutPatchSpec() {
   const base = AGENT_SPECS['location-scout'];
   const mergeLs = (out, state) => {
@@ -115,7 +122,7 @@ export function locationScoutPatchSpec() {
       return { ...full, settings: full.settings.filter((s) => only.has(s.name)), scenes: full.scenes.filter((s) => only.has(s.location)) };
     },
     merge: (_kept, out, state) => mergeLs(out, state),
-    gate: (out, _in, state) => validateLocationPlates(out, selectLocationScoutInput(state)),
+    gate: (out, _in, state) => scopePlateIssues(validateLocationPlates(out, selectLocationScoutInput(state)), out, state),
     request: (input) => ({ rounds: 0, task: `PATCH MODE: the stage play gained or corrected locations (${input.settings.map((s) => s.name).join(', ')}). Produce plates ONLY for the settings in /references/input.json, following their descriptions exactly; every other plate is already approved and kept as it is.` }),
   };
 }
