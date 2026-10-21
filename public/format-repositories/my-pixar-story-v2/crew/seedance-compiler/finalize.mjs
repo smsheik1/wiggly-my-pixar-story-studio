@@ -70,6 +70,7 @@ export function finalizeShotBlock(text, { outfits = {}, props = [] } = {}) {
   });
   return out.map((l) => {
     const pm = /^(\s*Props:\s*)(.*?)\.?\s*$/.exec(l);
+    if (pm) for (const st of props) { const { name, rest } = splitPropState(st); if (rest && /s$/i.test(name) && pm[2].includes(`${name} in @`) && pm[2].includes(st)) { l = `${pm[1]}${pm[2].replace(st, `more ${rest}`)}.`; return l; } }
     if (!pm || !held.length) return l;
     let body = pm[2];
     for (const h of [...new Map(held.map((x) => [x.st, x])).values()]) {
@@ -104,6 +105,9 @@ function fullNamesInLine(line, names) {
       const repl = seen ? head : name; seen = true;
       return `${keep ? keep + ' ' : ''}${repl}${postKeep}`;
     });
+    // the full name once per line; later mentions in the same line read 'the <head>' ('… of the coupe')
+    let n = 0;
+    t = t.replace(new RegExp(`(\\b(?:the|a)\\s+)?${esc(name)}`, 'gi'), (m0) => (n++ ? `the ${head}` : m0));
   }
   return t;
 }

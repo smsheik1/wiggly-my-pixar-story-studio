@@ -31,10 +31,16 @@ test('actions name the prop plainly; a held prop is stated on the Props line', (
 test('full prop name replaces bare head-noun mentions, once per line, never inside spoken lines or tags', () => {
   const n = ['black sedan with dented bumper'];
   assert.equal(fullPropNames('He waits by the old sedan, then pats the sedan.', n), 'He waits by the black sedan with dented bumper, then pats the sedan.');
+  assert.equal(fullPropNames('beside the black sedan with dented bumper, then inside the black sedan with dented bumper.', n), 'beside the black sedan with dented bumper, then inside the sedan.');
   assert.equal(fullPropNames('tactile rug and faded sedan paint', ['red sedan with faded paint']), 'tactile rug and red sedan with faded paint');
   assert.equal(fullPropNames('@Dad: {My old sedan.}', n), '@Dad: {My old sedan.}');
   assert.equal(fullPropNames('inside @old_sedan_interior, the sedan interior plate', n), 'inside @old_sedan_interior, the sedan interior plate');
   assert.equal(fullPropNames('the black 2003 Ford Focus sedan with dents', ['black Ford Focus sedan with dents']), 'the black 2003 Ford Focus sedan with dents');
+});
+
+test('a Props line that already says the prop is in hand keeps the rest as "more …"', () => {
+  const out = finalizeShotBlock("SHOT 1 | 0–3s\nProps: marbles in @Kid's hands; marbles scattered across the floor.\n@Kid holds the marbles.\nHard cut.", { props: ['marbles scattered across the floor'] });
+  assert.match(out, /Props: marbles in @Kid's hands; more scattered across the floor\./);
 });
 
 test('scale stated once', () => {

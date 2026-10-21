@@ -194,7 +194,7 @@ export function selectSeedanceCompilerInput(state = {}) {
     ...characters.map((c) => ({ tag: c.elementTag, type: 'character', sourceTag: c.imageTag, assetKey: c.assetKey,
       plainEnglishDescription: castByTag.get(c.elementTag)?.physicalDescription ?? c.mainOutfit ?? `${c.elementTag} character reference` })),
     ...locations.map((l) => ({ tag: l.elementName, type: 'location', sourceTag: l.elementTag, assetKey: l.assetKey,
-      plainEnglishDescription: `Empty ${l.settingName} plate${l.lighting ? `, ${l.lighting}` : ''}` })),
+      plainEnglishDescription: `Empty plate of the location: ${l.settingName}${l.lighting ? `, ${l.lighting}` : ''}` })), // 'Empty Suburban driveway' read as a proper name
   ];
   const audio = p.voiceAudioRefs ?? {};
   const voiceRegistry = (sd.cast ?? []).map((c) => ({ speakerTag: c.elementTag, verbatimVoicePrompt: c.voiceDescription, ...(audio[c.elementTag] ? { audioReference: audio[c.elementTag] } : {}) }));
