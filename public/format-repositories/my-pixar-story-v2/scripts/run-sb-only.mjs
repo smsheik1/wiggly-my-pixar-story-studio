@@ -14,6 +14,7 @@ import { shotTimeline } from './lib/animatic.mjs';
 import { compilePanels } from '../crew/storyboard-artist/compile.mjs';
 import { selectStoryboardArtistInput } from '../crew/storyboard-artist/input.mjs';
 import { PANEL_IMAGE, STYLE_FILE } from '../crew/storyboard-artist/style.mjs';
+import { withEventLog } from '../graph/event-log.mjs';
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 const runId = arg('--run-id'), maxUsd = +(arg('--max-usd') ?? 0.3);
@@ -24,13 +25,21 @@ const keyUsage = async () => { const r = await fetch('https://openrouter.ai/api/
 const load = async (k) => JSON.parse(await readFile(arg(k), 'utf8'));
 const unwrap = (o, key) => (o?.[key] ? o : o?.output?.[key] ? o.output : o);
 const sd = unwrap(await load('--sd'), 'segments'), ca = unwrap(await load('--ca'), 'characters'), ls = unwrap(await load('--ls'), 'locations');
-const state = { storyDirector: sd, characterArchitect: { output: ca }, locationScout: { output: ls } };
 const out = join(RUNS_ROOT, runId, 'outputs'); await mkdir(out, { recursive: true });
+let prevApprovedAssets = undefined, prevAssetFiles = undefined;
+try {
+  const st = JSON.parse(await readFile(join(out, 'state.json'), 'utf8'));
+  prevApprovedAssets = st.approvedAssets;
+  prevAssetFiles = st.assetFiles;
+} catch {}
+const state = { storyDirector: sd, characterArchitect: { output: ca }, locationScout: { output: ls }, approvedAssets: prevApprovedAssets, assetFiles: prevAssetFiles };
 const b0 = await keyUsage(); log(`[budget] cap $${maxUsd}`);
 const guard = setInterval(async () => { try { const b = await keyUsage(); const spent = b.usage - b0.usage; if (spent > maxUsd) { log(`ABORT: spent $${spent.toFixed(4)} > $${maxUsd}`); process.exit(3); } } catch {} }, 15000);
 const t = { ...DEFAULT_TIMEOUTS, firstTokenMs: 900_000, idleMs: 900_000, stallMs: 600_000 };
 const liveness = createLiveness({ stallMs: t.stallMs }); const events = [];
-const onEvent = (e) => { events.push({ type: e.type, attempt: e.attempt, at: new Date().toISOString(), ...(e.issues ? { issues: e.issues.map((i) => ({ severity: i.severity, code: i.code, path: i.path, message: i.message })) } : {}) }); log(`[sb] ${e.type}${e.attempt ? ` attempt ${e.attempt}` : ''}${e.issues ? ` ${e.issues.filter((i) => i.severity === 'error').length} errors` : ''}`); };
+const eventsFile = join(RUNS_ROOT, runId, 'events.jsonl');
+const rawOnEvent = (e) => { events.push({ type: e.type, attempt: e.attempt, at: new Date().toISOString(), ...(e.issues ? { issues: e.issues.map((i) => ({ severity: i.severity, code: i.code, path: i.path, message: i.message })) } : {}) }); log(`[sb] ${e.type}${e.attempt ? ` attempt ${e.attempt}` : ''}${e.issues ? ` ${e.issues.filter((i) => i.severity === 'error').length} errors` : ''}`); };
+const onEvent = withEventLog(eventsFile, rawOnEvent);
 const invoke = deepAgentInvoke({ runId, runsRoot: RUNS_ROOT, reflectionRounds: 0, createModel: (c, a) => openRouterModel(c, a, { apiKey: sec.OPENROUTER_API_KEY }) });
 const node = makeAgentNode('storyboard-artist', invoke, { onEvent, runTag: runId, liveness, timeouts: { firstTokenMs: t.firstTokenMs, idleMs: t.idleMs } });
 const hb = setInterval(() => { for (const e of liveness.active()) log(`[heartbeat] ${liveness.line(e)}`); }, 30000);

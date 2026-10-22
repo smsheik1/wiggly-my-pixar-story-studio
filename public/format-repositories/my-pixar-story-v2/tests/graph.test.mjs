@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { MemorySaver, Command } from '@langchain/langgraph';
 import { buildGraph, retryNotes, requiredAssetTags } from '../graph/graph.mjs';
 import { parseInitialState, statusReducer } from '../graph/state.mjs';
+import { V2_MODELS } from '../config/models.mjs';
 import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
 import { draftStoryboard } from './fixtures/storyboard-draft.mjs';
 
@@ -37,7 +38,7 @@ test('happy path: all five agents run, Muse Spark 1.3 max, status done, outputs 
   const s = await buildGraph({ invoke }).invoke(initial({ approvedAssets: assets() }));
   assert.equal(s.status, 'done', JSON.stringify(s.escalations));
   assert.deepEqual(invoke.calls.map((c) => c.agent).sort(), ['character-architect', 'location-scout', 'seedance-compiler', 'story-director', 'storyboard-artist']);
-  assert.ok(invoke.calls.every((c) => c.model === 'meta/muse-spark-1.3-contributor' && c.effort === 'xhigh' && c.skill > 500));
+  assert.ok(invoke.calls.every((c) => c.model === V2_MODELS[c.agent]?.model && c.effort === V2_MODELS[c.agent]?.effort && c.skill > 500));
   assert.ok(s.storyDirector.segments.length === 2 && s.characterArchitect.output.characters.length === 3);
   assert.equal(s.locationScout.output.locations[0].elementTag, '@Loc 1');
   assert.equal(s.seedanceCompiler.output.segments[0].generationPayload.resolution, '480p');

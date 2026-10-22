@@ -23,6 +23,7 @@ import { loadSecrets, defaultSecretsPath } from './lib/secrets.mjs';
 import { makeTracing } from './lib/tracing.mjs';
 import { auditRun } from './audit-trace.mjs';
 import { inputsFromProject, loadPhotoReferences, defaultPhotoRefsPath } from './run-rehearsal.mjs';
+import { withEventLog, appendEvent } from '../graph/event-log.mjs';
 
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
 const log = (...a) => console.log(new Date().toISOString(), ...a);
@@ -37,7 +38,7 @@ const src = join(RUNS_ROOT, runId, 'outputs'), out = join(RUNS_ROOT, arg('--out-
 await mkdir(out, { recursive: true });
 const rd = async (f) => JSON.parse(await readFile(join(src, f), 'utf8'));
 const [sd, ca, ls, prev] = await Promise.all(['story-director.json', 'character-architect.json', 'location-scout.json', 'state.json'].map(rd));
-if (!['awaiting-approval', 'done'].includes(prev.status)) throw new Error(`run ${runId} is ${prev.status}, not awaiting-approval or done`);
+if (!['awaiting-approval', 'done', 'approved'].includes(prev.status)) throw new Error(`run ${runId} is ${prev.status}, not awaiting-approval, done, or approved`);
 const inputs = inputsFromProject(JSON.parse(await readFile(projectPath, 'utf8')));
 const refs = await loadPhotoReferences(defaultPhotoRefsPath(projectPath)); if (refs.length) inputs.photoReferences = refs;
 const approvedAssets = { ...(prev.approvedAssets ?? {}), ...placeholderAssets(prev.pendingApproval ?? []) };
@@ -61,8 +62,10 @@ const tr = await makeTracing(sec);
 const t = { ...DEFAULT_TIMEOUTS, firstTokenMs: 900_000, idleMs: 900_000, stallMs: 600_000 };
 const liveness = createLiveness({ stallMs: t.stallMs });
 const events = [];
-const onEvent = (e) => { const s = { type: e.type, attempt: e.attempt, at: new Date().toISOString(), ...(e.issues ? { issues: e.issues.map((i) => ({ severity: i.severity, code: i.code, path: i.path, message: i.message })) } : {}), ...(e.message ? { message: e.message } : {}) };
+const eventsFile = join(RUNS_ROOT, runId, 'events.jsonl');
+const rawOnEvent = (e) => { const s = { type: e.type, attempt: e.attempt, at: new Date().toISOString(), ...(e.issues ? { issues: e.issues.map((i) => ({ severity: i.severity, code: i.code, path: i.path, message: i.message })) } : {}), ...(e.message ? { message: e.message } : {}) };
   events.push(s); log(`[sc] ${e.type}${e.attempt ? ` attempt ${e.attempt}` : ''}${e.issues ? ` codes ${[...new Set(e.issues.filter((i) => i.severity === 'error').map((i) => i.code))].join(',') || '(none)'}` : ''}${e.message ? ` ${e.message}` : ''}`); };
+const onEvent = withEventLog(eventsFile, rawOnEvent);
 const invoke = deepAgentInvoke({ runId: arg("--out-run") ?? runId, runsRoot: RUNS_ROOT, createModel: (c, a) => openRouterModel(c, a, { apiKey: sec.OPENROUTER_API_KEY }) });
 const node = makeAgentNode('seedance-compiler', invoke, { onEvent, runTag: runId, liveness, timeouts: { firstTokenMs: t.firstTokenMs, idleMs: t.idleMs } });
 const hb = setInterval(() => { for (const e of liveness.active()) log(`[heartbeat] ${liveness.line(e)}`); }, 30000);
@@ -73,7 +76,21 @@ try {
     metadata: { runId, scOnly: true }, callbacks: [new LivenessHandler(liveness), ...(tr?.callbacks ?? [])], ...(tr ? { runId: tr.rootRunId } : {}) });
 } finally { clearInterval(hb); clearInterval(guard); }
 const wallSec = Math.round((Date.now() - t0) / 1000);
-if (res.seedanceCompiler?.output) await writeFile(join(out, `seedance-compiler${suffix}.json`), JSON.stringify(res.seedanceCompiler.output, null, 2));
+if (res.seedanceCompiler?.output) {
+  await writeFile(join(out, `seedance-compiler${suffix}.json`), JSON.stringify(res.seedanceCompiler.output, null, 2));
+  try {
+    const stPath = join(out, 'state.json');
+    const st = JSON.parse(await readFile(stPath, 'utf8'));
+    st.status = res.status ?? 'done';
+    st.seedanceCompiler = { output: res.seedanceCompiler.output };
+    await writeFile(stPath, JSON.stringify(st, null, 2));
+  } catch {}
+}
+appendEvent(eventsFile, {
+  type: 'run-finished',
+  status: res.status ?? 'done',
+  at: new Date().toISOString(),
+});
 const b1 = await keyUsage();
 await writeFile(join(out, `sc-state${suffix}.json`), JSON.stringify({ status: res.status ?? 'done', approvedAssets, attempts: res.attempts, retryCounts: res.retryCounts, gateIssues: res.gateIssues,
   validationErrors: res.validationErrors, escalations: res.escalations ?? [], wallSec, keySpentUsd: b1.usage - b0.usage, events }, null, 2));

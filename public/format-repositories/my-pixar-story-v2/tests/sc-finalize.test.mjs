@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { referenceLines, continuityLocations, fullLookLine, splitPropState, finalizeShotBlock, fullPropNames, dedupeScale, finalizeClip } from '../crew/seedance-compiler/finalize.mjs';
+import { referenceLines, continuityLocations, fullLookLine, splitPropState, finalizeShotBlock, fullPropNames, dedupeScale, finalizeClip, sanitizeTeenWords, canonicalLookLine } from '../crew/seedance-compiler/finalize.mjs';
 import { heldPropStated } from '../crew/linter/shot-locks.mjs';
 
 test('Look line carries the full approved outfit, near-duplicate hijab items merged', () => {
@@ -72,3 +72,33 @@ test('article before the full name; reference lines from input; continuity per l
   const t = continuityLocations('Location: the yard in @yard and the car in @car_inside throughout. Never leave them. The camera stays on the same side of the action for the whole segment and never crosses to the other side. Costume fixed.', shots, [{ elementName: '@yard', settingName: 'Back yard' }, { elementName: '@car_inside', settingName: 'Car interior' }]);
   assert.equal(t, 'Location: the back yard in @yard for shots 1 to 2 and the car interior in @car_inside for shot 3. Never leave them. The camera stays on the same side of the action as in @yard for shots 1 to 2 and as in @car_inside for shot 3 and never crosses to the other side. Costume fixed.');
 });
+
+test('sanitizeTeenWords replaces underage terms in prose while preserving spoken lines in braces', () => {
+  const input = 'A 17-year-old teenager bakes cookies. @Dad: {When I was a 17-year-old teen.} He is a minor.';
+  const sanitized = sanitizeTeenWords(input);
+  assert.equal(sanitized, 'A eighteen-year-old young adult bakes cookies. @Dad: {When I was a 17-year-old teen.} He is a young adult.');
+});
+
+test('finalizeShotBlock stamps missing camera, onScreen, look line, and voiceover mouth state from srcShot', () => {
+  const blk = 'SHOT 1 | 0–4s\n@Kid looks out the window.\nHard cut.';
+  const srcShot = {
+    shotNumber: 1,
+    sceneId: '1.1',
+    framing: 'medium',
+    cameraAngle: 'eye level',
+    cameraMove: 'slow push in',
+    onScreen: ['@Kid'],
+    narration: { speaker: '@Adult', line: '{When I was young.}' }
+  };
+  const cards = new Map([['@Kid', { elementTag: '@Kid', signatureAccent: 'blue cap pushed back' }]]);
+  const chars = new Map([['@Kid', { elementTag: '@Kid', visualTell: 'emerald bracelet', mainOutfit: 'blue tee, jeans, sneakers' }]]);
+  const out = finalizeShotBlock(blk, { cards, chars, srcShot, props: ['a shiny bicycle parked outside'] });
+
+  assert.match(out, /Camera: medium, eye level, slow push in\./);
+  assert.match(out, /On screen: @Kid\./);
+  assert.match(out, /Look @Kid: blue cap pushed back; emerald bracelet; blue tee; jeans; sneakers\./);
+  assert.match(out, /Props: a shiny bicycle parked outside\./);
+  assert.match(out, /No one on screen speaks; every on-screen mouth stays closed\./);
+  assert.match(out, /Hard cut\./);
+});
+

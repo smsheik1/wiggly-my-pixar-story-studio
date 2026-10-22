@@ -155,7 +155,7 @@ export async function buildAnimatic({
 // CLI execution
 if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename ?? '')) {
   const runId = arg('--run');
-  const runsRoot = arg('--runs-root', '/Users/shaz/wt-v2/public/format-repositories/my-pixar-story-v2/runs');
+  const runsRoot = arg('--runs-root', resolve(import.meta.dirname ?? '', '../runs'));
   const runDir = runId ? join(runsRoot, runId) : process.cwd();
 
   const sdPath = arg('--sd', join(runDir, 'outputs', 'story-director.json'));

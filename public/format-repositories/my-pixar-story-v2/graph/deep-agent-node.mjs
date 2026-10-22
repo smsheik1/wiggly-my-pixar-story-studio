@@ -65,7 +65,7 @@ export async function prepareRunWorkspace({ runsRoot = RUNS_ROOT, runId, agent, 
   const manifest = [];
   for (const [tag, assetKey] of Object.entries(approvedAssets)) {
     if (URLISH.test(assetKey)) throw new Error(`prepareRunWorkspace: asset key for ${tag} must be a local asset key, not a URL or path`);
-    const src = assetFiles[assetKey];
+    const src = assetFiles[assetKey] || assetFiles[tag];
     let path = assetPath(assetKey);
     if (src) {
       if (!existsSync(src)) throw new Error(`prepareRunWorkspace: approved asset file missing for ${assetKey}`);

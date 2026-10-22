@@ -8,7 +8,7 @@ const gemini = readFileSync(new URL('./fixtures/gemini-ls-SKILL.md', import.meta
 // Deliberate stylization edits (anti-photoreal): Gemini lines we rewrote on purpose.
 const STYLIZED = [
   ['* **Lens & Perspective:** 35mm (wide establishing) or 50mm (medium master). Deep staging with clear foreground, midground, and background layers.', '* **Framing:** a wide shot or medium shot in plain words, with clear foreground, midground and background layers.'],
-  ['(warm white walls, honey-oak wood, scuffed painted cubbies, soft desaturated teal)', '(warm white walls, honey-oak wood, soft teal)'],
+  ['(warm white walls, honey-oak wood, scuffed painted cubbies, soft desaturated teal)', 'grounded in natural materials and muted neutrals. Distinct environments must contrast: vary the primary wood tone and secondary accent color per setting based on geography and era (e.g. warm honey woods for family homes vs. walnut, brick, or deeper tones for city apartments); never copy-paste identical furniture and fabric colors across all locations'],
   ['Sets use **muted, warm, natural palettes**', 'Sets use a **gently saturated, cohesive palette**'],
   ['shelves, desks, cubbies, textures with soft wear and tactile production CG materials]. [WALL DRESSING — drawings, textures, soft paint wear]', 'real-world proportions, naturally detailed clean materials]. [WALL DRESSING — a few simple items]'],
   ['stacking chairs, coat racks, aquarium tank, plants, small tactile details creating believable living space without clutter]', 'a few clear story props from the answers, no clutter]'],

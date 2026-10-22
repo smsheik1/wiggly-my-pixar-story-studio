@@ -31,6 +31,8 @@ import { parseStoryboard } from '../crew/storyboard-artist/schema.mjs';
 import { compileSheets } from '../crew/storyboard-artist/compile.mjs';
 import { validateStoryboard } from '../crew/linter/check-storyboard.mjs';
 import { shotTimeline } from '../scripts/lib/animatic.mjs';
+import { extractHeroProps } from '../crew/prop-architect/extract-props.mjs';
+import { makeProductionApprovalNode, makeProducerNode, makeAssemblyNode } from './producer.mjs';
 
 export const MAX_ATTEMPTS = 3;
 export const MAX_TRANSIENT_RETRIES = 2;
@@ -72,7 +74,7 @@ export const AGENT_SPECS = {
     select: selectStoryDirectorInput, parse: parseStagePlay, gate: (out, input) => validateStoryDirectorOutput(out, input),
     // answer trace shown to (and logged with) the self-review critique
     trace: (out, input) => ({ text: traceReport(out, input), data: traceSummary(out, input) }),
-    write: (out) => ({ storyDirector: out }),
+    write: (out) => ({ storyDirector: out, heroProps: extractHeroProps(out) }),
   },
   'character-architect': {
     select: selectCharacterArchitectInput, parse: parseCharacterSheets, gate: (out, _in, state) => gateCharacters(out, state.storyDirector),
@@ -203,20 +205,21 @@ export function escalationReason(issues = [], maxAttempts) {
   return net ? `model call kept dropping (network/stream error) on all ${maxAttempts} attempts; not a gate failure` : `model call failed on all ${maxAttempts} attempts; not a gate failure`;
 }
 
-/** Tags that must be approved before compiling: every CA @Image N and LS @Loc N. */
-export function requiredAssetTags(state) {
+/** Tags that must be approved before compiling: every CA @Image N and LS @Loc N, plus hero @Prop N when includeProps is true. */
+export function requiredAssetTags(state, { includeProps = false } = {}) {
   const chars = state.characterArchitect?.output?.characters ?? [];
   const locs = state.locationScout?.output?.locations ?? [];
-  return [...chars.map((c) => c.imageTag), ...locs.map((l) => l.elementTag)];
+  const props = includeProps ? (state.heroProps ?? []) : [];
+  return [...chars.map((c) => c.imageTag), ...locs.map((l) => l.elementTag), ...props.map((p) => p.propTag)];
 }
 
 /** Human approval gate. With useInterrupt, pauses via LangGraph interrupt() and resumes with { approvedAssets }. */
 /** Placeholder approvals for dry runs: fake asset keys, no image model calls. Clearly marked. */
-export const placeholderAssets = (tags) => Object.fromEntries(tags.map((t) => [t, `placeholder:${t.startsWith('@Loc') ? 'location-plate' : 'master-render'}:${t.slice(1).replace(/\s+/g, '-').toLowerCase()}`]));
+export const placeholderAssets = (tags) => Object.fromEntries(tags.map((t) => [t, `placeholder:${t.startsWith('@Loc') ? 'location-plate' : (t.startsWith('@Prop') ? 'prop-sheet' : 'master-render')}:${t.slice(1).replace(/\s+/g, '-').toLowerCase()}`]));
 
-export function makeApprovalNode({ useInterrupt = false, autoApprove } = {}) {
+export function makeApprovalNode({ useInterrupt = false, autoApprove, includeProps = false } = {}) {
   return async (state) => {
-    const need = requiredAssetTags(state);
+    const need = requiredAssetTags(state, { includeProps });
     let approved = state.approvedAssets ?? {};
     let missing = need.filter((t) => !approved[t]);
     if (missing.length && autoApprove) return { approvedAssets: { ...approved, ...autoApprove(missing) }, pendingApproval: [] };
@@ -271,10 +274,10 @@ export function makeAnimaticApprovalNode({ useInterrupt = false, autoApprove } =
 /** Where the animatic gate sends the run: rejected -> its target, approved -> compiler. */
 export const animaticRoute = (s) => (halted(s) ? END : s.animaticApproval?.decision === 'reject' ? s.animaticApproval.target : 'seedance-compiler');
 
-const halted = (s) => ['escalated', 'failed', 'awaiting-approval'].includes(s.status);
+const halted = (s) => ['escalated', 'failed', 'awaiting-approval', 'awaiting-production'].includes(s.status);
 
 /** Build and compile the v2 graph. Default invoke runs each agent as a Deep Agent; inject a fake invoke in tests. */
-export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer, onEvent, runTag, autoApprove, autoApproveAnimatic = false, storyboard = true, liveness, timeouts } = {}) {
+export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer, onEvent, runTag, autoApprove, autoApproveAnimatic = false, autoApproveProduction = false, storyboard = true, production = false, renderClip, runDir = '/tmp', liveness, timeouts } = {}) {
   if (invoke === undefined) invoke = deepAgentInvoke(deepAgent);
   if (typeof invoke !== 'function') throw new Error('buildGraph: invoke must be a function');
   const runStop = new AbortController(); // shared by every node: a fatal provider error stops the whole run
@@ -292,6 +295,9 @@ export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS,
     .addNode('animatic-editor', makeAnimaticEditorNode())
     .addNode('animatic-approval', makeAnimaticApprovalNode({ useInterrupt, autoApprove: autoApproveAnimatic }))
     .addNode('seedance-compiler', node('seedance-compiler'))
+    .addNode('production-approval', makeProductionApprovalNode({ useInterrupt, autoApprove: autoApproveProduction }))
+    .addNode('producer', makeProducerNode({ renderClip, runDir }))
+    .addNode('assembly', makeAssemblyNode({ runDir }))
     .addNode('finish', async (s) => (halted(s) ? {} : { status: 'done' }))
     .addEdge(START, 'story-director')
     .addConditionalEdges('story-director', (s) => (halted(s) ? END : ['character-architect', 'location-scout']), ['character-architect', 'location-scout', END])
@@ -302,7 +308,10 @@ export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS,
     .addConditionalEdges('storyboard-artist', (s) => (halted(s) ? END : 'animatic-editor'), ['animatic-editor', END])
     .addConditionalEdges('animatic-editor', (s) => (halted(s) ? END : 'animatic-approval'), ['animatic-approval', END])
     .addConditionalEdges('animatic-approval', animaticRoute, ['seedance-compiler', 'story-director', 'storyboard-artist', END])
-    .addEdge('seedance-compiler', 'finish')
+    .addConditionalEdges('seedance-compiler', (s) => (halted(s) ? END : production ? 'production-approval' : 'finish'), ['production-approval', 'finish', END])
+    .addConditionalEdges('production-approval', (s) => (halted(s) ? END : 'producer'), ['producer', END])
+    .addEdge('producer', 'assembly')
+    .addEdge('assembly', 'finish')
     .addEdge('finish', END);
   return g.compile(checkpointer ? { checkpointer } : undefined);
 }

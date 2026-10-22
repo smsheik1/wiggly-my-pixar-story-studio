@@ -61,12 +61,17 @@ export async function emitFlowJob({ jobId, runId = 'r1', kind = 'storyboard-pane
 
   // If webhook is provided or configured, notify Grok Bot immediately
   if (webhook?.url) {
-    try {
-      const headers = { 'Content-Type': 'application/json' };
-      if (webhook.auth) headers['Authorization'] = webhook.auth;
-      await fetch(webhook.url, { method: 'POST', headers, body: JSON.stringify({ runId, job: jobId }) });
-    } catch (e) {
-      console.warn(`[flow-queue] Warning: webhook notify failed (${e.message}), Grok Bot will pick up via Drive sync.`);
+    const headers = { 'Content-Type': 'application/json' };
+    if (webhook.auth) {
+      let cleanAuth = String(webhook.auth).trim().replace(/^["']|["']$/g, '');
+      if (!cleanAuth.startsWith('Bearer ')) cleanAuth = `Bearer ${cleanAuth}`;
+      headers['Authorization'] = cleanAuth;
+    }
+    const cleanUrl = String(webhook.url).trim().replace(/^["']|["']$/g, '');
+    const res = await fetch(cleanUrl, { method: 'POST', headers, body: JSON.stringify({ runId, job: jobId }) });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`FLOW_WEBHOOK failed (HTTP ${res.status}): ${body.slice(0, 300)}`);
     }
   }
 
@@ -100,25 +105,35 @@ export function checkLandedImage(filePath, { isPanel = false } = {}) {
 /**
  * Wait for a job to complete in the queue directory.
  * Watches runs/<runId>/<jobId>/ for output.png.done (or output.png.failed).
+ * Automatically accounts for jobs ahead in the queue so queued items never time out prematurely.
  */
-export async function waitForFlowJob(jobId, { runId = 'r1', queueDir, timeoutMs = 300_000, pollIntervalMs = 3000, isPanel = false } = {}) {
+const DEFAULT_FLOW_TIMEOUT_MS = 1_800_000;
+
+export async function waitForFlowJob(jobId, { runId = 'r1', queueDir, timeoutMs = DEFAULT_FLOW_TIMEOUT_MS, pollIntervalMs = 3000, isPanel = false } = {}) {
   const dir = resolveQueueDir(queueDir);
-  const jobDir = join(dir, 'runs', runId, jobId);
+  const runDir = join(dir, 'runs', runId);
+  const jobDir = join(runDir, jobId);
   const outputFile = join(jobDir, 'output.png');
   const doneFile = join(jobDir, 'output.png.done');
   const failedFile = join(jobDir, 'output.png.failed');
   const t0 = Date.now();
 
-  while (Date.now() - t0 < timeoutMs) {
-    if (existsSync(failedFile)) {
-      let reason = 'Flow job failed';
-      try {
-        const failedData = JSON.parse(await readFile(failedFile, 'utf8'));
-        reason = failedData.reason || reason;
-      } catch {}
-      throw new Error(`Flow job ${jobId} failed: ${reason}`);
-    }
+  // If using default timeout and there are multiple unfinished jobs in this run, allow 15 minutes per job
+  if (timeoutMs === DEFAULT_FLOW_TIMEOUT_MS) {
+    try {
+      const allJobs = await readdir(runDir);
+      let pendingCount = 0;
+      for (const j of allJobs) {
+        if (!existsSync(join(runDir, j, 'output.png.done'))) {
+          pendingCount++;
+        }
+      }
+      const dynamicTimeout = Math.max(timeoutMs, pendingCount * 15 * 60 * 1000);
+      timeoutMs = dynamicTimeout;
+    } catch {}
+  }
 
+  while (Date.now() - t0 < timeoutMs) {
     const hasDone = existsSync(doneFile);
     if (hasDone && existsSync(outputFile)) {
       const s1 = await stat(outputFile).then((s) => s.size, () => 0);
@@ -137,9 +152,20 @@ export async function waitForFlowJob(jobId, { runId = 'r1', queueDir, timeoutMs 
       }
     }
 
+    // Only fail if failedFile exists AND doneFile does NOT exist
+    if (!hasDone && existsSync(failedFile)) {
+      let reason = 'Flow job failed';
+      try {
+        const failedData = JSON.parse(await readFile(failedFile, 'utf8'));
+        reason = failedData.reason || reason;
+      } catch {}
+      throw new Error(`Flow job ${jobId} failed: ${reason}`);
+    }
+
     await new Promise((r) => setTimeout(r, pollIntervalMs));
   }
 
-  await writeFile(join(jobDir, 'output.png.failed'), JSON.stringify({ id: jobId, reason: `Timed out after ${Math.round(timeoutMs / 1000)}s` }, null, 2));
+  // On client timeout, do NOT write output.png.failed into the job directory,
+  // because Grok Bot may still be rendering or queued to render it.
   throw new Error(`Flow job ${jobId} timed out after ${Math.round(timeoutMs / 1000)}s waiting in ${jobDir}`);
 }

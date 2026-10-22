@@ -59,7 +59,7 @@ export const PASSIVE_ACTION_VERBS = /\b(?:listens?(?:\s+(?:intently|quietly|sile
 
 /**
  * Returns true if an action string describes passive character behavior without physical business or moving holds (Dan Kieft craft).
- * E.g. "@Theo listens quietly", "@Sister watches @Shaz", "@Theo smiles and nods along".
+ * E.g. "@Theo listens quietly", "@Sister watches @Brother", "@Theo smiles and nods along".
  */
 export function isPassiveAction(text) {
   const s = String(text ?? '').trim();

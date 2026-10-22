@@ -91,7 +91,7 @@ export const CastCardSchema = z.object({
   elementTag: z.string().regex(/^@[\w_]+$/, "Element tag must start with @ and contain alphanumeric or underscore, e.g. '@Wren'"),
   age: z.number().int().positive(),
   oneWordRole: z.string().min(2).describe("e.g. 'presenter', 'teacher', 'father'"),
-  physicalDescription: z.string().min(20).describe('Dan Kieft character description: physical traits, characteristic posture, resting demeanor, and one-line personality with whimsy (e.g. Danzar style: "a man in his late thirties, tall and genuinely strong, warm brown skin, cheerful and easy in himself" or "an eight-year-old boy, small and sturdy, bright and fiercely curious, dead serious about being a scientist")'),
+  physicalDescription: z.string().min(20).describe('Plain visual description anyone could draw from; no non-visual adjectives'),
   // Optional (r5-dry1: the SD invented accents and hijab colours to fill a required field). Empty/none = no accessory,
   // and it is then left out of the per-shot Look locks. Never invented: only an item the answers / cast notes give, in their wording.
   signatureAccent: OptionalAccent.describe("The one always-worn item the answers / cast notes give, in their wording (e.g. 'wears a hijab'); omit or leave empty when none is given. Never invent details such as colours"),

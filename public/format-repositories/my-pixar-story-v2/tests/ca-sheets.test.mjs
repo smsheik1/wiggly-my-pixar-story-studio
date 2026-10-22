@@ -13,9 +13,9 @@ const TELLS = ['a bright green baseball cap', 'a striped orange scarf', 'a purpl
 // Old run outputs predate the stylized opening line; swap it in.
 const OPEN = (s) => s.replaceAll('feature-quality 3D animated film, production CG, not photorealistic and not flat cartoon', 'stylized 3D animated feature film: storybook look, simplified chunky shapes with soft rounded edges, smooth clean materials, gently saturated colors');
 const withTells = (o) => ({ ...o, characters: o.characters.map((c, i) => ({ ...c, visualTell: TELLS[i], masterRenderPrompt: { ...c.masterRenderPrompt, promptText: `${OPEN(c.masterRenderPrompt.promptText)} Tell: ${TELLS[i]}.` } })) });
-const sd = JSON.parse(readFileSync(new URL('../runs/r4-dry10/outputs/story-director.json', import.meta.url)));
-const ca = withTells(JSON.parse(readFileSync(new URL('../runs/r4-dry10/outputs/character-architect.json', import.meta.url))));
-const sheetsFx = OPEN(JSON.stringify(withTells(JSON.parse(readFileSync(new URL('../runs/r4-dry10-sheets/outputs/character-architect.json', import.meta.url), 'utf8')))));
+const sd = JSON.parse(readFileSync(new URL('./fixtures/good-stage-play.json', import.meta.url)));
+const ca = withTells(JSON.parse(readFileSync(new URL('./fixtures/good-master-renders.json', import.meta.url))));
+const sheetsFx = OPEN(JSON.stringify(withTells(JSON.parse(readFileSync(new URL('./fixtures/good-character-sheets.json', import.meta.url), 'utf8')))));
 
 test('model-sheet state passes mode, masterRenderRef and master prompts through the CA selector', () => {
   const input = selectCharacterArchitectInput(sheetState({ inputs: {}, storyDirector: sd, characters: ca }));

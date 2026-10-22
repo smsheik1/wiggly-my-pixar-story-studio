@@ -95,17 +95,23 @@ export function engineDurationFor(engine, lenSec) {
   return e.durations.find((d) => d >= lenSec);
 }
 export const MAX_TOTAL_SECONDS = 180;
-export const REF_TAG = /^@(?:Image|Loc) \d+$/;
-export const SLOT_TAG = /^@(?:Image|Loc)\b/i;
+export const REF_TAG = /^@(?:Image|Loc|Prop) \d+$/;
+export const SLOT_TAG = /^@(?:Image|Loc|Prop)\b/i;
 const ELEMENT = /^@[\w_]+$/;
 
 export const ReferenceSchema = z.object({
-  tag: z.string().regex(ELEMENT, "tag is an element name like '@Theo' or '@kitchen'").refine((t) => !SLOT_TAG.test(t), 'use element names, never @Image N / @Loc N slots'),
+  tag: z.string().regex(ELEMENT, "tag is an element name like '@Theo' or '@kitchen'").refine((t) => !SLOT_TAG.test(t), 'use element names, never @Image N / @Loc N / @Prop N slots'),
   kind: z.enum(['character', 'location', 'prop', 'staging']),
-  sourceTag: z.string().regex(REF_TAG).optional().describe('Upstream slot: @Image N (Character Architect) or @Loc N (Location Scout)'),
+  sourceTag: z.string().regex(REF_TAG).optional().describe('Upstream slot: @Image N (Character Architect), @Loc N (Location Scout), or @Prop N (Prop Architect)'),
   assetKey: z.string().regex(ASSET_KEY, 'assetKey must be a local asset key, not a URL or file path').refine((s) => !/^https?:|\//.test(s), 'assetKey must not be a URL or path'),
 }).strict()
-  .refine((r) => !r.sourceTag || (r.kind === 'character') === r.sourceTag.startsWith('@Image '), { message: 'character refs come from @Image N, location refs from @Loc N', path: ['sourceTag'] });
+  .refine((r) => {
+    if (!r.sourceTag) return true;
+    if (r.kind === 'character') return r.sourceTag.startsWith('@Image ');
+    if (r.kind === 'location') return r.sourceTag.startsWith('@Loc ');
+    if (r.kind === 'prop') return r.sourceTag.startsWith('@Prop ');
+    return true;
+  }, { message: 'character refs come from @Image N, location refs from @Loc N, prop refs from @Prop N', path: ['sourceTag'] });
 
 export const ShotDialogueSchema = z.object({
   speaker: z.string().regex(ELEMENT),

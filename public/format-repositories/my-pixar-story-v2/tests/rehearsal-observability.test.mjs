@@ -7,6 +7,7 @@ import { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 import { runRehearsal } from '../scripts/run-rehearsal.mjs';
 import { loadSecrets } from '../scripts/lib/secrets.mjs';
 import { upsertTracker, createRecorder } from '../scripts/lib/report.mjs';
+import { readEvents } from '../graph/event-log.mjs';
 import { placeholderAssets } from '../graph/graph.mjs';
 import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
 
@@ -39,6 +40,11 @@ test('placeholder assets: compiler runs past approval with marked fake keys; rep
     assert.equal(r.state.status, 'done');
     assert.ok(Object.values(r.state.approvedAssets).every((k) => k.startsWith('placeholder:')));
     assert.ok(existsSync(join(r.dir, 'seedance-compiler.json'))); assert.ok(lines[0].startsWith('PLACEHOLDER ASSETS'));
+    assert.ok(existsSync(r.eventsFile));
+    const evs = readEvents(r.eventsFile);
+    assert.ok(evs.length >= 5);
+    assert.equal(evs[0].type, 'run-started');
+    assert.equal(evs.at(-1).type, 'run-finished');
     const rep = readFileSync(r.report, 'utf8');
     for (const s of ['Story Director', 'Character Architect', 'Location Scout', 'Seedance Compiler', 'Attempt 2', 'HUMAN', 'placeholder assets']) assert.ok(rep.includes(s), s);
     const t = readFileSync(tracker, 'utf8');

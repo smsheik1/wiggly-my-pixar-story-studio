@@ -28,7 +28,7 @@ The location plate must establish the exact spatial layout and camera POV requir
 
 ### Law 3: Palette Discipline & Signature Accent Exclusion
 In stylized 3D animation, the environment must support character readability:
-* Sets use a **gently saturated, cohesive palette** (warm white walls, honey-oak wood, soft teal).
+* Sets use a **gently saturated, cohesive palette** grounded in natural materials and muted neutrals. Distinct environments must contrast: vary the primary wood tone and secondary accent color per setting based on geography and era (e.g. warm honey woods for family homes vs. walnut, brick, or deeper tones for city apartments); never copy-paste identical furniture and fabric colors across all locations.
 * **Forbid the Cast's Signature Colors from Dominating Walls:** If the hero child wears a saturated mustard-yellow tee and the secondary child wears a magenta tutu, forbid whole walls from being painted bright yellow or neon magenta.
 
 ### Law 4: The Single-Sign Text Law (Anti-Rune Protection)

@@ -23,10 +23,11 @@ import { createLiveness, LivenessHandler, DEFAULT_TIMEOUTS } from '../graph/live
 import { auditRun } from './audit-trace.mjs';
 import { applyScriptView } from './script-view.mjs';
 import { createRecorder, upsertTracker, reportHtml, defaultTrackerPath } from './lib/report.mjs';
+import { withEventLog, appendEvent } from '../graph/event-log.mjs';
 import { startBudgetGuard } from './lib/budget.mjs';
 
 const OUTPUT_KEYS = { 'story-director': (s) => s.storyDirector, 'character-architect': (s) => s.characterArchitect?.output,
-  'location-scout': (s) => s.locationScout?.output, 'seedance-compiler': (s) => s.seedanceCompiler?.output };
+  'location-scout': (s) => s.locationScout?.output, 'storyboard-artist': (s) => s.storyboardArtist, 'seedance-compiler': (s) => s.seedanceCompiler?.output };
 
 /** Map a studio project (inputs.subject object or string, inputs.answers, and the story direction fields) to graph inputs. No fallback story. */
 export function inputsFromProject(project) {
@@ -58,6 +59,7 @@ const summarize = (agent, o) => {
   if (agent === 'story-director') return `${o.masthead?.title ?? o.title ?? 'untitled'}: ${o.segments?.length ?? 0} segments, ${(o.segments ?? []).reduce((n, g) => n + (g.shots?.length ?? 0), 0)} shots, cast ${(o.cast ?? []).map((c) => c.name).join(', ')}`;
   if (agent === 'character-architect') return `${o.characters?.length ?? 0} characters: ${(o.characters ?? []).map((c) => `${c.imageTag} ${c.name}`).join(', ')}`;
   if (agent === 'location-scout') return `${o.locations?.length ?? 0} locations: ${(o.locations ?? []).map((l) => `${l.elementTag} ${l.name}`).join(', ')}`;
+  if (agent === 'storyboard-artist') return `${o.sheets?.length ?? 0} sheets, ${(o.sheets ?? []).reduce((n, sh) => n + (sh.panels?.length ?? 0), 0)} panels`;
   return `${o.segments?.length ?? 0} segments, ${o.totalRuntimeSec}s`;
 };
 
@@ -88,13 +90,16 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
   const t = { ...DEFAULT_TIMEOUTS, ...timeouts };
   const liveness = createLiveness({ now, stallMs: t.stallMs });
   const rec = createRecorder({ runId, placeholderAssets: usePlaceholderAssets, tracingProject: tr?.projectName ?? null, onChange: (m) => { if (trackerPath) { try { upsertTracker(m, trackerPath); } catch { /* tracker is optional */ } } } });
+  const eventsFile = join(runsRoot, runId, 'events.jsonl');
+  const onEvent = withEventLog(eventsFile, rec.onEvent);
   if (reflectionRounds !== undefined) log(`self-review rounds override: ${typeof reflectionRounds === 'number' ? `${reflectionRounds} for every agent` : Object.entries(reflectionRounds).map(([a, n]) => `${a}=${n}`).join(', ')}`);
   const graph = buildGraphFn({ storyboard, ...(invoke ? { invoke } : { deepAgent: { runId, runsRoot, createModel: (c, a) => openRouterModel(c, a, { apiKey: sec.OPENROUTER_API_KEY }), ...(reflectionRounds !== undefined ? { reflectionRounds } : {}) } }),
-    onEvent: rec.onEvent, runTag: runId, liveness, timeouts: { firstTokenMs: t.firstTokenMs, idleMs: t.idleMs, ...(t.pollMs ? { pollMs: t.pollMs } : {}), now }, ...(usePlaceholderAssets ? { autoApprove: placeholderAssets } : {}) });
+    onEvent, runTag: runId, liveness, timeouts: { firstTokenMs: t.firstTokenMs, idleMs: t.idleMs, ...(t.pollMs ? { pollMs: t.pollMs } : {}), now }, ...(usePlaceholderAssets ? { autoApprove: placeholderAssets } : {}) });
   if (usePlaceholderAssets) log('PLACEHOLDER ASSETS: asset approval auto-filled with fake keys (no images generated)');
   const config = { runName: 'wiggly-v2 rehearsal', tags: [`runId:${runId}`, 'wiggly-v2', ...(usePlaceholderAssets ? ['placeholder-assets'] : [])],
     metadata: { runId, placeholderAssets: usePlaceholderAssets }, recursionLimit: 50, callbacks: [new LivenessHandler(liveness), ...(tr?.callbacks ?? [])], ...(tr ? { runId: tr.rootRunId } : {}) };
   if (tr) log(`LangSmith: tracing to ${tr.projectName}`);
+  appendEvent(eventsFile, { type: 'run-started', runId, placeholderAssets: usePlaceholderAssets });
   const beat = () => { const live = liveness.active().map((e) => ({ agent: e.agent, attempt: e.attempt, text: liveness.line(e), stalled: liveness.status(e).stalled }));
     for (const x of live) log(`[heartbeat] ${x.text}`); rec.heartbeat(live); };
   const hb = heartbeatMs > 0 ? setInterval(beat, heartbeatMs) : null;
@@ -103,6 +108,7 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
   if (tr) await tr.flush?.();
   const url = tr ? await tr.url() : null;
   rec.finish(state, url);
+  appendEvent(eventsFile, { type: 'run-finished', runId, status: state.status, pendingApproval: state.pendingApproval });
   const runDir = join(runsRoot, runId), dir = join(runDir, 'outputs');
   await mkdir(dir, { recursive: true });
   log(`run ${runId}: status ${state.status}`);
@@ -130,7 +136,7 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
   }
   log(`outputs saved to ${dir}`); log(`report: ${report}`);
   log(url ? `LangSmith: ${url}` : 'LangSmith: not traced (no LANGSMITH_API_KEY)');
-  return { state, dir, runId, report, url, model: rec.model };
+  return { state, dir, runId, report, url, model: rec.model, eventsFile };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
