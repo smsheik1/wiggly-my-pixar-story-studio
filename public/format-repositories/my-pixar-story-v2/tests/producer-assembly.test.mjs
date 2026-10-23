@@ -2,7 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { buildGraph, requiredAssetTags } from '../graph/graph.mjs';
-import { makeProductionApprovalNode, makeProducerNode, makeAssemblyNode } from '../graph/producer.mjs';
+import { makeProductionApprovalNode, makeProducerNode, makeAssemblyNode, upscaleClipWithReplicate, renderClipWithReplicate } from '../graph/producer.mjs';
+import { generatePropTurnaroundPrompt } from '../crew/prop-architect/extract-props.mjs';
+import { selectSeedanceCompilerInput } from '../crew/seedance-compiler/input.mjs';
 import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
 import { draftStoryboard } from './fixtures/storyboard-draft.mjs';
 
@@ -68,6 +70,66 @@ test('Assembly node aggregates rendered clips into masterVideo with duration', a
   assert.ok(res.masterVideo);
   assert.equal(res.masterVideo.durationSec, 49.0);
   assert.match(res.masterVideo.videoPath, /master-video\.mp4/);
+});
+
+test('upscaleClipWithReplicate invokes bytedance/video-upscaler with scene aigc', async () => {
+  const fakeFetch = async (url, opts) => {
+    if (url.includes('/predictions') && opts?.method === 'POST') {
+      const body = JSON.parse(opts.body);
+      assert.equal(body.input.scene, 'aigc');
+      assert.equal(body.input.target_resolution, '1080p');
+      assert.equal(body.input.video, 'https://cdn.example.com/clip.mp4');
+      return {
+        ok: true,
+        json: async () => ({ id: 'pred_upscale_123', status: 'succeeded', output: 'https://cdn.example.com/upscaled-1080p.mp4' }),
+      };
+    }
+    return { ok: true, json: async () => ({}) };
+  };
+
+  const res = await upscaleClipWithReplicate({
+    inputVideoUrl: 'https://cdn.example.com/clip.mp4',
+    apiKey: 'test-key',
+    targetResolution: '1080p',
+    fetchFn: fakeFetch,
+  });
+
+  assert.equal(res.predictionId, 'pred_upscale_123');
+  assert.equal(res.outputVideoUrl, 'https://cdn.example.com/upscaled-1080p.mp4');
+  assert.equal(res.targetResolution, '1080p');
+});
+
+test('generatePropTurnaroundPrompt produces 4-view 3D model sheet instructions', () => {
+  const prop = { name: '2000 Honda Accord Coupe', description: 'silver 2-door coupe' };
+  const prompt = generatePropTurnaroundPrompt(prop, ['https://cdn.example.com/car.jpg']);
+  assert.match(prompt, /Multi-angle model sheet/i);
+  assert.match(prompt, /2000 Honda Accord Coupe/);
+  assert.match(prompt, /front 3\/4 view, side profile, and rear 3\/4 view/i);
+  assert.match(prompt, /Matching real-life reference photos/i);
+});
+
+test('selectSeedanceCompilerInput binds heroProps into references array', () => {
+  const baseState = {
+    storyDirector: json('good-stage-play.json'),
+    characterArchitect: { output: json('good-master-renders.json') },
+    locationScout: { output: json('good-location-plates.json') },
+    approvedAssets: {
+      ...assets(),
+      '@Prop 1': 'asset:prop-sheet:2000-honda-accord',
+    },
+    heroProps: [
+      {
+        propTag: '@Prop 1',
+        elementTag: '@2000_honda_accord',
+        name: '2000 Honda Accord',
+        description: 'silver 2-door coupe parked in driveway',
+        assetKey: 'asset:prop-sheet:2000-honda-accord',
+      },
+    ],
+  };
+
+  const input = selectSeedanceCompilerInput(baseState);
+  assert.ok(input.references.some((r) => r.type === 'prop' && r.tag === '@2000_honda_accord' && r.sourceTag === '@Prop 1'));
 });
 
 test('Full Graph with production: true runs through producer and assembly to masterVideo', async () => {
