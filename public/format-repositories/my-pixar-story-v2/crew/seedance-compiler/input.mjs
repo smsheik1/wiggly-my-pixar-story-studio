@@ -15,7 +15,7 @@ export const ReferenceElement = z.object({
   tag: z.string().regex(/^@[\w_]+$/),
   type: z.enum(['character', 'location', 'prop', 'staging']),
   plainEnglishDescription: z.string().min(10),
-  sourceTag: z.string().regex(/^@(?:Image|Loc) \d+$/).optional(),
+  sourceTag: z.string().regex(/^@(?:Image|Loc|Prop) \d+$/).optional(),
   assetKey: KEY,
 }).strict();
 export const VoiceRegistryEntry = z.object({
@@ -193,12 +193,23 @@ export function selectSeedanceCompilerInput(state = {}) {
     if (l.lightingAnchor) o.lighting = `${l.lightingAnchor.sourceDescription}, ${l.lightingAnchor.keyLightDirection}; ${l.lightingAnchor.shadowCharacteristics}`;
     return o;
   });
+  const heroProps = (p.heroProps ?? state.heroProps ?? []).map((hp) => {
+    const assetKey = assets[hp.propTag] ?? assets[hp.elementTag] ?? hp.assetKey;
+    return {
+      tag: hp.elementTag,
+      type: 'prop',
+      sourceTag: hp.propTag,
+      assetKey,
+      plainEnglishDescription: `Multi-angle model sheet of hero prop: ${hp.name}. ${hp.description}`,
+    };
+  });
   const castByTag = new Map((sd.cast ?? []).map((c) => [c.elementTag, c]));
   const references = [
     ...characters.map((c) => ({ tag: c.elementTag, type: 'character', sourceTag: c.imageTag, assetKey: c.assetKey,
       plainEnglishDescription: castByTag.get(c.elementTag)?.physicalDescription ?? c.mainOutfit ?? `${c.elementTag} character reference` })),
     ...locations.map((l) => ({ tag: l.elementName, type: 'location', sourceTag: l.elementTag, assetKey: l.assetKey,
       plainEnglishDescription: `Empty plate of the location: ${l.settingName}${l.lighting ? `, ${l.lighting}` : ''}` })), // 'Empty Suburban driveway' read as a proper name
+    ...heroProps,
   ];
   const audio = p.voiceAudioRefs ?? {};
   const voiceRegistry = (sd.cast ?? []).map((c) => ({ speakerTag: c.elementTag, verbatimVoicePrompt: c.voiceDescription, ...(audio[c.elementTag] ? { audioReference: audio[c.elementTag] } : {}) }));

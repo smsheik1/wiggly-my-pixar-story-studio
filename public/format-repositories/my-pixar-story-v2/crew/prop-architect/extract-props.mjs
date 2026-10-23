@@ -60,3 +60,12 @@ export function extractHeroProps(stagePlay = {}) {
 
   return out;
 }
+
+/**
+ * Generates the standardized 4-view 3D turnaround prompt for a hero vehicle or object.
+ */
+export function generatePropTurnaroundPrompt(prop, photoUrls = []) {
+  const photoClause = photoUrls?.length ? ` Matching real-life reference photos: ${photoUrls.join(', ')}.` : '';
+  return `Multi-angle model sheet of ${prop.name}, Pixar-style 3D stylized turnaround: front 3/4 view, side profile, and rear 3/4 view. Characterized by slightly rounded exaggerated proportions, rich tactile materials, tactile textures, and subtle story-specific wear.${photoClause} Neutral gray studio lighting, crisp shadows, feature animation production asset.`;
+}
+
