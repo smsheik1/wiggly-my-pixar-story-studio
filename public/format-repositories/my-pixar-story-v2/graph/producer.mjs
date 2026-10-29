@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { interrupt } from '@langchain/langgraph';
+import { interrupt, isGraphInterrupt } from '@langchain/langgraph';
 
 export const SEEDANCE_VERSION = 'ca38262bae0952bf80a7f10eda58af860a0eae7d48957a099e32632792b8f116';
 export const VIDEO_UPSCALER_MODEL = 'bytedance/video-upscaler';
@@ -229,16 +229,39 @@ export function makeProducerNode({
     }
 
     const rendered = [];
-    for (const seg of segments) {
-      onProgress({ type: 'clip-render-start', clipId: seg.segmentId });
-      const res = await renderClip({
-        clip: seg,
-        runDir,
-        engine: seg.generationPayload?.engine ?? 'seedance-2.5',
-        duration: seg.generationPayload?.durationSec ?? seg.totalDurationSec,
-      });
-      rendered.push(res);
-      onProgress({ type: 'clip-render-done', clipId: seg.segmentId, res });
+    let paid = {};
+    try {
+      paid = JSON.parse(await readFile(join(runDir, 'outputs', 'paid-items.json'), 'utf8'));
+    } catch {
+      paid = {};
+    }
+    try {
+      for (const seg of segments) {
+        const itemId = seg.segmentId;
+        if (paid[itemId]) {
+          rendered.push({ clipId: itemId, videoPath: paid[itemId] });
+          continue;
+        }
+        onProgress({ type: 'clip-render-start', clipId: itemId });
+        const duration = seg.generationPayload?.durationSec ?? seg.totalDurationSec;
+        const res = await renderClip({
+          clip: seg,
+          runDir,
+          state,
+          itemId,
+          engine: seg.generationPayload?.engine ?? 'seedance-2.5',
+          duration,
+        });
+        rendered.push(res);
+        onProgress({ type: 'clip-render-done', clipId: itemId, res });
+      }
+    } catch (error) {
+      if (isGraphInterrupt(error)) throw error;
+      if (error?.code === 'AWAITING_CREDITS') {
+        interrupt({ kind: 'credits', itemId: error.itemId, credits: error.credits });
+        interrupt({ kind: 'credits', itemId: error.itemId, credits: error.credits });
+      }
+      throw error;
     }
 
     return {

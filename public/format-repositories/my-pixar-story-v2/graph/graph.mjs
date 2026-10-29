@@ -33,6 +33,7 @@ import { validateStoryboard } from '../crew/linter/check-storyboard.mjs';
 import { shotTimeline } from '../scripts/lib/animatic.mjs';
 import { extractHeroProps } from '../crew/prop-architect/extract-props.mjs';
 import { makeProductionApprovalNode, makeProducerNode, makeAssemblyNode } from './producer.mjs';
+import { makePanelStillNode, makeSheetStillNode } from './stills.mjs';
 
 export const MAX_ATTEMPTS = 3;
 export const MAX_TRANSIENT_RETRIES = 2;
@@ -277,7 +278,7 @@ export const animaticRoute = (s) => (halted(s) ? END : s.animaticApproval?.decis
 const halted = (s) => ['escalated', 'failed', 'awaiting-approval', 'awaiting-production'].includes(s.status);
 
 /** Build and compile the v2 graph. Default invoke runs each agent as a Deep Agent; inject a fake invoke in tests. */
-export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer, onEvent, runTag, autoApprove, autoApproveAnimatic = false, autoApproveProduction = false, storyboard = true, production = false, renderClip, runDir = '/tmp', liveness, timeouts } = {}) {
+export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS, useInterrupt = false, checkpointer, onEvent, runTag, autoApprove, autoApproveAnimatic = false, autoApproveProduction = false, storyboard = true, production = false, renderClip, renderStill, runDir = '/tmp', liveness, timeouts } = {}) {
   if (invoke === undefined) invoke = deepAgentInvoke(deepAgent);
   if (typeof invoke !== 'function') throw new Error('buildGraph: invoke must be a function');
   const runStop = new AbortController(); // shared by every node: a fatal provider error stops the whole run
@@ -287,11 +288,13 @@ export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS,
     .addNode('character-architect', node('character-architect'))
     .addNode('location-scout', node('location-scout'))
     .addNode('join', async () => ({}))
+    .addNode('render-sheets', makeSheetStillNode({ renderStill, runDir }))
     .addNode('asset-approval', makeApprovalNode({ useInterrupt, autoApprove }))
     .addNode('storyboard-artist', async (s) => {
       const r = await node('storyboard-artist')(s);
       return s.animaticApproval?.routed ? { ...r, animaticApproval: null, revisionNotes: { 'storyboard-artist': '', 'story-director': '' } } : r; // a fresh board clears a routed rejection
     })
+    .addNode('render-panels', makePanelStillNode({ renderStill, runDir }))
     .addNode('animatic-editor', makeAnimaticEditorNode())
     .addNode('animatic-approval', makeAnimaticApprovalNode({ useInterrupt, autoApprove: autoApproveAnimatic }))
     .addNode('seedance-compiler', node('seedance-compiler'))
@@ -302,10 +305,12 @@ export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS,
     .addEdge(START, 'story-director')
     .addConditionalEdges('story-director', (s) => (halted(s) ? END : ['character-architect', 'location-scout']), ['character-architect', 'location-scout', END])
     .addEdge(['character-architect', 'location-scout'], 'join')
-    .addConditionalEdges('join', (s) => (halted(s) ? END : 'asset-approval'), ['asset-approval', END])
+    .addConditionalEdges('join', (s) => (halted(s) ? END : 'render-sheets'), ['render-sheets', END])
+    .addConditionalEdges('render-sheets', (s) => (halted(s) ? END : 'asset-approval'), ['asset-approval', END])
     // storyboard: false keeps the old 4-agent path (assets approved -> compiler), used by the older graph tests.
     .addConditionalEdges('asset-approval', (s) => (halted(s) ? END : storyboard ? 'storyboard-artist' : 'seedance-compiler'), ['storyboard-artist', 'seedance-compiler', END])
-    .addConditionalEdges('storyboard-artist', (s) => (halted(s) ? END : 'animatic-editor'), ['animatic-editor', END])
+    .addConditionalEdges('storyboard-artist', (s) => (halted(s) ? END : 'render-panels'), ['render-panels', END])
+    .addConditionalEdges('render-panels', (s) => (halted(s) ? END : 'animatic-editor'), ['animatic-editor', END])
     .addConditionalEdges('animatic-editor', (s) => (halted(s) ? END : 'animatic-approval'), ['animatic-approval', END])
     .addConditionalEdges('animatic-approval', animaticRoute, ['seedance-compiler', 'story-director', 'storyboard-artist', END])
     .addConditionalEdges('seedance-compiler', (s) => (halted(s) ? END : production ? 'production-approval' : 'finish'), ['production-approval', 'finish', END])

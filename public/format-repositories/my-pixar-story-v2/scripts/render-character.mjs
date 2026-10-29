@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { readFile, mkdir, copyFile } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { emitFlowJob, waitForFlowJob, resolveQueueDir } from './flow-queue.mjs';
 import { loadSecrets } from './lib/secrets.mjs';
+import { missingReplicateTokenError, saveNanoBanana } from './replicate-image.mjs';
 
 function parseArgs(args = process.argv.slice(2)) {
   const out = {};
@@ -27,35 +27,22 @@ export async function renderCharacter({ charId, runId = 'r6-live', timeoutMs = 6
   );
   if (!char) throw new Error(`Character "${charId}" not found in ${caPath}`);
 
-  const sec = loadSecrets(undefined, () => true);
-  const webhook = sec.FLOW_WEBHOOK_URL ? { url: sec.FLOW_WEBHOOK_URL, auth: sec.FLOW_WEBHOOK_AUTH } : null;
-
-  const jobId = `char-${char.characterId}`;
-  log(`Emitting Flow job for ${char.name} (${char.imageTag}): ${jobId}`);
-  log(`Aspect: ${char.masterRenderPrompt?.aspectRatio || '1:1'}`);
-  log(`Prompt: ${char.masterRenderPrompt?.promptText.slice(0, 120)}...`);
-
-  await emitFlowJob({
-    jobId,
-    runId,
-    kind: 'character-master',
-    prompt: char.masterRenderPrompt?.promptText,
-    aspect: char.masterRenderPrompt?.aspectRatio || '1:1',
-    webhook,
-  });
-
-  log(`Job emitted to Flow Queue. Waiting for Grokbot to render ${char.name}...`);
-  const landed = await waitForFlowJob(jobId, { runId, timeoutMs, isPanel: false });
-  log(`SUCCESS: ${char.name} landed! Resolution: ${landed.width}x${landed.height}`);
-
-  // Copy to run assets
+  const token = loadSecrets(undefined, () => true).REPLICATE_API_TOKEN?.trim();
+  if (!token) throw new Error(missingReplicateTokenError());
   const assetsDir = `runs/${runId}/assets`;
   await mkdir(assetsDir, { recursive: true });
   const localDest = join(assetsDir, `${char.imageTag.replace('@', '')}-${char.characterId}.png`);
-  await copyFile(landed.outputPath, localDest);
-  log(`Saved character asset to ${localDest}`);
-
-  return { ok: true, char, localDest, ...landed };
+  log(`Rendering ${char.name} (${char.imageTag}) with Nano Banana 2.1`);
+  const saved = await saveNanoBanana({
+    prompt: char.masterRenderPrompt?.promptText,
+    aspectRatio: char.masterRenderPrompt?.aspectRatio || '1:1',
+    resolution: '1K',
+    apiKey: token,
+    dest: localDest,
+    wait: (ms) => new Promise((resolve) => setTimeout(resolve, Math.min(ms, timeoutMs))),
+  });
+  log(`Saved character asset to ${saved.dest} (${saved.id})`);
+  return { ok: true, char, localDest, id: saved.id, url: saved.url };
 }
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/.*\//, ''))) {

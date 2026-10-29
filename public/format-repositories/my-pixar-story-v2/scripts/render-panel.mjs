@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Render a single storyboard panel using Google Flow Grokbot via the Flow Queue.
-import { readFile, mkdir, copyFile } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { emitFlowJob, waitForFlowJob } from './flow-queue.mjs';
 import { loadSecrets } from './lib/secrets.mjs';
+import { missingReplicateTokenError, saveNanoBanana } from './replicate-image.mjs';
 import { appendEvent } from '../graph/event-log.mjs';
 
 function parseArgs(args = process.argv.slice(2)) {
@@ -42,35 +42,24 @@ export async function renderPanel({ shotId, runId = 'r6-live', jobSuffix = '', t
     refPaths.push(refFile);
   }
 
-  const sec = loadSecrets(undefined, () => true);
-  const webhook = sec.FLOW_WEBHOOK_URL ? { url: sec.FLOW_WEBHOOK_URL, auth: sec.FLOW_WEBHOOK_AUTH } : null;
-
-  const jobId = `panel-${panel.shotId.replace('.', '_')}${jobSuffix ? `-${jobSuffix}` : ''}`;
-  log(`Emitting Flow job for Shot ${panel.shotId}: ${jobId}`);
-  log(`Aspect: ${panel.aspect || '16:9'} (2K)`);
+  const token = loadSecrets(undefined, () => true).REPLICATE_API_TOKEN?.trim();
+  if (!token) throw new Error(missingReplicateTokenError());
+  log(`Rendering Shot ${panel.shotId} with Nano Banana 2.1`);
   log(`References (${refPaths.length}): ${panel.references.map((r) => r.imageTag || r.tag).join(', ')}`);
-  log(`Prompt: ${prompt.slice(0, 140)}...`);
-
-  await emitFlowJob({
-    jobId,
-    runId,
-    kind: 'storyboard-panel',
-    prompt,
-    references: refPaths,
-    aspect: panel.aspect || '16:9',
-    webhook,
-  });
-
-  log(`Job emitted to Flow Queue. Waiting for Grokbot to render Shot ${panel.shotId}...`);
-  const landed = await waitForFlowJob(jobId, { runId, timeoutMs, isPanel: true });
-  log(`SUCCESS: Shot ${panel.shotId} landed! Resolution: ${landed.width}x${landed.height}`);
-
-  // Copy to run storyboard-panels directory
   const panelsDir = `runs/${runId}/storyboard-panels`;
   await mkdir(panelsDir, { recursive: true });
   const localDest = join(panelsDir, `${panel.shotId}.png`);
-  await copyFile(landed.outputPath, localDest);
-  log(`Saved storyboard panel to ${localDest}`);
+  const saved = await saveNanoBanana({
+    prompt,
+    aspectRatio: panel.aspect || '16:9',
+    resolution: '2K',
+    referencePaths: refPaths,
+    apiKey: token,
+    dest: localDest,
+    wait: (ms) => new Promise((resolve) => setTimeout(resolve, Math.min(ms, timeoutMs))),
+  });
+  const landed = { id: saved.id, url: saved.url };
+  log(`Saved storyboard panel to ${localDest} (${saved.id})`);
 
   // Append event to events.jsonl
   const eventsFile = `runs/${runId}/events.jsonl`;
@@ -79,7 +68,7 @@ export async function renderPanel({ shotId, runId = 'r6-live', jobSuffix = '', t
     type: 'render-job-landed',
     kind: 'storyboard-panel',
     shotId: panel.shotId,
-    resolution: `${landed.width}x${landed.height}`,
+    predictionId: landed.id,
     file: localDest,
   });
 

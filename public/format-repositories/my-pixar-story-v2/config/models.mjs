@@ -5,7 +5,12 @@ import { VIDEO_ENGINES } from '../crew/seedance-compiler/schema.mjs';
 export { VIDEO_ENGINES };
 import { fileURLToPath } from 'node:url';
 import { skillFileName, reviewFileName } from '../crew/files.mjs';
-export const NANO_BANANA = Object.freeze({ provider: 'google-flow', model: 'nano-banana-2.1', promptLines: 'single' });
+export const NANO_BANANA = Object.freeze({
+  provider: 'replicate',
+  model: 'nano-banana-2.1',
+  apiModel: 'google/nano-banana-2.1',
+  promptLines: 'single',
+});
 
 // Provider limits per model (OpenRouter /api/v1/models top_provider, checked 2026-10-18). Every agent's maxTokens must fit
 // maxCompletionTokens; openRouterModel refuses a config that does not (tests/models.test.mjs checks it too).

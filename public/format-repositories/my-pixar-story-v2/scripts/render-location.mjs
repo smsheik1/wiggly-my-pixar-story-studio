@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { readFile, mkdir, copyFile } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { emitFlowJob, waitForFlowJob } from './flow-queue.mjs';
 import { loadSecrets } from './lib/secrets.mjs';
+import { missingReplicateTokenError, saveNanoBanana } from './replicate-image.mjs';
 
 function parseArgs(args = process.argv.slice(2)) {
   const out = {};
@@ -31,35 +31,22 @@ export async function renderLocation({ locId, runId = 'r6-live', timeoutMs = 600
   });
   if (!loc) throw new Error(`Location "${locId}" not found in ${lsPath}`);
 
-  const sec = loadSecrets(undefined, () => true);
-  const webhook = sec.FLOW_WEBHOOK_URL ? { url: sec.FLOW_WEBHOOK_URL, auth: sec.FLOW_WEBHOOK_AUTH } : null;
-
-  const jobId = `loc-${loc.locationId}`;
-  log(`Emitting Flow job for ${loc.name} (${loc.elementTag}): ${jobId}`);
-  log(`Aspect: ${loc.locationPlatePrompt?.aspectRatio || '16:9'}`);
-  log(`Prompt: ${loc.locationPlatePrompt?.promptText.slice(0, 120)}...`);
-
-  await emitFlowJob({
-    jobId,
-    runId,
-    kind: 'location-plate',
-    prompt: loc.locationPlatePrompt?.promptText,
-    aspect: loc.locationPlatePrompt?.aspectRatio || '16:9',
-    webhook,
-  });
-
-  log(`Job emitted to Flow Queue. Waiting for Grokbot to render ${loc.name}...`);
-  const landed = await waitForFlowJob(jobId, { runId, timeoutMs, isPanel: false });
-  log(`SUCCESS: ${loc.name} landed! Resolution: ${landed.width}x${landed.height}`);
-
-  // Copy to run assets
+  const token = loadSecrets(undefined, () => true).REPLICATE_API_TOKEN?.trim();
+  if (!token) throw new Error(missingReplicateTokenError());
   const assetsDir = `runs/${runId}/assets`;
   await mkdir(assetsDir, { recursive: true });
   const localDest = join(assetsDir, `${loc.elementTag.replace('@', '')}-${loc.locationId}.png`);
-  await copyFile(landed.outputPath, localDest);
-  log(`Saved location asset to ${localDest}`);
-
-  return { ok: true, loc, localDest, ...landed };
+  log(`Rendering ${loc.name} (${loc.elementTag}) with Nano Banana 2.1`);
+  const saved = await saveNanoBanana({
+    prompt: loc.locationPlatePrompt?.promptText,
+    aspectRatio: loc.locationPlatePrompt?.aspectRatio || '16:9',
+    resolution: '1K',
+    apiKey: token,
+    dest: localDest,
+    wait: (ms) => new Promise((resolve) => setTimeout(resolve, Math.min(ms, timeoutMs))),
+  });
+  log(`Saved location asset to ${saved.dest} (${saved.id})`);
+  return { ok: true, loc, localDest, id: saved.id, url: saved.url };
 }
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/.*\//, ''))) {

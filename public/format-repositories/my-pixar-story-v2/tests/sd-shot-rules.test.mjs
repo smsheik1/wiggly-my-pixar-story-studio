@@ -101,6 +101,27 @@ test('SD input gets photo text (no paths); CA gets photoFile; LS gets location d
   const ls = selectLocationScoutInput({ storyDirector: good() });
   assert.match(ls.settings[0].description, /scuffed wooden table/);
 });
+test('a real photo file reaches the character architect and the story director only sees the look', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'v2ref-'));
+  try {
+    const file = join(dir, 'Leo.jpg');
+    writeFileSync(file, 'photo');
+    const refs = [{ id: 'Leo', name: 'Leo', realPerson: 'Leo', skinTone: 'olive', description: 'An adult man with short dark hair and a trimmed beard.', path: file }];
+    const sd = selectStoryDirectorInput({ inputs: { answers: {}, photoReferences: refs } });
+    assert.equal(sd.photoCharacters[0].skinTone, 'olive');
+    assert.match(sd.photoCharacters[0].description, /trimmed beard/);
+    assert.equal(JSON.stringify(sd).includes(file), false);
+    const story = good();
+    story.cast[0].photoRef = 'Leo';
+    story.cast[0].skinTone = 'olive';
+    const state = { inputs: { answers: {}, photoReferences: refs }, storyDirector: story };
+    const ca = selectCharacterArchitectInput(state);
+    const files = photoFilesFor('character-architect', ca, state);
+    assert.equal(files['/references/photos/Leo.jpg'], file);
+    assert.equal(existsSync(file), true);
+    assert.equal(JSON.stringify(ca).includes(file), false);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
 test('prepareRunWorkspace copies reference photos read-only into references/photos; loadPhotoReferences validates', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'v2photo-'));
   try {

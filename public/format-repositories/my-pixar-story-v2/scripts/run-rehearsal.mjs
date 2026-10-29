@@ -24,6 +24,7 @@ import { auditRun } from './audit-trace.mjs';
 import { applyScriptView } from './script-view.mjs';
 import { createRecorder, upsertTracker, reportHtml, defaultTrackerPath } from './lib/report.mjs';
 import { withEventLog, appendEvent } from '../graph/event-log.mjs';
+import { invokePersisting, writeRunState } from '../graph/run-state.mjs';
 import { startBudgetGuard } from './lib/budget.mjs';
 
 const OUTPUT_KEYS = { 'story-director': (s) => s.storyDirector, 'character-architect': (s) => s.characterArchitect?.output,
@@ -100,11 +101,13 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
     metadata: { runId, placeholderAssets: usePlaceholderAssets }, recursionLimit: 50, callbacks: [new LivenessHandler(liveness), ...(tr?.callbacks ?? [])], ...(tr ? { runId: tr.rootRunId } : {}) };
   if (tr) log(`LangSmith: tracing to ${tr.projectName}`);
   appendEvent(eventsFile, { type: 'run-started', runId, placeholderAssets: usePlaceholderAssets });
+  const stateFile = join(runsRoot, runId, 'outputs', 'state.json');
+  await writeRunState(stateFile, { status: 'running', pendingApproval: [] }, { placeholderAssets: usePlaceholderAssets });
   const beat = () => { const live = liveness.active().map((e) => ({ agent: e.agent, attempt: e.attempt, text: liveness.line(e), stalled: liveness.status(e).stalled }));
     for (const x of live) log(`[heartbeat] ${x.text}`); rec.heartbeat(live); };
   const hb = heartbeatMs > 0 ? setInterval(beat, heartbeatMs) : null;
   let state;
-  try { state = await graph.invoke({ inputs }, config); } finally { if (hb) clearInterval(hb); }
+  try { state = await invokePersisting(graph, { inputs }, config, stateFile, { placeholderAssets: usePlaceholderAssets }); } finally { if (hb) clearInterval(hb); }
   if (tr) await tr.flush?.();
   const url = tr ? await tr.url() : null;
   rec.finish(state, url);
@@ -118,7 +121,7 @@ export async function runRehearsal({ projectPath, runId = `rehearsal-${randomUUI
     log(`  ${agent}: ${summarize(agent, o)} (attempts ${state.attempts?.[agent] ?? 0}, retries ${state.retryCounts?.[agent] ?? 0})`);
   }
   if (Object.keys(state.reflections ?? {}).length) await writeFile(join(dir, 'reflections.json'), JSON.stringify(state.reflections, null, 2));
-  await writeFile(join(dir, 'state.json'), JSON.stringify({ status: state.status, placeholderAssets: usePlaceholderAssets, approvedAssets: state.approvedAssets, pendingApproval: state.pendingApproval, retryCounts: state.retryCounts, escalations: state.escalations, validationErrors: state.validationErrors }, null, 2));
+  await writeRunState(stateFile, state, { placeholderAssets: usePlaceholderAssets });
   const report = join(runDir, 'report.html');
   await writeFile(report, reportHtml(rec.model));
   for (const e of state.escalations ?? []) {

@@ -7,7 +7,7 @@
 //   locationScout.hints            per-setting LS hints
 //   locationScout.output           LS output
 //   approvedAssets                 { '@Image N' | '@Loc N' -> local asset key }, set by the human approval gate
-//   storyboardArtist.output/.sheets Storyboard Artist panels + compiled sheet prompts (made by hand in Google Flow)
+//   storyboardArtist.output/.sheets Storyboard Artist panels + compiled sheet prompts (Nano Banana 2.1 on Replicate)
 //   animaticApproval / approvedShotTimings  parent's animatic decision; approved timings go to the Seedance Compiler
 //   seedanceCompiler.output        compiled Seedance prompts (no video generation in the graph)
 import { z } from 'zod';
@@ -59,6 +59,7 @@ export const PipelineStateSchema = z.object({
   reflections: z.record(z.string(), z.array(z.unknown())).default({}), // { agent: [{ attempt, rounds, log: [{ round, critique, ... }] }] }
   status: z.enum(STATUSES).default('running'),
   pendingApproval: z.array(z.string()).default([]),
+  assetFiles: z.record(z.string(), z.string()).optional(),
 });
 
 /** Validate an initial state (throws ZodError). */
@@ -98,4 +99,5 @@ export const PipelineAnnotation = Annotation.Root({
   reflections: Annotation({ reducer: mergeObj, default: () => ({}) }), // per-agent self-critique log (reviewable)
   status: Annotation({ reducer: statusReducer, default: () => 'running' }),
   pendingApproval: Annotation({ reducer: replace, default: () => [] }),
+  assetFiles: Annotation({ reducer: mergeObj, default: () => ({}) }),
 });

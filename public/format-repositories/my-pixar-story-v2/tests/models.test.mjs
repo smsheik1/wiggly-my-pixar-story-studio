@@ -12,10 +12,10 @@ test('story director: OpenRouter Haiku 5.5 at high (r5-sd10 picked it over Muse)
   assert.deepEqual([V2_MODELS['story-director'].provider, V2_MODELS['story-director'].model, V2_MODELS['story-director'].effort],
     ['openrouter', 'anthropic/claude-haiku-5.5', 'high']);
 });
-test('every image step is Nano Banana 2.1 via Google Flow', () => {
+test('every image step is Nano Banana 2.1 on Replicate', () => {
   let n = 0;
   for (const [a, cfg] of Object.entries(V2_MODELS)) for (const [k, img] of Object.entries(cfg.imageSteps ?? {})) {
-    n++; assert.equal(img.model, 'nano-banana-2.1', `${a}.${k}`); assert.equal(img.provider, 'google-flow', `${a}.${k}`);
+    n++; assert.equal(img.model, 'nano-banana-2.1', `${a}.${k}`); assert.equal(img.apiModel, 'google/nano-banana-2.1', `${a}.${k}`); assert.equal(img.provider, 'replicate', `${a}.${k}`);
   }
   assert.ok(n >= 3);
   for (const k of ['storyboard', 'character', 'location']) assert.ok(Object.values(V2_MODELS).some(c => c.imageSteps?.[k]), k);
