@@ -85,3 +85,27 @@ test('a short balance interrupts and does not fail the still', async () => {
     rmSync(runDir, { recursive: true, force: true });
   }
 });
+
+test('makeSheetStillNode renders hero prop turnaround sheets alongside characters and locations', async () => {
+  const runDir = mkdtempSync(join(tmpdir(), 'props-'));
+  try {
+    const renderedItems = [];
+    const node = makeSheetStillNode({
+      runDir,
+      renderStill: async (req) => {
+        renderedItems.push(req.itemId);
+        return { dest: `/tmp/${req.itemId}.png` };
+      },
+    });
+    const state = {
+      characterArchitect: { output: { characters: [leo] } },
+      locationScout: { output: { locations: [{ elementTag: '@Kitchen', locationId: 'l1', name: 'Kitchen', locationPlatePrompt: { promptText: 'cozy kitchen' } }] } },
+      heroProps: [{ propTag: '@Prop 1', name: 'Camry', description: "Z's 2005 Toyota Camry" }],
+    };
+    const done = await node(state);
+    assert.deepEqual(renderedItems, ['@Leo', '@Kitchen', '@Prop 1']);
+    assert.equal(done.assetFiles['@Prop 1'], '/tmp/@Prop 1.png');
+  } finally {
+    rmSync(runDir, { recursive: true, force: true });
+  }
+});

@@ -76,6 +76,15 @@ export function makeSheetStillNode({ renderStill, runDir = '/tmp' } = {}) {
           dest: join(runDir, 'assets', `${String(loc.elementTag).replace('@', '')}-${loc.locationId}.png`),
         }, files, loc.elementTag, runDir);
       }
+      for (const prop of state.heroProps ?? []) {
+        const prompt = prop.promptText || `Multi-angle model sheet of a ${prop.description || prop.name}, Pixar-style 3D stylized vehicle turnaround: front 3/4 view, side profile, and rear 3/4 view. Neutral gray studio lighting, crisp shadows, feature animation production asset.`;
+        await paint(renderStill, {
+          prompt,
+          aspectRatio: '16:9',
+          resolution: '1K',
+          dest: join(runDir, 'assets', `${String(prop.propTag).replace('@', '').replace(/\s+/g, '')}-${prop.propTag.replace('@Prop ', 'p')}.png`),
+        }, files, prop.propTag, runDir);
+      }
     } catch (error) {
       if (pauseForCredits(error)) return {};
       return failed(error instanceof Error ? error.message : 'Still render failed.');

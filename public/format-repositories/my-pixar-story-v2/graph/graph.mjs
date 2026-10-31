@@ -207,7 +207,7 @@ export function escalationReason(issues = [], maxAttempts) {
 }
 
 /** Tags that must be approved before compiling: every CA @Image N and LS @Loc N, plus hero @Prop N when includeProps is true. */
-export function requiredAssetTags(state, { includeProps = false } = {}) {
+export function requiredAssetTags(state, { includeProps = true } = {}) {
   const chars = state.characterArchitect?.output?.characters ?? [];
   const locs = state.locationScout?.output?.locations ?? [];
   const props = includeProps ? (state.heroProps ?? []) : [];
@@ -218,7 +218,7 @@ export function requiredAssetTags(state, { includeProps = false } = {}) {
 /** Placeholder approvals for dry runs: fake asset keys, no image model calls. Clearly marked. */
 export const placeholderAssets = (tags) => Object.fromEntries(tags.map((t) => [t, `placeholder:${t.startsWith('@Loc') ? 'location-plate' : (t.startsWith('@Prop') ? 'prop-sheet' : 'master-render')}:${t.slice(1).replace(/\s+/g, '-').toLowerCase()}`]));
 
-export function makeApprovalNode({ useInterrupt = false, autoApprove, includeProps = false } = {}) {
+export function makeApprovalNode({ useInterrupt = false, autoApprove, includeProps = true } = {}) {
   return async (state) => {
     const need = requiredAssetTags(state, { includeProps });
     let approved = state.approvedAssets ?? {};

@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { AIMessage } from '@langchain/core/messages';
 import { validateStoryDirectorOutput } from '../crew/linter/check-stage-play.mjs';
-import { checkAnswerSources, checkExtraCast, resolveAnswer, answerPaths, sameWord, numbersIn, traceLines, traceSummary, traceReport, connectiveCap } from '../crew/linter/answer-sources.mjs';
+import { checkAnswerSources, checkExtraCast, resolveAnswer, answerPaths, sameWord, numbersIn, namesIn, traceLines, traceSummary, traceReport, connectiveCap } from '../crew/linter/answer-sources.mjs';
 import { StoryDirectorOutputSchema } from '../crew/story-director/schema.mjs';
 import { InputShotSchema } from '../crew/seedance-compiler/input.mjs';
 import { deepAgentInvoke, REFLECTION, critiqueMessages, parseUntraceable } from '../graph/deep-agent-node.mjs';
@@ -185,4 +185,32 @@ test('reflection logs the trace and the critic\'s untraceable list per round', a
     assert.equal(e.trace.lines, 7); assert.equal(e.trace.withProblems, 0);
     assert.deepEqual(e.untraceable.map((u) => u.where), ['2.1']);
   } finally { await rm(runs, { recursive: true, force: true }); }
+});
+
+test('1-letter name "Z" and pronoun "You" pass answer source checks without rejection', () => {
+  const input = {
+    subject: 'Z',
+    answers: {
+      a: { memory: 'My best friend Z and I worked on our cars all summer.' },
+    },
+  };
+  const data = {
+    cast: [{ name: 'Z', realPerson: 'Z', elementTag: '@Z' }],
+    segments: [{
+      segmentId: '1',
+      shots: [{
+        shotNumber: 1,
+        narration: {
+          line: '{You know that feeling when you first start the engine.}',
+          source: { answer: 'a.memory', kind: 'paraphrase' },
+        },
+      }],
+    }],
+  };
+  const extra = checkExtraCast(data, input);
+  assert.deepEqual(extra, [], '1-letter name "Z" must not be flagged as missing from answers');
+
+  const names = namesIn('You know that feeling when Z smiles.', new Set(['z']));
+  assert.ok(!names.includes('You'), '"You" must not be extracted as an invented proper noun');
+  assert.ok(names.includes('Z'), '"Z" must be extracted as a proper noun name');
 });

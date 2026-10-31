@@ -37,6 +37,10 @@ test('G1 valid master render passes (dad)', () => { const r = validateOne(dad())
 test('G2 valid Format B sheet passes (Mia)', () => { const r = validateOne(mia()); assert.equal(r.isValid, true, r.errors.join('\n')); });
 test('G3 held object -> Empty Hands Law Violated', () =>
   hasCode(validateOne(edit(dad(), 'masterRenderPrompt', (t) => t.replace('Pose:', 'He holds a heavy firefighter axe in his hands. Pose:'))), 'HELD_OBJECT_VIOLATION', 'Empty Hands Law Violated'));
+test('G3b natural gestures like "talks with his hands" pass Empty Hands Law', () => {
+  const r = validateOne(edit(dad(), 'masterRenderPrompt', (t) => t.replace('Pose:', 'He talks with his hands warmly while laughing. Pose:')));
+  assert.equal(r.isValid, true, r.errors.join('\n'));
+});
 test('G4 tattoo -> Never put ink, pen, or drawn marks on skin', () =>
   hasCode(validateOne(edit(dad(), 'masterRenderPrompt', (t) => t.replace('Hands:', 'A black ink anchor tattoo on his right forearm. Hands:'))), 'SKIN_INK_VIOLATION', 'Never put ink, pen, or drawn marks on skin'));
 test('G5 bobblehead adult -> child proportion token', () =>

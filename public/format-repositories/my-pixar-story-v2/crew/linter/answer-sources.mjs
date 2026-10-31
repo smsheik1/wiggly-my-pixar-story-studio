@@ -87,7 +87,15 @@ export function numbersIn(t) {
   for (const w of words(s)) for (const part of w.split('-')) if (part in NUM) out.add(NUM[part]);
   return out;
 }
-const ALWAYS_OK = new Set(['tv', 'i', "i'm", "i'd", "i'll", "i've", 'ok', 'okay', 'mom', 'mum', 'mama', 'mommy', 'dad', 'daddy', 'papa', 'god', 'oh', 'hey']);
+const ALWAYS_OK = new Set([
+  'tv', 'i', "i'm", "i'd", "i'll", "i've", 'ok', 'okay',
+  'mom', 'mum', 'mama', 'mommy', 'dad', 'daddy', 'papa', 'god', 'oh', 'hey',
+  'you', 'your', "you're", "you'd", "you'll", "you've",
+  'we', 'us', "we're", "we'd", "we'll", "we've",
+  'he', 'him', 'his', "he's", 'she', 'her', 'hers', "she's",
+  'they', 'them', 'their', 'theirs', "they're",
+  'it', 'its', "it's",
+]);
 /** Capitalised words used mid-sentence anywhere in a corpus: the input's proper nouns. */
 export function properNouns(texts) {
   const out = new Set();
@@ -102,7 +110,7 @@ export function namesIn(line, known = new Set()) {
   const out = [];
   for (const s of sentences(String(line ?? '').replace(/[{}]/g, ''))) s.split(/\s+/).forEach((tok, i) => {
     const w = tok.replace(/^[^A-Za-z]+|[^A-Za-z'-]+$/g, '');
-    if (!/^(?:[A-Z][a-z]|[A-Z]{2,}$)/.test(w) || ALWAYS_OK.has(w.toLowerCase())) return;
+    if (!/^(?:[A-Z][a-z]|[A-Z]+$)/.test(w) || ALWAYS_OK.has(w.toLowerCase())) return;
     if (i > 0 || known.has(squash(w))) out.push(w);
   });
   return out;
@@ -259,7 +267,7 @@ export function checkExtraCast(data, input = {}) {
   const named = (w) => corpusWords.some((x) => sameWord(x, w)) || (w.length >= 4 && corpusSquash.includes(squash(w)));
   (data?.cast ?? []).forEach((c, i) => {
     const tagWords = String(c.elementTag ?? '').slice(1).replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2');
-    const cand = [...new Set([c.realPerson, c.name, tagWords].flatMap(words))].filter((w) => w.length >= 2 && !GENERIC.has(w));
+    const cand = [...new Set([c.realPerson, c.name, tagWords].flatMap(words))].filter((w) => w.length >= 1 && !GENERIC.has(w));
     const ok = cand.some((w) => named(w) || RELATIONS.some((g) => g.includes(w) && g.some(named)));
     if (!ok) issues.push({ severity: 'error', code: 'CAST_NOT_IN_ANSWERS', path: `cast.${i}`,
       message: `Cast ${c.elementTag ?? c.name} ('${c.realPerson ?? c.name}') is not named anywhere in the family's answers, subject, cast notes or photos. Only people the family mentions exist; remove the card and its lines.` });

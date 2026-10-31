@@ -13,7 +13,7 @@ export const MASTER_OPENING = 'A single-character full-body render from a styliz
 export const TEMPLATE_LABELS = ['Eyes:', 'Eyebrows:', 'Face:', 'Subject:', 'Skin:', 'Hands:', 'Silhouette:', 'Hair:', 'Wardrobe:', 'Pose:', 'Camera:', 'Background:'];
 export const HELD = /\b(holds?|holding|clutching|grasping)\s+(a|an|the|his|her)\s+(?!only\b|weight\b|shape\b|pose\b)/i;
 const CARRY = /\b(carries|carrying)\s+(?:a|an|the|his|her)?\s*(?:\w+\s+){0,2}(axe|cup|mug|bag|backpack|tool|toy|umbrella|book|phone|box|ball|doll|cane)s?\b/i;
-const IN_HANDS = /\b(?:in|with)\s+(?:his|her|their|both)\s+hands\b/i;
+const IN_HANDS = /\bin\s+(?:his|her|their|both)\s+hands\b|\b(?:carrying|clutching|grasping|gripping|holding)\s+(?:\w+\s+){0,3}with\s+(?:his|her|their|both)\s+hands\b/i;
 const INK = /\b(tattoo|tattoos|biro mark|pen mark|ink on skin)\b/i;
 const INK_NEGATION = /\b(no|without|never|zero)\s+(ink|tattoos?|markings?|pen marks?|biro marks?)\b/gi;
 // Source of truth for BOBBLEHEAD_ADULT_VIOLATION. crew/character-architect/role.md must list every token (tests/ca-gate-rules.test.mjs).
