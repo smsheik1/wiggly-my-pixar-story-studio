@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 
 export function runSnapshot(state = {}, extra = {}) {
   return {
+    ...state,
     status: state.status ?? 'running',
     placeholderAssets: extra.placeholderAssets ?? false,
     approvedAssets: state.approvedAssets,

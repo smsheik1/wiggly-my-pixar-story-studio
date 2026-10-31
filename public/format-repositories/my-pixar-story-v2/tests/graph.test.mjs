@@ -97,6 +97,17 @@ test('human interrupt: pauses for approval, resumes with approvedAssets, finishe
   const s2 = await g.invoke(new Command({ resume: { approvedAssets: assets() } }), cfg);
   assert.equal(s2.status, 'done'); assert.deepEqual(s2.approvedAssets, assets());
 });
+test('human interrupt resumes cleanly when approvedAssets is an array of tag strings', async () => {
+  const invoke = fakeInvoke();
+  const g = buildGraph({ invoke, useInterrupt: true, checkpointer: new MemorySaver() });
+  const cfg = { configurable: { thread_id: 't2' } };
+  const s1 = await g.invoke(initial({ assetFiles: assets() }), cfg);
+  assert.ok(s1.__interrupt__?.[0]?.value?.missing?.length === 4);
+  const tags = ['@Image 1', '@Image 2', '@Image 3', '@Loc 1'];
+  const s2 = await g.invoke(new Command({ resume: { approvedAssets: tags } }), cfg);
+  assert.equal(s2.status, 'done');
+  assert.deepEqual(s2.approvedAssets, assets());
+});
 test('parallel outputs merge without clobbering; reducers', async () => {
   const s = await buildGraph({ invoke: fakeInvoke() }).invoke(initial({ approvedAssets: assets(), locationScout: { hints: { Kitchen: { singleSignText: 'LAB' } } } }));
   assert.ok(s.locationScout.hints && s.locationScout.output, 'hints and output coexist');

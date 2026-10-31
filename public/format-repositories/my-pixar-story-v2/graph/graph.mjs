@@ -207,7 +207,7 @@ export function escalationReason(issues = [], maxAttempts) {
 }
 
 /** Tags that must be approved before compiling: every CA @Image N and LS @Loc N, plus hero @Prop N when includeProps is true. */
-export function requiredAssetTags(state, { includeProps = true } = {}) {
+export function requiredAssetTags(state, { includeProps = false } = {}) {
   const chars = state.characterArchitect?.output?.characters ?? [];
   const locs = state.locationScout?.output?.locations ?? [];
   const props = includeProps ? (state.heroProps ?? []) : [];
@@ -218,7 +218,7 @@ export function requiredAssetTags(state, { includeProps = true } = {}) {
 /** Placeholder approvals for dry runs: fake asset keys, no image model calls. Clearly marked. */
 export const placeholderAssets = (tags) => Object.fromEntries(tags.map((t) => [t, `placeholder:${t.startsWith('@Loc') ? 'location-plate' : (t.startsWith('@Prop') ? 'prop-sheet' : 'master-render')}:${t.slice(1).replace(/\s+/g, '-').toLowerCase()}`]));
 
-export function makeApprovalNode({ useInterrupt = false, autoApprove, includeProps = true } = {}) {
+export function makeApprovalNode({ useInterrupt = false, autoApprove, includeProps = false } = {}) {
   return async (state) => {
     const need = requiredAssetTags(state, { includeProps });
     let approved = state.approvedAssets ?? {};
@@ -226,7 +226,16 @@ export function makeApprovalNode({ useInterrupt = false, autoApprove, includePro
     if (missing.length && autoApprove) return { approvedAssets: { ...approved, ...autoApprove(missing) }, pendingApproval: [] };
     if (missing.length && useInterrupt) {
       const resume = interrupt({ kind: 'asset-approval', missing });
-      approved = { ...approved, ...(resume?.approvedAssets ?? {}) };
+      const rawAssets = resume?.approvedAssets;
+      const toAssetKey = (tag, val) => (typeof val === 'string' && val.length > 0 ? val : (typeof state.assetFiles?.[tag] === 'string' ? state.assetFiles[tag] : placeholderAssets([tag])[tag]));
+      const normalized = Array.isArray(rawAssets)
+        ? Object.fromEntries(rawAssets.map((t) => [t, toAssetKey(t)]))
+        : (rawAssets && typeof rawAssets === 'object'
+            ? Object.fromEntries(Object.entries(rawAssets).map(([k, v]) => [k, toAssetKey(k, v)]))
+            : (resume?.decision === 'approve' || resume?.approved
+                ? Object.fromEntries(need.map((t) => [t, toAssetKey(t)]))
+                : {}));
+      approved = { ...approved, ...normalized };
       missing = need.filter((t) => !approved[t]);
       // the approved image is the truth: its outfit text (approvedLooks, element tag -> what the sheet shows) rides along
       if (!missing.length) return { approvedAssets: approved, ...(resume?.approvedLooks ? { approvedLooks: { ...(state.approvedLooks ?? {}), ...resume.approvedLooks } } : {}), pendingApproval: [] };

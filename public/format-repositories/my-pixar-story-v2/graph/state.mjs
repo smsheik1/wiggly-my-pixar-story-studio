@@ -92,6 +92,7 @@ export const PipelineAnnotation = Annotation.Root({
   masterVideo: Annotation({ reducer: replace, default: () => undefined }),
   revisionNotes: Annotation({ reducer: mergeObj, default: () => ({}) }),
   attempts: Annotation({ reducer: mergeObj, default: () => ({}) }),
+  passed: Annotation({ reducer: mergeObj, default: () => ({}) }),
   gateIssues: Annotation({ reducer: mergeObj, default: () => ({}) }),
   escalations: Annotation({ reducer: (a = [], b = []) => [...a, ...b], default: () => [] }),
   retryCounts: Annotation({ reducer: mergeObj, default: () => ({}) }),
