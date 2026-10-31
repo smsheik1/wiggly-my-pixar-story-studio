@@ -85,9 +85,9 @@ export async function generateNanoBanana({
   return { url, id: prediction.id, metrics: prediction.metrics ?? {} };
 }
 
-export async function saveNanoBanana({ dest, ...options }) {
-  const generated = await generateNanoBanana(options);
-  const image = await options.fetchFn(generated.url);
+export async function saveNanoBanana({ dest, fetchFn = globalThis.fetch, ...options }) {
+  const generated = await generateNanoBanana({ ...options, fetchFn });
+  const image = await fetchFn(generated.url);
   if (!image.ok) throw new Error(`Nano Banana image download failed: HTTP ${image.status}`);
   const bytes = Buffer.from(await image.arrayBuffer());
   await mkdir(dirname(dest), { recursive: true });

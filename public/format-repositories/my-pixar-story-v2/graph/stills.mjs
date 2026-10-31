@@ -18,7 +18,7 @@ async function readPaidItems(runDir) {
   }
 }
 
-export function nanoBananaStill({ apiKey, fetchFn } = {}) {
+export function nanoBananaStill({ apiKey, fetchFn = globalThis.fetch } = {}) {
   return ({ prompt, aspectRatio, resolution, dest, referencePaths }) => {
     if (!String(prompt ?? '').trim()) throw new Error('The crew did not write a still prompt.');
     return saveNanoBanana({ prompt, aspectRatio, resolution, dest, referencePaths, apiKey, fetchFn });
