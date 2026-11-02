@@ -27,6 +27,13 @@ function fakeInvoke(bad = {}) {
       return JSON.stringify(o);
     }
     if (req.agent === 'storyboard-artist') return JSON.stringify(draftStoryboard(req.input));
+    if (req.agent === 'seedance-compiler') {
+      const txt = JSON.stringify(json(FIX[req.agent]));
+      return Object.entries(json('good-approved-assets.json')).reduce((t, [tag, k]) => {
+        const approvedKey = req.input?.references?.find((r) => r.sourceTag === tag)?.assetKey;
+        return approvedKey ? t.split(k).join(approvedKey) : t;
+      }, txt);
+    }
     return JSON.stringify(json(FIX[req.agent]));
   };
   fn.calls = calls;
@@ -107,6 +114,26 @@ test('human interrupt resumes cleanly when approvedAssets is an array of tag str
   const s2 = await g.invoke(new Command({ resume: { approvedAssets: tags } }), cfg);
   assert.equal(s2.status, 'done');
   assert.deepEqual(s2.approvedAssets, assets());
+});
+test('human interrupt resumes cleanly when approvedAssets contains file paths or URLs, storing canonical asset keys', async () => {
+  const invoke = fakeInvoke();
+  const g = buildGraph({ invoke, useInterrupt: true, checkpointer: new MemorySaver() });
+  const cfg = { configurable: { thread_id: 't3' } };
+  const s1 = await g.invoke(initial({ assetFiles: { '@Image 1': '/tmp/image1.png', '@Image 2': '/tmp/image2.png', '@Image 3': '/tmp/image3.png', '@Loc 1': '/tmp/loc1.png' } }), cfg);
+  assert.ok(s1.__interrupt__?.[0]?.value?.missing?.length === 4);
+  const dirtyApprovals = {
+    '@Image 1': '/tmp/image1.png',
+    '@Image 2': 'https://wiggly.agentenamel.com/api/mcp/renders/Image2.png',
+    '@Image 3': '/tmp/image3.png',
+    '@Loc 1': '/tmp/loc1.png',
+  };
+  const s2 = await g.invoke(new Command({ resume: { approvedAssets: dirtyApprovals } }), cfg);
+  assert.equal(s2.status, 'done');
+  for (const [tag, key] of Object.entries(s2.approvedAssets)) {
+    assert.match(key, /^[A-Za-z0-9][\w.:-]*$/, `key for ${tag} must be local asset key`);
+    assert.ok(!key.includes('/'), `key for ${tag} must not contain slashes`);
+    assert.ok(!key.startsWith('http'), `key for ${tag} must not be a URL`);
+  }
 });
 test('parallel outputs merge without clobbering; reducers', async () => {
   const s = await buildGraph({ invoke: fakeInvoke() }).invoke(initial({ approvedAssets: assets(), locationScout: { hints: { Kitchen: { singleSignText: 'LAB' } } } }));

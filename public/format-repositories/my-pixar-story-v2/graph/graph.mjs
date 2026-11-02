@@ -16,7 +16,7 @@ import { parseStagePlay } from '../crew/story-director/schema.mjs';
 import { validateStoryDirectorOutput } from '../crew/linter/check-stage-play.mjs';
 import { traceReport, traceSummary } from '../crew/linter/answer-sources.mjs';
 import { selectCharacterArchitectInput } from '../crew/character-architect/input.mjs';
-import { parseCharacterSheets } from '../crew/character-architect/schema.mjs';
+import { parseCharacterSheets, ASSET_KEY } from '../crew/character-architect/schema.mjs';
 import { validateCharacterSheets } from '../crew/linter/check-character-sheets.mjs';
 import { selectLocationScoutInput } from '../crew/location-scout/input.mjs';
 import { parseLocationPlates } from '../crew/location-scout/schema.mjs';
@@ -227,7 +227,26 @@ export function makeApprovalNode({ useInterrupt = false, autoApprove, includePro
     if (missing.length && useInterrupt) {
       const resume = interrupt({ kind: 'asset-approval', missing });
       const rawAssets = resume?.approvedAssets;
-      const toAssetKey = (tag, val) => (typeof val === 'string' && val.length > 0 ? val : (typeof state.assetFiles?.[tag] === 'string' ? state.assetFiles[tag] : placeholderAssets([tag])[tag]));
+      const isCleanKey = (k) => typeof k === 'string' && ASSET_KEY.test(k) && !k.includes('/') && !k.startsWith('http');
+      const canonicalKey = (t) => {
+        const ca = state.characterArchitect?.output?.characters ?? [];
+        const char = ca.find((c) => c.imageTag === t || c.elementTag === t);
+        if (char) {
+          if (isCleanKey(char.modelSheetPrompt?.masterRenderRef)) return char.modelSheetPrompt.masterRenderRef;
+          if (char.characterId) return `asset:master-render:${char.characterId.toLowerCase().replace(/[^a-z0-9_.-]/g, '-')}`;
+        }
+        const ls = state.locationScout?.output?.locations ?? [];
+        const loc = ls.find((l) => l.elementTag === t);
+        if (loc?.locationId) return `asset:location-plate:${loc.locationId.toLowerCase().replace(/[^a-z0-9_.-]/g, '-')}`;
+        const props = state.heroProps ?? [];
+        const prop = props.find((p) => p.propTag === t || p.elementTag === t);
+        if (prop) {
+          const name = prop.name || prop.elementTag || t;
+          return `asset:prop-sheet:${name.replace(/^@/, '').toLowerCase().replace(/[^a-z0-9_.-]/g, '-')}`;
+        }
+        return placeholderAssets([t])[t];
+      };
+      const toAssetKey = (tag, val) => (isCleanKey(val) ? val : (isCleanKey(state.assetFiles?.[tag]) ? state.assetFiles[tag] : canonicalKey(tag)));
       const normalized = Array.isArray(rawAssets)
         ? Object.fromEntries(rawAssets.map((t) => [t, toAssetKey(t)]))
         : (rawAssets && typeof rawAssets === 'object'
@@ -236,9 +255,17 @@ export function makeApprovalNode({ useInterrupt = false, autoApprove, includePro
                 ? Object.fromEntries(need.map((t) => [t, toAssetKey(t)]))
                 : {}));
       approved = { ...approved, ...normalized };
+      const assetFiles = { ...(state.assetFiles ?? {}) };
+      for (const [tag, k] of Object.entries(approved)) {
+        if (!isCleanKey(k)) approved[tag] = canonicalKey(tag);
+        const resolved = approved[tag];
+        if (assetFiles[tag] && !assetFiles[resolved]) {
+          assetFiles[resolved] = assetFiles[tag];
+        }
+      }
       missing = need.filter((t) => !approved[t]);
       // the approved image is the truth: its outfit text (approvedLooks, element tag -> what the sheet shows) rides along
-      if (!missing.length) return { approvedAssets: approved, ...(resume?.approvedLooks ? { approvedLooks: { ...(state.approvedLooks ?? {}), ...resume.approvedLooks } } : {}), pendingApproval: [] };
+      if (!missing.length) return { approvedAssets: approved, assetFiles, ...(resume?.approvedLooks ? { approvedLooks: { ...(state.approvedLooks ?? {}), ...resume.approvedLooks } } : {}), pendingApproval: [] };
     }
     if (missing.length) return { status: 'awaiting-approval', pendingApproval: missing };
     return { pendingApproval: [] };
