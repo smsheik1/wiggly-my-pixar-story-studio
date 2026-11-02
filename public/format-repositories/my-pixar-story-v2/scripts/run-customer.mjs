@@ -17,16 +17,20 @@ import { loadSecrets, defaultSecretsPath } from './lib/secrets.mjs';
 import { withEventLog, appendEvent } from '../graph/event-log.mjs';
 
 export function seedance480pRenderer({ apiKey, fetchFn = globalThis.fetch } = {}) {
-  return async ({ clip, runDir, duration, state }) => renderClipWithReplicate({
-    clip,
-    promptText: sendPrompt(clip),
-    referenceFiles: (clip.references ?? []).map((ref) => state?.assetFiles?.[ref.sourceTag] || state?.assetFiles?.[ref.assetKey] || state?.assetFiles?.[ref.tag]).filter(Boolean),
-    runDir,
-    apiKey,
-    duration: duration ?? clip.generationPayload?.durationSec ?? 10,
-    resolution: '480p',
-    fetchFn,
-  });
+  return async ({ clip, runDir, duration, state }) => {
+    const promptData = sendPrompt(clip);
+    const promptText = typeof promptData === 'string' ? promptData : promptData?.prompt ?? clip?.compiledPrompt ?? '';
+    return renderClipWithReplicate({
+      clip,
+      promptText,
+      referenceFiles: (clip.references ?? []).map((ref) => state?.assetFiles?.[ref.sourceTag] || state?.assetFiles?.[ref.assetKey] || state?.assetFiles?.[ref.tag]).filter(Boolean),
+      runDir,
+      apiKey,
+      duration: duration ?? clip.generationPayload?.durationSec ?? 10,
+      resolution: '480p',
+      fetchFn,
+    });
+  };
 }
 
 export async function runCustomer({

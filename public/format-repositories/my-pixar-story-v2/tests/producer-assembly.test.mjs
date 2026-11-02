@@ -217,3 +217,29 @@ test('Full Graph with production: true runs through producer and assembly to mas
   assert.ok(finalState.masterVideo.durationSec > 0, 'durationSec should be positive');
   assert.equal(finalState.masterVideo.resolution, '1920x1080');
 });
+
+test('renderClipWithReplicate extracts string prompt when promptText is an object', async () => {
+  let passedPrompt = null;
+  const mockFetch = async (url, opts) => {
+    if (url.includes('/predictions')) {
+      const body = JSON.parse(opts.body);
+      passedPrompt = body.input.prompt;
+      return {
+        ok: true,
+        json: async () => ({ id: 'pred_123', status: 'succeeded', output: 'http://example.com/clip.mp4' }),
+      };
+    }
+    return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+  };
+
+  await renderClipWithReplicate({
+    clip: { segmentId: 1 },
+    promptText: { prompt: 'A warm sunny day in Chicago', images: [] },
+    apiKey: 'test-token',
+    runDir: '/tmp',
+    fetchFn: mockFetch,
+  });
+
+  assert.equal(typeof passedPrompt, 'string');
+  assert.equal(passedPrompt, 'A warm sunny day in Chicago');
+});

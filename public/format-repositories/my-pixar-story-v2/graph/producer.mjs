@@ -89,8 +89,12 @@ export async function renderClipWithReplicate({
     }
   }
 
+  const stringPrompt = typeof promptText === 'object' && promptText !== null
+    ? (promptText.prompt ?? promptText.compiledPrompt ?? JSON.stringify(promptText))
+    : String(promptText ?? clip?.compiledPrompt ?? '');
+
   const inputPayload = {
-    prompt: promptText,
+    prompt: stringPrompt,
     duration,
     resolution,
     aspect_ratio: '16:9',
