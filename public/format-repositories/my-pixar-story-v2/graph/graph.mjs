@@ -326,7 +326,7 @@ export function makeAnimaticEditorNode({ runDir = '/tmp', buildVideo = buildAnim
 }
 
 /**
- * Animatic approval gate (after the storyboard sheets are made in Flow, sliced and cut to scratch audio).
+ * Animatic approval gate (after storyboard panels are rendered and compiled with scratch audio into animatic_preview.mp4).
  * state.animaticApproval / interrupt resume: { decision: 'approve' } or { decision: 'reject', target, notes }.
  * Approve: the SD shot timings are frozen into approvedShotTimings for the Seedance Compiler.
  */
