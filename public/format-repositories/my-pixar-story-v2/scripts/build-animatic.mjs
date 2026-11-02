@@ -9,7 +9,7 @@
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import { existsSync, statSync, readdirSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { join, resolve } from 'node:path';
+import { join, resolve, dirname } from 'node:path';
 import { loadSecrets, defaultSecretsPath } from './lib/secrets.mjs';
 import { shotTimeline, pacedTimeline, animaticArgs } from './lib/animatic.mjs';
 import { scratchLines, ttsTranscript, estimateUsd, oddities, mixArgs, speechSpan, placeLines } from './lib/scratch-audio.mjs';
@@ -22,10 +22,11 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? proces
 
 export async function buildAnimatic({
   sd,
-  runDir,
+  runDir = '/tmp',
   outPath,
   voices = {},
   framesDir,
+  framePaths = {},
   secretsPath = defaultSecretsPath(),
   maxUsd = DEFAULT_CAP_USD,
   allowMissingFrames = true,
@@ -124,6 +125,8 @@ export async function buildAnimatic({
   const availableFiles = framesDir && existsSync(framesDir) ? readdirSync(framesDir) : [];
   const missingShots = [];
   const frames = finalTimeline.map((s) => {
+    const fromMap = framePaths?.[s.shotId];
+    if (fromMap && existsSync(fromMap)) return { ...s, path: fromMap };
     const f = availableFiles.find((x) => new RegExp(`^${s.shotId.replace('.', '\\.')}\\.(png|jpe?g|webp)$`, 'i').test(x));
     if (!f) missingShots.push(s.shotId);
     return { ...s, path: f ? join(framesDir, f) : null };
@@ -136,6 +139,8 @@ export async function buildAnimatic({
 
   // 3. Compile the animatic video via FFmpeg
   const targetOut = outPath ?? join(runDir, 'animatic_preview.mp4');
+  await mkdir(runDir, { recursive: true });
+  await mkdir(dirname(targetOut), { recursive: true });
   const { args, totalSec } = animaticArgs(frames, { audio: finalAudioPath, out: targetOut });
   execFileSync('ffmpeg', args, { stdio: 'inherit' });
 

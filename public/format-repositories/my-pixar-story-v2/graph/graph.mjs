@@ -30,7 +30,10 @@ import { selectStoryboardArtistInput } from '../crew/storyboard-artist/input.mjs
 import { parseStoryboard } from '../crew/storyboard-artist/schema.mjs';
 import { compileSheets } from '../crew/storyboard-artist/compile.mjs';
 import { validateStoryboard } from '../crew/linter/check-storyboard.mjs';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { shotTimeline } from '../scripts/lib/animatic.mjs';
+import { buildAnimatic } from '../scripts/build-animatic.mjs';
 import { extractHeroProps } from '../crew/prop-architect/extract-props.mjs';
 import { makeProductionApprovalNode, makeProducerNode, makeAssemblyNode } from './producer.mjs';
 import { makePanelStillNode, makeSheetStillNode } from './stills.mjs';
@@ -276,18 +279,48 @@ export function makeApprovalNode({ useInterrupt = false, autoApprove, includePro
  * Animatic Editor node: assembles the animatic preview video and timed shot cuts from the
  * Story Director script, scratch voice audio, and storyboard panels.
  */
-export function makeAnimaticEditorNode() {
+export function makeAnimaticEditorNode({ runDir = '/tmp', buildVideo = buildAnimatic } = {}) {
   return async (state) => {
     const sd = state.storyDirector;
     if (!sd) return {};
     const timeline = shotTimeline(sd);
+    let approvedShotTimings = state.approvedShotTimings ?? timeline.map((s) => ({
+      shotId: s.shotId,
+      startSec: s.timelineStartSec,
+      endSec: +(s.timelineStartSec + s.durationSec).toFixed(3),
+      durationSec: s.durationSec,
+    }));
+    let animaticVideo = state.animaticVideo;
+    const assetFiles = { ...(state.assetFiles ?? {}) };
+
+    if (buildVideo && typeof buildVideo === 'function') {
+      try {
+        const framesDir = join(runDir, 'storyboard-panels');
+        const outPath = join(runDir, 'animatic_preview.mp4');
+        const res = await buildVideo({
+          sd,
+          runDir,
+          outPath,
+          framesDir,
+          framePaths: state.assetFiles,
+          allowMissingFrames: true,
+        });
+        if (res?.outPath && existsSync(res.outPath)) {
+          animaticVideo = res.outPath;
+          assetFiles['animatic-video'] = res.outPath;
+        }
+        if (res?.approvedShotTimings?.length) {
+          approvedShotTimings = res.approvedShotTimings;
+        }
+      } catch (err) {
+        console.warn(`[animatic-editor] Warning: video assembly failed (${err.message}). Proceeding with timeline only.`);
+      }
+    }
+
     return {
-      approvedShotTimings: state.approvedShotTimings ?? timeline.map((s) => ({
-        shotId: s.shotId,
-        startSec: s.timelineStartSec,
-        endSec: s.timelineStartSec + s.durationSec,
-        durationSec: s.durationSec,
-      })),
+      approvedShotTimings,
+      ...(animaticVideo ? { animaticVideo } : {}),
+      assetFiles,
     };
   };
 }
@@ -331,7 +364,7 @@ export function buildGraph({ invoke, deepAgent = {}, maxAttempts = MAX_ATTEMPTS,
       return s.animaticApproval?.routed ? { ...r, animaticApproval: null, revisionNotes: { 'storyboard-artist': '', 'story-director': '' } } : r; // a fresh board clears a routed rejection
     })
     .addNode('render-panels', makePanelStillNode({ renderStill, runDir }))
-    .addNode('animatic-editor', makeAnimaticEditorNode())
+    .addNode('animatic-editor', makeAnimaticEditorNode({ runDir }))
     .addNode('animatic-approval', makeAnimaticApprovalNode({ useInterrupt, autoApprove: autoApproveAnimatic }))
     .addNode('seedance-compiler', node('seedance-compiler'))
     .addNode('production-approval', makeProductionApprovalNode({ useInterrupt, autoApprove: autoApproveProduction }))

@@ -1,8 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { MemorySaver, Command } from '@langchain/langgraph';
-import { buildGraph, retryNotes, requiredAssetTags } from '../graph/graph.mjs';
+import { buildGraph, retryNotes, requiredAssetTags, makeAnimaticEditorNode } from '../graph/graph.mjs';
 import { parseInitialState, statusReducer } from '../graph/state.mjs';
 import { V2_MODELS } from '../config/models.mjs';
 import { GOOD_ANSWERS } from './fixtures/good-answers.mjs';
@@ -149,4 +151,23 @@ test('selector failure escalates immediately; buildGraph needs invoke; state sch
   assert.throws(() => parseInitialState(initial({ approvedAssets: { '@Image 1': 'https://x.example/a.png' } })));
   assert.equal(parseInitialState(initial()).status, 'running');
   assert.equal(retryNotes([]), '');
+});
+
+test('makeAnimaticEditorNode: compiles animatic video, writes approvedShotTimings, and records animatic-video in assetFiles', async () => {
+  const d = mkdtempSync(join(tmpdir(), 'anim-node-'));
+  const stagePlay = json(FIX['story-director']);
+  const state = {
+    storyDirector: stagePlay,
+    assetFiles: {
+      '1.1': join(d, '1.1.png'),
+    },
+  };
+  const node = makeAnimaticEditorNode({ runDir: d });
+  const result = await node(state);
+
+  assert.ok(Array.isArray(result.approvedShotTimings), 'must output approvedShotTimings');
+  assert.ok(result.approvedShotTimings.length > 0, 'must have shots in approvedShotTimings');
+  assert.equal(result.assetFiles['animatic-video'], join(d, 'animatic_preview.mp4'));
+  assert.equal(result.animaticVideo, join(d, 'animatic_preview.mp4'));
+  assert.ok(existsSync(join(d, 'animatic_preview.mp4')), 'animatic_preview.mp4 must exist on disk');
 });
