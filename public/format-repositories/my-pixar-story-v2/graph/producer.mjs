@@ -223,12 +223,17 @@ export function makeProducerNode({
 } = {}) {
   return async (state) => {
     const compilerOut = state.seedanceCompiler?.output;
-    const segments = compilerOut?.segments ?? [];
-    if (!segments.length) {
+    const allSegments = compilerOut?.segments ?? [];
+    if (!allSegments.length) {
       return { status: 'failed', escalations: [{ agent: 'producer', reason: 'No compiled segments in state' }] };
     }
 
-    const rendered = [];
+    const targetClips = state.productionApproval?.clips ?? state.productionApproval?.approvedClips ?? state.productionApproval?.targetClips;
+    const segments = Array.isArray(targetClips) && targetClips.length > 0
+      ? allSegments.filter((s) => targetClips.map((c) => String(c).replace(/^(clip|segment|part)[-_\s]*/i, '').trim()).includes(String(s.segmentId)))
+      : allSegments;
+
+    const rendered = Array.isArray(state.renderedClips) ? [...state.renderedClips] : [];
     let paid = {};
     try {
       paid = JSON.parse(await readFile(join(runDir, 'outputs', 'paid-items.json'), 'utf8'));
@@ -238,8 +243,11 @@ export function makeProducerNode({
     try {
       for (const seg of segments) {
         const itemId = seg.segmentId;
+        const existingIdx = rendered.findIndex((c) => String(c.clipId) === String(itemId));
         if (paid[itemId]) {
-          rendered.push({ clipId: itemId, videoPath: paid[itemId] });
+          const entry = { clipId: itemId, videoPath: paid[itemId] };
+          if (existingIdx >= 0) rendered[existingIdx] = entry;
+          else rendered.push(entry);
           continue;
         }
         onProgress({ type: 'clip-render-start', clipId: itemId });
@@ -252,7 +260,8 @@ export function makeProducerNode({
           engine: seg.generationPayload?.engine ?? 'seedance-2.5',
           duration,
         });
-        rendered.push(res);
+        if (existingIdx >= 0) rendered[existingIdx] = res;
+        else rendered.push(res);
         onProgress({ type: 'clip-render-done', clipId: itemId, res });
       }
     } catch (error) {
@@ -283,6 +292,23 @@ export function makeAssemblyNode({
   return async (state) => {
     const clips = state.renderedClips ?? [];
     if (!clips.length) return {};
+
+    const allSegments = state.seedanceCompiler?.output?.segments ?? [];
+    const isPartial = allSegments.length > 0 && clips.length < allSegments.length;
+
+    if (isPartial) {
+      const latest = clips[clips.length - 1];
+      const assetFiles = { ...(state.assetFiles ?? {}) };
+      if (latest?.videoPath) {
+        assetFiles[`clip-${latest.clipId}`] = latest.videoPath;
+      }
+      return {
+        renderedClips: clips,
+        assetFiles,
+        status: 'awaiting-production',
+        pendingApproval: ['production'],
+      };
+    }
 
     const existingClips = clips.filter((c) => c.videoPath && existsSync(c.videoPath));
     const masterVideoPath = join(runDir, 'master-video.mp4');

@@ -56,6 +56,60 @@ test('Producer node renders clips and returns renderedClips array', async () => 
   assert.equal(res.renderedClips[1].durationSec, 30);
 });
 
+test('Producer node filters clips when productionApproval specifies target clips', async () => {
+  const renderedCalls = [];
+  const fakeRender = async ({ clip, duration }) => {
+    renderedCalls.push(clip.segmentId);
+    return {
+      clipId: clip.segmentId,
+      videoPath: `/tmp/fake-clip-${clip.segmentId}.mp4`,
+      durationSec: duration,
+    };
+  };
+
+  const producerNode = makeProducerNode({ renderClip: fakeRender });
+  const fakeState = {
+    seedanceCompiler: {
+      output: {
+        segments: [
+          { segmentId: 1, totalDurationSec: 19, generationPayload: { durationSec: 19 } },
+          { segmentId: 2, totalDurationSec: 30, generationPayload: { durationSec: 30 } },
+          { segmentId: 3, totalDurationSec: 25, generationPayload: { durationSec: 25 } },
+        ],
+      },
+    },
+    productionApproval: { decision: 'approve', clips: [1] },
+  };
+
+  const res = await producerNode(fakeState);
+  assert.equal(res.renderedClips.length, 1);
+  assert.deepEqual(renderedCalls, [1]);
+  assert.equal(res.renderedClips[0].clipId, 1);
+});
+
+test('Assembly node pauses at awaiting-production when partial clips are rendered', async () => {
+  const assemblyNode = makeAssemblyNode({ runDir: '/tmp' });
+  const state = {
+    seedanceCompiler: {
+      output: {
+        segments: [
+          { segmentId: 1, totalDurationSec: 19 },
+          { segmentId: 2, totalDurationSec: 30 },
+        ],
+      },
+    },
+    renderedClips: [
+      { clipId: 1, videoPath: '/tmp/clip1.mp4', durationSec: 19.0 },
+    ],
+  };
+
+  const res = await assemblyNode(state);
+  assert.equal(res.status, 'awaiting-production');
+  assert.deepEqual(res.pendingApproval, ['production']);
+  assert.equal(res.assetFiles?.['clip-1'], '/tmp/clip1.mp4');
+  assert.equal(res.masterVideo, undefined);
+});
+
 test('Assembly node aggregates rendered clips into masterVideo with duration', async () => {
   const assemblyNode = makeAssemblyNode({ runDir: '/tmp' });
   const state = {
