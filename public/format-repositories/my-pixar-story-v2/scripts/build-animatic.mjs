@@ -7,7 +7,7 @@
 //   node scripts/build-animatic.mjs --sd <story-director.json> --out <animatic.mp4> [--frames <dir>] [--voices <voices.json>]
 
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
-import { existsSync, statSync, readdirSync } from 'node:fs';
+import { existsSync, statSync, readdirSync, openSync, readSync, closeSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { join, resolve, dirname } from 'node:path';
 import { loadSecrets, defaultSecretsPath } from './lib/secrets.mjs';
@@ -17,6 +17,27 @@ import { scratchLines, ttsTranscript, estimateUsd, oddities, mixArgs, speechSpan
 const MODEL = 'sonic-3.6-2026-08-27';
 const VERSION = '2026-08-14';
 const DEFAULT_CAP_USD = 0.50;
+
+export function isValidImage(filePath) {
+  try {
+    if (!filePath || !existsSync(filePath)) return false;
+    if (statSync(filePath).size < 16) return false;
+    const buf = Buffer.alloc(8);
+    const fd = openSync(filePath, 'r');
+    const bytesRead = readSync(fd, buf, 0, 8, 0);
+    closeSync(fd);
+    if (bytesRead < 8) return false;
+    // PNG: 89 50 4E 47 0D 0A 1A 0A
+    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return true;
+    // JPEG: FF D8 FF
+    if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return true;
+    // WEBP: RIFF
+    if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 
@@ -126,10 +147,12 @@ export async function buildAnimatic({
   const missingShots = [];
   const frames = finalTimeline.map((s) => {
     const fromMap = framePaths?.[s.shotId];
-    if (fromMap && existsSync(fromMap)) return { ...s, path: fromMap };
+    if (fromMap && isValidImage(fromMap)) return { ...s, path: fromMap };
     const f = availableFiles.find((x) => new RegExp(`^${s.shotId.replace('.', '\\.')}\\.(png|jpe?g|webp)$`, 'i').test(x));
-    if (!f) missingShots.push(s.shotId);
-    return { ...s, path: f ? join(framesDir, f) : null };
+    const full = f ? join(framesDir, f) : null;
+    if (full && isValidImage(full)) return { ...s, path: full };
+    missingShots.push(s.shotId);
+    return { ...s, path: null };
   });
 
   if (missingShots.length) {
