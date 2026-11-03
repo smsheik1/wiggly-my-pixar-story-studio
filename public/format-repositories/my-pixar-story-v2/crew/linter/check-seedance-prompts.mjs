@@ -49,6 +49,22 @@ const unNegatedHit = (text, re) => {
   let m; while ((m = g.exec(text))) if (!/\b(no|not) $/i.test(text.slice(Math.max(0, m.index - 4), m.index))) return true;
   return false;
 };
+// WIGGLY (spot-me clip 2): a shot carrying a voiceover / off-camera line whose action has someone on screen talking,
+// laughing aloud, yelling, singing, telling or saying something: the engine animates that mouth over the narration.
+const SHOT_META_LINE = /^\s*(?:SHOT\s+\d+|Camera:|On screen:|Look\b|Location:|Props:|Composition from|Hard cut\.?\s*$)/i;
+const SPEECH_VERB = /\b(?:talk(?:s|ing|ed)?|speak(?:s|ing)?|spoke|chat(?:s|ting|ted)?|chatter(?:s|ing|ed)?|laugh(?:s|ing|ed)?(?! silently| soundlessly| without sound)|yell(?:s|ing|ed)?|shout(?:s|ing|ed)?|scream(?:s|ing|ed)?|sing(?:s|ing)?|sang|tell(?:s|ing)?|told|say(?:s|ing)?|said|whisper(?:s|ing|ed)?|mutter(?:s|ing|ed)?|mumbl(?:e|es|ing|ed)|call(?:s|ing|ed)? out|explain(?:s|ing|ed)?|rambl(?:e|es|ing|ed)|lip[- ]?sync\w*|mouth(?:s|ing|ed)? (?:the |his |her |their )?(?:words?|lines?))\b/gi;
+const SPEECH_NEGATION = /\b(?:no|not|never|without|nor|stops?|stopped|done|finished|instead of|rather than)\b[^.;,\n]{0,20}$/i;
+/** Speech / mouth-movement verbs in a shot's action text (lines in braces, meta lines, heard-only and lock lines ignored). */
+export function speechInAction(blockText) {
+  const action = String(blockText ?? '').split('\n')
+    .filter((l) => l.trim() && !SHOT_META_LINE.test(l) && !/^\s*@[\w_]+\s*(?:,\s*(?:voice[- ]?over|off[- ]?camera)\s*)?:\s*\{/i.test(l)
+      && !/no one on screen speaks|every (?:on-screen )?mouth stays closed|no humming|no dialogue/i.test(l))
+    .map(withoutBracesText).join('\n');
+  const hits = []; let m; SPEECH_VERB.lastIndex = 0;
+  while ((m = SPEECH_VERB.exec(action))) if (!SPEECH_NEGATION.test(action.slice(Math.max(0, m.index - 30), m.index))) hits.push(m[0]);
+  return [...new Set(hits.map((h) => h.toLowerCase()))];
+}
+const withoutBracesText = (x) => String(x ?? '').replace(/\{[^}]*\}/g, '').replace(/"[^"]*"/g, '');
 // Heard-only speaker label at the start of a [SHOTS] line ("@AdultTheo, voiceover: {..}"): a voice, not an on-screen element.
 const HEARD_SPEAKER_LABEL = /^(\s*)@[\w_]+(\s*,\s*(?:voice[- ]?over|off[- ]?camera)\s*:)/gim;
 // WIGGLY (r4-dry15): every SHOT block states its camera direction on one line: "Camera: <framing>, <angle>, <move>."
@@ -261,6 +277,9 @@ export function validateSeedancePrompts(data, input) {
       for (const h of heard) voiceTags.add(h);
       if (heard.length && !(MOUTHS_CLOSED_SPEAK.test(b.text) && MOUTHS_CLOSED_LIPS.test(b.text)))
         err('VOICEOVER_MOUTHS_OPEN', `${p}: SHOT ${b.n} has a voiceover / off-camera line, so it also says "${MOUTHS_CLOSED_LINE}"`, `${p}.tenBlocks.block5_shots`);
+      const talk = heard.length ? speechInAction(b.text) : [];
+      if (talk.length)
+        err('VOICEOVER_ON_SCREEN_SPEECH', `${p}: SHOT ${b.n} has a voiceover / off-camera line, but its action has someone on screen ${talk.map((t) => `"${t}"`).join(', ')}; the engine animates that mouth over the narration. Rewrite the action so every on-screen character is silent with mouth closed (e.g. a closed-mouth smile, miming or gesturing, listening, drinking, looking away).`, `${p}.tenBlocks.block5_shots`);
     }
     // Multi-location clip: every shot names its place ("Location: @kitchen."), or the engine blends the rooms.
     const locRefs = (seg.references ?? []).filter((r) => r.kind === 'location').map((r) => r.tag);

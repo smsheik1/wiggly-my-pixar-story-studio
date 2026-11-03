@@ -54,7 +54,7 @@ jobs:
           echo "slow=$slow" >> "$GITHUB_OUTPUT"
   v2-crew:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -62,6 +62,10 @@ jobs:
           node-version: 26
           cache: npm
           cache-dependency-path: public/format-repositories/my-pixar-story-v2/package-lock.json
+      # Animatic assembly and the panel-padding check shell out to ffmpeg.
+      - name: Install ffmpeg
+        uses: ./.github/actions/ffmpeg
+        timeout-minutes: 5
       - run: npm --prefix public/format-repositories/my-pixar-story-v2 ci
       - run: npm --prefix public/format-repositories/my-pixar-story-v2 test
   studio:
