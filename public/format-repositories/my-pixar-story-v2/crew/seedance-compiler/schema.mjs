@@ -216,7 +216,8 @@ export const SeedanceSegmentSchema = SeedanceSegmentBase.superRefine((seg, ctx) 
   });
 });
 
-/** Assemble compiledPrompt in code from the 10 ordered blocks (headers can never go missing or out of order). */
+/** Assemble compiledPrompt in code from the 10 ordered blocks (headers can never go missing or out of order).
+ *  compiledPrompt is derived from tenBlocks. Edit the blocks and regenerate; the gate rejects a hand-edited prompt (COMPILED_PROMPT_DRIFT). */
 export function assembleCompiledPrompt(tenBlocks = {}) {
   return BLOCK_HEADERS.map((h, i) => `${h}\n${String(tenBlocks[BLOCK_KEYS[i]] ?? '').trim()}`).join('\n\n');
 }

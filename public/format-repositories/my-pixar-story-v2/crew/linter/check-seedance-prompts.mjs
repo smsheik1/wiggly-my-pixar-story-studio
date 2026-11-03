@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { segmentCastPresence } from '../seedance-compiler/input.mjs';
 import { checkSeedanceShotLocks } from './shot-locks.mjs';
-import { VIDEO_ENGINE, VIDEO_ENGINES, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX_TOTAL_SECONDS, BLOCK_HEADERS, headerPositions, sendTimeTags } from '../seedance-compiler/schema.mjs';
+import { VIDEO_ENGINE, VIDEO_ENGINES, VIDEO_RESOLUTION, MAX_SEGMENT_SECONDS, MAX_TOTAL_SECONDS, BLOCK_HEADERS, BLOCK_KEYS, headerPositions, sendTimeTags, assembleCompiledPrompt } from '../seedance-compiler/schema.mjs';
 
 import { WORDS_PER_SECOND } from './speech.mjs';
 export { WORDS_PER_SECOND };
@@ -22,6 +22,7 @@ export const MOUTHS_CLOSED_LINE = 'No one on screen speaks; every on-screen mout
 const MOUTHS_CLOSED_SPEAK = /no one on screen speaks/i;
 const MOUTHS_CLOSED_LIPS = /mouths?\b[^.\n]{0,30}\bstays? closed/i;
 export const SILENT_LINE = 'Silent scene apart from ambience: no dialogue, no voice, no humming; every mouth stays closed and still.';
+const CONTINUOUS_MOVE = 'One continuous move — the camera never stops and never cuts.';
 const words = (x) => String(x ?? '').replace(/[{}]/g, '').toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').split(/\s+/).filter(Boolean);
 /** First 6+ word run of a heard-only line that appears in the prompt (post-narration engines), or null. */
 export function leakedNarration(line, prompt, n = 6) {
@@ -65,6 +66,18 @@ export function speechInAction(blockText) {
   return [...new Set(hits.map((h) => h.toLowerCase()))];
 }
 const withoutBracesText = (x) => String(x ?? '').replace(/\{[^}]*\}/g, '').replace(/"[^"]*"/g, '');
+/** Action prose of one SHOT block: the lines shots[].action must equal. Camera, locks, dialogue, the location
+ *  prefix ("In @kitchen:"), the continuous-move sentence and the mouth-closed line are not the action. */
+export function shotActionText(blockText) {
+  return String(blockText ?? '').split('\n').map((l) => l.trim()).filter((l) => l
+    && !/^SHOT\s+\d+/.test(l)
+    && !/^(?:Camera|On screen|Look|Props|Location)\b[^:\n]*:/i.test(l)
+    && !/^Composition from\b/i.test(l)
+    && !/\{.*\}/.test(l)
+    && !/^Hard cut\.?$/.test(l)
+    && l !== MOUTHS_CLOSED_LINE && l !== SILENT_LINE && l !== CONTINUOUS_MOVE)
+    .map((l) => l.replace(/^In @[\w_]+:\s*/, '').split(CONTINUOUS_MOVE).join('').trim()).filter(Boolean).join('\n');
+}
 // Heard-only speaker label at the start of a [SHOTS] line ("@AdultTheo, voiceover: {..}"): a voice, not an on-screen element.
 const HEARD_SPEAKER_LABEL = /^(\s*)@[\w_]+(\s*,\s*(?:voice[- ]?over|off[- ]?camera)\s*:)/gim;
 // WIGGLY (r4-dry15): every SHOT block states its camera direction on one line: "Camera: <framing>, <angle>, <move>."
@@ -96,6 +109,21 @@ export function splitBlocks(text) {
     out[h] = text.slice(pos[i] + h.length, after.length ? Math.min(...after) : text.length).trim();
   });
   return out;
+}
+
+const clip = (s, n = 90) => { const t = String(s ?? '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n)}…` : t; };
+const voiceoverSpeechMessage = (p, n, talk) => `${p}: SHOT ${n} has a voiceover / off-camera line, but its action has someone on screen ${talk.map((w) => `"${w}"`).join(', ')}; the engine animates that mouth over the narration. Rewrite the action so every on-screen character is silent with mouth closed (e.g. a closed-mouth smile, miming or gesturing, listening, drinking, looking away).`;
+
+/** First block header whose body is not the canonical assembly of tenBlocks, or null when compiledPrompt matches.
+ *  compiledPrompt is derived (assembleCompiledPrompt); a hand-edited copy fails COMPILED_PROMPT_DRIFT. */
+export function compiledPromptDriftSection(tenBlocks, compiledPrompt) {
+  const blocks = tenBlocks ?? {};
+  if (assembleCompiledPrompt(blocks) === String(compiledPrompt ?? '')) return null;
+  const got = splitBlocks(String(compiledPrompt ?? ''));
+  for (let i = 0; i < BLOCK_HEADERS.length; i++) {
+    if (String(blocks[BLOCK_KEYS[i]] ?? '').trim() !== String(got[BLOCK_HEADERS[i]] ?? '').trim()) return BLOCK_HEADERS[i];
+  }
+  return 'block separators';
 }
 
 /** Gemini base: one segment. */
@@ -172,6 +200,19 @@ export function validateSeedanceSegment(seg, { pathPrefix = '', engine = VIDEO_E
   if (seg?.shots && headers.length && (seg.shots.length !== headers.length || seg.shots.some((s, i) => +headers[i][2] !== s.startSec || +headers[i][3] !== s.endSec)))
     err('SHOT_HEADER_MISMATCH', 'Structured shots and SHOT headers in [SHOTS] disagree.', 'shots');
   if (TEEN_WORDS.test(t)) err('UNDERAGE_DEPICTION', 'Teen/minor wording; teens are depicted as eighteen.');
+  // compiledPrompt is what gets rendered. It is assembled from tenBlocks; a hand edit that leaves it stale fails here.
+  if (seg?.tenBlocks) {
+    const section = compiledPromptDriftSection(seg.tenBlocks, t);
+    if (section) err('COMPILED_PROMPT_DRIFT', `compiledPrompt drifted from tenBlocks at ${section}. compiledPrompt is assembled from tenBlocks and is never edited on its own; edit tenBlocks and regenerate it.`, 'compiledPrompt');
+    const actionBlocks = shotBlocks(seg.tenBlocks.block5_shots ?? '');
+    (seg.shots ?? []).forEach((s, j) => {
+      if (typeof s?.action !== 'string') return;
+      const b = actionBlocks.find((x) => x.n === s.shotNumber) ?? actionBlocks[j];
+      if (!b) return;
+      const want = shotActionText(b.text);
+      if (s.action.trim() !== want) err('SHOT_ACTION_DRIFT', `SHOT ${s.shotNumber ?? j + 1}: shots[].action must match the action text in block5_shots ("${clip(want)}"), not "${clip(s.action)}".`, `shots.${j}.action`);
+    });
+  }
   const errors = issues.filter((i) => i.severity === 'error').map((i) => i.message);
   const warnings = issues.filter((i) => i.severity === 'warning').map((i) => i.message);
   return { isValid: errors.length === 0, errors, warnings, issues };
@@ -279,8 +320,24 @@ export function validateSeedancePrompts(data, input) {
         err('VOICEOVER_MOUTHS_OPEN', `${p}: SHOT ${b.n} has a voiceover / off-camera line, so it also says "${MOUTHS_CLOSED_LINE}"`, `${p}.tenBlocks.block5_shots`);
       const talk = heard.length ? speechInAction(b.text) : [];
       if (talk.length)
-        err('VOICEOVER_ON_SCREEN_SPEECH', `${p}: SHOT ${b.n} has a voiceover / off-camera line, but its action has someone on screen ${talk.map((t) => `"${t}"`).join(', ')}; the engine animates that mouth over the narration. Rewrite the action so every on-screen character is silent with mouth closed (e.g. a closed-mouth smile, miming or gesturing, listening, drinking, looking away).`, `${p}.tenBlocks.block5_shots`);
+        err('VOICEOVER_ON_SCREEN_SPEECH', voiceoverSpeechMessage(p, b.n, talk), `${p}.tenBlocks.block5_shots`);
     }
+    // The rendered prompt and the structured action can stay stale after block5_shots is fixed. Check both.
+    const block5ByN = new Map(shotBlocks(shotsText).map((b) => [b.n, b.text.trim()]));
+    for (const b of shotBlocks(splitBlocks(t)['[SHOTS]'] ?? '')) {
+      if (block5ByN.get(b.n) === b.text.trim()) continue;
+      const heard = [...b.text.matchAll(/^\s*@[\w_]+\s*,\s*(?:voice[- ]?over|off[- ]?camera)\s*:/gim)];
+      const talk = heard.length ? speechInAction(b.text) : [];
+      if (talk.length) err('VOICEOVER_ON_SCREEN_SPEECH', `${voiceoverSpeechMessage(p, b.n, talk)} This is in compiledPrompt [SHOTS], which is what gets rendered.`, `${p}.compiledPrompt`);
+    }
+    (seg.shots ?? []).forEach((s, j) => {
+      if (typeof s?.action !== 'string') return;
+      const b = shotBlocks(shotsText).find((x) => x.n === s.shotNumber) ?? shotBlocks(shotsText)[j];
+      const compiled = shotBlocks(splitBlocks(t)['[SHOTS]'] ?? '').find((x) => x.n === s.shotNumber);
+      const heard = heardOnly(s.dialogue) || (b && /,\s*(?:voice[- ]?over|off[- ]?camera)\s*:/i.test(b.text)) || (compiled && /,\s*(?:voice[- ]?over|off[- ]?camera)\s*:/i.test(compiled.text));
+      const talk = heard ? speechInAction(s.action) : [];
+      if (talk.length) err('VOICEOVER_ON_SCREEN_SPEECH', `${voiceoverSpeechMessage(p, s.shotNumber ?? j + 1, talk)} This is in shots[].action.`, `${p}.shots.${j}.action`);
+    });
     // Multi-location clip: every shot names its place ("Location: @kitchen."), or the engine blends the rooms.
     const locRefs = (seg.references ?? []).filter((r) => r.kind === 'location').map((r) => r.tag);
     if (locRefs.length > 1) shotBlocks(shotsText).forEach((b, j) => {

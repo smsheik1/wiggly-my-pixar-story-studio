@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseSeedancePrompts, assembleCompiledPrompt } from '../crew/seedance-compiler/schema.mjs';
 import { selectSeedanceCompilerInput, segmentCastPresence } from '../crew/seedance-compiler/input.mjs';
-import { validateSeedancePrompts } from '../crew/linter/check-seedance-prompts.mjs';
+import { validateSeedancePrompts, shotActionText, shotBlocks } from '../crew/linter/check-seedance-prompts.mjs';
 
 const json = (f) => JSON.parse(readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8'));
 const role = readFileSync(new URL('../crew/seedance-compiler/role.md', import.meta.url), 'utf8');
@@ -81,6 +81,7 @@ test('VOICE_ONLY_REFERENCE when a voice-only speaker is attached; passes once re
   for (const sh of s.shots) sh.cast = sh.cast.filter((c) => c !== '@Shaz');
   block(d, 1, 'block1_referenceMaterials', (t) => t.split('\n').filter((l) => !l.startsWith('@Shaz =')).join('\n'));
   shots(d, 1, shazHeardOnly);
+  s.shots.forEach((sh, j) => { sh.action = shotActionText(shotBlocks(s.tenBlocks.block5_shots)[j].text); });
   // no longer on screen, so the narrator voice is "never seen"
   block(d, 1, 'block2_voices', (t) => t.replace('An off-screen narrator voice; @Shaz on screen never speaks these lines. ', 'An off-screen narrator, never seen. '));
   const c = errs(d, narratorOnly());
